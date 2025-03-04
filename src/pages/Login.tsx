@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -12,16 +12,17 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { login, user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     window.scrollTo(0, 0);
     
     // Check if user is already logged in
-    if (user) {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
       navigate("/dashboard");
     }
-  }, [navigate, user]);
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,9 +30,34 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
+      // Simulation d'un délai de réseau
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simple validation for demo
+      if (email && password) {
+        console.log("Login attempt with:", { email });
+        
+        // For demo purposes, any login credentials will work
+        // In a real app, this would validate against a backend
+        const userData = {
+          email,
+          firstName: "Utilisateur",
+          lastName: "BGS"
+        };
+        
+        localStorage.setItem("user", JSON.stringify(userData));
+        
+        toast({
+          title: "Connexion réussie",
+          description: "Bienvenue sur votre tableau de bord",
+        });
+        
+        navigate("/dashboard");
+      } else {
+        setError("Veuillez remplir tous les champs");
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Une erreur s'est produite lors de la connexion");
+      setError("Une erreur s'est produite lors de la connexion");
       console.error("Login error:", err);
     } finally {
       setIsLoading(false);

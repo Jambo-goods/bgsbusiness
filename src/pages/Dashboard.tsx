@@ -1,23 +1,48 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { LayoutDashboard, Briefcase, Settings, LogOut, Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Project } from "@/data/projects";
+import { Project } from "@/types/project";
+import { projects } from "@/data/projects";
 import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { user, logout } = useAuth();
-  const [dashboardData, setDashboardData] = useState({
-    investmentTotal: 7500,
-    projectsCount: 3
-  });
+  const [userData, setUserData] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    investmentTotal: number;
+    projectsCount: number;
+  } | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    
+    // Simulate fetching user data
+    // In a real app, this would come from an authentication context or API
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      setUserData({
+        firstName: parsedUser.firstName || "Jean",
+        lastName: parsedUser.lastName || "Dupont",
+        email: parsedUser.email || "jean.dupont@example.com",
+        investmentTotal: 7500,
+        projectsCount: 3
+      });
+    } else {
+      // Redirect to login if no user is found
+      window.location.href = "/login";
+    }
   }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+  };
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -26,7 +51,7 @@ export default function Dashboard() {
   // Filter user's investments (in a real app, this would be user-specific)
   const userInvestments = projects.slice(0, 3);
 
-  if (!user) {
+  if (!userData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-bgs-blue">Chargement...</div>
@@ -112,7 +137,7 @@ export default function Dashboard() {
           
           <div className="px-2 mt-auto">
             <button
-              onClick={logout}
+              onClick={handleLogout}
               className="flex items-center w-full px-4 py-3 rounded-lg text-red-500 hover:bg-red-50 transition-colors"
             >
               <LogOut size={20} className={isSidebarOpen ? "mr-3" : "mx-auto"} />
@@ -130,7 +155,7 @@ export default function Dashboard() {
         <div className="max-w-6xl mx-auto">
           <header className="mb-8">
             <h1 className="text-2xl font-bold text-bgs-blue">
-              Bonjour, {user.firstName} {user.lastName}
+              Bonjour, {userData.firstName} {userData.lastName}
             </h1>
             <p className="text-bgs-blue/70">
               Bienvenue sur votre tableau de bord BGS Business Club
@@ -146,7 +171,7 @@ export default function Dashboard() {
                     Total investi
                   </h3>
                   <p className="text-3xl font-bold text-bgs-blue">
-                    {dashboardData.investmentTotal.toLocaleString()} €
+                    {userData.investmentTotal.toLocaleString()} €
                   </p>
                 </div>
                 <div className="glass-card p-6">
@@ -154,7 +179,7 @@ export default function Dashboard() {
                     Projets actifs
                   </h3>
                   <p className="text-3xl font-bold text-bgs-blue">
-                    {dashboardData.projectsCount}
+                    {userData.projectsCount}
                   </p>
                 </div>
                 <div className="glass-card p-6">
@@ -285,7 +310,7 @@ export default function Dashboard() {
                     <input
                       id="firstName"
                       type="text"
-                      value={user.firstName}
+                      value={userData.firstName}
                       onChange={() => {}}
                       className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5"
                     />
@@ -298,7 +323,7 @@ export default function Dashboard() {
                     <input
                       id="lastName"
                       type="text"
-                      value={user.lastName}
+                      value={userData.lastName}
                       onChange={() => {}}
                       className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5"
                     />
@@ -312,7 +337,7 @@ export default function Dashboard() {
                   <input
                     id="email"
                     type="email"
-                    value={user.email}
+                    value={userData.email}
                     onChange={() => {}}
                     className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5"
                   />
