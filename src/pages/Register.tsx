@@ -1,9 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Mail, Lock, User, ArrowRight, Check } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Mail, Lock, User, ArrowRight, AlertCircle } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Register() {
   const [firstName, setFirstName] = useState("");
@@ -14,10 +15,18 @@ export default function Register() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    
+    // Check if user is already logged in
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,15 +45,28 @@ export default function Register() {
     
     setIsLoading(true);
 
-    // Simuler une inscription pour la démonstration
-    // Dans une version réelle, ceci serait connecté à Supabase ou à une API
     try {
       // Simulation d'un délai de réseau
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       console.log("Registration attempt with:", { firstName, lastName, email });
-      // Redirection simulée - à implémenter avec une authentification réelle
-      // navigate("/dashboard");
+      
+      // For demo purposes, create a user and store in localStorage
+      // In a real app, this would send the data to a backend
+      const userData = {
+        firstName,
+        lastName,
+        email
+      };
+      
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      toast({
+        title: "Inscription réussie",
+        description: "Votre compte a été créé avec succès",
+      });
+      
+      navigate("/dashboard");
     } catch (err) {
       setError("Une erreur s'est produite lors de l'inscription");
       console.error("Registration error:", err);
@@ -69,8 +91,9 @@ export default function Register() {
             
             <div className="glass-card p-6 md:p-8">
               {error && (
-                <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-                  {error}
+                <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
+                  <AlertCircle size={18} className="mr-2 flex-shrink-0" />
+                  <p>{error}</p>
                 </div>
               )}
               
