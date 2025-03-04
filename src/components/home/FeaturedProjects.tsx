@@ -1,61 +1,103 @@
 
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import ProjectCard, { Project } from "@/components/ui/ProjectCard";
-
-// Sample project data
-const featuredProjects: Project[] = [
-  {
-    id: "wood-africa",
-    name: "BGS Wood Africa",
-    companyName: "BGS Wood Africa",
-    description: "Achat de tronçonneuses pour découper du bois et produire des matériaux de construction.",
-    profitability: 15,
-    duration: "Flexible",
-    location: "Afrique de l'Ouest",
-    status: "active",
-    minInvestment: 1500,
-    image: "https://images.unsplash.com/photo-1614254136161-0314a45127a9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-  },
-  {
-    id: "energy",
-    name: "BGS Energy",
-    companyName: "BGS Energy",
-    description: "Achat d'équipements pour collecter et transformer les déchets en carburant, gaz et charbon.",
-    profitability: 12,
-    duration: "12 mois",
-    location: "Afrique centrale",
-    status: "upcoming",
-    minInvestment: 2000,
-    image: "https://images.unsplash.com/photo-1540324603583-fa99c8235661?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-  },
-];
+import { ArrowRight, CircleCheck, Star } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { projects } from "@/data/projects";
 
 export default function FeaturedProjects() {
+  const [visibleProjects, setVisibleProjects] = useState(3);
+  const featuredProjects = projects.filter(project => project.featured);
+  
   return (
-    <section className="py-20 bg-bgs-gray-light relative overflow-hidden">
+    <section className="py-16 bg-gradient-to-b from-white to-bgs-gray-light">
       <div className="container px-4 md:px-6 mx-auto">
-        <div className="flex justify-between items-end mb-12">
-          <div>
-            <h2 className="text-3xl font-bold text-bgs-blue animate-fade-up">
-              Projets d'investissement
-            </h2>
-            <p className="text-bgs-blue/80 mt-2 animate-fade-up" style={{ animationDelay: "0.1s" }}>
-              Découvrez les opportunités d'investissement disponibles
-            </p>
-          </div>
-          <Link 
-            to="/projects" 
-            className="text-bgs-orange font-medium hover:text-bgs-orange-light transition-colors animate-fade-up"
-            style={{ animationDelay: "0.2s" }}
-          >
-            Voir tous les projets
-          </Link>
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-bgs-blue mb-4">
+            Projets à la une
+          </h2>
+          <p className="text-bgs-blue/70 max-w-2xl mx-auto">
+            Découvrez nos opportunités d'investissement sélectionnées avec soin pour vous offrir
+            le meilleur rapport qualité-rendement avec un impact réel en Afrique.
+          </p>
         </div>
         
-        <div className="grid md:grid-cols-2 gap-8">
-          {featuredProjects.map((project, index) => (
-            <ProjectCard key={project.id} project={project} index={index} />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {featuredProjects.slice(0, visibleProjects).map((project) => (
+            <Link to={`/projects/${project.id}`} key={project.id} className="glass-card overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+              <div className="relative">
+                <img 
+                  src={project.image} 
+                  alt={project.name}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="absolute top-3 right-3 bg-bgs-orange text-white text-xs font-medium px-2 py-1 rounded-full flex items-center">
+                  <Star size={12} className="mr-1" />
+                  Populaire
+                </div>
+              </div>
+              
+              <div className="p-5">
+                <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-bgs-orange/10 text-bgs-orange mb-2">
+                  {project.category}
+                </span>
+                <h3 className="text-lg font-semibold text-bgs-blue mb-1">
+                  {project.name}
+                </h3>
+                <p className="text-sm text-bgs-blue/70 mb-2">
+                  {project.location}
+                </p>
+                <p className="text-sm text-bgs-blue/80 mb-4 line-clamp-2">
+                  {project.description}
+                </p>
+                
+                <div className="mb-4">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-bgs-blue/70">Progression</span>
+                    <span className="text-xs font-medium text-bgs-blue">
+                      {project.fundingProgress}%
+                    </span>
+                  </div>
+                  <Progress value={project.fundingProgress} className="h-1.5" />
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-bgs-blue/60">Prix</p>
+                    <p className="text-base font-semibold text-bgs-blue">
+                      {project.price.toLocaleString()} €
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-bgs-blue/60">Rendement</p>
+                    <p className="text-base font-semibold text-bgs-blue flex items-center">
+                      <CircleCheck size={14} className="text-green-500 mr-1" />
+                      {project.yield}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </Link>
           ))}
+        </div>
+        
+        {featuredProjects.length > visibleProjects && (
+          <div className="text-center mt-10">
+            <button
+              onClick={() => setVisibleProjects(prev => prev + 3)}
+              className="btn-secondary inline-flex items-center"
+            >
+              Voir plus de projets
+              <ArrowRight size={16} className="ml-2" />
+            </button>
+          </div>
+        )}
+        
+        <div className="text-center mt-10">
+          <Link to="/projects" className="btn-primary inline-flex items-center">
+            Voir tous les projets
+            <ArrowRight size={16} className="ml-2" />
+          </Link>
         </div>
       </div>
     </section>
