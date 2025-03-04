@@ -1,7 +1,20 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Briefcase, Settings, LogOut, ChevronLeft, ChevronRight, Wallet, Users, HelpCircle } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Briefcase, 
+  Settings, 
+  LogOut, 
+  ChevronLeft, 
+  ChevronRight, 
+  Wallet, 
+  TrendingUp, 
+  BarChart3, 
+  List, 
+  History, 
+  Upload
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface SidebarProps {
@@ -78,6 +91,48 @@ export default function Sidebar({
             </li>
             <li>
               <button
+                onClick={() => setActiveTab("wallet")}
+                className={cn(
+                  "flex items-center w-full px-4 py-3 rounded-lg transition-colors",
+                  activeTab === "wallet" 
+                    ? "bg-bgs-blue text-white" 
+                    : "text-bgs-blue hover:bg-bgs-gray-light"
+                )}
+              >
+                <Wallet size={20} className={expanded ? "mr-3" : "mx-auto"} />
+                {expanded && <span>Solde disponible</span>}
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => setActiveTab("capital")}
+                className={cn(
+                  "flex items-center w-full px-4 py-3 rounded-lg transition-colors",
+                  activeTab === "capital" 
+                    ? "bg-bgs-blue text-white" 
+                    : "text-bgs-blue hover:bg-bgs-gray-light"
+                )}
+              >
+                <TrendingUp size={20} className={expanded ? "mr-3" : "mx-auto"} />
+                {expanded && <span>Capital investi</span>}
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => setActiveTab("yield")}
+                className={cn(
+                  "flex items-center w-full px-4 py-3 rounded-lg transition-colors",
+                  activeTab === "yield" 
+                    ? "bg-bgs-blue text-white" 
+                    : "text-bgs-blue hover:bg-bgs-gray-light"
+                )}
+              >
+                <BarChart3 size={20} className={expanded ? "mr-3" : "mx-auto"} />
+                {expanded && <span>Rendement mensuel</span>}
+              </button>
+            </li>
+            <li>
+              <button
                 onClick={() => setActiveTab("investments")}
                 className={cn(
                   "flex items-center w-full px-4 py-3 rounded-lg transition-colors",
@@ -92,11 +147,16 @@ export default function Sidebar({
             </li>
             <li>
               <button
-                onClick={() => {}}
-                className="flex items-center w-full px-4 py-3 rounded-lg transition-colors text-bgs-blue hover:bg-bgs-gray-light"
+                onClick={() => setActiveTab("activeList")}
+                className={cn(
+                  "flex items-center w-full px-4 py-3 rounded-lg transition-colors",
+                  activeTab === "activeList" 
+                    ? "bg-bgs-blue text-white" 
+                    : "text-bgs-blue hover:bg-bgs-gray-light"
+                )}
               >
-                <Wallet size={20} className={expanded ? "mr-3" : "mx-auto"} />
-                {expanded && <span>Portefeuille</span>}
+                <List size={20} className={expanded ? "mr-3" : "mx-auto"} />
+                {expanded && <span>Investissements actifs</span>}
               </button>
             </li>
           </ul>
@@ -105,7 +165,7 @@ export default function Sidebar({
         {expanded && (
           <div className="px-3 mb-2">
             <p className="text-xs font-semibold text-bgs-gray-medium uppercase tracking-wider px-4 mb-1 mt-4">
-              Communauté
+              Transactions
             </p>
           </div>
         )}
@@ -114,20 +174,30 @@ export default function Sidebar({
           <ul className="space-y-1">
             <li>
               <button
-                onClick={() => {}}
-                className="flex items-center w-full px-4 py-3 rounded-lg transition-colors text-bgs-blue hover:bg-bgs-gray-light"
+                onClick={() => setActiveTab("history")}
+                className={cn(
+                  "flex items-center w-full px-4 py-3 rounded-lg transition-colors",
+                  activeTab === "history" 
+                    ? "bg-bgs-blue text-white" 
+                    : "text-bgs-blue hover:bg-bgs-gray-light"
+                )}
               >
-                <Users size={20} className={expanded ? "mr-3" : "mx-auto"} />
-                {expanded && <span>Réseau</span>}
+                <History size={20} className={expanded ? "mr-3" : "mx-auto"} />
+                {expanded && <span>Historique</span>}
               </button>
             </li>
             <li>
               <button
-                onClick={() => {}}
-                className="flex items-center w-full px-4 py-3 rounded-lg transition-colors text-bgs-blue hover:bg-bgs-gray-light"
+                onClick={() => setActiveTab("transfers")}
+                className={cn(
+                  "flex items-center w-full px-4 py-3 rounded-lg transition-colors",
+                  activeTab === "transfers" 
+                    ? "bg-bgs-blue text-white" 
+                    : "text-bgs-blue hover:bg-bgs-gray-light"
+                )}
               >
-                <HelpCircle size={20} className={expanded ? "mr-3" : "mx-auto"} />
-                {expanded && <span>Aide</span>}
+                <Upload size={20} className={expanded ? "mr-3" : "mx-auto"} />
+                {expanded && <span>Dépôt & Retrait</span>}
               </button>
             </li>
             <li>
