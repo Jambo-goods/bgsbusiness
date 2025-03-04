@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Calendar, LineChart, DollarSign, CheckCircle } from "lucide-react";
+import { Calendar, LineChart, DollarSign, CheckCircle, Users, Clock, ShieldCheck, TrendingUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types/project";
 
@@ -41,11 +41,17 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-gray-50 p-4 rounded-lg text-center">
-          <p className="text-2xl font-bold text-bgs-blue">{remainingDays}</p>
+          <div className="flex items-center justify-center mb-1">
+            <Clock size={18} className="text-bgs-orange mr-1" />
+            <p className="text-2xl font-bold text-bgs-blue">{remainingDays}</p>
+          </div>
           <p className="text-xs text-bgs-blue/70">jours restants</p>
         </div>
         <div className="bg-gray-50 p-4 rounded-lg text-center">
-          <p className="text-2xl font-bold text-bgs-blue">{investorCount}</p>
+          <div className="flex items-center justify-center mb-1">
+            <Users size={18} className="text-bgs-orange mr-1" />
+            <p className="text-2xl font-bold text-bgs-blue">{investorCount}</p>
+          </div>
           <p className="text-xs text-bgs-blue/70">investisseurs</p>
         </div>
       </div>
@@ -64,11 +70,11 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
         
         <div className="flex items-start">
           <div className="bg-bgs-blue/5 p-2 rounded-full mr-3">
-            <LineChart size={18} className="text-bgs-blue" />
+            <TrendingUp size={18} className="text-green-500" />
           </div>
           <div>
             <p className="text-sm text-bgs-blue/70">Rendement estimé</p>
-            <p className="text-bgs-blue font-medium">{project.yield}% annuel</p>
+            <p className="text-green-600 font-medium">{project.yield}% annuel</p>
           </div>
         </div>
         
@@ -78,15 +84,34 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
           </div>
           <div>
             <p className="text-sm text-bgs-blue/70">Investissement minimum</p>
-            <p className="text-bgs-blue font-medium">{project.minInvestment} €</p>
+            <p className="text-bgs-blue font-medium">{project.minInvestment.toLocaleString()} €</p>
           </div>
+        </div>
+      </div>
+      
+      {/* Countdown timer section */}
+      <div className="mb-6 bg-bgs-orange/10 p-4 rounded-lg">
+        <div className="flex items-center mb-2">
+          <Clock size={18} className="text-bgs-orange mr-2" />
+          <h4 className="font-medium text-bgs-blue">Offre à durée limitée</h4>
+        </div>
+        <p className="text-sm text-bgs-blue/80 mb-3">
+          Investissez avant la fin de la campagne pour bénéficier des conditions actuelles.
+        </p>
+        <div className="grid grid-cols-4 gap-2">
+          {[remainingDays, 23, 59, 48].map((value, index) => (
+            <div key={index} className="bg-white rounded-md p-2 text-center">
+              <div className="text-bgs-blue font-bold">{value}</div>
+              <div className="text-xs text-bgs-blue/60">{["Jours", "Heures", "Min", "Sec"][index]}</div>
+            </div>
+          ))}
         </div>
       </div>
       
       {/* Reassurance points */}
       <div className="mb-6 space-y-3">
         <div className="flex items-center text-sm text-bgs-blue/80">
-          <CheckCircle size={16} className="text-green-500 mr-2 shrink-0" />
+          <ShieldCheck size={16} className="text-green-500 mr-2 shrink-0" />
           <span>Contrat d'investissement sécurisé</span>
         </div>
         <div className="flex items-center text-sm text-bgs-blue/80">

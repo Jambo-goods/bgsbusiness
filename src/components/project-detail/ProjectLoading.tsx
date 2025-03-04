@@ -10,9 +10,15 @@ export default function ProjectLoading() {
       <main className="pt-32 pb-20">
         <div className="container px-4 md:px-6 mx-auto">
           <div className="flex justify-center items-center min-h-[60vh]">
-            <div className="text-center">
-              <div className="w-10 h-10 border-4 border-bgs-blue/20 border-t-bgs-blue rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-bgs-blue/70">Chargement du projet...</p>
+            <div className="text-center space-y-4">
+              <div className="relative w-24 h-24 mx-auto">
+                <div className="absolute w-full h-full border-4 border-bgs-blue/10 rounded-full"></div>
+                <div className="absolute w-full h-full border-4 border-t-bgs-orange border-l-bgs-orange border-transparent rounded-full animate-spin"></div>
+              </div>
+              <h3 className="text-xl font-semibold text-bgs-blue">Chargement du projet</h3>
+              <p className="text-bgs-blue/70 max-w-md">
+                Nous récupérons les informations détaillées du projet. Merci de patienter un instant...
+              </p>
             </div>
           </div>
         </div>
