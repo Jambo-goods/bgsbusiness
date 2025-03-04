@@ -1,7 +1,7 @@
 
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types/project";
-import { ArrowUpIcon, TrendingUpIcon, WalletIcon, BarChart3Icon, ChevronRightIcon } from "lucide-react";
+import { ArrowUpIcon, TrendingUpIcon, WalletIcon, BarChart3Icon, ChevronRightIcon, Banknote } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const data = [
@@ -34,7 +34,29 @@ interface OverviewProps {
 export default function Overview({ userData, userInvestments, setActiveTab }: OverviewProps) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Solde disponible card */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-3">
+            <div className="bg-purple-100 p-2 rounded-lg">
+              <Banknote className="h-5 w-5 text-purple-600" />
+            </div>
+            <span className="bg-green-100 text-green-600 text-xs px-2 py-0.5 rounded-full font-medium flex items-center">
+              <ArrowUpIcon className="h-3 w-3 mr-1" /> +8.3%
+            </span>
+          </div>
+          <h3 className="text-xs font-medium text-bgs-gray-medium mb-1">
+            Solde disponible
+          </h3>
+          <p className="text-xl font-bold text-bgs-blue">
+            3,250 €
+          </p>
+          <div className="mt-2 text-xs text-bgs-gray-medium">
+            <span className="text-green-500">↑ 250€</span> depuis le dernier mois
+          </div>
+        </div>
+
+        {/* Total investi card */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <div className="bg-blue-100 p-2 rounded-lg">
@@ -55,6 +77,7 @@ export default function Overview({ userData, userInvestments, setActiveTab }: Ov
           </div>
         </div>
 
+        {/* Projets actifs card */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <div className="bg-orange-100 p-2 rounded-lg">
@@ -75,6 +98,7 @@ export default function Overview({ userData, userInvestments, setActiveTab }: Ov
           </div>
         </div>
 
+        {/* Rendement moyen card */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
           <div className="flex items-center justify-between mb-3">
             <div className="bg-green-100 p-2 rounded-lg">
