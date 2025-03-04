@@ -7,6 +7,7 @@ interface DashboardSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isSidebarOpen: boolean;
+  toggleSidebar: () => void;
   handleLogout: () => void;
 }
 
@@ -14,6 +15,7 @@ export default function DashboardSidebar({
   activeTab, 
   setActiveTab, 
   isSidebarOpen,
+  toggleSidebar,
   handleLogout 
 }: DashboardSidebarProps) {
   return (
@@ -28,6 +30,7 @@ export default function DashboardSidebar({
         setActiveTab={setActiveTab} 
         isSidebarOpen={isSidebarOpen}
         handleLogout={handleLogout}
+        toggleSidebar={toggleSidebar}
       />
     </aside>
   );

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SidebarSection from "./SidebarSection";
@@ -12,19 +12,43 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   isSidebarOpen: boolean;
   handleLogout: () => void;
+  toggleSidebar?: () => void;
 }
 
 export default function Sidebar({ 
   activeTab, 
   setActiveTab, 
   isSidebarOpen,
-  handleLogout 
+  handleLogout,
+  toggleSidebar
 }: SidebarProps) {
   const [expanded, setExpanded] = useState(true);
   
   const handleToggle = () => {
     setExpanded(!expanded);
   };
+  
+  // Add keyboard shortcut listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl/Cmd+B
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault(); // Prevent default browser behavior
+        if (toggleSidebar) {
+          toggleSidebar();
+        } else {
+          handleToggle();
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    
+    // Clean up event listener on component unmount
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [toggleSidebar]);
   
   return (
     <div className={cn(
@@ -64,6 +88,7 @@ export default function Sidebar({
           onClick={handleToggle}
           className="p-1.5 rounded-full hover:bg-gray-100 text-bgs-gray-medium w-full flex justify-center"
           aria-label={expanded ? "Réduire" : "Agrandir"}
+          title={expanded ? "Réduire (Ctrl/Cmd+B)" : "Agrandir (Ctrl/Cmd+B)"}
         >
           {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
         </button>
