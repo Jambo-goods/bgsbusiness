@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { LayoutDashboard, Wallet, Settings, Menu, LogOut, History, Thermometer } from "lucide-react";
+import { LayoutDashboard, Wallet, Settings, Menu, LogOut, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -32,11 +32,6 @@ export default function DashboardSidebar({
       name: "Transactions",
       icon: <History size={20} />,
       tab: "transactions"
-    },
-    {
-      name: "Chauffage",
-      icon: <Thermometer size={20} />,
-      tab: "heater"
     },
     {
       name: "Paramètres",
