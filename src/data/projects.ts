@@ -6,10 +6,10 @@ export const projects: Project[] = [
   {
     id: "wood-africa",
     name: "BGS Wood Africa",
-    companyName: "BGS Wood Africa",
+    companyName: "BGS Wood Africa Corporation",
     description: "Achat de tronçonneuses pour découper du bois et produire des matériaux de construction.",
     profitability: 15,
-    duration: "Flexible",
+    duration: "24 mois",
     location: "Afrique de l'Ouest",
     status: "active",
     minInvestment: 1500,
@@ -18,12 +18,15 @@ export const projects: Project[] = [
     yield: 15,
     fundingProgress: 65,
     featured: true,
+    possibleDurations: [12, 24, 36],
+    startDate: "2023-10-15",
+    endDate: "2025-10-15",
     image: "https://images.unsplash.com/photo-1614254136161-0314a45127a9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
   },
   {
     id: "energy",
     name: "BGS Energy",
-    companyName: "BGS Energy",
+    companyName: "BGS Energy Solutions",
     description: "Achat d'équipements pour collecter et transformer les déchets en carburant, gaz et charbon.",
     profitability: 12,
     duration: "12 mois",
@@ -35,12 +38,15 @@ export const projects: Project[] = [
     yield: 12,
     fundingProgress: 30,
     featured: true,
+    possibleDurations: [6, 12, 18],
+    startDate: "2024-01-10",
+    endDate: "2025-01-10",
     image: "https://images.unsplash.com/photo-1540324603583-fa99c8235661?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
   },
   {
     id: "agro-tech",
     name: "BGS AgroTech",
-    companyName: "BGS AgroTech",
+    companyName: "BGS AgroTech Industries",
     description: "Achat de machines agricoles pour améliorer la production et réduire les pertes post-récolte.",
     profitability: 14,
     duration: "24 mois",
@@ -52,12 +58,15 @@ export const projects: Project[] = [
     yield: 14,
     fundingProgress: 25,
     featured: false,
+    possibleDurations: [12, 24, 36, 48],
+    startDate: "2024-03-01",
+    endDate: "2026-03-01",
     image: "https://images.unsplash.com/photo-1589923188651-268a9765e432?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
   },
   {
     id: "logistics",
     name: "BGS Logistics",
-    companyName: "BGS Logistics",
+    companyName: "BGS Logistics & Transport",
     description: "Acquisition de véhicules de transport pour faciliter la distribution des produits sur les marchés locaux.",
     profitability: 13,
     duration: "18 mois",
@@ -69,6 +78,9 @@ export const projects: Project[] = [
     yield: 13,
     fundingProgress: 45,
     featured: false,
+    possibleDurations: [12, 18, 24],
+    startDate: "2023-08-15",
+    endDate: "2025-02-15",
     image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
   },
 ];

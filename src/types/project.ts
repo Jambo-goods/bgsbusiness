@@ -15,4 +15,7 @@ export interface Project {
   yield: number;
   fundingProgress: number;
   featured?: boolean;
+  possibleDurations?: number[];
+  startDate?: string;
+  endDate?: string;
 }

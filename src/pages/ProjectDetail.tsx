@@ -16,6 +16,7 @@ import ProjectUpdatesTab from "@/components/project-detail/ProjectUpdatesTab";
 import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
 import ProjectLoading from "@/components/project-detail/ProjectLoading";
 import ProjectNotFound from "@/components/project-detail/ProjectNotFound";
+import ProjectInvestmentSimulator from "@/components/project-detail/ProjectInvestmentSimulator";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -61,6 +62,11 @@ export default function ProjectDetail() {
               {activeTab === 'overview' && <ProjectOverviewTab project={project} />}
               {activeTab === 'documents' && <ProjectDocumentsTab />}
               {activeTab === 'updates' && <ProjectUpdatesTab />}
+              
+              {/* Ajout du simulateur d'investissement après l'onglet actif */}
+              {activeTab === 'overview' && <div className="mt-6">
+                <ProjectInvestmentSimulator project={project} />
+              </div>}
             </div>
             
             {/* Sidebar */}
