@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Calendar, LineChart, DollarSign, CheckCircle, Users, Clock, ShieldCheck, TrendingUp } from "lucide-react";
+import { Calendar, LineChart, DollarSign, CheckCircle, Users, Clock, ShieldCheck, TrendingUp, AlertCircle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types/project";
 
@@ -12,25 +12,50 @@ interface ProjectSidebarProps {
 }
 
 export default function ProjectSidebar({ project, remainingDays, investorCount }: ProjectSidebarProps) {
+  // Calculate funding progress percentage
+  const progressPercentage = project.fundingProgress;
+  
   return (
     <div className="glass-card p-6 sticky top-32 animate-fade-up" style={{ animationDelay: "0.2s" }}>
+      {/* Status badge */}
+      <div className="mb-5 flex justify-between items-center">
+        <span className={`inline-flex items-center px-3 py-1 text-xs font-medium rounded-full ${
+          project.status === 'active' 
+            ? 'bg-blue-100 text-blue-800' 
+            : project.status === 'completed'
+            ? 'bg-green-100 text-green-800'
+            : 'bg-orange-100 text-orange-800'
+        }`}>
+          {project.status === 'active' 
+            ? '● Projet actif' 
+            : project.status === 'completed' 
+            ? '● Projet complété' 
+            : '● À venir'}
+        </span>
+        
+        <div className="flex items-center text-sm font-medium text-green-600">
+          <TrendingUp size={16} className="mr-1"/>
+          {project.yield}% rendement
+        </div>
+      </div>
+      
       {/* Progress bar */}
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-semibold text-bgs-blue">Progression du financement</h3>
           <span className="text-sm font-medium text-bgs-blue">
-            {project.fundingProgress}%
+            {progressPercentage}%
           </span>
         </div>
         <Progress 
-          value={project.fundingProgress} 
+          value={progressPercentage} 
           size="lg"
-          showValue={true}
+          showValue={false}
           className="mb-2"
         />
         <div className="flex justify-between items-center mt-2">
           <span className="text-sm text-bgs-blue">
-            <span className="font-medium">{Math.round(project.price * project.fundingProgress / 100).toLocaleString()} €</span> collectés
+            <span className="font-medium">{Math.round(project.price * progressPercentage / 100).toLocaleString()} €</span> collectés
           </span>
           <span className="text-sm text-bgs-blue">
             Objectif: <span className="font-medium">{project.price.toLocaleString()} €</span>
@@ -69,7 +94,7 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
         </div>
         
         <div className="flex items-start">
-          <div className="bg-bgs-blue/5 p-2 rounded-full mr-3">
+          <div className="bg-green-50 p-2 rounded-full mr-3">
             <TrendingUp size={18} className="text-green-500" />
           </div>
           <div>
@@ -85,6 +110,19 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
           <div>
             <p className="text-sm text-bgs-blue/70">Investissement minimum</p>
             <p className="text-bgs-blue font-medium">{project.minInvestment.toLocaleString()} €</p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Risk notice */}
+      <div className="mb-6 bg-amber-50 p-4 rounded-lg border border-amber-100">
+        <div className="flex items-start">
+          <AlertCircle size={18} className="text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+          <div>
+            <h4 className="font-medium text-bgs-blue text-sm mb-1">Avis de risque</h4>
+            <p className="text-xs text-bgs-blue/80">
+              Tout investissement comporte des risques. Les rendements passés ne préjugent pas des rendements futurs. Veuillez lire toute la documentation avant d'investir.
+            </p>
           </div>
         </div>
       </div>
@@ -128,7 +166,7 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
       <div>
         <Link 
           to="/login" 
-          className="w-full btn-primary justify-center mb-3"
+          className="w-full btn-primary justify-center mb-3 flex items-center"
         >
           Investir maintenant
         </Link>
