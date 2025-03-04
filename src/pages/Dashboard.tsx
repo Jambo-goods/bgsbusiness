@@ -9,6 +9,7 @@ import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import InvestmentsList from "@/components/dashboard/InvestmentsList";
 import TransactionHistory from "@/components/dashboard/TransactionHistory";
+import HeaterDashboard from "@/components/dashboard/HeaterDashboard";
 import AccountSettings from "@/components/dashboard/AccountSettings";
 import { calculateTotalInvested } from "@/utils/accountUtils";
 
@@ -96,6 +97,10 @@ export default function Dashboard() {
           
           {activeTab === "transactions" && (
             <TransactionHistory />
+          )}
+          
+          {activeTab === "heater" && (
+            <HeaterDashboard />
           )}
           
           {activeTab === "settings" && (
