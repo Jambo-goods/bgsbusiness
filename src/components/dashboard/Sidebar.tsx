@@ -41,32 +41,6 @@ export default function Sidebar({
       "flex flex-col h-full transition-all duration-300 bg-white shadow-sm",
       expanded ? "w-64" : "w-20"
     )}>
-      <div className="flex justify-between items-center px-4 py-4 border-b border-gray-100">
-        {expanded ? (
-          <Link to="/" className="flex items-center">
-            <img 
-              src="lovable-uploads/d9a3204a-06aa-470d-8255-7f3bd0852557.png" 
-              alt="BGS Business Club" 
-              className="h-8 w-auto"
-            />
-          </Link>
-        ) : (
-          <div className="mx-auto">
-            <div className="h-8 w-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-bold text-sm">
-              B
-            </div>
-          </div>
-        )}
-        
-        <button 
-          onClick={handleToggle}
-          className="p-1 rounded-full hover:bg-gray-100 text-bgs-gray-medium"
-          aria-label={expanded ? "Réduire" : "Agrandir"}
-        >
-          {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-        </button>
-      </div>
-      
       <nav className="flex-1 py-2 overflow-y-auto">
         <div className={expanded ? "px-2 mb-1" : "px-1 mb-1"}>
           {expanded && (
@@ -239,6 +213,17 @@ export default function Sidebar({
           </ul>
         </div>
       </nav>
+      
+      {/* Add a toggle button at the bottom to replace the removed header toggle */}
+      <div className="py-3 px-4 border-t border-gray-100">
+        <button 
+          onClick={handleToggle}
+          className="p-1.5 rounded-full hover:bg-gray-100 text-bgs-gray-medium w-full flex justify-center"
+          aria-label={expanded ? "Réduire" : "Agrandir"}
+        >
+          {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+        </button>
+      </div>
     </div>
   );
 }
