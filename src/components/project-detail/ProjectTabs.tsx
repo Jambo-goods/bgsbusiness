@@ -11,11 +11,11 @@ interface ProjectTabsProps {
 export default function ProjectTabs({ activeTab, setActiveTab }: ProjectTabsProps) {
   return (
     <div className="mb-8 animate-fade-up">
-      <div className="flex border-b border-gray-200">
+      <div className="flex w-full border-b border-gray-200">
         <button 
           onClick={() => setActiveTab('overview')}
           className={cn(
-            "py-3 px-6 font-medium text-sm transition-colors border-b-2 -mb-px flex items-center",
+            "py-4 px-8 font-medium text-sm transition-colors border-b-2 -mb-px flex items-center justify-center flex-1",
             activeTab === 'overview' 
               ? "border-bgs-orange text-bgs-orange" 
               : "border-transparent text-bgs-blue/60 hover:text-bgs-blue"
@@ -30,7 +30,7 @@ export default function ProjectTabs({ activeTab, setActiveTab }: ProjectTabsProp
         <button 
           onClick={() => setActiveTab('documents')}
           className={cn(
-            "py-3 px-6 font-medium text-sm transition-colors border-b-2 -mb-px flex items-center",
+            "py-4 px-8 font-medium text-sm transition-colors border-b-2 -mb-px flex items-center justify-center flex-1",
             activeTab === 'documents' 
               ? "border-bgs-orange text-bgs-orange" 
               : "border-transparent text-bgs-blue/60 hover:text-bgs-blue"
@@ -45,7 +45,7 @@ export default function ProjectTabs({ activeTab, setActiveTab }: ProjectTabsProp
         <button 
           onClick={() => setActiveTab('updates')}
           className={cn(
-            "py-3 px-6 font-medium text-sm transition-colors border-b-2 -mb-px flex items-center",
+            "py-4 px-8 font-medium text-sm transition-colors border-b-2 -mb-px flex items-center justify-center flex-1",
             activeTab === 'updates' 
               ? "border-bgs-orange text-bgs-orange" 
               : "border-transparent text-bgs-blue/60 hover:text-bgs-blue"

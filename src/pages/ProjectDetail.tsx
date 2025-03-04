@@ -51,29 +51,33 @@ export default function ProjectDetail() {
       <Navbar />
       
       <main className="pt-28 pb-20">
-        <div className="container px-4 md:px-6 mx-auto">
-          <ProjectHeader project={project} />
-          
-          <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-            {/* Main Content */}
-            <div className="lg:col-span-2 space-y-8">
-              {activeTab === 'overview' && <ProjectOverviewTab project={project} />}
-              {activeTab === 'documents' && <ProjectDocumentsTab />}
-              {activeTab === 'updates' && <ProjectUpdatesTab />}
-              
-              {/* Investment simulator - only show on overview tab */}
-              {activeTab === 'overview' && <ProjectInvestmentSimulator project={project} />}
-            </div>
+        <div className="max-w-full mx-auto">
+          <div className="px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 mx-auto">
+            <ProjectHeader project={project} />
             
-            {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <ProjectSidebar 
-                project={project} 
-                remainingDays={remainingDays} 
-                investorCount={investorCount} 
-              />
+            <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+          </div>
+            
+          <div className="px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 mx-auto">  
+            <div className="grid grid-cols-1 lg:grid-cols-7 gap-8 items-start">
+              {/* Main Content */}
+              <div className="lg:col-span-5 space-y-8">
+                {activeTab === 'overview' && <ProjectOverviewTab project={project} />}
+                {activeTab === 'documents' && <ProjectDocumentsTab />}
+                {activeTab === 'updates' && <ProjectUpdatesTab />}
+                
+                {/* Investment simulator - only show on overview tab */}
+                {activeTab === 'overview' && <ProjectInvestmentSimulator project={project} />}
+              </div>
+              
+              {/* Sidebar */}
+              <div className="lg:col-span-2">
+                <ProjectSidebar 
+                  project={project} 
+                  remainingDays={remainingDays} 
+                  investorCount={investorCount} 
+                />
+              </div>
             </div>
           </div>
         </div>
