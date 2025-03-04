@@ -114,19 +114,6 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
         </div>
       </div>
       
-      {/* Risk notice */}
-      <div className="mb-6 bg-amber-50 p-4 rounded-lg border border-amber-100">
-        <div className="flex items-start">
-          <AlertCircle size={18} className="text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
-          <div>
-            <h4 className="font-medium text-bgs-blue text-sm mb-1">Avis de risque</h4>
-            <p className="text-xs text-bgs-blue/80">
-              Tout investissement comporte des risques. Les rendements passés ne préjugent pas des rendements futurs. Veuillez lire toute la documentation avant d'investir.
-            </p>
-          </div>
-        </div>
-      </div>
-      
       {/* Countdown timer section */}
       <div className="mb-6 bg-bgs-orange/10 p-4 rounded-lg">
         <div className="flex items-center mb-2">
