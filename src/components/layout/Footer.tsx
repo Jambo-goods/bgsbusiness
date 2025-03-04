@@ -1,5 +1,6 @@
+
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
+import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, LinkedIn } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -30,7 +31,7 @@ export default function Footer() {
                 <Instagram size={20} />
               </a>
               <a href="#" className="text-white/80 hover:text-white transition-colors">
-                <Linkedin size={20} />
+                <LinkedIn size={20} />
               </a>
             </div>
           </div>
