@@ -1,6 +1,10 @@
 
+import { useState } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types/project";
+import { Wallet, TrendingUp, CreditCard } from "lucide-react";
+import { calculateTotalInvested, calculateAvailableBalance, calculateMonthlyReturn } from "@/utils/accountUtils";
+import DepositModal from "./DepositModal";
 
 interface DashboardOverviewProps {
   investmentTotal: number;
@@ -15,31 +19,58 @@ export default function DashboardOverview({
   userInvestments,
   setActiveTab
 }: DashboardOverviewProps) {
+  const [isDepositModalOpen, setIsDepositModalOpen] = useState(false);
+  
+  // Calculate account metrics
+  const availableBalance = calculateAvailableBalance();
+  const monthlyReturn = calculateMonthlyReturn(userInvestments);
+  
   return (
     <div className="space-y-8">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="glass-card p-6">
-          <h3 className="text-sm font-medium text-bgs-blue/70 mb-2">
-            Total investi
-          </h3>
+          <div className="flex items-center mb-2">
+            <Wallet size={20} className="text-bgs-blue/70 mr-2" />
+            <h3 className="text-sm font-medium text-bgs-blue/70">
+              Solde disponible
+            </h3>
+          </div>
+          <p className="text-3xl font-bold text-bgs-blue">
+            {availableBalance.toLocaleString()} €
+          </p>
+          <button 
+            onClick={() => setIsDepositModalOpen(true)}
+            className="mt-4 text-sm text-bgs-orange hover:text-bgs-orange-light transition-colors"
+          >
+            Faire un dépôt
+          </button>
+        </div>
+        <div className="glass-card p-6">
+          <div className="flex items-center mb-2">
+            <CreditCard size={20} className="text-bgs-blue/70 mr-2" />
+            <h3 className="text-sm font-medium text-bgs-blue/70">
+              Capital investi
+            </h3>
+          </div>
           <p className="text-3xl font-bold text-bgs-blue">
             {investmentTotal.toLocaleString()} €
           </p>
-        </div>
-        <div className="glass-card p-6">
-          <h3 className="text-sm font-medium text-bgs-blue/70 mb-2">
-            Projets actifs
-          </h3>
-          <p className="text-3xl font-bold text-bgs-blue">
-            {projectsCount}
+          <p className="mt-4 text-sm text-bgs-blue/70">
+            {projectsCount} projets actifs
           </p>
         </div>
         <div className="glass-card p-6">
-          <h3 className="text-sm font-medium text-bgs-blue/70 mb-2">
-            Rendement moyen
-          </h3>
+          <div className="flex items-center mb-2">
+            <TrendingUp size={20} className="text-bgs-blue/70 mr-2" />
+            <h3 className="text-sm font-medium text-bgs-blue/70">
+              Rendement mensuel
+            </h3>
+          </div>
           <p className="text-3xl font-bold text-green-500">
-            13.5%
+            {monthlyReturn.toFixed(2)} €
+          </p>
+          <p className="mt-4 text-sm text-bgs-blue/70">
+            {(monthlyReturn * 12).toFixed(2)} € par an
           </p>
         </div>
       </div>
@@ -87,6 +118,12 @@ export default function DashboardOverview({
           </button>
         </div>
       </div>
+      
+      {/* Deposit Modal */}
+      <DepositModal 
+        isOpen={isDepositModalOpen}
+        onClose={() => setIsDepositModalOpen(false)}
+      />
     </div>
   );
 }

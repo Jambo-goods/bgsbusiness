@@ -8,16 +8,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import DashboardOverview from "@/components/dashboard/DashboardOverview";
 import InvestmentsList from "@/components/dashboard/InvestmentsList";
+import TransactionHistory from "@/components/dashboard/TransactionHistory";
 import AccountSettings from "@/components/dashboard/AccountSettings";
+import { calculateTotalInvested } from "@/utils/accountUtils";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { user } = useAuth();
-  const [dashboardData, setDashboardData] = useState({
-    investmentTotal: 7500,
-    projectsCount: 3
-  });
+  
+  // Filter user's investments (in a real app, this would be user-specific)
+  const userInvestments = projects.slice(0, 3);
+  
+  // Calculate dashboard data
+  const investmentTotal = calculateTotalInvested(userInvestments);
+  const projectsCount = userInvestments.length;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -26,9 +31,6 @@ export default function Dashboard() {
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
-
-  // Filter user's investments (in a real app, this would be user-specific)
-  const userInvestments = projects.slice(0, 3);
 
   if (!user) {
     return (
@@ -81,8 +83,8 @@ export default function Dashboard() {
           {/* Dashboard content based on active tab */}
           {activeTab === "overview" && (
             <DashboardOverview 
-              investmentTotal={dashboardData.investmentTotal}
-              projectsCount={dashboardData.projectsCount}
+              investmentTotal={investmentTotal}
+              projectsCount={projectsCount}
               userInvestments={userInvestments}
               setActiveTab={setActiveTab}
             />
@@ -90,6 +92,10 @@ export default function Dashboard() {
           
           {activeTab === "investments" && (
             <InvestmentsList userInvestments={userInvestments} />
+          )}
+          
+          {activeTab === "transactions" && (
+            <TransactionHistory />
           )}
           
           {activeTab === "settings" && (
