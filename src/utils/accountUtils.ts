@@ -1,4 +1,3 @@
-
 // Calculate total invested amount from user investments
 export const calculateTotalInvested = (userInvestments: any[]): number => {
   return userInvestments.reduce((total, investment) => total + 2500, 0); // Assuming each investment is 2500€
@@ -25,15 +24,15 @@ export const calculateAnnualReturn = (userInvestments: any[]): number => {
   }, 0);
 };
 
-// Calculate energy consumption for heater (demo purposes)
-export const calculateHeaterConsumption = (powerLevel: number, hours: number): number => {
-  // Assuming a 2000W heater at 100% power
-  const consumption = (2000 * (powerLevel / 100) * hours) / 1000; // in kWh
-  return Math.round(consumption * 100) / 100;
+// Calculate heater consumption based on power level and state
+export const calculateHeaterConsumption = (powerLevel: number, isHeaterOn: boolean): number => {
+  if (!isHeaterOn) return 0;
+  // Base consumption is between 0.5 and 2.5 kWh per day based on power level
+  return (powerLevel / 100) * 2 + 0.5;
 };
 
-// Calculate cost of energy (demo purposes)
+// Calculate energy cost based on consumption (kWh) and price per kWh
 export const calculateEnergyCost = (consumption: number): number => {
-  // Assuming 0.20€ per kWh
-  return Math.round(consumption * 0.20 * 100) / 100;
+  const pricePerKwh = 0.174; // Price in euros per kWh
+  return consumption * pricePerKwh;
 };

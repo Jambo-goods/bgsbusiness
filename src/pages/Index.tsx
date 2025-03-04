@@ -34,9 +34,10 @@ export default function Index() {
         
         {/* CTA */}
         <CallToAction />
+        
+        {/* Footer */}
+        <Footer />
       </main>
-      
-      <Footer />
     </div>
   );
 }
