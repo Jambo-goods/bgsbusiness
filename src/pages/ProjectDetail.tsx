@@ -50,23 +50,21 @@ export default function ProjectDetail() {
     <div className="min-h-screen page-transition bg-gray-50">
       <Navbar />
       
-      <main className="pt-32 pb-20">
+      <main className="pt-28 pb-20">
         <div className="container px-4 md:px-6 mx-auto">
           <ProjectHeader project={project} />
           
           <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} />
           
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
             {/* Main Content */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-8">
               {activeTab === 'overview' && <ProjectOverviewTab project={project} />}
               {activeTab === 'documents' && <ProjectDocumentsTab />}
               {activeTab === 'updates' && <ProjectUpdatesTab />}
               
-              {/* Ajout du simulateur d'investissement après l'onglet actif */}
-              {activeTab === 'overview' && <div className="mt-6">
-                <ProjectInvestmentSimulator project={project} />
-              </div>}
+              {/* Investment simulator - only show on overview tab */}
+              {activeTab === 'overview' && <ProjectInvestmentSimulator project={project} />}
             </div>
             
             {/* Sidebar */}
