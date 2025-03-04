@@ -1,12 +1,12 @@
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowRight, AlertCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { AlertCircle } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import NameFields from "./NameFields";
 import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import TermsCheckbox from "./TermsCheckbox";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
@@ -17,8 +17,7 @@ export default function RegisterForm() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const navigate = useNavigate();
-  const { toast } = useToast();
+  const { register } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,29 +37,9 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // Simulation d'un délai de réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log("Registration attempt with:", { firstName, lastName, email });
-      
-      // For demo purposes, create a user and store in localStorage
-      // In a real app, this would send the data to a backend
-      const userData = {
-        firstName,
-        lastName,
-        email
-      };
-      
-      localStorage.setItem("user", JSON.stringify(userData));
-      
-      toast({
-        title: "Inscription réussie",
-        description: "Votre compte a été créé avec succès",
-      });
-      
-      navigate("/dashboard");
+      await register(firstName, lastName, email, password);
     } catch (err) {
-      setError("Une erreur s'est produite lors de l'inscription");
+      setError(err instanceof Error ? err.message : "Une erreur s'est produite lors de l'inscription");
       console.error("Registration error:", err);
     } finally {
       setIsLoading(false);

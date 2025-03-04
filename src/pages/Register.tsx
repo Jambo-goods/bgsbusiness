@@ -4,19 +4,20 @@ import { Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import RegisterForm from "@/components/auth/RegisterForm";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Register() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     window.scrollTo(0, 0);
     
     // Check if user is already logged in
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
+    if (user) {
       navigate("/dashboard");
     }
-  }, [navigate]);
+  }, [navigate, user]);
 
   return (
     <div className="min-h-screen page-transition">
