@@ -1,5 +1,6 @@
 
 import { Link } from "react-router-dom";
+import { Mail, Phone, MapPin, Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -15,6 +16,20 @@ export default function Footer() {
             <p className="text-white/70 mb-4">
               BGS Business Club vous permet d'investir dans des actifs physiques en Afrique et de générer des rendements attractifs.
             </p>
+            <div className="flex space-x-4">
+              <a href="https://facebook.com" className="text-white/70 hover:text-white transition-colors" aria-label="Facebook">
+                <Facebook size={20} />
+              </a>
+              <a href="https://twitter.com" className="text-white/70 hover:text-white transition-colors" aria-label="Twitter">
+                <Twitter size={20} />
+              </a>
+              <a href="https://instagram.com" className="text-white/70 hover:text-white transition-colors" aria-label="Instagram">
+                <Instagram size={20} />
+              </a>
+              <a href="https://linkedin.com" className="text-white/70 hover:text-white transition-colors" aria-label="LinkedIn">
+                <Linkedin size={20} />
+              </a>
+            </div>
           </div>
           
           <div>
@@ -67,11 +82,17 @@ export default function Footer() {
           <div>
             <h4 className="text-lg font-semibold mb-4">Contact</h4>
             <ul className="space-y-2">
-              <li className="text-white/70">
-                Email: contact@bgsbusiness.club
+              <li className="flex items-center text-white/70">
+                <Mail size={16} className="mr-2" />
+                <span>contact@bgsbusiness.club</span>
               </li>
-              <li className="text-white/70">
-                Téléphone: +33 1 23 45 67 89
+              <li className="flex items-center text-white/70">
+                <Phone size={16} className="mr-2" />
+                <span>+33 1 23 45 67 89</span>
+              </li>
+              <li className="flex items-center text-white/70">
+                <MapPin size={16} className="mr-2" />
+                <span>Paris, France</span>
               </li>
             </ul>
           </div>
