@@ -1,6 +1,5 @@
-
-import React from "react";
-import { TrendingUp, Shield, Globe, Building } from "lucide-react";
+import React, { useState } from "react";
+import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import { Project } from "@/types/project";
 
 interface ProjectOverviewTabProps {
@@ -8,6 +7,31 @@ interface ProjectOverviewTabProps {
 }
 
 export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps) {
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+
+  const toggleFaq = (index: number) => {
+    setOpenFaqIndex(openFaqIndex === index ? null : index);
+  };
+
+  const faqItems = [
+    {
+      question: "Comment puis-je suivre la performance de mon investissement ?",
+      answer: "Vous recevrez des rapports mensuels détaillés dans votre tableau de bord personnel et des alertes par email pour tout événement important. Notre plateforme vous permet également de visualiser en temps réel les statistiques clés de votre investissement."
+    },
+    {
+      question: "Quand serai-je payé pour mon investissement ?",
+      answer: "Les dividendes sont versés mensuellement, généralement dans les 5 premiers jours du mois suivant. Vous pouvez choisir de réinvestir automatiquement ces dividendes ou de les recevoir sur votre compte bancaire."
+    },
+    {
+      question: "Puis-je visiter le projet sur place ?",
+      answer: "Oui, nous organisons des visites pour les investisseurs intéressés. Contactez notre équipe pour plus d'informations et pour planifier une visite adaptée à votre emploi du temps."
+    },
+    {
+      question: "Quelle est la durée minimale d'investissement ?",
+      answer: "La durée minimale recommandée est de 12 mois pour bénéficier pleinement des rendements. Cependant, notre plateforme offre une liquidité facilitée si vous avez besoin de récupérer votre investissement avant terme."
+    }
+  ];
+
   return (
     <div className="space-y-8 animate-fade-up">
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
@@ -102,20 +126,42 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
       </div>
       
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <h2 className="text-xl font-semibold text-bgs-blue mb-4">FAQ</h2>
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium text-bgs-blue mb-2">Comment puis-je suivre la performance de mon investissement ?</h3>
-            <p className="text-bgs-blue/80">Vous recevrez des rapports mensuels détaillés dans votre tableau de bord personnel et des alertes par email pour tout événement important.</p>
+        <div className="flex items-center mb-6">
+          <div className="bg-bgs-orange/10 p-2 rounded-full mr-3">
+            <HelpCircle className="h-5 w-5 text-bgs-orange" />
           </div>
-          <div>
-            <h3 className="font-medium text-bgs-blue mb-2">Quand serai-je payé pour mon investissement ?</h3>
-            <p className="text-bgs-blue/80">Les dividendes sont versés mensuellement, généralement dans les 5 premiers jours du mois suivant.</p>
-          </div>
-          <div>
-            <h3 className="font-medium text-bgs-blue mb-2">Puis-je visiter le projet sur place ?</h3>
-            <p className="text-bgs-blue/80">Oui, nous organisons des visites pour les investisseurs intéressés. Contactez notre équipe pour plus d'informations.</p>
-          </div>
+          <h2 className="text-xl font-semibold text-bgs-blue">Questions fréquentes</h2>
+        </div>
+        
+        <div className="space-y-4 mt-6">
+          {faqItems.map((faq, index) => (
+            <div 
+              key={index} 
+              className="border border-gray-100 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md"
+            >
+              <button
+                onClick={() => toggleFaq(index)}
+                className="w-full flex items-center justify-between p-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors"
+              >
+                <h3 className="font-medium text-bgs-blue">{faq.question}</h3>
+                <div className="ml-2 p-1 rounded-full bg-white border border-gray-200">
+                  {openFaqIndex === index ? (
+                    <ChevronUp className="h-4 w-4 text-bgs-orange" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-bgs-blue/70" />
+                  )}
+                </div>
+              </button>
+              
+              <div 
+                className={`overflow-hidden transition-all duration-300 ${
+                  openFaqIndex === index ? 'max-h-40 opacity-100 p-4' : 'max-h-0 opacity-0 p-0'
+                }`}
+              >
+                <p className="text-bgs-blue/80 leading-relaxed">{faq.answer}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
