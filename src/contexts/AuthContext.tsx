@@ -1,171 +1,171 @@
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { toast } from "@/components/ui/use-toast";
 
-// Define the User type
-interface User {
-  email: string;
+export interface User {
+  id: string;
   firstName: string;
   lastName: string;
+  email: string;
+  password?: string;
 }
 
-// Define the context type
 interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (firstName: string, lastName: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => boolean;
+  register: (user: Omit<User, "id">) => boolean;
   logout: () => void;
+  updateUser: (user: User) => void;
 }
 
-// Create the context with a default value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Define props for the provider
-interface AuthProviderProps {
-  children: ReactNode;
-}
-
-// Create the AuthProvider component
-export const AuthProvider = ({ children }: AuthProviderProps) => {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
-  // Check for user in localStorage on initial load
   useEffect(() => {
-    const checkUserAuth = () => {
+    // Check if user is stored in localStorage
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
       try {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
+        setUser(JSON.parse(storedUser));
       } catch (error) {
-        console.error("Error checking authentication:", error);
+        console.error("Error parsing user data:", error);
         localStorage.removeItem("user");
-      } finally {
-        setIsLoading(false);
       }
-    };
-
-    checkUserAuth();
+    }
   }, []);
 
-  // Login function
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Simple validation for demo
-      if (email && password) {
-        console.log("Login attempt with:", { email });
+  const login = (email: string, password: string): boolean => {
+    // In a real app, this would call an API
+    // For demo purposes, we'll check localStorage for registered users
+    const usersStr = localStorage.getItem("registeredUsers");
+    if (usersStr) {
+      try {
+        const users: User[] = JSON.parse(usersStr);
+        const foundUser = users.find(
+          (u) => u.email === email && u.password === password
+        );
         
-        // For demo purposes, any login credentials will work
-        const userData = {
-          email,
-          firstName: "Utilisateur",
-          lastName: "BGS"
-        };
-        
-        localStorage.setItem("user", JSON.stringify(userData));
-        setUser(userData);
-        
-        toast({
-          title: "Connexion réussie",
-          description: "Bienvenue sur votre tableau de bord",
-        });
-        
-        navigate("/dashboard");
-      } else {
-        throw new Error("Veuillez remplir tous les champs");
+        if (foundUser) {
+          // Remove password from user object before storing in state
+          const { password: _, ...userWithoutPassword } = foundUser;
+          setUser(userWithoutPassword);
+          localStorage.setItem("user", JSON.stringify(userWithoutPassword));
+          toast({
+            title: "Connexion réussie",
+            description: "Bienvenue sur votre espace BGS Business Club",
+          });
+          return true;
+        }
+      } catch (error) {
+        console.error("Error parsing registered users:", error);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Une erreur s'est produite lors de la connexion";
-      toast({
-        title: "Erreur de connexion",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      throw err;
-    } finally {
-      setIsLoading(false);
     }
+    
+    toast({
+      variant: "destructive",
+      title: "Échec de la connexion",
+      description: "Email ou mot de passe incorrect",
+    });
+    return false;
   };
 
-  // Register function
-  const register = async (firstName: string, lastName: string, email: string, password: string) => {
-    setIsLoading(true);
+  const register = (userData: Omit<User, "id">): boolean => {
+    // In a real app, this would call an API
+    // For demo purposes, we'll store in localStorage
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const usersStr = localStorage.getItem("registeredUsers");
+      let users: User[] = usersStr ? JSON.parse(usersStr) : [];
       
-      console.log("Registration attempt with:", { firstName, lastName, email });
+      // Check if email already exists
+      if (users.some((u) => u.email === userData.email)) {
+        toast({
+          variant: "destructive",
+          title: "Inscription échouée",
+          description: "Cet email est déjà utilisé",
+        });
+        return false;
+      }
       
-      // For demo purposes, create a user and store in localStorage
-      const userData = {
-        firstName,
-        lastName,
-        email
+      // Create new user with generated ID
+      const newUser: User = {
+        ...userData,
+        id: crypto.randomUUID(),
       };
       
-      localStorage.setItem("user", JSON.stringify(userData));
-      setUser(userData);
+      // Add to registered users
+      users.push(newUser);
+      localStorage.setItem("registeredUsers", JSON.stringify(users));
+      
+      // Log user in (remove password from state)
+      const { password: _, ...userWithoutPassword } = newUser;
+      setUser(userWithoutPassword);
+      localStorage.setItem("user", JSON.stringify(userWithoutPassword));
       
       toast({
         title: "Inscription réussie",
-        description: "Votre compte a été créé avec succès",
+        description: "Bienvenue sur BGS Business Club",
       });
-      
-      navigate("/dashboard");
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Une erreur s'est produite lors de l'inscription";
+      return true;
+    } catch (error) {
+      console.error("Error registering user:", error);
       toast({
-        title: "Erreur d'inscription",
-        description: errorMessage,
         variant: "destructive",
+        title: "Inscription échouée",
+        description: "Une erreur est survenue. Veuillez réessayer.",
       });
-      throw err;
-    } finally {
-      setIsLoading(false);
+      return false;
     }
   };
 
-  // Logout function
   const logout = () => {
-    localStorage.removeItem("user");
     setUser(null);
+    localStorage.removeItem("user");
     toast({
       title: "Déconnexion réussie",
-      description: "Vous avez été déconnecté avec succès",
+      description: "À bientôt sur BGS Business Club",
     });
-    navigate("/login");
   };
 
-  // Create the context value
-  const value = {
-    user,
-    isLoading,
-    login,
-    register,
-    logout
+  const updateUser = (updatedUser: User) => {
+    try {
+      // Update the current user in state
+      setUser(updatedUser);
+      
+      // Update the user in localStorage
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      
+      // Update the user in the registered users list
+      const usersStr = localStorage.getItem("registeredUsers");
+      if (usersStr) {
+        const users: User[] = JSON.parse(usersStr);
+        const updatedUsers = users.map(u => 
+          u.id === updatedUser.id ? updatedUser : u
+        );
+        localStorage.setItem("registeredUsers", JSON.stringify(updatedUsers));
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast({
+        variant: "destructive",
+        title: "Mise à jour échouée",
+        description: "Une erreur est survenue lors de la mise à jour de votre profil.",
+      });
+    }
   };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
-// Custom hook to use the auth context
-export const useAuth = () => {
+export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-};
+}
