@@ -1,213 +1,222 @@
 
-import { useState } from "react";
-import { Thermometer, Clock, AlertCircle, BarChart4 } from "lucide-react";
+import { Flame, Thermometer, Clock, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "@/hooks/use-toast";
-import { calculateHeaterConsumption, calculateEnergyCost } from "@/utils/accountUtils";
+import { Slider } from "@/components/ui/slider";
+import { useState } from "react";
+import { toast } from "@/components/ui/use-toast";
 
-const HeaterDashboard = () => {
-  const [isHeaterOn, setIsHeaterOn] = useState(true);
-  const [temperature, setTemperature] = useState(21);
-  const [powerLevel, setPowerLevel] = useState(80);
-  const [scheduleEnabled, setScheduleEnabled] = useState(true);
+export default function HeaterDashboard() {
+  const [status, setStatus] = useState<"on" | "off">("on");
+  const [temperature, setTemperature] = useState(22);
+  const [powerLevel, setPowerLevel] = useState(65);
   
-  const dailyConsumption = calculateHeaterConsumption(powerLevel, isHeaterOn);
-  const monthlyCost = calculateEnergyCost(dailyConsumption * 30);
-  
-  const handleToggleHeater = () => {
-    setIsHeaterOn(!isHeaterOn);
+  const toggleStatus = () => {
+    const newStatus = status === "on" ? "off" : "on";
+    setStatus(newStatus);
     toast({
-      title: isHeaterOn ? "Chauffage désactivé" : "Chauffage activé",
-      description: isHeaterOn 
-        ? "Votre chauffage a été désactivé avec succès." 
-        : "Votre chauffage a été activé avec succès.",
-      duration: 3000,
+      title: `Chauffage ${newStatus === "on" ? "activé" : "désactivé"}`,
+      description: `Le chauffage a été ${newStatus === "on" ? "activé" : "désactivé"} avec succès.`,
+      variant: newStatus === "on" ? "default" : "destructive",
     });
   };
-
+  
   const handleTemperatureChange = (value: number[]) => {
     setTemperature(value[0]);
+    toast({
+      title: "Température modifiée",
+      description: `La température a été réglée à ${value[0]}°C.`,
+    });
   };
-
-  const handlePowerLevelChange = (value: number[]) => {
+  
+  const handlePowerChange = (value: number[]) => {
     setPowerLevel(value[0]);
+    toast({
+      title: "Puissance modifiée",
+      description: `La puissance a été réglée à ${value[0]}%.`,
+    });
   };
-
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-bgs-blue">Gestion du Chauffage</h2>
-        <Badge variant={isHeaterOn ? "default" : "destructive"}>
-          {isHeaterOn ? "En marche" : "Arrêté"}
+        <h2 className="text-3xl font-bold text-bgs-blue">Heater</h2>
+        <Badge variant={status === "on" ? "success" : "destructive"} className="flex items-center gap-1">
+          {status === "on" ? (
+            <>
+              <CheckCircle2 size={14} />
+              <span>Actif</span>
+            </>
+          ) : (
+            <>
+              <AlertCircle size={14} />
+              <span>Inactif</span>
+            </>
+          )}
         </Badge>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Temperature Control */}
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Thermometer className="mr-2 text-bgs-orange" />
-              Contrôle de Température
+            <CardTitle className="flex items-center gap-2">
+              <Thermometer size={20} />
+              <span>Contrôle de température</span>
             </CardTitle>
-            <CardDescription>Réglez la température de votre chauffage</CardDescription>
+            <CardDescription>Réglez la température souhaitée</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center mb-6">
-              <span className="text-5xl font-bold text-bgs-blue">{temperature}°</span>
-            </div>
-            <div className="px-4">
-              <Slider
-                defaultValue={[temperature]}
-                max={30}
-                min={16}
-                step={0.5}
-                onValueChange={handleTemperatureChange}
-                disabled={!isHeaterOn}
-              />
-              <div className="flex justify-between mt-2 text-sm text-bgs-blue/60">
-                <span>16°C</span>
-                <span>23°C</span>
-                <span>30°C</span>
+            <div className="space-y-6">
+              <div className="text-center">
+                <span className="text-4xl font-bold text-bgs-blue">{temperature}°C</span>
+              </div>
+              
+              <div className="py-4">
+                <Slider
+                  defaultValue={[temperature]}
+                  min={10}
+                  max={30}
+                  step={1}
+                  onValueChange={handleTemperatureChange}
+                  disabled={status === "off"}
+                />
+                <div className="flex justify-between mt-2 text-xs text-bgs-blue/60">
+                  <span>10°C</span>
+                  <span>20°C</span>
+                  <span>30°C</span>
+                </div>
               </div>
             </div>
           </CardContent>
-          <CardFooter className="justify-between border-t pt-4">
-            <Button variant="outline" size="sm" onClick={() => setTemperature(20)} disabled={!isHeaterOn}>
+          <CardFooter className="flex justify-between">
+            <Button variant="outline" onClick={toggleStatus}>
+              {status === "on" ? "Désactiver" : "Activer"}
+            </Button>
+            <Button onClick={() => setTemperature(22)} disabled={status === "off"}>
               Réinitialiser
             </Button>
-            <Button
-              variant={isHeaterOn ? "default" : "outline"}
-              onClick={handleToggleHeater}
+          </CardFooter>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flame size={20} />
+              <span>Niveau de puissance</span>
+            </CardTitle>
+            <CardDescription>Ajustez la puissance du chauffage</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="text-center">
+                <span className="text-4xl font-bold text-bgs-blue">{powerLevel}%</span>
+              </div>
+              
+              <div className="py-4">
+                <Slider
+                  defaultValue={[powerLevel]}
+                  min={0}
+                  max={100}
+                  step={5}
+                  onValueChange={handlePowerChange}
+                  disabled={status === "off"}
+                />
+                <div className="flex justify-between mt-2 text-xs text-bgs-blue/60">
+                  <span>0%</span>
+                  <span>50%</span>
+                  <span>100%</span>
+                </div>
+              </div>
+              
+              <div>
+                <Progress value={powerLevel} className="h-2" />
+              </div>
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button 
+              variant={powerLevel > 80 ? "destructive" : "outline"} 
+              className="w-full"
+              disabled={status === "off"}
+              onClick={() => setPowerLevel(100)}
             >
-              {isHeaterOn ? "Arrêter" : "Activer"}
+              Mode Boost (100%)
             </Button>
           </CardFooter>
         </Card>
-
-        {/* Power Level */}
+        
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart4 className="mr-2 text-bgs-orange" />
-              Niveau de Puissance
+            <CardTitle className="flex items-center gap-2">
+              <Clock size={20} />
+              <span>Programmation</span>
             </CardTitle>
-            <CardDescription>Ajustez la puissance de votre chauffage</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center mb-6">
-              <span className="text-5xl font-bold text-bgs-blue">{powerLevel}%</span>
-            </div>
-            <div className="px-4">
-              <Slider
-                defaultValue={[powerLevel]}
-                max={100}
-                min={20}
-                step={5}
-                onValueChange={handlePowerLevelChange}
-                disabled={!isHeaterOn}
-              />
-              <div className="flex justify-between mt-2 text-sm text-bgs-blue/60">
-                <span>Eco</span>
-                <span>Normal</span>
-                <span>Max</span>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="border-t pt-4">
-            <div className="w-full flex justify-between items-center">
-              <span className="text-sm text-bgs-blue/80">Consommation quotidienne:</span>
-              <span className="font-medium">{dailyConsumption.toFixed(1)} kWh</span>
-            </div>
-          </CardFooter>
-        </Card>
-
-        {/* Scheduling */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Clock className="mr-2 text-bgs-orange" />
-              Programmation
-            </CardTitle>
-            <CardDescription>Configurez l'horaire de votre chauffage</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between mb-6">
-              <span className="font-medium">Programme automatique</span>
-              <Switch 
-                checked={scheduleEnabled} 
-                onCheckedChange={setScheduleEnabled}
-                disabled={!isHeaterOn}
-              />
-            </div>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span>Matin (6h - 9h)</span>
-                <Badge variant="outline">21°C</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Journée (9h - 17h)</span>
-                <Badge variant="outline">19°C</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Soir (17h - 23h)</span>
-                <Badge variant="outline">22°C</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Nuit (23h - 6h)</span>
-                <Badge variant="outline">18°C</Badge>
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="justify-end border-t pt-4">
-            <Button variant="outline" size="sm" disabled={!isHeaterOn || !scheduleEnabled}>
-              Modifier
-            </Button>
-          </CardFooter>
-        </Card>
-
-        {/* Energy Stats */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <AlertCircle className="mr-2 text-bgs-orange" />
-              Statistiques Énergétiques
-            </CardTitle>
-            <CardDescription>Analysez votre consommation d'énergie</CardDescription>
+            <CardDescription>Planifiez les périodes de chauffage</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span>Consommation journalière:</span>
-                <span className="font-medium">{dailyConsumption.toFixed(1)} kWh</span>
+              <div className="flex justify-between items-center p-2 border rounded">
+                <div>
+                  <h4 className="text-sm font-medium text-bgs-blue">Matin</h4>
+                  <p className="text-xs text-bgs-blue/60">06:00 - 09:00</p>
+                </div>
+                <Badge>Actif</Badge>
               </div>
-              <div className="flex justify-between items-center">
-                <span>Consommation mensuelle estimée:</span>
-                <span className="font-medium">{(dailyConsumption * 30).toFixed(0)} kWh</span>
+              
+              <div className="flex justify-between items-center p-2 border rounded">
+                <div>
+                  <h4 className="text-sm font-medium text-bgs-blue">Soir</h4>
+                  <p className="text-xs text-bgs-blue/60">17:00 - 22:00</p>
+                </div>
+                <Badge>Actif</Badge>
               </div>
-              <div className="flex justify-between items-center">
-                <span>Coût mensuel estimé:</span>
-                <span className="font-medium">{monthlyCost.toFixed(2)} €</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>Émissions de CO₂:</span>
-                <span className="font-medium">{(dailyConsumption * 0.1 * 30).toFixed(0)} kg/mois</span>
+              
+              <div className="flex justify-between items-center p-2 border rounded opacity-50">
+                <div>
+                  <h4 className="text-sm font-medium text-bgs-blue">Après-midi</h4>
+                  <p className="text-xs text-bgs-blue/60">12:00 - 14:00</p>
+                </div>
+                <Badge variant="outline">Inactif</Badge>
               </div>
             </div>
           </CardContent>
-          <CardFooter className="justify-end border-t pt-4">
-            <Button variant="outline" size="sm">
-              Historique complet
+          <CardFooter>
+            <Button variant="outline" className="w-full" disabled={status === "off"}>
+              Gérer la programmation
             </Button>
           </CardFooter>
         </Card>
       </div>
+      
+      <Card>
+        <CardHeader>
+          <CardTitle>Statistiques de consommation</CardTitle>
+          <CardDescription>Consommation énergétique du chauffage</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-white/50 p-4 rounded">
+              <h4 className="text-sm font-medium text-bgs-blue mb-1">Aujourd'hui</h4>
+              <p className="text-2xl font-bold text-bgs-blue">3.2 kWh</p>
+              <p className="text-xs text-bgs-blue/60">Environ 0.64€</p>
+            </div>
+            
+            <div className="bg-white/50 p-4 rounded">
+              <h4 className="text-sm font-medium text-bgs-blue mb-1">Cette semaine</h4>
+              <p className="text-2xl font-bold text-bgs-blue">18.7 kWh</p>
+              <p className="text-xs text-bgs-blue/60">Environ 3.74€</p>
+            </div>
+            
+            <div className="bg-white/50 p-4 rounded">
+              <h4 className="text-sm font-medium text-bgs-blue mb-1">Ce mois-ci</h4>
+              <p className="text-2xl font-bold text-bgs-blue">78.4 kWh</p>
+              <p className="text-xs text-bgs-blue/60">Environ 15.68€</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default HeaterDashboard;
+}
