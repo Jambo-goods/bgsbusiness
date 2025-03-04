@@ -1,20 +1,7 @@
-
 import { MapPin, Clock, BarChart3, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-
-export interface Project {
-  id: string;
-  name: string;
-  companyName: string;
-  description: string;
-  profitability: number;
-  duration: string;
-  location: string;
-  status: "upcoming" | "active" | "completed";
-  minInvestment: number;
-  image: string;
-}
+import { Project } from "@/types/project";
 
 interface ProjectCardProps {
   project: Project;

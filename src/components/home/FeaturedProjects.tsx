@@ -4,10 +4,11 @@ import { Link } from "react-router-dom";
 import { ArrowRight, CircleCheck, Star } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { projects } from "@/data/projects";
+import { Project } from "@/types/project";
 
 export default function FeaturedProjects() {
   const [visibleProjects, setVisibleProjects] = useState(3);
-  const featuredProjects = projects.filter(project => project.featured);
+  const featuredProjects = projects.filter((project: Project) => project.featured);
   
   return (
     <section className="py-16 bg-gradient-to-b from-white to-bgs-gray-light">

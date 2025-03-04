@@ -1,20 +1,7 @@
-
 import { Link } from "react-router-dom";
 import { CircleCheck, Star } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-
-interface Project {
-  id: string;
-  name: string;
-  description: string;
-  image: string;
-  price: number;
-  category: string;
-  location: string;
-  yield: number;
-  fundingProgress: number;
-  featured?: boolean;
-}
+import { Project } from "@/types/project";
 
 interface ProjectsListProps {
   projects: Project[];
