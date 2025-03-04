@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import { Project } from "@/types/project";
+import { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "@/components/ui/accordion";
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -126,42 +132,26 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
       </div>
       
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <div className="flex items-center mb-6">
+        <div className="flex items-center mb-5">
           <div className="bg-bgs-orange/10 p-2 rounded-full mr-3">
             <HelpCircle className="h-5 w-5 text-bgs-orange" />
           </div>
           <h2 className="text-xl font-semibold text-bgs-blue">Questions fréquentes</h2>
         </div>
         
-        <div className="space-y-4 mt-6">
-          {faqItems.map((faq, index) => (
-            <div 
-              key={index} 
-              className="border border-gray-100 rounded-lg overflow-hidden transition-all duration-300 hover:shadow-md"
-            >
-              <button
-                onClick={() => toggleFaq(index)}
-                className="w-full flex items-center justify-between p-4 text-left bg-gray-50 hover:bg-gray-100 transition-colors"
-              >
-                <h3 className="font-medium text-bgs-blue">{faq.question}</h3>
-                <div className="ml-2 p-1 rounded-full bg-white border border-gray-200">
-                  {openFaqIndex === index ? (
-                    <ChevronUp className="h-4 w-4 text-bgs-orange" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4 text-bgs-blue/70" />
-                  )}
-                </div>
-              </button>
-              
-              <div 
-                className={`overflow-hidden transition-all duration-300 ${
-                  openFaqIndex === index ? 'max-h-40 opacity-100 p-4' : 'max-h-0 opacity-0 p-0'
-                }`}
-              >
-                <p className="text-bgs-blue/80 leading-relaxed">{faq.answer}</p>
-              </div>
-            </div>
-          ))}
+        <div className="mt-4">
+          <Accordion type="single" collapsible className="w-full">
+            {faqItems.map((faq, index) => (
+              <AccordionItem key={index} value={`item-${index}`} className="border-b border-gray-100 last:border-0">
+                <AccordionTrigger className="py-4 text-base font-medium text-bgs-blue hover:text-bgs-orange hover:no-underline">
+                  {faq.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm text-bgs-blue/80 leading-relaxed pb-4">
+                  {faq.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </div>
     </div>
