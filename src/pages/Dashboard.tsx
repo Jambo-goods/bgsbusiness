@@ -68,7 +68,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-bgs-gray-light flex flex-col">
       <Navbar />
       
-      <div className="flex flex-1 pt-24">
+      <div className="flex flex-1 pt-20">
         {/* Mobile sidebar toggle */}
         <button 
           onClick={toggleSidebar}
@@ -98,7 +98,7 @@ export default function Dashboard() {
           "flex-1 p-6 transition-all",
           isSidebarOpen ? "md:ml-0" : "md:ml-0"
         )}>
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             <DashboardHeader userData={userData} />
             
             {/* Dashboard content based on active tab */}

@@ -1,4 +1,9 @@
 
+import { useState } from "react";
+import { toast } from "@/components/ui/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Shield, User, CreditCard, BellRing, Languages } from "lucide-react";
+
 interface SettingsProps {
   userData: {
     firstName: string;
@@ -8,76 +13,260 @@ interface SettingsProps {
 }
 
 export default function Settings({ userData }: SettingsProps) {
+  const [formData, setFormData] = useState({
+    firstName: userData.firstName,
+    lastName: userData.lastName,
+    email: userData.email,
+    password: "",
+    confirmPassword: "",
+  });
+  
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+  
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Modifications enregistrées",
+      description: "Vos paramètres ont été mis à jour avec succès.",
+    });
+  };
+  
   return (
-    <div className="glass-card p-6">
-      <h2 className="text-xl font-semibold text-bgs-blue mb-6">
-        Paramètres du compte
-      </h2>
-      
-      <form className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label htmlFor="firstName" className="block text-sm font-medium text-bgs-blue mb-1">
-              Prénom
-            </label>
-            <input
-              id="firstName"
-              type="text"
-              value={userData.firstName}
-              onChange={() => {}}
-              className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5"
-            />
-          </div>
+    <div className="space-y-6">
+      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-50">
+        <h2 className="text-xl font-semibold text-bgs-blue mb-6">
+          Paramètres du compte
+        </h2>
+        
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="mb-6 bg-bgs-gray-light p-1 rounded-lg">
+            <TabsTrigger value="profile" className="flex items-center gap-2 data-[state=active]:bg-white text-bgs-blue">
+              <User className="h-4 w-4" />
+              Profil
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2 data-[state=active]:bg-white text-bgs-blue">
+              <Shield className="h-4 w-4" />
+              Sécurité
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2 data-[state=active]:bg-white text-bgs-blue">
+              <BellRing className="h-4 w-4" />
+              Notifications
+            </TabsTrigger>
+            <TabsTrigger value="payment" className="flex items-center gap-2 data-[state=active]:bg-white text-bgs-blue">
+              <CreditCard className="h-4 w-4" />
+              Paiement
+            </TabsTrigger>
+          </TabsList>
           
-          <div>
-            <label htmlFor="lastName" className="block text-sm font-medium text-bgs-blue mb-1">
-              Nom
-            </label>
-            <input
-              id="lastName"
-              type="text"
-              value={userData.lastName}
-              onChange={() => {}}
-              className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5"
-            />
-          </div>
-        </div>
-        
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-bgs-blue mb-1">
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={userData.email}
-            onChange={() => {}}
-            className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5"
-          />
-        </div>
-        
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium text-bgs-blue mb-1">
-            Nouveau mot de passe
-          </label>
-          <input
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5"
-          />
-          <p className="mt-1 text-xs text-bgs-blue/70">
-            Laissez vide si vous ne souhaitez pas changer de mot de passe
-          </p>
-        </div>
-        
-        <button
-          type="submit"
-          className="btn-primary"
-        >
-          Enregistrer les modifications
-        </button>
-      </form>
+          <TabsContent value="profile">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="firstName" className="block text-sm font-medium text-bgs-blue mb-1">
+                    Prénom
+                  </label>
+                  <input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    value={formData.firstName}
+                    onChange={handleChange}
+                    className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5 focus:ring-1 focus:ring-bgs-orange focus:border-bgs-orange"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="lastName" className="block text-sm font-medium text-bgs-blue mb-1">
+                    Nom
+                  </label>
+                  <input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    value={formData.lastName}
+                    onChange={handleChange}
+                    className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5 focus:ring-1 focus:ring-bgs-orange focus:border-bgs-orange"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium text-bgs-blue mb-1">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5 focus:ring-1 focus:ring-bgs-orange focus:border-bgs-orange"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="language" className="block text-sm font-medium text-bgs-blue mb-1">
+                  Langue
+                </label>
+                <div className="relative">
+                  <select
+                    id="language"
+                    className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5 appearance-none focus:ring-1 focus:ring-bgs-orange focus:border-bgs-orange"
+                    defaultValue="fr"
+                  >
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                    <option value="es">Español</option>
+                  </select>
+                  <Languages className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-bgs-gray-medium pointer-events-none" />
+                </div>
+              </div>
+              
+              <button
+                type="submit"
+                className="btn-primary"
+              >
+                Enregistrer les modifications
+              </button>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="security">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label htmlFor="currentPassword" className="block text-sm font-medium text-bgs-blue mb-1">
+                  Mot de passe actuel
+                </label>
+                <input
+                  id="currentPassword"
+                  name="currentPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5 focus:ring-1 focus:ring-bgs-orange focus:border-bgs-orange"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-bgs-blue mb-1">
+                  Nouveau mot de passe
+                </label>
+                <input
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleChange}
+                  className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5 focus:ring-1 focus:ring-bgs-orange focus:border-bgs-orange"
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-bgs-blue mb-1">
+                  Confirmer le mot de passe
+                </label>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  className="bg-white border border-gray-200 text-bgs-blue rounded-lg block w-full p-2.5 focus:ring-1 focus:ring-bgs-orange focus:border-bgs-orange"
+                />
+              </div>
+              
+              <div className="flex items-center p-4 bg-blue-50 rounded-lg">
+                <Shield className="h-5 w-5 text-bgs-blue mr-3" />
+                <p className="text-sm text-bgs-blue">Pour une sécurité optimale, utilisez un mot de passe fort avec des lettres, chiffres et symboles.</p>
+              </div>
+              
+              <button
+                type="submit"
+                className="btn-primary"
+              >
+                Mettre à jour le mot de passe
+              </button>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="notifications">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+                <div className="flex items-center">
+                  <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                    <BellRing className="h-5 w-5 text-bgs-blue" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-bgs-blue">Notifications par email</h3>
+                    <p className="text-xs text-bgs-gray-medium">Recevoir des emails sur les nouvelles opportunités</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" value="" className="sr-only peer" defaultChecked />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-bgs-orange/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-bgs-orange"></div>
+                </label>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+                <div className="flex items-center">
+                  <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                    <BellRing className="h-5 w-5 text-bgs-blue" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-bgs-blue">Mises à jour des projets</h3>
+                    <p className="text-xs text-bgs-gray-medium">Recevoir des notifications sur l'avancement des projets</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" value="" className="sr-only peer" defaultChecked />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-bgs-orange/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-bgs-orange"></div>
+                </label>
+              </div>
+              
+              <div className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+                <div className="flex items-center">
+                  <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                    <BellRing className="h-5 w-5 text-bgs-blue" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-bgs-blue">Newsletters mensuelles</h3>
+                    <p className="text-xs text-bgs-gray-medium">Recevoir un résumé mensuel des activités</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" value="" className="sr-only peer" />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-bgs-orange/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-bgs-orange"></div>
+                </label>
+              </div>
+              
+              <button
+                onClick={() => toast({
+                  title: "Paramètres enregistrés",
+                  description: "Vos préférences de notification ont été mises à jour.",
+                })}
+                className="btn-primary w-full mt-4"
+              >
+                Enregistrer les préférences
+              </button>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="payment">
+            <div className="text-center py-8">
+              <CreditCard className="h-16 w-16 mx-auto text-bgs-gray-medium mb-3" />
+              <h3 className="text-lg font-medium text-bgs-blue mb-2">Aucune méthode de paiement</h3>
+              <p className="text-sm text-bgs-gray-medium mb-6">Ajoutez une méthode de paiement pour investir rapidement dans de nouveaux projets</p>
+              <button className="btn-primary">
+                Ajouter une méthode de paiement
+              </button>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }
