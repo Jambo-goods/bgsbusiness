@@ -1,3 +1,6 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,19 +38,12 @@
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -96,6 +92,60 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white text-bgs-blue font-sans antialiased;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl xl:text-6xl;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl;
+  }
+
+  h3 {
+    @apply text-2xl md:text-3xl;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-white bg-opacity-70 backdrop-blur-sm border border-white border-opacity-20 shadow-glass rounded-xl;
+  }
+
+  .btn-primary {
+    @apply bg-bgs-orange text-white font-medium px-6 py-3 rounded-lg transition-all hover:bg-bgs-orange-light focus:outline-none focus:ring-2 focus:ring-bgs-orange focus:ring-opacity-50 shadow-md hover:shadow-lg transform hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-bgs-blue font-medium px-6 py-3 rounded-lg border border-bgs-blue/10 transition-all hover:bg-bgs-gray-light focus:outline-none focus:ring-2 focus:ring-bgs-blue focus:ring-opacity-30 shadow-sm hover:shadow-md;
+  }
+
+  .bg-gradient {
+    @apply bg-gradient-to-r from-bgs-blue via-bgs-blue-light to-bgs-blue;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-bgs-orange to-bgs-orange-light;
+  }
+
+  .page-transition {
+    @apply animate-fade-in;
+  }
+
+  .nav-link {
+    @apply relative text-bgs-blue/80 font-medium hover:text-bgs-blue transition-colors after:absolute after:w-0 after:h-0.5 after:bg-bgs-orange after:left-0 after:-bottom-1 after:transition-all hover:after:w-full;
+  }
+
+  .nav-link.active {
+    @apply text-bgs-blue after:w-full;
+  }
+}
+
+.smooth-scroll {
+  scroll-behavior: smooth;
 }
