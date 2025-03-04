@@ -2,10 +2,10 @@
 import { ReactNode } from "react";
 
 interface InfoStepProps {
-  number: number;
   title: string;
   description: string;
   icon: ReactNode;
+  number?: number; // Make number optional since we'll set it based on the array index
 }
 
 export function InfoStep({ number, title, description, icon }: InfoStepProps) {
@@ -24,7 +24,7 @@ export function InfoStep({ number, title, description, icon }: InfoStepProps) {
 interface InfoSectionProps {
   title: string;
   subtitle: string;
-  steps: InfoStepProps[];
+  steps: Omit<InfoStepProps, 'number'>[]; // Remove number requirement from the steps array
 }
 
 export default function InfoSection({ title, subtitle, steps }: InfoSectionProps) {
@@ -51,7 +51,7 @@ export default function InfoSection({ title, subtitle, steps }: InfoSectionProps
               className="animate-fade-up"
               style={{ animationDelay: `${0.1 * index}s` }}
             >
-              <InfoStep {...step} number={index + 1} />
+              <InfoStep {...step} number={index + 1} /> {/* Add the number prop here */}
             </div>
           ))}
         </div>
