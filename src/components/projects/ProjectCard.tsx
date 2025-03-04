@@ -71,7 +71,7 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-bgs-gray-light p-3 rounded-lg">
             <p className="text-xs text-bgs-gray-medium mb-1">Montant cible</p>
-            <p className="font-semibold text-bgs-blue">{project.fundingTarget}€</p>
+            <p className="font-semibold text-bgs-blue">{project.price}€</p>
           </div>
           <div className="bg-bgs-gray-light p-3 rounded-lg">
             <p className="text-xs text-bgs-gray-medium mb-1">Min. investissement</p>
