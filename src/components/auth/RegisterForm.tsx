@@ -37,13 +37,7 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // Pass user data as a single object instead of separate arguments
-      await register({
-        firstName,
-        lastName,
-        email,
-        password
-      });
+      await register(firstName, lastName, email, password);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Une erreur s'est produite lors de l'inscription");
       console.error("Registration error:", err);
