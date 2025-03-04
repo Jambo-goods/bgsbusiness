@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,6 +10,7 @@ import Overview from "@/components/dashboard/Overview";
 import Investments from "@/components/dashboard/Investments";
 import Settings from "@/components/dashboard/Settings";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
+import { Progress } from "@/components/ui/progress";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");

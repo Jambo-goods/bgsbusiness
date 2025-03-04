@@ -13,6 +13,7 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [filterActive, setFilterActive] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
   
   // Filtered and sorted investments
   const filteredInvestments = userInvestments
@@ -31,83 +32,97 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
     });
   
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-50">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-xl font-semibold text-bgs-blue">
+    <div className="space-y-4">
+      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+          <h2 className="text-base font-medium text-bgs-blue">
             Mes investissements
           </h2>
           
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0 sm:w-64">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-bgs-gray-medium h-4 w-4" />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0 sm:w-60">
+              <SearchIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 text-bgs-gray-medium h-3.5 w-3.5" />
               <input
                 type="text"
                 placeholder="Rechercher un projet..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-4 py-2 w-full border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-bgs-orange"
+                className="pl-7 pr-3 py-1.5 w-full border border-gray-200 rounded-md text-xs focus:outline-none focus:ring-1 focus:ring-bgs-orange"
               />
             </div>
             
             <button 
               onClick={() => setFilterActive(!filterActive)}
-              className={`p-2 rounded-lg border ${filterActive ? 'bg-bgs-blue text-white border-bgs-blue' : 'border-gray-200 text-bgs-gray-medium'}`}
+              className={`p-1.5 rounded-md border ${filterActive ? 'bg-bgs-blue text-white border-bgs-blue' : 'border-gray-200 text-bgs-gray-medium'}`}
             >
-              <FilterIcon className="h-4 w-4" />
+              <FilterIcon className="h-3.5 w-3.5" />
             </button>
             
             <div className="relative">
-              <button className="p-2 rounded-lg border border-gray-200 text-bgs-gray-medium">
-                <ArrowUpDownIcon className="h-4 w-4" />
+              <button 
+                className="p-1.5 rounded-md border border-gray-200 text-bgs-gray-medium"
+                onClick={() => setShowSortMenu(!showSortMenu)}
+              >
+                <ArrowUpDownIcon className="h-3.5 w-3.5" />
               </button>
-              <div className="absolute right-0 mt-1 w-48 bg-white shadow-md rounded-lg border border-gray-100 z-10 hidden">
-                <div className="p-2">
-                  <button 
-                    onClick={() => setSortBy("date")}
-                    className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-gray-50"
-                  >
-                    Date (récent)
-                  </button>
-                  <button 
-                    onClick={() => setSortBy("name")}
-                    className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-gray-50"
-                  >
-                    Nom (A-Z)
-                  </button>
-                  <button 
-                    onClick={() => setSortBy("yield")}
-                    className="block w-full text-left px-3 py-2 text-sm rounded-md hover:bg-gray-50"
-                  >
-                    Rendement (élevé-bas)
-                  </button>
+              {showSortMenu && (
+                <div className="absolute right-0 mt-1 w-40 bg-white shadow-md rounded-md border border-gray-100 z-10">
+                  <div className="p-1">
+                    <button 
+                      onClick={() => {
+                        setSortBy("date");
+                        setShowSortMenu(false);
+                      }}
+                      className="block w-full text-left px-3 py-1.5 text-xs rounded-md hover:bg-gray-50"
+                    >
+                      Date (récent)
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setSortBy("name");
+                        setShowSortMenu(false);
+                      }}
+                      className="block w-full text-left px-3 py-1.5 text-xs rounded-md hover:bg-gray-50"
+                    >
+                      Nom (A-Z)
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setSortBy("yield");
+                        setShowSortMenu(false);
+                      }}
+                      className="block w-full text-left px-3 py-1.5 text-xs rounded-md hover:bg-gray-50"
+                    >
+                      Rendement (élevé-bas)
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>
         
-        <div className="space-y-6">
+        <div className="space-y-3">
           {filteredInvestments.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-bgs-gray-medium">Aucun investissement trouvé</p>
+            <div className="text-center py-8">
+              <p className="text-sm text-bgs-gray-medium">Aucun investissement trouvé</p>
             </div>
           ) : (
             filteredInvestments.map((project) => (
-              <div key={project.id} className="border bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+              <div key={project.id} className="border bg-white rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex flex-col md:flex-row">
                   <img 
                     src={project.image} 
                     alt={project.name} 
-                    className="w-full md:w-48 h-40 object-cover"
+                    className="w-full md:w-40 h-32 object-cover"
                   />
-                  <div className="p-5 flex-1">
+                  <div className="p-3 flex-1">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-semibold text-bgs-blue text-lg mb-1">{project.name}</h3>
-                        <p className="text-sm text-bgs-gray-medium mb-2">{project.location}</p>
+                        <h3 className="font-medium text-bgs-blue text-sm mb-0.5">{project.name}</h3>
+                        <p className="text-xs text-bgs-gray-medium mb-2">{project.location}</p>
                       </div>
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         project.status === 'active' 
                           ? 'bg-blue-100 text-blue-600' 
                           : project.status === 'completed'
@@ -118,34 +133,34 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
                       </span>
                     </div>
                     
-                    <p className="text-sm text-bgs-blue/80 mb-4 line-clamp-2">
+                    <p className="text-xs text-bgs-blue/80 mb-3 line-clamp-1">
                       {project.description}
                     </p>
                     
-                    <div className="mb-4">
+                    <div className="mb-3">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-bgs-gray-medium">Progression</span>
                         <span className="font-medium text-bgs-blue">{project.fundingProgress}%</span>
                       </div>
-                      <Progress value={project.fundingProgress} className="h-1.5 bg-gray-100" indicatorClassName="bg-bgs-orange" />
+                      <Progress value={project.fundingProgress} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
                     </div>
                     
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div>
                         <p className="text-xs text-bgs-gray-medium">Montant investi</p>
-                        <p className="font-semibold text-bgs-blue">2500 €</p>
+                        <p className="font-medium text-bgs-blue text-sm">2500 €</p>
                       </div>
                       <div>
                         <p className="text-xs text-bgs-gray-medium">Rendement</p>
-                        <p className="font-semibold text-green-500">{project.yield}%</p>
+                        <p className="font-medium text-green-500 text-sm">{project.yield}%</p>
                       </div>
                       <div>
                         <p className="text-xs text-bgs-gray-medium">Date</p>
-                        <p className="font-semibold text-bgs-blue">15/03/2023</p>
+                        <p className="font-medium text-bgs-blue text-sm">15/03/2023</p>
                       </div>
                       <div>
                         <p className="text-xs text-bgs-gray-medium">Duration</p>
-                        <p className="font-semibold text-bgs-blue">{project.duration}</p>
+                        <p className="font-medium text-bgs-blue text-sm">{project.duration}</p>
                       </div>
                     </div>
                   </div>
@@ -155,10 +170,10 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
           )}
         </div>
         
-        <div className="mt-8 text-center">
+        <div className="mt-4 text-center">
           <Link 
             to="/projects" 
-            className="btn-primary inline-block"
+            className="text-sm text-bgs-blue hover:text-bgs-orange px-4 py-1.5 rounded-md border border-bgs-blue hover:border-bgs-orange transition-colors inline-block"
           >
             Découvrir de nouveaux projets
           </Link>
