@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { LayoutDashboard, Briefcase, Settings, LogOut, Menu, X } from "lucide-react";
@@ -6,6 +7,7 @@ import { Project } from "@/types/project";
 import { projects } from "@/data/projects";
 import { Progress } from "@/components/ui/progress";
 import Footer from "@/components/layout/Footer";
+import Navbar from "@/components/layout/Navbar";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -61,11 +63,13 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-bgs-gray-light flex flex-col">
-      <div className="flex flex-1">
+      <Navbar />
+      
+      <div className="flex flex-1 pt-24">
         {/* Mobile sidebar toggle */}
         <button 
           onClick={toggleSidebar}
-          className="md:hidden fixed top-4 left-4 z-50 bg-white p-2 rounded-md shadow-md"
+          className="md:hidden fixed top-20 left-4 z-50 bg-white p-2 rounded-md shadow-md"
           aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
         >
           {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
