@@ -1,8 +1,8 @@
-
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ShieldCheck, Globe, Users, TrendingUp } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
 
 export default function About() {
   useEffect(() => {
@@ -172,65 +172,7 @@ export default function About() {
         </section>
       </main>
       
-      {/* Footer section would go here - same as in other pages */}
-      <footer className="bg-bgs-blue text-white py-12">
-        <div className="container px-4 md:px-6 mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div>
-              <img
-                src="lovable-uploads/d9a3204a-06aa-470d-8255-7f3bd0852557.png"
-                alt="BGS Business Club"
-                className="h-12 mb-4"
-              />
-              <p className="text-white/70 mb-4">
-                BGS Business Club vous permet d'investir dans des actifs physiques en Afrique et de générer des rendements attractifs.
-              </p>
-            </div>
-            
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Liens rapides</h4>
-              <ul className="space-y-2">
-                {["Accueil", "Projets", "Comment ça marche", "À propos"].map((link, i) => (
-                  <li key={i}>
-                    <a href={i === 0 ? "/" : `/${link.toLowerCase().replace(/ /g, "-")}`} className="text-white/70 hover:text-white transition-colors">
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Ressources</h4>
-              <ul className="space-y-2">
-                {["FAQ", "Conditions d'utilisation", "Politique de confidentialité"].map((resource, i) => (
-                  <li key={i}>
-                    <a href={`/${resource.toLowerCase().replace(/ /g, "-").replace(/'/g, "")}`} className="text-white/70 hover:text-white transition-colors">
-                      {resource}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            
-            <div>
-              <h4 className="text-lg font-semibold mb-4">Contact</h4>
-              <ul className="space-y-2">
-                <li className="text-white/70">
-                  Email: contact@bgsbusiness.club
-                </li>
-                <li className="text-white/70">
-                  Téléphone: +33 1 23 45 67 89
-                </li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="mt-12 pt-6 border-t border-white/10 text-center text-white/50 text-sm">
-            &copy; {new Date().getFullYear()} BGS Business Club. Tous droits réservés.
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
