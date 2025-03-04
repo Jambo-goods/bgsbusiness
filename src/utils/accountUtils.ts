@@ -24,16 +24,3 @@ export const calculateAnnualReturn = (userInvestments: any[]): number => {
     return total + annualYield;
   }, 0);
 };
-
-// Calculate energy consumption for heater (demo purposes)
-export const calculateHeaterConsumption = (powerLevel: number, hours: number): number => {
-  // Assuming a 2000W heater at 100% power
-  const consumption = (2000 * (powerLevel / 100) * hours) / 1000; // in kWh
-  return Math.round(consumption * 100) / 100;
-};
-
-// Calculate cost of energy (demo purposes)
-export const calculateEnergyCost = (consumption: number): number => {
-  // Assuming 0.20€ per kWh
-  return Math.round(consumption * 0.20 * 100) / 100;
-};
