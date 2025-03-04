@@ -58,11 +58,8 @@ export default function Dashboard() {
 
   if (!userData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-bgs-gray-light to-white flex items-center justify-center">
-        <div className="flex flex-col items-center">
-          <div className="h-12 w-12 rounded-full border-4 border-bgs-orange border-t-transparent animate-spin mb-4"></div>
-          <p className="text-bgs-blue font-medium">Chargement de votre tableau de bord...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-bgs-blue">Chargement...</div>
       </div>
     );
   }
@@ -75,55 +72,51 @@ export default function Dashboard() {
         {/* Mobile sidebar toggle */}
         <button 
           onClick={toggleSidebar}
-          className="md:hidden fixed top-20 left-4 z-50 bg-white p-2 rounded-xl shadow-md border border-gray-100"
+          className="md:hidden fixed top-20 left-4 z-50 bg-white p-2 rounded-md shadow-md"
           aria-label={isSidebarOpen ? "Fermer le menu" : "Ouvrir le menu"}
         >
-          {isSidebarOpen ? <X size={24} className="text-bgs-blue" /> : <Menu size={24} className="text-bgs-blue" />}
+          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
         
         {/* Sidebar */}
         <aside 
           className={cn(
-            "fixed md:sticky top-20 left-0 h-[calc(100vh-5rem)] transition-all duration-300 ease-in-out z-40",
+            "bg-white shadow-md fixed md:static z-40 h-full transition-all",
             isSidebarOpen ? "w-64 translate-x-0" : "w-0 -translate-x-full md:w-20 md:translate-x-0"
           )}
         >
-          <div className="h-full bg-white shadow-md rounded-r-xl overflow-hidden">
-            <Sidebar 
-              activeTab={activeTab} 
-              setActiveTab={setActiveTab} 
-              isSidebarOpen={isSidebarOpen}
-              handleLogout={handleLogout}
-            />
-          </div>
+          <Sidebar 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            isSidebarOpen={isSidebarOpen}
+            handleLogout={handleLogout}
+          />
         </aside>
         
         {/* Main content */}
         <main className={cn(
-          "flex-1 p-6 transition-all duration-300 ease-in-out",
+          "flex-1 p-6 transition-all",
           isSidebarOpen ? "md:ml-0" : "md:ml-0"
         )}>
-          <div className="max-w-7xl mx-auto space-y-6">
+          <div className="max-w-7xl mx-auto">
             <DashboardHeader userData={userData} />
             
             {/* Dashboard content based on active tab */}
-            <div className="transition-all duration-300 ease-in-out">
-              {activeTab === "overview" && (
-                <Overview 
-                  userData={userData} 
-                  userInvestments={userInvestments} 
-                  setActiveTab={setActiveTab} 
-                />
-              )}
-              
-              {activeTab === "investments" && (
-                <Investments userInvestments={userInvestments} />
-              )}
-              
-              {activeTab === "settings" && (
-                <Settings userData={userData} />
-              )}
-            </div>
+            {activeTab === "overview" && (
+              <Overview 
+                userData={userData} 
+                userInvestments={userInvestments} 
+                setActiveTab={setActiveTab} 
+              />
+            )}
+            
+            {activeTab === "investments" && (
+              <Investments userInvestments={userInvestments} />
+            )}
+            
+            {activeTab === "settings" && (
+              <Settings userData={userData} />
+            )}
           </div>
         </main>
       </div>
