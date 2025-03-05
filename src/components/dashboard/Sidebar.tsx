@@ -1,6 +1,5 @@
 
 import { useState, useEffect, useCallback, memo } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SidebarSection from "./SidebarSection";
 import PrincipalSection from "./sections/PrincipalSection";
@@ -55,11 +54,20 @@ const Sidebar = memo(({
     )}>
       <nav className="flex-1 py-4 overflow-y-auto px-2 overscroll-contain">
         <SidebarSection title="Principal" expanded={expanded}>
-          <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} />
+          <PrincipalSection 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            expanded={expanded} 
+          />
         </SidebarSection>
         
         <SidebarSection title="Compte" expanded={expanded}>
-          <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} handleLogout={handleLogout} />
+          <AccountSection 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            expanded={expanded} 
+            handleLogout={handleLogout} 
+          />
         </SidebarSection>
       </nav>
     </div>
