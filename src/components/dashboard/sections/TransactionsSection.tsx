@@ -1,5 +1,4 @@
 
-import { History } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
 interface TransactionsSectionProps {
@@ -9,9 +8,8 @@ interface TransactionsSectionProps {
 }
 
 export default function TransactionsSection({ activeTab, setActiveTab, expanded }: TransactionsSectionProps) {
-  const navItems = [
-    { id: "history", label: "Historique", icon: History },
-  ];
+  // Empty navItems array - removed the History item
+  const navItems: any[] = [];
 
   return (
     <>
