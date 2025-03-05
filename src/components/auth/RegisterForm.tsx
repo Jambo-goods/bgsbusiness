@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle, Loader2 } from "lucide-react";
@@ -57,8 +58,40 @@ export default function RegisterForm() {
       
       if (error) throw error;
       
+      // Initialize user profile with wallet balance
+      if (data.user) {
+        await supabase
+          .from('profiles')
+          .upsert({
+            id: data.user.id,
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            wallet_balance: 0,
+            investment_total: 0,
+            projects_count: 0
+          });
+      }
+      
       // Success
       toast.success("Inscription réussie! Vérifiez votre email pour confirmer votre compte.");
+      
+      // Auto login the user if confirmation not required (helps with testing)
+      try {
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email, 
+          password
+        });
+        
+        if (!loginError) {
+          navigate("/dashboard");
+          return;
+        }
+      } catch (loginErr) {
+        // Silent fail - if auto-login doesn't work, still redirect to login page
+        console.log("Auto-login failed, redirecting to login page");
+      }
+      
       navigate("/login");
       
     } catch (err: any) {
