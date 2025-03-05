@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import Footer from "@/components/layout/Footer";
 import Navbar from "@/components/layout/Navbar";
@@ -8,6 +9,8 @@ import DashboardMain from "@/components/dashboard/DashboardMain";
 import MobileSidebarToggle from "@/components/dashboard/MobileSidebarToggle";
 import DashboardLoading from "@/components/dashboard/DashboardLoading";
 import { projects } from "@/data/projects";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   // Possible activeTab values: "overview", "wallet", "capital", "yield", "investments", "tracking", "profile", "settings"
@@ -21,72 +24,92 @@ export default function Dashboard() {
     address?: string;
     investmentTotal: number;
     projectsCount: number;
+    walletBalance: number;
   } | null>(null);
   const [userInvestments, setUserInvestments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const navigate = useNavigate();
 
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    // Simulate fetching user data
-    // In a real app, this would come from an authentication context or API
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      
-      // Check for recent investment
-      const recentInvestment = localStorage.getItem("recentInvestment");
-      let additionalInvestment = 0;
-      
-      if (recentInvestment) {
-        const investmentData = JSON.parse(recentInvestment);
-        additionalInvestment = investmentData.amount;
+    const fetchUserData = async () => {
+      try {
+        // Vérifier si l'utilisateur est connecté
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (!sessionData.session) {
+          navigate("/login");
+          return;
+        }
+        
+        const userId = sessionData.session.user.id;
+        
+        // Récupérer les données de l'utilisateur depuis profiles
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+          
+        if (profileError) throw profileError;
+        
+        // Récupérer les investissements de l'utilisateur
+        const { data: investmentsData, error: investmentsError } = await supabase
+          .from('investments')
+          .select('project_id')
+          .eq('user_id', userId);
+          
+        if (investmentsError) throw investmentsError;
+        
+        // Filtrer les projets pour obtenir ceux dans lesquels l'utilisateur a investi
+        let userInvestmentProjects = [];
+        
+        if (investmentsData.length > 0) {
+          const projectIds = investmentsData.map(inv => inv.project_id);
+          userInvestmentProjects = projects.filter(p => projectIds.includes(p.id));
+        }
+        
+        setUserData({
+          firstName: profileData.first_name || "Utilisateur",
+          lastName: profileData.last_name || "",
+          email: profileData.email || "",
+          phone: profileData.phone || "",
+          address: profileData.address || "",
+          investmentTotal: profileData.investment_total || 0,
+          projectsCount: profileData.projects_count || 0,
+          walletBalance: profileData.wallet_balance || 0
+        });
+        
+        setUserInvestments(userInvestmentProjects);
+      } catch (err) {
+        console.error("Erreur lors de la récupération des données:", err);
+        toast.error("Erreur lors du chargement des données utilisateur");
+        navigate("/login");
+      } finally {
+        setIsLoading(false);
       }
-      
-      setUserData({
-        firstName: parsedUser.firstName || "Jean",
-        lastName: parsedUser.lastName || "Dupont",
-        email: parsedUser.email || "jean.dupont@example.com",
-        phone: parsedUser.phone || "+33 6 12 34 56 78",
-        address: parsedUser.address || "123 Avenue des Champs-Élysées, Paris",
-        investmentTotal: 7500 + additionalInvestment,
-        projectsCount: 3
-      });
-    } else {
-      // Redirect to login if no user is found
-      window.location.href = "/login";
-    }
+    };
     
-    // Filter user's investments (in a real app, this would be user-specific)
-    let investments = projects.slice(0, 3);
-    
-    // Check if there's a recent investment to add
-    const recentInvestment = localStorage.getItem("recentInvestment");
-    if (recentInvestment) {
-      const investmentData = JSON.parse(recentInvestment);
-      
-      // Find the project in the projects list
-      const project = projects.find(p => p.id === investmentData.projectId);
-      
-      // If the project exists and it's not already in the investments list
-      if (project && !investments.some(i => i.id === project.id)) {
-        // Add the project to the beginning of the list
-        investments = [project, ...investments];
-      }
-    }
-    
-    setUserInvestments(investments);
-  }, []);
+    fetchUserData();
+  }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    window.location.href = "/login";
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate("/login");
+    } catch (error) {
+      console.error("Erreur lors de la déconnexion:", error);
+      toast.error("Erreur lors de la déconnexion");
+    }
   };
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  if (!userData) {
+  if (isLoading) {
     return <DashboardLoading />;
   }
 

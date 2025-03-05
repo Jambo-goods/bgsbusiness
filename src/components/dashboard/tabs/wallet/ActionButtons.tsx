@@ -1,9 +1,8 @@
 
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Upload, Download } from "lucide-react";
+import React, { useState } from "react";
+import { Plus, Minus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 interface ActionButtonsProps {
   onDeposit: () => void;
@@ -11,152 +10,154 @@ interface ActionButtonsProps {
 }
 
 export default function ActionButtons({ onDeposit, onWithdraw }: ActionButtonsProps) {
-  const { toast } = useToast();
-
+  const [isProcessingDeposit, setIsProcessingDeposit] = useState(false);
+  const [isProcessingWithdrawal, setIsProcessingWithdrawal] = useState(false);
+  
+  // Fonction pour effectuer un dépôt
   const handleDeposit = async () => {
+    setIsProcessingDeposit(true);
+    
     try {
+      // Vérifier si l'utilisateur est connecté
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez vous connecter pour effectuer un dépôt",
-          variant: "destructive"
-        });
+        toast.error("Vous devez être connecté pour effectuer un dépôt");
         return;
       }
-
-      // Ajout d'une transaction de dépôt (simulée pour le test)
-      const depositAmount = 1000; // 1000€ pour test
-
-      // Création de la transaction
+      
+      const userId = session.session.user.id;
+      const amount = 500; // Montant fixe pour cet exemple
+      
+      // Créer une transaction de dépôt
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
-          user_id: session.session.user.id,
-          amount: depositAmount,
+          user_id: userId,
+          amount: amount,
           type: 'deposit',
-          description: 'Dépôt de fonds'
+          description: 'Dépôt sur votre compte'
         });
-
+        
       if (transactionError) throw transactionError;
-
-      // Mise à jour du solde du portefeuille
-      const { error: walletError } = await supabase.rpc(
-        'increment_wallet_balance',
-        { user_id: session.session.user.id, increment_amount: depositAmount }
-      );
-
-      if (walletError) throw walletError;
-
-      toast({
-        title: "Dépôt réussi",
-        description: `${depositAmount}€ ont été ajoutés à votre portefeuille`,
-      });
-
-      // Appel de la fonction de rappel
-      onDeposit();
-
+      
+      // Mettre à jour le solde du portefeuille
+      const { data, error: functionError } = await supabase
+        .rpc('increment_wallet_balance', {
+          user_id: userId,
+          increment_amount: amount
+        });
+        
+      if (functionError) throw functionError;
+      
+      toast.success(`Dépôt de ${amount}€ effectué avec succès`);
+      onDeposit(); // Callback pour mettre à jour l'UI
+      
     } catch (error) {
       console.error("Erreur lors du dépôt:", error);
-      toast({
-        title: "Erreur de dépôt",
-        description: "Une erreur s'est produite lors du dépôt des fonds",
-        variant: "destructive"
-      });
+      toast.error("Une erreur s'est produite lors du dépôt");
+    } finally {
+      setIsProcessingDeposit(false);
     }
   };
-
+  
+  // Fonction pour effectuer un retrait
   const handleWithdraw = async () => {
+    setIsProcessingWithdrawal(true);
+    
     try {
+      // Vérifier si l'utilisateur est connecté
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez vous connecter pour effectuer un retrait",
-          variant: "destructive"
-        });
+        toast.error("Vous devez être connecté pour effectuer un retrait");
         return;
       }
-
-      // Récupération du solde actuel
+      
+      const userId = session.session.user.id;
+      const amount = 200; // Montant fixe pour cet exemple
+      
+      // Vérifier le solde actuel
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('wallet_balance')
-        .eq('id', session.session.user.id)
+        .eq('id', userId)
         .single();
-
+        
       if (profileError) throw profileError;
-
-      const withdrawalAmount = 500; // 500€ pour test
-
-      // Vérification que le solde est suffisant
-      if (profileData.wallet_balance < withdrawalAmount) {
-        toast({
-          title: "Solde insuffisant",
-          description: "Vous n'avez pas assez de fonds pour effectuer ce retrait",
-          variant: "destructive"
-        });
+      
+      if (profileData.wallet_balance < amount) {
+        toast.error("Solde insuffisant pour effectuer ce retrait");
         return;
       }
-
-      // Création de la transaction
+      
+      // Créer une transaction de retrait
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
-          user_id: session.session.user.id,
-          amount: withdrawalAmount,
+          user_id: userId,
+          amount: amount,
           type: 'withdrawal',
-          description: 'Retrait de fonds'
+          description: 'Retrait de votre compte'
         });
-
+        
       if (transactionError) throw transactionError;
-
-      // Mise à jour du solde du portefeuille (soustraction)
-      const { error: walletError } = await supabase.rpc(
-        'increment_wallet_balance',
-        { user_id: session.session.user.id, increment_amount: -withdrawalAmount }
-      );
-
-      if (walletError) throw walletError;
-
-      toast({
-        title: "Retrait réussi",
-        description: `${withdrawalAmount}€ ont été retirés de votre portefeuille`,
-      });
-
-      // Appel de la fonction de rappel
-      onWithdraw();
-
+      
+      // Mettre à jour le solde du portefeuille (avec un montant négatif)
+      const { data, error: functionError } = await supabase
+        .rpc('increment_wallet_balance', {
+          user_id: userId,
+          increment_amount: -amount
+        });
+        
+      if (functionError) throw functionError;
+      
+      toast.success(`Retrait de ${amount}€ effectué avec succès`);
+      onWithdraw(); // Callback pour mettre à jour l'UI
+      
     } catch (error) {
       console.error("Erreur lors du retrait:", error);
-      toast({
-        title: "Erreur de retrait",
-        description: "Une erreur s'est produite lors du retrait des fonds",
-        variant: "destructive"
-      });
+      toast.error("Une erreur s'est produite lors du retrait");
+    } finally {
+      setIsProcessingWithdrawal(false);
     }
   };
-
+  
   return (
-    <div className="flex flex-wrap gap-4">
-      <Button 
-        onClick={handleDeposit}
-        className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
-      >
-        <Upload className="h-4 w-4 mr-2" />
-        Déposer des fonds
-      </Button>
+    <div className="bg-white p-6 rounded-xl shadow-sm">
+      <h3 className="text-lg font-semibold text-bgs-blue mb-4">Actions</h3>
       
-      <Button 
-        onClick={handleWithdraw}
-        variant="outline"
-        className="border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10"
-      >
-        <Download className="h-4 w-4 mr-2" />
-        Retirer des fonds
-      </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <button
+          onClick={handleDeposit}
+          disabled={isProcessingDeposit}
+          className="btn-primary py-3 flex items-center justify-center gap-2"
+        >
+          {isProcessingDeposit ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <>
+              <Plus className="h-5 w-5" />
+              Déposer
+            </>
+          )}
+        </button>
+        
+        <button
+          onClick={handleWithdraw}
+          disabled={isProcessingWithdrawal}
+          className="btn-secondary py-3 flex items-center justify-center gap-2"
+        >
+          {isProcessingWithdrawal ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <>
+              <Minus className="h-5 w-5" />
+              Retirer
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
