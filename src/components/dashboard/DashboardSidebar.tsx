@@ -1,5 +1,5 @@
 
-import { memo } from "react";
+import React from "react";
 import { cn } from "@/lib/utils";
 import Sidebar from "./Sidebar";
 
@@ -11,31 +11,27 @@ interface DashboardSidebarProps {
   handleLogout: () => void;
 }
 
-const DashboardSidebar = memo(({
-  activeTab,
-  setActiveTab,
+export default function DashboardSidebar({ 
+  activeTab, 
+  setActiveTab, 
   isSidebarOpen,
   toggleSidebar,
-  handleLogout
-}: DashboardSidebarProps) => {
+  handleLogout 
+}: DashboardSidebarProps) {
   return (
-    <div 
+    <aside 
       className={cn(
-        "fixed inset-y-0 left-0 z-20 flex h-full flex-col border-r bg-white pt-20 transition-transform duration-300 md:translate-x-0 md:pt-20",
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        "bg-white shadow-md fixed md:static z-40 h-full transition-all duration-300",
+        isSidebarOpen ? "w-64 translate-x-0" : "w-0 -translate-x-full md:w-20 md:translate-x-0"
       )}
     >
       <Sidebar 
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
         isSidebarOpen={isSidebarOpen}
         handleLogout={handleLogout}
         toggleSidebar={toggleSidebar}
       />
-    </div>
+    </aside>
   );
-});
-
-DashboardSidebar.displayName = "DashboardSidebar";
-
-export default DashboardSidebar;
+}
