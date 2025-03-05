@@ -38,7 +38,7 @@ export default function TabContent({
       )}
       
       {activeTab === "capital" && (
-        <CapitalTab />
+        <CapitalTab investmentTotal={userData.investmentTotal || 0} />
       )}
       
       {activeTab === "yield" && (
