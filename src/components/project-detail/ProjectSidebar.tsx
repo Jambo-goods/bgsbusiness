@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, TrendingUp, AlertCircle, Eye, Building, MapPin } from "lucide-react";
+import { ArrowRight, Users, TrendingUp, AlertCircle, Eye, Building, MapPin, SliderIcon } from "lucide-react";
 import { Project } from "@/types/project";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 
 interface ProjectSidebarProps {
   project: Project;
@@ -62,6 +63,19 @@ export default function ProjectSidebar({
       setTimeout(() => {
         console.log("Redirection vers la page d'investissement avec montant:", investmentAmount, "et durée:", duration);
       }, 1000);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10) || 0;
+    const max = Math.min(project.price, 20000);
+    
+    if (value < project.minInvestment) {
+      setInvestmentAmount(project.minInvestment);
+    } else if (value > max) {
+      setInvestmentAmount(max);
+    } else {
+      setInvestmentAmount(value);
     }
   };
 
@@ -131,14 +145,31 @@ export default function ProjectSidebar({
               <label className="text-sm font-medium text-bgs-blue">Montant à investir</label>
               <span className="text-sm font-bold text-bgs-blue">{investmentAmount.toLocaleString()} €</span>
             </div>
-            <Slider
-              value={[investmentAmount]}
-              min={project.minInvestment}
-              max={Math.min(project.price, 20000)}
-              step={100}
-              onValueChange={(value) => setInvestmentAmount(value[0])}
-              className="mb-2"
-            />
+            
+            {/* Added flex container for slider and input field */}
+            <div className="flex gap-2 items-center mb-2">
+              <div className="w-full">
+                <Slider
+                  value={[investmentAmount]}
+                  min={project.minInvestment}
+                  max={Math.min(project.price, 20000)}
+                  step={100}
+                  onValueChange={(value) => setInvestmentAmount(value[0])}
+                />
+              </div>
+              
+              <div className="w-24 flex-shrink-0">
+                <Input
+                  type="number"
+                  value={investmentAmount}
+                  onChange={handleInputChange}
+                  min={project.minInvestment}
+                  max={Math.min(project.price, 20000)}
+                  className="text-right text-sm font-medium"
+                />
+              </div>
+            </div>
+            
             <div className="flex justify-between text-xs text-bgs-blue/60">
               <span>Min: {project.minInvestment} €</span>
               <span>Max: {Math.min(project.price, 20000).toLocaleString()} €</span>
