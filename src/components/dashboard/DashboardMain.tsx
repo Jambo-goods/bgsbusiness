@@ -15,6 +15,7 @@ interface DashboardMainProps {
     address?: string;
     investmentTotal: number;
     projectsCount: number;
+    walletBalance?: number;
   };
   activeTab: string;
   userInvestments: Project[];
@@ -32,7 +33,7 @@ export default function DashboardMain({
 }: DashboardMainProps) {
   return (
     <main className={cn(
-      "flex-1 p-6 transition-all",
+      "flex-1 p-6 transition-all overflow-y-auto",
       isSidebarOpen ? "md:ml-0" : "md:ml-0"
     )}>
       <div className="max-w-7xl mx-auto">

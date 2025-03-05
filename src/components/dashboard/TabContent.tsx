@@ -8,6 +8,7 @@ import Investments from "./Investments";
 import ProfileTab from "./tabs/ProfileTab";
 import InvestmentTrackingTab from "./tabs/InvestmentTrackingTab";
 import SettingsTab from "./tabs/SettingsTab";
+import ActivityFeed from "./overview/ActivityFeed";
 
 interface TabContentProps {
   activeTab: string;
@@ -26,15 +27,16 @@ export default function TabContent({
 }: TabContentProps) {
   return (
     <div className={cn("w-full")}>
-      
-      
       {activeTab === "overview" && (
-        <Overview 
-          userData={userData} 
-          userInvestments={userInvestments}
-          setActiveTab={setActiveTab}
-          refreshData={refreshData}
-        />
+        <div className="space-y-6">
+          <Overview 
+            userData={userData} 
+            userInvestments={userInvestments}
+            setActiveTab={setActiveTab}
+            refreshData={refreshData}
+          />
+          <ActivityFeed />
+        </div>
       )}
       
       {activeTab === "wallet" && (

@@ -60,7 +60,6 @@ export default function DashboardLayout({
         />
       </div>
       
-      {/* Footer */}
       <Footer />
     </div>
   );
