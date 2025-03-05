@@ -1,9 +1,10 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, Clock, Calendar, TrendingUp, AlertCircle, Eye } from "lucide-react";
+import { ArrowRight, Users, Clock, Calendar, TrendingUp, AlertCircle, Eye, Building, MapPin, DollarSign } from "lucide-react";
 import { Project } from "@/types/project";
 import { Progress } from "@/components/ui/progress";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 interface ProjectSidebarProps {
@@ -18,9 +19,77 @@ export default function ProjectSidebar({
   investorCount
 }: ProjectSidebarProps) {
   const progressPercentage = project.fundingProgress;
+  const [userBalance] = useState<number>(1000); // Simuler le solde utilisateur
+
+  const handleInvestClick = () => {
+    if (progressPercentage >= 100) {
+      toast.info("Ce projet est entièrement financé", {
+        description: "Découvrez d'autres opportunités d'investissement dans notre catalogue."
+      });
+      return;
+    }
+    
+    if (project.minInvestment > userBalance) {
+      toast.error("Solde insuffisant", {
+        description: "Veuillez recharger votre compte avant de procéder à cet investissement.",
+        action: {
+          label: "Déposer des fonds",
+          onClick: () => console.log("Redirection vers la page de dépôt")
+        }
+      });
+    } else {
+      toast.success("Redirection vers la page d'investissement", {
+        description: "Vous allez pouvoir sélectionner votre montant et la durée."
+      });
+      // Simuler la redirection
+      setTimeout(() => {
+        console.log("Redirection vers la page d'investissement");
+      }, 1000);
+    }
+  };
 
   return (
     <div className="sticky top-24 space-y-4 animate-fade-up">
+      {/* Informations de l'entreprise */}
+      <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
+        <div className="flex items-center mb-4">
+          <Building className="h-5 w-5 text-bgs-blue mr-2" />
+          <h3 className="font-medium text-bgs-blue">Informations de l'entreprise</h3>
+        </div>
+        
+        <div className="space-y-3">
+          <div className="flex items-start">
+            <div className="p-1.5 bg-blue-50 rounded-md mr-2">
+              <Building className="h-4 w-4 text-blue-500" />
+            </div>
+            <div>
+              <p className="text-xs text-bgs-blue/70">Nom de l'entreprise</p>
+              <p className="text-sm font-semibold text-bgs-blue">{project.companyName}</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start">
+            <div className="p-1.5 bg-green-50 rounded-md mr-2">
+              <TrendingUp className="h-4 w-4 text-green-500" />
+            </div>
+            <div>
+              <p className="text-xs text-bgs-blue/70">Rentabilité estimée</p>
+              <p className="text-sm font-semibold text-green-600">{project.yield}%</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start">
+            <div className="p-1.5 bg-amber-50 rounded-md mr-2">
+              <MapPin className="h-4 w-4 text-amber-500" />
+            </div>
+            <div>
+              <p className="text-xs text-bgs-blue/70">Localisation</p>
+              <p className="text-sm font-semibold text-bgs-blue">{project.location}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       {/* Project Status Card */}
       <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <div className="space-y-4">
@@ -80,10 +149,27 @@ export default function ProjectSidebar({
           </div>
           
           {/* CTA Button */}
-          <Button className="w-full bg-bgs-orange hover:bg-bgs-orange-light text-white rounded-lg py-6 font-medium flex items-center justify-center shadow-md hover:shadow-lg transition-all">
-            Investir maintenant
-            <ArrowRight className="ml-2 h-4 w-4" />
+          <Button 
+            onClick={handleInvestClick}
+            className={cn(
+              "w-full text-white rounded-lg py-6 font-medium flex items-center justify-center shadow-md hover:shadow-lg transition-all",
+              userBalance < project.minInvestment ? "bg-gray-400 hover:bg-gray-500" : "bg-bgs-orange hover:bg-bgs-orange-light"
+            )}
+          >
+            {userBalance < project.minInvestment ? "Solde insuffisant" : "Investir maintenant"}
+            {userBalance >= project.minInvestment && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
+          
+          {userBalance < project.minInvestment && (
+            <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 mt-2">
+              <div className="flex items-start">
+                <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
+                <p className="text-xs text-bgs-blue/80">
+                  Votre solde actuel ({userBalance.toLocaleString()} €) est insuffisant pour l'investissement minimum de {project.minInvestment.toLocaleString()} €
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       
