@@ -158,13 +158,6 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
           </div>
         </div>
       )}
-      
-      <button
-        onClick={handleInvestClick}
-        className="w-full py-3 px-4 bg-bgs-orange text-white rounded-lg font-medium hover:bg-bgs-orange-light transition-colors"
-      >
-        Investir maintenant
-      </button>
     </div>
   );
 }
