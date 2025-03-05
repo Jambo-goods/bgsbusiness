@@ -68,11 +68,11 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
         
         <Progress 
           value={project.fundingProgress} 
-          className="bg-gray-100 mb-6" 
+          className="bg-gray-100" 
           size="sm"
         />
         
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-4 mt-6 mb-6">
           <div className="bg-bgs-gray-light p-3 rounded-lg">
             <p className="text-xs text-bgs-gray-medium mb-1">Rentabilité annualisée</p>
             <p className="font-semibold text-green-600">{annualYield}%</p>
