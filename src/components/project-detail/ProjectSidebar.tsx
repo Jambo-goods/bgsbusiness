@@ -1,10 +1,11 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, TrendingUp, AlertCircle, Eye, Building, MapPin } from "lucide-react";
 import { Project } from "@/types/project";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Slider } from "@/components/ui/slider";
 
 interface ProjectSidebarProps {
   project: Project;
@@ -19,6 +20,23 @@ export default function ProjectSidebar({
 }: ProjectSidebarProps) {
   const progressPercentage = project.fundingProgress;
   const [userBalance] = useState<number>(1000); // Simuler le solde utilisateur
+  const [investmentAmount, setInvestmentAmount] = useState<number>(project.minInvestment);
+  const [duration, setDuration] = useState<number>(
+    project.possibleDurations ? project.possibleDurations[0] : 12
+  );
+  const [totalReturn, setTotalReturn] = useState<number>(0);
+  const [monthlyReturn, setMonthlyReturn] = useState<number>(0);
+  
+  // Calculer les rendements lorsque les entrées changent
+  useEffect(() => {
+    // Rendement annuel converti en rendement pour la durée sélectionnée
+    const returnRate = (project.yield / 100) * (duration / 12);
+    const calculatedTotalReturn = investmentAmount * (1 + returnRate);
+    const calculatedMonthlyReturn = calculatedTotalReturn / duration;
+    
+    setTotalReturn(calculatedTotalReturn);
+    setMonthlyReturn(calculatedMonthlyReturn);
+  }, [investmentAmount, duration, project.yield]);
 
   const handleInvestClick = () => {
     if (progressPercentage >= 100) {
@@ -28,7 +46,7 @@ export default function ProjectSidebar({
       return;
     }
     
-    if (project.minInvestment > userBalance) {
+    if (investmentAmount > userBalance) {
       toast.error("Solde insuffisant", {
         description: "Veuillez recharger votre compte avant de procéder à cet investissement.",
         action: {
@@ -38,11 +56,11 @@ export default function ProjectSidebar({
       });
     } else {
       toast.success("Redirection vers la page d'investissement", {
-        description: "Vous allez pouvoir sélectionner votre montant et la durée."
+        description: "Vous allez pouvoir confirmer votre montant de " + investmentAmount + "€ sur " + duration + " mois."
       });
       // Simuler la redirection
       setTimeout(() => {
-        console.log("Redirection vers la page d'investissement");
+        console.log("Redirection vers la page d'investissement avec montant:", investmentAmount, "et durée:", duration);
       }, 1000);
     }
   };
@@ -107,6 +125,66 @@ export default function ProjectSidebar({
             </div>
           </div>
           
+          {/* Investment Amount */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-bgs-blue">Montant à investir</label>
+              <span className="text-sm font-bold text-bgs-blue">{investmentAmount.toLocaleString()} €</span>
+            </div>
+            <Slider
+              value={[investmentAmount]}
+              min={project.minInvestment}
+              max={Math.min(project.price, 20000)}
+              step={100}
+              onValueChange={(value) => setInvestmentAmount(value[0])}
+              className="mb-2"
+            />
+            <div className="flex justify-between text-xs text-bgs-blue/60">
+              <span>Min: {project.minInvestment} €</span>
+              <span>Max: {Math.min(project.price, 20000).toLocaleString()} €</span>
+            </div>
+          </div>
+          
+          {/* Investment Duration */}
+          {project.possibleDurations && (
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-bgs-blue">Durée d'investissement</label>
+                <span className="text-sm font-bold text-bgs-blue">{duration} mois</span>
+              </div>
+              <div className="flex justify-between gap-2">
+                {project.possibleDurations.map((months) => (
+                  <button
+                    key={months}
+                    onClick={() => setDuration(months)}
+                    className={`flex-1 py-2 px-1 text-sm rounded-md transition-colors ${
+                      duration === months
+                        ? "bg-bgs-blue text-white"
+                        : "bg-gray-100 text-bgs-blue hover:bg-gray-200"
+                    }`}
+                  >
+                    {months} mois
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Return Calculation */}
+          <div className="p-3 bg-bgs-gray-light rounded-lg mb-4">
+            <h3 className="text-sm font-medium text-bgs-blue mb-2">Simulation de rendement</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-bgs-blue/70">Retour total estimé</p>
+                <p className="text-sm font-semibold text-bgs-blue">{totalReturn.toLocaleString(undefined, {maximumFractionDigits: 2})} €</p>
+              </div>
+              <div>
+                <p className="text-xs text-bgs-blue/70">Retour mensuel</p>
+                <p className="text-sm font-semibold text-bgs-blue">{monthlyReturn.toLocaleString(undefined, {maximumFractionDigits: 2})} €</p>
+              </div>
+            </div>
+          </div>
+          
           {/* Investment Details */}
           <div className="space-y-3 pt-2 border-t border-gray-100">
             <div className="flex justify-between">
@@ -124,19 +202,19 @@ export default function ProjectSidebar({
             onClick={handleInvestClick}
             className={cn(
               "w-full text-white rounded-lg py-6 font-medium flex items-center justify-center shadow-md hover:shadow-lg transition-all",
-              userBalance < project.minInvestment ? "bg-gray-400 hover:bg-gray-500" : "bg-bgs-orange hover:bg-bgs-orange-light"
+              investmentAmount > userBalance ? "bg-gray-400 hover:bg-gray-500" : "bg-bgs-orange hover:bg-bgs-orange-light"
             )}
           >
-            {userBalance < project.minInvestment ? "Solde insuffisant" : "Investir maintenant"}
-            {userBalance >= project.minInvestment && <ArrowRight className="ml-2 h-4 w-4" />}
+            {investmentAmount > userBalance ? "Solde insuffisant" : "Investir maintenant"}
+            {investmentAmount <= userBalance && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
           
-          {userBalance < project.minInvestment && (
+          {investmentAmount > userBalance && (
             <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 mt-2">
               <div className="flex items-start">
                 <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
                 <p className="text-xs text-bgs-blue/80">
-                  Votre solde actuel ({userBalance.toLocaleString()} €) est insuffisant pour l'investissement minimum de {project.minInvestment.toLocaleString()} €
+                  Votre solde actuel ({userBalance.toLocaleString()} €) est insuffisant pour l'investissement de {investmentAmount.toLocaleString()} €
                 </p>
               </div>
             </div>
