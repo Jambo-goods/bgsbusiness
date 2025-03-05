@@ -7,6 +7,7 @@ import NameFields from "./NameFields";
 import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import TermsCheckbox from "./TermsCheckbox";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
@@ -38,30 +39,63 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // Simulation d'un délai de réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      console.log("Registration attempt with:", { firstName, lastName, email });
-      
-      // For demo purposes, create a user and store in localStorage
-      // In a real app, this would send the data to a backend
-      const userData = {
-        firstName,
-        lastName,
-        email
-      };
-      
-      localStorage.setItem("user", JSON.stringify(userData));
-      
-      toast({
-        title: "Inscription réussie",
-        description: "Votre compte a été créé avec succès",
+      // Tenter de s'inscrire avec Supabase
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName
+          }
+        }
       });
       
-      navigate("/dashboard");
+      if (signUpError) throw signUpError;
+      
+      if (data && data.user) {
+        // S'assurer que le solde du portefeuille est initialisé à 0
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ 
+            wallet_balance: 0,
+            investment_total: 0,
+            projects_count: 0
+          })
+          .eq('id', data.user.id);
+        
+        if (profileError) {
+          console.error("Erreur lors de l'initialisation du profil:", profileError);
+        }
+        
+        toast({
+          title: "Inscription réussie",
+          description: "Votre compte a été créé avec succès",
+        });
+        
+        // Pour la démo, créer également une entrée dans localStorage
+        const userData = {
+          firstName,
+          lastName,
+          email,
+          wallet_balance: 0,
+          investment_total: 0,
+          projects_count: 0
+        };
+        
+        localStorage.setItem("user", JSON.stringify(userData));
+        
+        navigate("/dashboard");
+      }
     } catch (err) {
-      setError("Une erreur s'est produite lors de l'inscription");
       console.error("Registration error:", err);
+      
+      // Afficher un message d'erreur plus convivial
+      if (err.message?.includes("email") || err.message?.includes("already registered")) {
+        setError("Cette adresse email est déjà utilisée. Veuillez vous connecter ou utiliser une autre adresse.");
+      } else {
+        setError("Une erreur s'est produite lors de l'inscription. Veuillez réessayer.");
+      }
     } finally {
       setIsLoading(false);
     }

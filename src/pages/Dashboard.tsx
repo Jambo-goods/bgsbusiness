@@ -49,14 +49,18 @@ export default function Dashboard() {
             additionalInvestment = investmentData.amount;
           }
           
+          // S'assurer que les valeurs par défaut sont à 0 si elles ne sont pas définies
+          const investmentTotal = (parsedUser.investmentTotal || parsedUser.investment_total || 0) + additionalInvestment;
+          const projectsCount = parsedUser.projectsCount || parsedUser.projects_count || 0;
+          
           setUserData({
             firstName: parsedUser.firstName || "Jean",
             lastName: parsedUser.lastName || "Dupont",
             email: parsedUser.email || "jean.dupont@example.com",
             phone: parsedUser.phone || "+33 6 12 34 56 78",
             address: parsedUser.address || "123 Avenue des Champs-Élysées, Paris",
-            investmentTotal: 7500 + additionalInvestment,
-            projectsCount: 3
+            investmentTotal: investmentTotal,
+            projectsCount: projectsCount
           });
           
           // Filtrer les investissements de l'utilisateur (dans une vraie application, ce serait spécifique à l'utilisateur)
@@ -101,14 +105,15 @@ export default function Dashboard() {
         }
         
         // Mettre à jour les données utilisateur
+        // Utiliser des valeurs par défaut de 0 pour les propriétés numériques
         setUserData({
           firstName: profileData.first_name || "Utilisateur",
           lastName: profileData.last_name || "",
           email: user.email || "",
           phone: profileData.phone || "",
           address: profileData.address || "",
-          investmentTotal: profileData.investment_total || 0,
-          projectsCount: profileData.projects_count || 0
+          investmentTotal: profileData.investment_total ?? 0,
+          projectsCount: profileData.projects_count ?? 0
         });
         
         // Récupérer les investissements de l'utilisateur
@@ -131,7 +136,7 @@ export default function Dashboard() {
           setUserInvestments(formattedInvestments);
         } else {
           // Aucun investissement trouvé, utiliser des données de démo
-          setUserInvestments(projects.slice(0, 3));
+          setUserInvestments([]);
         }
       }
     } catch (error) {

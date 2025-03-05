@@ -38,7 +38,11 @@ export default function WalletTab() {
       if (profileError) {
         console.error("Erreur lors de la récupération du profil:", profileError);
       } else if (profileData) {
-        setBalance(profileData.wallet_balance || 0);
+        // Utiliser l'opérateur nullish coalescing pour garantir que la valeur est 0 si null ou undefined
+        setBalance(profileData.wallet_balance ?? 0);
+      } else {
+        // Cas où le profil n'existe pas encore, initialiser à 0
+        setBalance(0);
       }
       
       // Fetch wallet transactions
