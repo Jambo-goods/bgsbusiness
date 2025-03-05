@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -16,33 +16,72 @@ import {
   RefreshCw 
 } from "lucide-react";
 
+// Type définition pour les paramètres
+type UserSettings = {
+  language: string;
+  theme: string;
+  sidebarCollapsed: boolean;
+  notifications: {
+    email: boolean;
+    app: boolean;
+    marketing: boolean;
+  };
+};
+
+// Valeurs par défaut des paramètres
+const defaultSettings: UserSettings = {
+  language: "fr",
+  theme: "light",
+  sidebarCollapsed: false,
+  notifications: {
+    email: true,
+    app: true,
+    marketing: false
+  }
+};
+
 export default function SettingsTab() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [settings, setSettings] = useState({
-    language: "fr",
-    theme: "light",
-    sidebarCollapsed: false,
-    notifications: {
-      email: true,
-      app: true,
-      marketing: false
-    }
-  });
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings);
 
-  const handleSwitchChange = (key: string, subKey?: string) => {
+  // Charger les paramètres depuis localStorage au chargement du composant
+  useEffect(() => {
+    const savedSettings = localStorage.getItem("userSettings");
+    if (savedSettings) {
+      try {
+        const parsedSettings = JSON.parse(savedSettings);
+        setSettings(parsedSettings);
+      } catch (error) {
+        console.error("Erreur lors du chargement des paramètres:", error);
+        // En cas d'erreur, utiliser les paramètres par défaut
+        setSettings(defaultSettings);
+      }
+    }
+  }, []);
+
+  // Appliquer le thème au chargement et lorsqu'il change
+  useEffect(() => {
+    // Ici on pourrait implémenter la logique pour changer le thème de l'application
+    document.documentElement.classList.toggle("dark", settings.theme === "dark");
+    
+    // On pourrait aussi ajuster d'autres éléments UI en fonction des préférences
+    console.log(`Thème appliqué: ${settings.theme}`);
+  }, [settings.theme]);
+
+  const handleSwitchChange = (key: keyof Omit<UserSettings, "notifications">, subKey?: keyof UserSettings["notifications"]) => {
     if (subKey) {
       setSettings(prev => ({
         ...prev,
-        [key]: {
-          ...prev[key as keyof typeof prev],
-          [subKey]: !(prev[key as keyof typeof prev] as Record<string, boolean>)[subKey]
+        notifications: {
+          ...prev.notifications,
+          [subKey]: !prev.notifications[subKey]
         }
       }));
     } else {
       setSettings(prev => ({
         ...prev,
-        [key]: !prev[key as keyof typeof prev]
+        [key]: !prev[key]
       }));
     }
   };
@@ -65,17 +104,18 @@ export default function SettingsTab() {
     setIsLoading(true);
 
     try {
-      // Simuler une requête API
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Dans une application réelle, nous sauvegarderions les paramètres dans une base de données
+      // Sauvegarder les paramètres dans localStorage
       localStorage.setItem("userSettings", JSON.stringify(settings));
+      
+      // Appliquer les paramètres immédiatement
+      document.documentElement.classList.toggle("dark", settings.theme === "dark");
       
       toast({
         title: "Paramètres enregistrés",
         description: "Vos préférences ont été mises à jour avec succès",
       });
     } catch (error) {
+      console.error("Erreur lors de la sauvegarde des paramètres:", error);
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de la sauvegarde des paramètres",

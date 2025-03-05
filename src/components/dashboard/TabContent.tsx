@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
 import WalletTab from "./tabs/WalletTab";
@@ -24,6 +23,8 @@ export default function TabContent({
 }: TabContentProps) {
   return (
     <div className={cn("w-full")}>
+      
+      
       {activeTab === "overview" && (
         <Overview 
           userData={userData} 
