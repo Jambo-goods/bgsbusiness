@@ -1,12 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, TrendingUp, AlertCircle, Eye, Building, MapPin, SliderIcon } from "lucide-react";
+import { ArrowRight, Users, TrendingUp, AlertCircle, Eye, Building, MapPin, Clock, CalendarClock } from "lucide-react";
 import { Project } from "@/types/project";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
-import { Input } from "@/components/ui/input";
 
 interface ProjectSidebarProps {
   project: Project;
@@ -28,9 +26,7 @@ export default function ProjectSidebar({
   const [totalReturn, setTotalReturn] = useState<number>(0);
   const [monthlyReturn, setMonthlyReturn] = useState<number>(0);
   
-  // Calculer les rendements lorsque les entrées changent
   useEffect(() => {
-    // Rendement annuel converti en rendement pour la durée sélectionnée
     const returnRate = (project.yield / 100) * (duration / 12);
     const calculatedTotalReturn = investmentAmount * (1 + returnRate);
     const calculatedMonthlyReturn = calculatedTotalReturn / duration;
@@ -59,29 +55,14 @@ export default function ProjectSidebar({
       toast.success("Redirection vers la page d'investissement", {
         description: "Vous allez pouvoir confirmer votre montant de " + investmentAmount + "€ sur " + duration + " mois."
       });
-      // Simuler la redirection
       setTimeout(() => {
         console.log("Redirection vers la page d'investissement avec montant:", investmentAmount, "et durée:", duration);
       }, 1000);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10) || 0;
-    const max = Math.min(project.price, 20000);
-    
-    if (value < project.minInvestment) {
-      setInvestmentAmount(project.minInvestment);
-    } else if (value > max) {
-      setInvestmentAmount(max);
-    } else {
-      setInvestmentAmount(value);
-    }
-  };
-
   return (
     <div className="sticky top-24 space-y-4 animate-fade-up">
-      {/* Informations de l'entreprise */}
       <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <div className="flex items-center mb-4">
           <Building className="h-5 w-5 text-bgs-blue mr-2" />
@@ -121,10 +102,8 @@ export default function ProjectSidebar({
         </div>
       </div>
       
-      {/* Project Status Card */}
       <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <div className="space-y-4">
-          {/* Stats */}
           <div className="grid grid-cols-1 gap-3 my-4">
             <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
               <div className="flex items-center">
@@ -139,44 +118,25 @@ export default function ProjectSidebar({
             </div>
           </div>
           
-          {/* Investment Amount */}
           <div className="mb-4">
             <div className="flex justify-between items-center mb-2">
               <label className="text-sm font-medium text-bgs-blue">Montant à investir</label>
               <span className="text-sm font-bold text-bgs-blue">{investmentAmount.toLocaleString()} €</span>
             </div>
-            
-            {/* Added flex container for slider and input field */}
-            <div className="flex gap-2 items-center mb-2">
-              <div className="w-full">
-                <Slider
-                  value={[investmentAmount]}
-                  min={project.minInvestment}
-                  max={Math.min(project.price, 20000)}
-                  step={100}
-                  onValueChange={(value) => setInvestmentAmount(value[0])}
-                />
-              </div>
-              
-              <div className="w-24 flex-shrink-0">
-                <Input
-                  type="number"
-                  value={investmentAmount}
-                  onChange={handleInputChange}
-                  min={project.minInvestment}
-                  max={Math.min(project.price, 20000)}
-                  className="text-right text-sm font-medium"
-                />
-              </div>
-            </div>
-            
+            <Slider
+              value={[investmentAmount]}
+              min={project.minInvestment}
+              max={Math.min(project.price, 20000)}
+              step={100}
+              onValueChange={(value) => setInvestmentAmount(value[0])}
+              className="mb-2"
+            />
             <div className="flex justify-between text-xs text-bgs-blue/60">
               <span>Min: {project.minInvestment} €</span>
               <span>Max: {Math.min(project.price, 20000).toLocaleString()} €</span>
             </div>
           </div>
           
-          {/* Investment Duration */}
           {project.possibleDurations && (
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
@@ -198,10 +158,19 @@ export default function ProjectSidebar({
                   </button>
                 ))}
               </div>
+              <div className="flex justify-between items-center mt-2 text-xs text-bgs-blue/60">
+                <div className="flex items-center">
+                  <Clock className="h-3.5 w-3.5 mr-1 text-bgs-blue/70" />
+                  <span>Min: {Math.min(...project.possibleDurations!)} mois</span>
+                </div>
+                <div className="flex items-center">
+                  <CalendarClock className="h-3.5 w-3.5 mr-1 text-bgs-blue/70" />
+                  <span>Max: {Math.max(...project.possibleDurations!)} mois</span>
+                </div>
+              </div>
             </div>
           )}
           
-          {/* Return Calculation */}
           <div className="p-3 bg-bgs-gray-light rounded-lg mb-4">
             <h3 className="text-sm font-medium text-bgs-blue mb-2">Simulation de rendement</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -216,7 +185,6 @@ export default function ProjectSidebar({
             </div>
           </div>
           
-          {/* Investment Details */}
           <div className="space-y-3 pt-2 border-t border-gray-100">
             <div className="flex justify-between">
               <span className="text-sm text-bgs-blue/80">Investissement min.</span>
@@ -228,7 +196,6 @@ export default function ProjectSidebar({
             </div>
           </div>
           
-          {/* CTA Button */}
           <Button 
             onClick={handleInvestClick}
             className={cn(
@@ -253,7 +220,6 @@ export default function ProjectSidebar({
         </div>
       </div>
       
-      {/* Project Metrics */}
       <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <h3 className="font-medium text-bgs-blue mb-3">Performance attendue</h3>
         <div className="flex items-center mb-3">
@@ -280,7 +246,6 @@ export default function ProjectSidebar({
         </div>
       </div>
       
-      {/* View Count */}
       <div className="flex items-center justify-center text-xs text-bgs-blue/60 bg-white rounded-lg py-2 shadow-sm border border-gray-100">
         <Eye className="h-3 w-3 mr-1" />
         <span>{100 + Math.floor(Math.random() * 900)} personnes ont consulté ce projet</span>
