@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import { Edit, Save } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 
 interface InvestmentAmountSectionProps {
   investmentAmount: number;
@@ -17,8 +18,8 @@ export default function InvestmentAmountSection({
 }: InvestmentAmountSectionProps) {
   const [isEditingAmount, setIsEditingAmount] = useState(false);
   
-  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInvestmentAmount(parseInt(e.target.value));
+  const handleSliderChange = (values: number[]) => {
+    setInvestmentAmount(values[0]);
   };
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -39,7 +40,7 @@ export default function InvestmentAmountSection({
   };
 
   return (
-    <div className="mb-4 bg-bgs-gray-light p-3 rounded-lg">
+    <div className="mb-4 bg-gradient-to-br from-white to-bgs-gray-light p-4 rounded-lg shadow-sm border border-gray-100">
       <div className="flex justify-between items-center mb-2">
         <span className="text-sm font-medium text-bgs-blue">Montant d'investissement</span>
         <button 
@@ -62,20 +63,26 @@ export default function InvestmentAmountSection({
         />
       ) : (
         <>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-bgs-blue/70">{minInvestment}€</span>
-            <span className="text-xl font-bold text-bgs-blue">{investmentAmount}€</span>
-            <span className="text-sm text-bgs-blue/70">{maxInvestment}€</span>
+          <div className="mb-3">
+            <span className="block text-center text-2xl font-bold text-gradient bg-gradient-to-r from-bgs-blue to-bgs-orange">{investmentAmount}€</span>
           </div>
-          <input
-            type="range"
-            min={minInvestment}
-            max={maxInvestment}
-            step={100}
-            value={investmentAmount}
-            onChange={handleSliderChange}
-            className="w-full accent-bgs-orange"
-          />
+          
+          <div className="px-2 py-3">
+            <Slider
+              defaultValue={[investmentAmount]}
+              max={maxInvestment}
+              min={minInvestment}
+              step={100}
+              value={[investmentAmount]}
+              onValueChange={handleSliderChange}
+              className="my-4"
+            />
+            
+            <div className="flex justify-between mt-3">
+              <span className="text-sm text-bgs-blue/70">{minInvestment}€</span>
+              <span className="text-sm text-bgs-blue/70">{maxInvestment}€</span>
+            </div>
+          </div>
         </>
       )}
     </div>
