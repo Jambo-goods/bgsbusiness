@@ -8,20 +8,35 @@ interface PerformanceSectionProps {
 }
 
 export default function PerformanceSection({ project }: PerformanceSectionProps) {
+  // Calculate annual yield for display
+  const annualYield = project.yield * 12;
+  
   return (
     <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
       <h3 className="font-medium text-bgs-blue mb-3">Performance attendue</h3>
+      
+      <div className="flex items-center mb-3">
+        <div className="p-1.5 bg-green-50 rounded-md mr-2">
+          <TrendingUp className="h-4 w-4 text-green-500" />
+        </div>
+        <div>
+          <p className="text-xs text-bgs-blue/70">Rendement mensuel</p>
+          <p className="text-sm font-bold text-green-600">{project.yield}%</p>
+        </div>
+      </div>
+      
       <div className="flex items-center mb-3">
         <div className="p-1.5 bg-green-50 rounded-md mr-2">
           <TrendingUp className="h-4 w-4 text-green-500" />
         </div>
         <div>
           <p className="text-xs text-bgs-blue/70">Rendement annualisé</p>
-          <p className="text-sm font-bold text-green-600">{project.yield}%</p>
+          <p className="text-sm font-bold text-green-600">{annualYield}%</p>
         </div>
       </div>
+      
       <p className="text-xs text-bgs-blue/70 mb-2">
-        Ce rendement est une estimation basée sur les performances historiques de projets similaires. 
+        Ce rendement mensuel de {project.yield}% ({annualYield}% annualisé) est une estimation basée sur les performances historiques de projets similaires. 
         Les rendements réels peuvent varier.
       </p>
       

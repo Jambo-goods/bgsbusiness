@@ -19,6 +19,10 @@ interface OverviewProps {
 }
 
 export default function Overview({ userData, userInvestments, setActiveTab }: OverviewProps) {
+  // Calculate yearly yield for display
+  const monthlyYield = 1.125; // 1.125% per month
+  const annualYield = monthlyYield * 12; // 13.5% per year
+  
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -60,14 +64,15 @@ export default function Overview({ userData, userInvestments, setActiveTab }: Ov
 
         {/* Rendement moyen card */}
         <DashboardCard
-          title="Rendement moyen"
-          value="13.5%"
+          title="Rendement mensuel moyen"
+          value={`${monthlyYield}%`}
           icon={<TrendingUpIcon />}
           iconBgColor="bg-green-100"
           iconColor="text-green-600"
-          changePercentage="+1.2%"
-          changeValue="↑ 1.2%"
-          changeTimeframe="le dernier semestre"
+          changePercentage="+0.1%"
+          changeValue="↑ 0.1%"
+          changeTimeframe="le dernier mois"
+          description={`${annualYield}% annualisé`}
         />
       </div>
       

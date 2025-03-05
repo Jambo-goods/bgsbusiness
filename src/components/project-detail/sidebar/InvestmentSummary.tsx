@@ -9,6 +9,9 @@ interface InvestmentSummaryProps {
 }
 
 export default function InvestmentSummary({ project, selectedDuration }: InvestmentSummaryProps) {
+  // Calculate annual yield for display
+  const annualYield = project.yield * 12;
+  
   return (
     <div className="bg-gradient-to-br from-white to-bgs-gray-light p-4 rounded-lg mb-4 shadow-sm border border-gray-100">
       <h4 className="text-sm font-medium text-bgs-blue mb-3">Résumé de l'investissement</h4>
@@ -19,9 +22,19 @@ export default function InvestmentSummary({ project, selectedDuration }: Investm
             <div className="bg-bgs-orange/10 p-1.5 rounded-lg">
               <TrendingUp size={14} className="text-bgs-orange" />
             </div>
-            <span>Rendement estimé</span>
+            <span>Rendement mensuel</span>
           </div>
           <span className="font-semibold text-bgs-orange">{project.yield}%</span>
+        </div>
+        
+        <div className="flex justify-between items-center text-sm">
+          <div className="flex items-center gap-2 text-bgs-blue">
+            <div className="bg-green-100 p-1.5 rounded-lg">
+              <TrendingUp size={14} className="text-green-600" />
+            </div>
+            <span>Rendement annualisé</span>
+          </div>
+          <span className="font-semibold text-green-600">{annualYield}%</span>
         </div>
         
         <div className="flex justify-between items-center text-sm">

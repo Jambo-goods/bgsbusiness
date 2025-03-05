@@ -151,7 +151,7 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
                         <p className="font-medium text-bgs-blue text-sm">2500 €</p>
                       </div>
                       <div>
-                        <p className="text-xs text-bgs-gray-medium">Rendement</p>
+                        <p className="text-xs text-bgs-gray-medium">Rendement mensuel</p>
                         <p className="font-medium text-green-500 text-sm">{project.yield}%</p>
                       </div>
                       <div>

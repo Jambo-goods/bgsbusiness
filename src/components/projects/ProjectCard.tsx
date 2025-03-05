@@ -19,6 +19,8 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
   };
   
   const status = statusConfig[project.status];
+  // Calculate annual yield for display
+  const annualYield = project.yield * 12;
   
   return (
     <div 
@@ -43,7 +45,7 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
           <h3 className="text-xl font-semibold text-bgs-blue">{project.name}</h3>
           <span className="flex items-center text-green-500 font-semibold">
             <TrendingUp className="h-4 w-4 mr-1" />
-            {project.yield}%
+            {project.yield}% mensuel
           </span>
         </div>
         
@@ -78,8 +80,8 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
         
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-bgs-gray-light p-3 rounded-lg">
-            <p className="text-xs text-bgs-gray-medium mb-1">Rentabilité estimée</p>
-            <p className="font-semibold text-green-600">{project.profitability}%</p>
+            <p className="text-xs text-bgs-gray-medium mb-1">Rentabilité annualisée</p>
+            <p className="font-semibold text-green-600">{annualYield}%</p>
           </div>
           <div className="bg-bgs-gray-light p-3 rounded-lg">
             <p className="text-xs text-bgs-gray-medium mb-1">Min. investissement</p>

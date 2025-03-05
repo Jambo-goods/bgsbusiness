@@ -18,7 +18,7 @@ export default function InvestmentDistribution({ setActiveTab }: InvestmentDistr
       <div className="space-y-3">
         <div>
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-bgs-gray-medium">BGS Wood Africa</span>
+            <span className="text-bgs-gray-medium">BGS Wood Africa (1.25% mensuel)</span>
             <span className="font-medium text-bgs-blue">2500 €</span>
           </div>
           <Progress value={33} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
@@ -26,7 +26,7 @@ export default function InvestmentDistribution({ setActiveTab }: InvestmentDistr
         
         <div>
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-bgs-gray-medium">BGS Energy</span>
+            <span className="text-bgs-gray-medium">BGS Energy (1% mensuel)</span>
             <span className="font-medium text-bgs-blue">2000 €</span>
           </div>
           <Progress value={27} className="h-1 bg-gray-100" indicatorClassName="bg-blue-500" />
@@ -34,7 +34,7 @@ export default function InvestmentDistribution({ setActiveTab }: InvestmentDistr
         
         <div>
           <div className="flex justify-between text-xs mb-1">
-            <span className="text-bgs-gray-medium">BGS Logistics</span>
+            <span className="text-bgs-gray-medium">BGS Logistics (1.08% mensuel)</span>
             <span className="font-medium text-bgs-blue">3000 €</span>
           </div>
           <Progress value={40} className="h-1 bg-gray-100" indicatorClassName="bg-green-500" />

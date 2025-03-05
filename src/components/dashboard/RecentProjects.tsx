@@ -19,7 +19,7 @@ export default function RecentProjects({ userInvestments, setActiveTab }: Recent
               <th className="px-3 py-2 text-left text-xs font-medium text-bgs-gray-medium uppercase tracking-wider">Projet</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-bgs-gray-medium uppercase tracking-wider">Date</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-bgs-gray-medium uppercase tracking-wider">Montant</th>
-              <th className="px-3 py-2 text-left text-xs font-medium text-bgs-gray-medium uppercase tracking-wider">Rendement</th>
+              <th className="px-3 py-2 text-left text-xs font-medium text-bgs-gray-medium uppercase tracking-wider">Rendement mensuel</th>
               <th className="px-3 py-2 text-left text-xs font-medium text-bgs-gray-medium uppercase tracking-wider">Statut</th>
             </tr>
           </thead>

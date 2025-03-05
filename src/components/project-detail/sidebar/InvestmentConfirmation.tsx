@@ -19,6 +19,9 @@ export default function InvestmentConfirmation({
   onConfirm,
   onCancel
 }: InvestmentConfirmationProps) {
+  // Calculate annual yield for display
+  const annualYield = project.yield * 12;
+  
   return (
     <div className="animate-fade-in">
       <div className="mb-6 text-center">
@@ -39,8 +42,8 @@ export default function InvestmentConfirmation({
             <p className="font-medium text-bgs-blue">{selectedDuration} mois</p>
           </div>
           <div className="mb-2">
-            <p className="text-sm text-bgs-blue/70">Rendement estimé</p>
-            <p className="font-medium text-bgs-blue">{project.yield}%</p>
+            <p className="text-sm text-bgs-blue/70">Rendement mensuel</p>
+            <p className="font-medium text-bgs-blue">{project.yield}% ({annualYield}% annualisé)</p>
           </div>
         </div>
         
