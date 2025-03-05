@@ -4,7 +4,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SidebarSection from "./SidebarSection";
 import PrincipalSection from "./sections/PrincipalSection";
-import TransactionsSection from "./sections/TransactionsSection";
 import AccountSection from "./sections/AccountSection";
 
 interface SidebarProps {
@@ -57,10 +56,6 @@ export default function Sidebar({
       <nav className="flex-1 py-4 overflow-y-auto px-2">
         <SidebarSection title="Principal" expanded={expanded}>
           <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} />
-        </SidebarSection>
-        
-        <SidebarSection title="Transactions" expanded={expanded}>
-          <TransactionsSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} />
         </SidebarSection>
         
         <SidebarSection title="Compte" expanded={expanded}>
