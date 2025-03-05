@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, AlertCircle, TrendingUp, Wallet, CreditCard } from "lucide-react";
+import { ArrowRight, AlertCircle, TrendingUp, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Project } from "@/types/project";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,8 +100,8 @@ export default function InvestmentOptionsSection({
       const amountNeeded = selectedAmount - walletBalance;
       toast.error(
         <div>
-          <p>Solde insuffisant pour investir {selectedAmount}€</p>
-          <p className="font-medium mt-1">Dépôt nécessaire: {amountNeeded}€</p>
+          <p className="font-semibold">Solde insuffisant</p>
+          <p>Vous avez besoin de {amountNeeded}€ supplémentaires pour investir {selectedAmount}€</p>
         </div>,
         {
           duration: 5000,
@@ -111,6 +112,7 @@ export default function InvestmentOptionsSection({
         }
       );
       
+      // Redirection automatique après 3 secondes
       setTimeout(() => {
         navigate("/dashboard/wallet?action=deposit");
       }, 3000);
@@ -230,18 +232,24 @@ export default function InvestmentOptionsSection({
           </p>
         </div>}
       
-      {isLoggedIn && walletBalance < selectedAmount && <div className="flex items-start gap-2 text-red-600 mb-4 p-3 bg-red-50 rounded-md">
+      {isLoggedIn && walletBalance < selectedAmount && (
+        <div className="flex items-start gap-2 text-red-600 mb-4 p-3 bg-red-50 rounded-md">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p>Solde insuffisant. Vous avez {walletBalance}€ dans votre portefeuille.</p>
-            <p className="mt-1 font-medium">Pour investir {selectedAmount}€, un dépôt supplémentaire de {selectedAmount - walletBalance}€ est nécessaire.</p>
-            <Button variant="link" className="p-0 h-auto text-red-600 hover:text-red-800 mt-1 flex items-center gap-1.5" 
-              onClick={() => navigate("/dashboard/wallet?action=deposit")}>
-              <CreditCard className="h-4 w-4" />
+            <p className="font-semibold">Solde insuffisant pour investir</p>
+            <p className="mt-1">Vous avez actuellement {walletBalance}€ dans votre portefeuille.</p>
+            <p className="mt-1 font-medium">Montant manquant: {selectedAmount - walletBalance}€</p>
+            <Button 
+              variant="link" 
+              className="p-0 h-auto text-red-600 hover:text-red-800 mt-2 flex items-center gap-1.5" 
+              onClick={() => navigate("/dashboard/wallet?action=deposit")}
+            >
+              <Wallet className="h-4 w-4" />
               Effectuer un dépôt maintenant
             </Button>
           </div>
-        </div>}
+        </div>
+      )}
       
       <Button 
         className="w-full relative overflow-hidden group bg-gradient-to-r from-bgs-blue to-bgs-blue-light hover:shadow-lg transition-all duration-300 border-none" 
