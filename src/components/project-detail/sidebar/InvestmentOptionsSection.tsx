@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, AlertCircle, TrendingUp, Wallet } from "lucide-react";
@@ -128,8 +129,17 @@ export default function InvestmentOptionsSection({
       timestamp: new Date().toISOString()
     }));
     
-    // Redirect to the confirmation page
-    navigate(`/project/${project.id}/confirmation`);
+    // Set investing state
+    setIsInvesting(true);
+    
+    try {
+      // Redirect to the confirmation page
+      navigate(`/project/${project.id}/confirmation`);
+    } catch (error) {
+      console.error("Erreur de redirection:", error);
+      toast.error("Erreur lors de la redirection vers la page de confirmation");
+      setIsInvesting(false);
+    }
   };
 
   return <div className="mt-6">
