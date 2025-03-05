@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, AlertCircle, TrendingUp, Wallet } from "lucide-react";
@@ -119,107 +118,18 @@ export default function InvestmentOptionsSection({
       return;
     }
 
-    setIsInvesting(true);
-    try {
-      const {
-        data: {
-          user
-        }
-      } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Erreur d'authentification. Veuillez vous reconnecter.");
-        return;
-      }
-
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + selectedDuration);
-
-      const {
-        error: investmentError
-      } = await supabase.from('investments').insert({
-        user_id: user.id,
-        project_id: project.id,
-        amount: selectedAmount,
-        yield_rate: expectedYield,
-        duration: selectedDuration,
-        end_date: endDate.toISOString(),
-        date: new Date().toISOString()
-      });
-      if (investmentError) {
-        console.error("Erreur lors de la création de l'investissement:", investmentError);
-        toast.error("Impossible de créer l'investissement");
-        return;
-      }
-
-      const {
-        error: transactionError
-      } = await supabase.from('wallet_transactions').insert({
-        user_id: user.id,
-        amount: -selectedAmount,
-        type: 'investment',
-        description: `Investissement dans ${project.name}`
-      });
-      if (transactionError) {
-        console.error("Erreur lors de la création de la transaction:", transactionError);
-        toast.error("Impossible de créer la transaction");
-        return;
-      }
-
-      const {
-        error: balanceError
-      } = await supabase.rpc('increment_wallet_balance', {
-        user_id: user.id,
-        increment_amount: -selectedAmount
-      });
-      if (balanceError) {
-        console.error("Erreur lors de la mise à jour du solde:", balanceError);
-        toast.error("Impossible de mettre à jour votre solde");
-        return;
-      }
-
-      const {
-        data: profileData,
-        error: profileError
-      } = await supabase.from('profiles').select('investment_total, projects_count').eq('id', user.id).single();
-      if (!profileError && profileData) {
-        const {
-          data: existingInvestments
-        } = await supabase.from('investments').select('id').eq('user_id', user.id).eq('project_id', project.id);
-
-        const newTotal = (profileData.investment_total || 0) + selectedAmount;
-        let newCount = profileData.projects_count || 0;
-        if (existingInvestments && existingInvestments.length <= 1) {
-          newCount += 1;
-        }
-
-        await supabase.from('profiles').update({
-          investment_total: newTotal,
-          projects_count: newCount
-        }).eq('id', user.id);
-      }
-
-      localStorage.setItem("recentInvestment", JSON.stringify({
-        projectId: project.id,
-        amount: selectedAmount,
-        duration: selectedDuration,
-        yield: expectedYield,
-        projectName: project.name,
-        timestamp: new Date().toISOString()
-      }));
-
-      toast.success("Investissement réalisé avec succès !");
-
-      onInvestmentConfirmed();
-
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 2000);
-    } catch (error) {
-      console.error("Erreur lors de l'investissement:", error);
-      toast.error("Une erreur est survenue lors de l'investissement");
-    } finally {
-      setIsInvesting(false);
-    }
+    // Store the investment details in localStorage for the confirmation page
+    localStorage.setItem("pendingInvestment", JSON.stringify({
+      projectId: project.id,
+      projectName: project.name,
+      amount: selectedAmount,
+      duration: selectedDuration,
+      yield: expectedYield,
+      timestamp: new Date().toISOString()
+    }));
+    
+    // Redirect to the confirmation page
+    navigate(`/project/${project.id}/confirmation`);
   };
 
   return <div className="mt-6">
