@@ -111,32 +111,47 @@ export default function InvestmentOptionsSection({
       
       const userId = session.session.user.id;
       
-      // Generate a UUID for the project if it doesn't have one
-      // This is needed because the database expects a UUID, not a string slug
-      // In a real application, you would query the projects table to get the correct UUID
+      // Check if project.id is a valid UUID
       let projectUuid = project.id;
       
-      // If project.id doesn't look like a UUID, try to fetch the actual UUID from the projects table
       if (!isUUID(project.id)) {
         console.log("Project ID is not a UUID, fetching the actual UUID...");
-        const { data: projectData, error: projectError } = await supabase
+        
+        // Try to fetch project by ID first (in case it's a numeric ID)
+        let { data: projectData, error: projectError } = await supabase
           .from('projects')
           .select('id')
-          .eq('name', project.name)
-          .single();
+          .eq('id', project.id);
           
-        if (projectError) {
-          console.error("Error fetching project UUID:", projectError);
-          throw new Error("Impossible de trouver le projet dans la base de données");
+        // If that fails, try fetching by name
+        if (projectError || !projectData || projectData.length === 0) {
+          console.log("Couldn't find project by ID, trying by name...");
+          const { data: projectByName, error: nameError } = await supabase
+            .from('projects')
+            .select('id')
+            .eq('name', project.name);
+            
+          if (nameError) {
+            console.error("Error fetching project UUID by name:", nameError);
+            throw new Error("Impossible de trouver le projet dans la base de données");
+          }
+          
+          if (!projectByName || projectByName.length === 0) {
+            throw new Error("Projet non trouvé dans la base de données");
+          }
+          
+          projectData = projectByName;
         }
         
-        if (projectData) {
-          projectUuid = projectData.id;
+        if (projectData && projectData.length > 0) {
+          projectUuid = projectData[0].id;
           console.log("Found project UUID:", projectUuid);
         } else {
           throw new Error("Projet non trouvé dans la base de données");
         }
       }
+      
+      console.log("Using project UUID:", projectUuid);
       
       // Start a transaction to update multiple tables
       // 1. Deduct from user's wallet balance
@@ -145,7 +160,10 @@ export default function InvestmentOptionsSection({
         { user_id: userId, increment_amount: -investmentAmount }
       );
       
-      if (walletError) throw walletError;
+      if (walletError) {
+        console.error("Wallet update error:", walletError);
+        throw walletError;
+      }
       
       // 2. Create investment record
       const { error: investmentError } = await supabase
@@ -160,7 +178,10 @@ export default function InvestmentOptionsSection({
           date: new Date().toISOString()
         });
       
-      if (investmentError) throw investmentError;
+      if (investmentError) {
+        console.error("Investment creation error:", investmentError);
+        throw investmentError;
+      }
       
       // 3. Update profile statistics
       const { data: profileData, error: profileFetchError } = await supabase
@@ -169,7 +190,10 @@ export default function InvestmentOptionsSection({
         .eq('id', userId)
         .single();
       
-      if (profileFetchError) throw profileFetchError;
+      if (profileFetchError) {
+        console.error("Profile fetch error:", profileFetchError);
+        throw profileFetchError;
+      }
       
       // Prepare the update
       const updates = {
@@ -182,7 +206,10 @@ export default function InvestmentOptionsSection({
         .update(updates)
         .eq('id', userId);
       
-      if (profileUpdateError) throw profileUpdateError;
+      if (profileUpdateError) {
+        console.error("Profile update error:", profileUpdateError);
+        throw profileUpdateError;
+      }
       
       // 4. Save transaction record
       const { error: transactionError } = await supabase
@@ -190,11 +217,14 @@ export default function InvestmentOptionsSection({
         .insert({
           user_id: userId,
           amount: investmentAmount,
-          type: 'investment',
+          type: 'withdrawal',
           description: `Investissement dans ${project.name}`
         });
       
-      if (transactionError) throw transactionError;
+      if (transactionError) {
+        console.error("Transaction record error:", transactionError);
+        throw transactionError;
+      }
       
       // Investment data to save in localStorage
       const investmentData = {
@@ -222,7 +252,7 @@ export default function InvestmentOptionsSection({
       console.error("Erreur lors de l'investissement:", error);
       toast({
         title: "Erreur lors de l'investissement",
-        description: "Une erreur est survenue lors de la création de votre investissement.",
+        description: error instanceof Error ? error.message : "Une erreur est survenue lors de la création de votre investissement.",
         variant: "destructive"
       });
     } finally {
@@ -231,10 +261,6 @@ export default function InvestmentOptionsSection({
     }
   };
   
-  const cancelInvestment = () => {
-    setShowConfirmation(false);
-  };
-
   // Helper function to check if a string is a valid UUID
   function isUUID(str) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
