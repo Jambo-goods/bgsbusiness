@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
@@ -91,7 +90,26 @@ export default function InvestmentOptionsSection({
 
   const createProjectInDatabase = async () => {
     try {
-      console.log("Creating project in database:", project);
+      console.log("Création du projet dans la base de données:", project.name);
+      
+      // Vérifier si le projet existe déjà par son nom
+      const { data: existingProject, error: checkError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('name', project.name)
+        .maybeSingle();
+      
+      if (checkError) {
+        console.error("Erreur lors de la vérification du projet existant:", checkError);
+      }
+      
+      // Si le projet existe déjà, retourner son ID
+      if (existingProject) {
+        console.log("Le projet existe déjà, utilisation de l'ID existant:", existingProject.id);
+        return existingProject.id;
+      }
+      
+      // Sinon, créer un nouveau projet
       const { data: newProject, error: insertError } = await supabase
         .from('projects')
         .insert({
@@ -107,7 +125,7 @@ export default function InvestmentOptionsSection({
           funding_progress: project.fundingProgress,
           featured: project.featured || false,
           possible_durations: project.possibleDurations,
-          status: project.status,
+          status: project.status || 'active',
           profitability: project.profitability,
           image: project.image
         })
@@ -115,69 +133,20 @@ export default function InvestmentOptionsSection({
         .single();
       
       if (insertError) {
-        console.error("Error creating project:", insertError);
+        console.error("Erreur lors de la création du projet:", insertError);
         throw new Error("Impossible de créer le projet dans la base de données");
       }
       
-      console.log("Project created successfully:", newProject);
+      console.log("Projet créé avec succès:", newProject);
+      toast({
+        title: "Projet créé",
+        description: `Le projet ${project.name} a été créé avec succès dans la base de données.`
+      });
+      
       return newProject.id;
     } catch (error) {
-      console.error("Error in createProjectInDatabase:", error);
+      console.error("Erreur dans createProjectInDatabase:", error);
       throw error;
-    }
-  };
-  
-  const findOrCreateProject = async () => {
-    try {
-      // First, try to find the project by ID if it's a UUID
-      if (isUUID(project.id)) {
-        console.log(`Checking if project with ID ${project.id} exists`);
-        const { data: projectById, error: idError } = await supabase
-          .from('projects')
-          .select('id')
-          .eq('id', project.id)
-          .maybeSingle();
-        
-        if (idError) {
-          console.error("Error checking project by ID:", idError);
-        }
-        
-        if (projectById) {
-          console.log("Found project by ID:", projectById);
-          return projectById.id;
-        }
-      }
-      
-      // Encode the project name for URL safety
-      const encodedName = encodeURIComponent(project.name);
-      console.log(`Attempting to find project with name: ${project.name} (encoded: ${encodedName})`);
-      
-      // Try to find by exact name match
-      const { data: projectByName, error: nameError } = await supabase
-        .from('projects')
-        .select('id')
-        .eq('name', project.name)
-        .maybeSingle();
-      
-      if (nameError) {
-        console.error("Error fetching project by name:", nameError);
-        
-        // Try to create the project instead of throwing an error immediately
-        console.log("Failed to find project, attempting to create it...");
-        return await createProjectInDatabase();
-      }
-      
-      if (projectByName) {
-        console.log("Found project by name:", projectByName);
-        return projectByName.id;
-      }
-      
-      // If project not found, create it
-      console.log("Project not found, creating in database");
-      return await createProjectInDatabase();
-    } catch (error) {
-      console.error("Error in findOrCreateProject:", error);
-      throw new Error("Erreur lors de la création ou recherche du projet");
     }
   };
   
@@ -199,43 +168,43 @@ export default function InvestmentOptionsSection({
       
       const userId = session.session.user.id;
       
-      // Find or create project in the database - improved error handling
-      console.log("Finding or creating project for:", project.name);
-      let projectUuid;
+      // Créer ou trouver le projet dans la base de données
+      console.log("Création/recherche du projet:", project.name);
+      let projectId;
       try {
-        projectUuid = await findOrCreateProject();
-        if (!projectUuid) {
+        projectId = await createProjectInDatabase();
+        if (!projectId) {
           throw new Error("Impossible de déterminer l'identifiant du projet");
         }
-        console.log("Using project UUID:", projectUuid);
+        console.log("ID du projet utilisé:", projectId);
       } catch (projectError) {
-        console.error("Project lookup/creation error:", projectError);
+        console.error("Erreur lors de la création/recherche du projet:", projectError);
         toast({
           title: "Erreur avec le projet",
-          description: "Impossible de trouver ou créer le projet. Veuillez réessayer plus tard.",
+          description: "Impossible de créer ou trouver le projet. Veuillez réessayer plus tard.",
           variant: "destructive"
         });
         setIsProcessing(false);
         return;
       }
       
-      // Update user's wallet balance
+      // Mettre à jour le solde de l'utilisateur (déduire le montant investi)
       const { error: walletError } = await supabase.rpc(
         'increment_wallet_balance',
         { user_id: userId, increment_amount: -investmentAmount }
       );
       
       if (walletError) {
-        console.error("Wallet update error:", walletError);
+        console.error("Erreur lors de la mise à jour du portefeuille:", walletError);
         throw walletError;
       }
       
-      // Create investment record
+      // Créer l'enregistrement d'investissement
       const { error: investmentError } = await supabase
         .from('investments')
         .insert({
           user_id: userId,
-          project_id: projectUuid,
+          project_id: projectId,
           amount: investmentAmount,
           duration: selectedDuration,
           yield_rate: project.yield,
@@ -244,11 +213,11 @@ export default function InvestmentOptionsSection({
         });
       
       if (investmentError) {
-        console.error("Investment creation error:", investmentError);
+        console.error("Erreur lors de la création de l'investissement:", investmentError);
         throw investmentError;
       }
       
-      // Update user profile statistics
+      // Mettre à jour les statistiques du profil utilisateur
       const { data: profileData, error: profileFetchError } = await supabase
         .from('profiles')
         .select('investment_total, projects_count')
@@ -256,7 +225,7 @@ export default function InvestmentOptionsSection({
         .single();
       
       if (profileFetchError) {
-        console.error("Profile fetch error:", profileFetchError);
+        console.error("Erreur lors de la récupération du profil:", profileFetchError);
         throw profileFetchError;
       }
       
@@ -271,28 +240,29 @@ export default function InvestmentOptionsSection({
         .eq('id', userId);
       
       if (profileUpdateError) {
-        console.error("Profile update error:", profileUpdateError);
+        console.error("Erreur lors de la mise à jour du profil:", profileUpdateError);
         throw profileUpdateError;
       }
       
-      // Record transaction
+      // Enregistrer la transaction
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
           user_id: userId,
-          amount: investmentAmount,
+          amount: -investmentAmount, // Montant négatif car c'est une sortie d'argent
           type: 'withdrawal',
-          description: `Investissement dans ${project.name}`
+          description: `Investissement dans ${project.name}`,
+          status: 'completed'
         });
       
       if (transactionError) {
-        console.error("Transaction record error:", transactionError);
+        console.error("Erreur lors de l'enregistrement de la transaction:", transactionError);
         throw transactionError;
       }
       
-      // Store investment data for dashboard display
+      // Stocker les données d'investissement pour l'affichage du tableau de bord
       const investmentData = {
-        projectId: project.id,
+        projectId: projectId,
         projectName: project.name,
         amount: investmentAmount,
         duration: selectedDuration,
@@ -309,6 +279,7 @@ export default function InvestmentOptionsSection({
         description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
       });
       
+      // Rediriger vers le tableau de bord
       navigate("/dashboard");
       
     } catch (error) {
@@ -323,7 +294,7 @@ export default function InvestmentOptionsSection({
       setShowConfirmation(false);
     }
   };
-  
+
   function isUUID(str) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
