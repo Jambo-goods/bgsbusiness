@@ -21,7 +21,7 @@ export default function DashboardSidebar({
   return (
     <aside 
       className={cn(
-        "bg-white shadow-md fixed md:static z-40 h-full transition-all",
+        "bg-white shadow-md fixed md:static z-40 h-full transition-all duration-300",
         isSidebarOpen ? "w-64 translate-x-0" : "w-0 -translate-x-full md:w-20 md:translate-x-0"
       )}
     >

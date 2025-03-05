@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -5,6 +6,7 @@ import SidebarSection from "./SidebarSection";
 import PrincipalSection from "./sections/PrincipalSection";
 import TransactionsSection from "./sections/TransactionsSection";
 import AccountSection from "./sections/AccountSection";
+
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -12,6 +14,7 @@ interface SidebarProps {
   handleLogout: () => void;
   toggleSidebar?: () => void;
 }
+
 export default function Sidebar({
   activeTab,
   setActiveTab,
@@ -20,6 +23,7 @@ export default function Sidebar({
   toggleSidebar
 }: SidebarProps) {
   const [expanded, setExpanded] = useState(true);
+  
   const handleToggle = () => {
     setExpanded(!expanded);
   };
@@ -44,8 +48,13 @@ export default function Sidebar({
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [toggleSidebar]);
-  return <div className={cn("flex flex-col h-full transition-all duration-300 bg-white shadow-sm", expanded ? "w-64" : "w-20")}>
-      <nav className="flex-1 py-2 overflow-y-auto">
+  
+  return (
+    <div className={cn(
+      "flex flex-col h-full transition-all duration-300 bg-white shadow-md rounded-r-xl border-r", 
+      expanded ? "w-64" : "w-20"
+    )}>
+      <nav className="flex-1 py-4 overflow-y-auto px-2">
         <SidebarSection title="Principal" expanded={expanded}>
           <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} />
         </SidebarSection>
@@ -60,6 +69,15 @@ export default function Sidebar({
       </nav>
       
       {/* Toggle button at the bottom */}
-      
-    </div>;
+      <div className="p-2 border-t flex justify-center">
+        <button 
+          onClick={handleToggle}
+          className="p-2 rounded-lg hover:bg-bgs-gray-light text-bgs-gray-medium transition-colors"
+          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+        </button>
+      </div>
+    </div>
+  );
 }
