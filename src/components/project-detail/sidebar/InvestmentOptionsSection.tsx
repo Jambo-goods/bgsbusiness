@@ -1,9 +1,11 @@
+
 import React, { useState } from "react";
 import { ArrowRight, Edit, Save } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { Slider } from "@/components/ui/slider";
 
 interface InvestmentOptionsSectionProps {
   project: Project;
@@ -18,6 +20,9 @@ export default function InvestmentOptionsSection({
   const [investmentAmount, setInvestmentAmount] = useState(500);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState(
+    project.possibleDurations ? project.possibleDurations[0] : parseInt(project.duration)
+  );
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -26,6 +31,10 @@ export default function InvestmentOptionsSection({
   const progressPercentage = (raised / target) * 100;
   const minInvestment = 100;
   const maxInvestment = 10000;
+  
+  // Get possible durations from project, or create an array from the project duration
+  const durations = project.possibleDurations || 
+    [parseInt(project.duration.split(' ')[0])];
   
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInvestmentAmount(parseInt(e.target.value));
@@ -44,6 +53,10 @@ export default function InvestmentOptionsSection({
     }
   };
   
+  const handleDurationChange = (values: number[]) => {
+    setSelectedDuration(values[0]);
+  };
+  
   const toggleEditMode = () => {
     setIsEditingAmount(!isEditingAmount);
   };
@@ -59,7 +72,7 @@ export default function InvestmentOptionsSection({
     setTimeout(() => {
       toast({
         title: "Investissement réussi !",
-        description: `Vous avez investi ${investmentAmount}€ dans ${project.name}.`,
+        description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
       });
       
       setIsProcessing(false);
@@ -94,6 +107,7 @@ export default function InvestmentOptionsSection({
               <span className="text-sm text-bgs-blue/70">Objectif: {target.toLocaleString()}€</span>
             </div>
             
+            {/* Investment amount section */}
             <div className="mb-4 bg-bgs-gray-light p-3 rounded-lg">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-bgs-blue">Montant d'investissement</span>
@@ -135,6 +149,45 @@ export default function InvestmentOptionsSection({
               )}
             </div>
             
+            {/* Duration selection section */}
+            <div className="mb-4 bg-bgs-gray-light p-3 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-bgs-blue">Durée d'investissement</span>
+              </div>
+              
+              <div className="mb-2">
+                <span className="block text-center text-xl font-bold text-bgs-blue">{selectedDuration} mois</span>
+              </div>
+              
+              <div className="px-2 py-4">
+                <Slider
+                  defaultValue={[selectedDuration]}
+                  max={Math.max(...durations)}
+                  min={Math.min(...durations)}
+                  step={durations.length > 1 ? undefined : 1}
+                  value={[selectedDuration]}
+                  onValueChange={handleDurationChange}
+                  className="my-4"
+                  classname="bg-bgs-orange"
+                  marks={durations.map(d => ({ value: d }))}
+                  minStepsBetweenThumbs={1}
+                />
+                
+                <div className="flex justify-between mt-2">
+                  {durations.map((duration) => (
+                    <span 
+                      key={duration} 
+                      className={`text-sm ${selectedDuration === duration ? 'text-bgs-orange font-medium' : 'text-bgs-blue/70'}`}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => setSelectedDuration(duration)}
+                    >
+                      {duration} mois
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
             <div className="bg-bgs-blue/5 p-3 rounded-lg mb-4">
               <div className="flex justify-between text-sm text-bgs-blue mb-1">
                 <span>Rendement estimé</span>
@@ -142,7 +195,7 @@ export default function InvestmentOptionsSection({
               </div>
               <div className="flex justify-between text-sm text-bgs-blue">
                 <span>Durée</span>
-                <span className="font-medium">{project.duration} ans</span>
+                <span className="font-medium">{selectedDuration} mois</span>
               </div>
             </div>
           </div>
@@ -168,17 +221,17 @@ export default function InvestmentOptionsSection({
                 <p className="font-medium text-bgs-blue">{investmentAmount}€</p>
               </div>
               <div className="mb-2">
-                <p className="text-sm text-bgs-blue/70">Rendement estimé</p>
-                <p className="font-medium text-bgs-blue">{project.yield}%</p>
+                <p className="text-sm text-bgs-blue/70">Durée</p>
+                <p className="font-medium text-bgs-blue">{selectedDuration} mois</p>
               </div>
               <div className="mb-2">
-                <p className="text-sm text-bgs-blue/70">Durée</p>
-                <p className="font-medium text-bgs-blue">{project.duration} ans</p>
+                <p className="text-sm text-bgs-blue/70">Rendement estimé</p>
+                <p className="font-medium text-bgs-blue">{project.yield}%</p>
               </div>
             </div>
             
             <p className="text-sm text-bgs-blue/70 mb-4">
-              En confirmant, vous acceptez d'investir {investmentAmount}€ dans ce projet.
+              En confirmant, vous acceptez d'investir {investmentAmount}€ pour une durée de {selectedDuration} mois dans ce projet.
             </p>
           </div>
           
