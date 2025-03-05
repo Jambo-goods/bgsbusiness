@@ -7,7 +7,7 @@ import WalletHistory from "./wallet/WalletHistory";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function WalletTab() {
-  const [balance, setBalance] = useState(3250);
+  const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

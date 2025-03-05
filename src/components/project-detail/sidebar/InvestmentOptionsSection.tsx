@@ -111,6 +111,33 @@ export default function InvestmentOptionsSection({
       
       const userId = session.session.user.id;
       
+      // Generate a UUID for the project if it doesn't have one
+      // This is needed because the database expects a UUID, not a string slug
+      // In a real application, you would query the projects table to get the correct UUID
+      let projectUuid = project.id;
+      
+      // If project.id doesn't look like a UUID, try to fetch the actual UUID from the projects table
+      if (!isUUID(project.id)) {
+        console.log("Project ID is not a UUID, fetching the actual UUID...");
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('name', project.name)
+          .single();
+          
+        if (projectError) {
+          console.error("Error fetching project UUID:", projectError);
+          throw new Error("Impossible de trouver le projet dans la base de données");
+        }
+        
+        if (projectData) {
+          projectUuid = projectData.id;
+          console.log("Found project UUID:", projectUuid);
+        } else {
+          throw new Error("Projet non trouvé dans la base de données");
+        }
+      }
+      
       // Start a transaction to update multiple tables
       // 1. Deduct from user's wallet balance
       const { error: walletError } = await supabase.rpc(
@@ -125,7 +152,7 @@ export default function InvestmentOptionsSection({
         .from('investments')
         .insert({
           user_id: userId,
-          project_id: project.id,
+          project_id: projectUuid,
           amount: investmentAmount,
           duration: selectedDuration,
           yield_rate: project.yield,
@@ -207,6 +234,12 @@ export default function InvestmentOptionsSection({
   const cancelInvestment = () => {
     setShowConfirmation(false);
   };
+
+  // Helper function to check if a string is a valid UUID
+  function isUUID(str) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  }
 
   return (
     <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100 transform transition-all duration-300 hover:shadow-lg">

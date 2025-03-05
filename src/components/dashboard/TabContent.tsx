@@ -33,7 +33,6 @@ export default function TabContent({
           userData={userData} 
           userInvestments={userInvestments}
           setActiveTab={setActiveTab}
-          refreshData={refreshData}
         />
       )}
       
