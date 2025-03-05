@@ -73,6 +73,7 @@ export default function Dashboard() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           isSidebarOpen={isSidebarOpen}
+          toggleSidebar={toggleSidebar}
           handleLogout={handleLogout}
         />
         
