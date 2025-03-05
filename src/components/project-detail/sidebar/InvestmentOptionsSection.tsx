@@ -129,16 +129,20 @@ export default function InvestmentOptionsSection({
       timestamp: new Date().toISOString()
     }));
     
-    // Set investing state and redirect to confirmation page
+    // Set investing state
     setIsInvesting(true);
     
-    // Use explicit path construction with project ID to ensure correct navigation
-    const confirmationPath = `/project/${project.id}/confirmation`;
-    console.log("Redirecting to:", confirmationPath);
-    
+    // IMPORTANT: Fix the navigation path construction and force direct navigation
     try {
-      // Immediate navigation to ensure it happens
-      navigate(confirmationPath, { replace: false });
+      // Use the direct path with project ID and make sure we're not replacing the current route
+      const confirmationPath = `/project/${project.id}/confirmation`;
+      console.log("Navigation to confirmation page:", confirmationPath);
+      
+      // Force navigation with a hard redirect to ensure proper route change
+      window.location.href = confirmationPath;
+      
+      // Don't execute code after this point as the page will reload
+      return;
     } catch (error) {
       console.error("Erreur de redirection:", error);
       toast.error("Erreur lors de la redirection vers la page de confirmation");
