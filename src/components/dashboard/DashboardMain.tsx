@@ -19,6 +19,7 @@ interface DashboardMainProps {
   activeTab: string;
   userInvestments: Project[];
   setActiveTab: (tab: string) => void;
+  refreshData: () => void;
 }
 
 export default function DashboardMain({ 
@@ -26,7 +27,8 @@ export default function DashboardMain({
   userData, 
   activeTab, 
   userInvestments, 
-  setActiveTab 
+  setActiveTab,
+  refreshData
 }: DashboardMainProps) {
   return (
     <main className={cn(
@@ -41,7 +43,8 @@ export default function DashboardMain({
           activeTab={activeTab} 
           userData={userData} 
           userInvestments={userInvestments} 
-          setActiveTab={setActiveTab} 
+          setActiveTab={setActiveTab}
+          refreshData={refreshData}
         />
       </div>
     </main>

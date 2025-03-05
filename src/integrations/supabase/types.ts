@@ -9,7 +9,164 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      investments: {
+        Row: {
+          amount: number
+          date: string | null
+          duration: number
+          end_date: string | null
+          id: string
+          project_id: string | null
+          status: string
+          user_id: string | null
+          yield_rate: number
+        }
+        Insert: {
+          amount: number
+          date?: string | null
+          duration: number
+          end_date?: string | null
+          id?: string
+          project_id?: string | null
+          status?: string
+          user_id?: string | null
+          yield_rate: number
+        }
+        Update: {
+          amount?: number
+          date?: string | null
+          duration?: number
+          end_date?: string | null
+          id?: string
+          project_id?: string | null
+          status?: string
+          user_id?: string | null
+          yield_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "investments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          investment_total: number | null
+          last_name: string | null
+          phone: string | null
+          projects_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id: string
+          investment_total?: number | null
+          last_name?: string | null
+          phone?: string | null
+          projects_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          investment_total?: number | null
+          last_name?: string | null
+          phone?: string | null
+          projects_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          category: string
+          company_name: string
+          created_at: string | null
+          description: string
+          duration: string
+          end_date: string | null
+          featured: boolean | null
+          funding_progress: number
+          id: string
+          image: string
+          location: string
+          min_investment: number
+          name: string
+          possible_durations: number[] | null
+          price: number
+          profitability: number
+          raised: number | null
+          start_date: string | null
+          status: string
+          target: number | null
+          updated_at: string | null
+          yield: number
+        }
+        Insert: {
+          category: string
+          company_name: string
+          created_at?: string | null
+          description: string
+          duration: string
+          end_date?: string | null
+          featured?: boolean | null
+          funding_progress: number
+          id?: string
+          image: string
+          location: string
+          min_investment: number
+          name: string
+          possible_durations?: number[] | null
+          price: number
+          profitability: number
+          raised?: number | null
+          start_date?: string | null
+          status: string
+          target?: number | null
+          updated_at?: string | null
+          yield: number
+        }
+        Update: {
+          category?: string
+          company_name?: string
+          created_at?: string | null
+          description?: string
+          duration?: string
+          end_date?: string | null
+          featured?: boolean | null
+          funding_progress?: number
+          id?: string
+          image?: string
+          location?: string
+          min_investment?: number
+          name?: string
+          possible_durations?: number[] | null
+          price?: number
+          profitability?: number
+          raised?: number | null
+          start_date?: string | null
+          status?: string
+          target?: number | null
+          updated_at?: string | null
+          yield?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

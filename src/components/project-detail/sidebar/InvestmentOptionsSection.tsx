@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 // Import our components
 import InvestmentAmountSection from "./InvestmentAmountSection";
@@ -28,6 +29,7 @@ export default function InvestmentOptionsSection({
   );
   const [totalReturn, setTotalReturn] = useState(0);
   const [monthlyReturn, setMonthlyReturn] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -37,6 +39,16 @@ export default function InvestmentOptionsSection({
   // Get possible durations from project, or create an array from the project duration
   const durations = project.possibleDurations || 
     [parseInt(project.duration.split(' ')[0])];
+  
+  // Vérifier si l'utilisateur est connecté
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsLoggedIn(!!user);
+    };
+    
+    checkAuthStatus();
+  }, []);
   
   // Calculate returns when investment amount or duration changes
   useEffect(() => {
@@ -51,39 +63,127 @@ export default function InvestmentOptionsSection({
   }, [investmentAmount, selectedDuration, project.yield]);
   
   const handleInvest = () => {
+    if (!isLoggedIn) {
+      toast({
+        title: "Connexion requise",
+        description: "Veuillez vous connecter pour pouvoir investir.",
+        variant: "destructive"
+      });
+      
+      // Redirection vers la page de connexion
+      navigate("/login");
+      return;
+    }
+    
     setShowConfirmation(true);
   };
   
-  const confirmInvestment = () => {
+  const confirmInvestment = async () => {
     setIsProcessing(true);
     
-    // Save investment data to local storage
-    const investmentData = {
-      projectId: project.id,
-      projectName: project.name,
-      amount: investmentAmount,
-      duration: selectedDuration,
-      yield: project.yield,
-      date: new Date().toISOString(),
-      monthlyReturn: monthlyReturn,
-      totalReturn: totalReturn
-    };
-    
-    localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Vérifier si l'utilisateur est connecté
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Connexion requise",
+          description: "Veuillez vous connecter pour pouvoir investir.",
+          variant: "destructive"
+        });
+        
+        setIsProcessing(false);
+        navigate("/login");
+        return;
+      }
+      
+      // Insérer l'investissement dans Supabase
+      const { error } = await supabase
+        .from('investments')
+        .insert({
+          user_id: user.id,
+          project_id: project.id,
+          amount: investmentAmount,
+          yield_rate: project.yield,
+          duration: selectedDuration,
+          end_date: new Date(new Date().setMonth(new Date().getMonth() + selectedDuration))
+        });
+      
+      if (error) {
+        console.error("Erreur lors de l'enregistrement de l'investissement:", error);
+        toast({
+          title: "Erreur",
+          description: "Une erreur est survenue lors de l'enregistrement de votre investissement.",
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Mettre à jour le profil utilisateur (total investi et nombre de projets)
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('investment_total, projects_count')
+        .eq('id', user.id)
+        .single();
+      
+      if (!profileError && profileData) {
+        // Vérifier si l'utilisateur a déjà investi dans ce projet
+        const { data: existingInvestments } = await supabase
+          .from('investments')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('project_id', project.id);
+        
+        let newCount = profileData.projects_count || 0;
+        if (existingInvestments && existingInvestments.length <= 1) {
+          // Incrémenter uniquement si c'est le premier investissement dans ce projet
+          newCount += 1;
+        }
+        
+        // Mettre à jour le profil
+        await supabase
+          .from('profiles')
+          .update({
+            investment_total: (profileData.investment_total || 0) + investmentAmount,
+            projects_count: newCount
+          })
+          .eq('id', user.id);
+      }
+      
+      // Sauvegarder les données d'investissement dans le localStorage pour affichage sur le dashboard
+      const investmentData = {
+        projectId: project.id,
+        projectName: project.name,
+        amount: investmentAmount,
+        duration: selectedDuration,
+        yield: project.yield,
+        date: new Date().toISOString(),
+        monthlyReturn: monthlyReturn,
+        totalReturn: totalReturn
+      };
+      
+      localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
+      
       toast({
         title: "Investissement réussi !",
         description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
       });
       
+      // Rediriger vers le tableau de bord
+      navigate("/dashboard");
+      
+    } catch (error) {
+      console.error("Erreur lors de l'investissement:", error);
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de l'investissement.",
+        variant: "destructive"
+      });
+    } finally {
       setIsProcessing(false);
       setShowConfirmation(false);
-      
-      // Redirect to dashboard
-      navigate("/dashboard");
-    }, 2000);
+    }
   };
   
   const cancelInvestment = () => {

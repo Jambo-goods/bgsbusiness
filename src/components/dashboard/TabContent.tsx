@@ -14,13 +14,15 @@ interface TabContentProps {
   userData: any;
   userInvestments: any[];
   setActiveTab: (tab: string) => void;
+  refreshData: () => void;
 }
 
 export default function TabContent({
   activeTab,
   userData,
   userInvestments,
-  setActiveTab
+  setActiveTab,
+  refreshData
 }: TabContentProps) {
   return (
     <div className={cn("w-full")}>
@@ -31,6 +33,7 @@ export default function TabContent({
           userData={userData} 
           userInvestments={userInvestments}
           setActiveTab={setActiveTab}
+          refreshData={refreshData}
         />
       )}
       
@@ -49,7 +52,7 @@ export default function TabContent({
       )}
       
       {activeTab === "investments" && (
-        <Investments userInvestments={userInvestments} />
+        <Investments userInvestments={userInvestments} refreshData={refreshData} />
       )}
       
       {activeTab === "tracking" && (
@@ -57,7 +60,7 @@ export default function TabContent({
       )}
       
       {activeTab === "profile" && (
-        <ProfileTab userData={userData} />
+        <ProfileTab userData={userData} refreshData={refreshData} />
       )}
 
       {activeTab === "settings" && (
