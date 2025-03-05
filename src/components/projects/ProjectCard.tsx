@@ -66,17 +66,15 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
           {project.description}
         </p>
         
-        <div className="mb-6">
-          <div className="flex justify-between text-sm mb-1">
-            <span className="text-bgs-gray-medium">Progression</span>
-            <span className="font-medium text-bgs-blue">{project.fundingProgress}%</span>
-          </div>
-          <Progress 
-            value={project.fundingProgress} 
-            className="bg-gray-100" 
-            size="sm"
-          />
+        <div className="flex justify-between text-sm mb-1">
+          <span className="text-bgs-gray-medium">Progression</span>
+          <span className="font-medium text-bgs-blue">{project.fundingProgress}%</span>
         </div>
+        <Progress 
+          value={project.fundingProgress} 
+          className="bg-gray-100 mb-6" 
+          size="sm"
+        />
         
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-bgs-gray-light p-3 rounded-lg">
