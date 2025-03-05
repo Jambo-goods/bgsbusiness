@@ -145,19 +145,6 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
           <p className="text-xs text-bgs-blue/80">Suivi en temps réel de votre investissement</p>
         </div>
       </div>
-      
-      {investmentAmount > userBalance && (
-        <div className="mb-4 bg-amber-50 p-3 rounded-lg border border-amber-100">
-          <div className="flex items-start">
-            <AlertCircle size={16} className="text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-xs text-bgs-blue/80">
-                Votre solde actuel ({userBalance.toLocaleString()} €) est insuffisant pour cet investissement.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
