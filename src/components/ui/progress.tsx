@@ -7,12 +7,13 @@ import { cn } from "@/lib/utils"
 interface ProgressProps extends React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> {
   indicatorClassName?: string;
   size?: "sm" | "md" | "lg";
+  showPercentage?: boolean;
 }
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   ProgressProps
->(({ className, value, indicatorClassName, size = "md", ...props }, ref) => {
+>(({ className, value, indicatorClassName, size = "md", showPercentage = false, ...props }, ref) => {
   const heightClass = 
     size === "sm" ? "h-2" : 
     size === "lg" ? "h-6" : 
@@ -36,8 +37,15 @@ const Progress = React.forwardRef<
             indicatorClassName || "bg-gradient-to-r from-bgs-orange to-bgs-orange-light"
           )}
           style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
-        />
+        >
+          {showPercentage && size === "lg" && (
+            <span className="text-xs font-medium text-white">{value}%</span>
+          )}
+        </ProgressPrimitive.Indicator>
       </ProgressPrimitive.Root>
+      {showPercentage && size !== "lg" && (
+        <span className="absolute top-0 right-0 -mt-6 text-xs font-medium text-bgs-blue">{value}%</span>
+      )}
     </div>
   )
 })

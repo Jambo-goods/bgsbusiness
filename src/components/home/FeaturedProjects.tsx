@@ -25,7 +25,7 @@ export default function FeaturedProjects() {
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {featuredProjects.slice(0, visibleProjects).map((project) => (
-            <Link to={`/projects/${project.id}`} key={project.id} className="glass-card overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+            <Link to={`/project/${project.id}`} key={project.id} className="glass-card overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1">
               <div className="relative">
                 <img 
                   src={project.image} 
@@ -71,9 +71,9 @@ export default function FeaturedProjects() {
                   </div>
                   <div>
                     <p className="text-xs text-bgs-blue/60">Rendement</p>
-                    <p className="text-base font-semibold text-bgs-blue flex items-center">
+                    <p className="text-base font-semibold text-green-500 flex items-center">
                       <CircleCheck size={14} className="text-green-500 mr-1" />
-                      {project.yield}%
+                      {project.yield}% mensuel
                     </p>
                   </div>
                 </div>

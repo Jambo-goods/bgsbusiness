@@ -1,62 +1,53 @@
 
-import React from "react";
-import { Project } from "@/types/project";
+import { cn } from "@/lib/utils";
 import Overview from "./Overview";
-import Investments from "./Investments";
-import Settings from "./Settings";
 import WalletTab from "./tabs/WalletTab";
 import CapitalTab from "./tabs/CapitalTab";
 import YieldTab from "./tabs/YieldTab";
-import ActiveListTab from "./tabs/ActiveListTab";
-import HistoryTab from "./tabs/HistoryTab";
+import Investments from "./Investments";
 import TransfersTab from "./tabs/TransfersTab";
 
 interface TabContentProps {
   activeTab: string;
-  userData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    investmentTotal: number;
-    projectsCount: number;
-  };
-  userInvestments: Project[];
+  userData: any;
+  userInvestments: any[];
   setActiveTab: (tab: string) => void;
 }
 
-export default function TabContent({ activeTab, userData, userInvestments, setActiveTab }: TabContentProps) {
-  switch(activeTab) {
-    case "overview":
-      return (
+export default function TabContent({
+  activeTab,
+  userData,
+  userInvestments,
+  setActiveTab
+}: TabContentProps) {
+  return (
+    <div className={cn("w-full")}>
+      {activeTab === "overview" && (
         <Overview 
           userData={userData} 
-          userInvestments={userInvestments} 
-          setActiveTab={setActiveTab} 
+          userInvestments={userInvestments}
+          setActiveTab={setActiveTab}
         />
-      );
-    case "investments":
-      return <Investments userInvestments={userInvestments} />;
-    case "settings":
-      return <Settings userData={userData} />;
-    case "wallet":
-      return <WalletTab />;
-    case "capital":
-      return <CapitalTab investmentTotal={userData.investmentTotal} />;
-    case "yield":
-      return <YieldTab />;
-    case "activeList":
-      return <ActiveListTab userInvestments={userInvestments} />;
-    case "history":
-      return <HistoryTab />;
-    case "transfers":
-      return <TransfersTab userData={userData} />;
-    default:
-      return (
-        <Overview 
-          userData={userData} 
-          userInvestments={userInvestments} 
-          setActiveTab={setActiveTab} 
-        />
-      );
-  }
+      )}
+      
+      {activeTab === "wallet" && (
+        <div className="space-y-6">
+          <WalletTab />
+          <TransfersTab userData={userData} />
+        </div>
+      )}
+      
+      {activeTab === "capital" && (
+        <CapitalTab />
+      )}
+      
+      {activeTab === "yield" && (
+        <YieldTab />
+      )}
+      
+      {activeTab === "investments" && (
+        <Investments userInvestments={userInvestments} />
+      )}
+    </div>
+  );
 }
