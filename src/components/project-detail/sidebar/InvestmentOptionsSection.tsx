@@ -1,4 +1,4 @@
-
+<lov-codelov-code>
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, AlertCircle, TrendingUp, Wallet } from "lucide-react";
@@ -129,12 +129,16 @@ export default function InvestmentOptionsSection({
       timestamp: new Date().toISOString()
     }));
     
-    // Set investing state
+    // Set investing state and redirect to confirmation page
     setIsInvesting(true);
     
+    // Use explicit path construction with project ID to ensure correct navigation
+    const confirmationPath = `/project/${project.id}/confirmation`;
+    console.log("Redirecting to:", confirmationPath);
+    
     try {
-      // Redirect to the confirmation page
-      navigate(`/project/${project.id}/confirmation`);
+      // Immediate navigation to ensure it happens
+      navigate(confirmationPath, { replace: false });
     } catch (error) {
       console.error("Erreur de redirection:", error);
       toast.error("Erreur lors de la redirection vers la page de confirmation");
@@ -200,3 +204,4 @@ export default function InvestmentOptionsSection({
       {!isLoggedIn}
     </div>;
 }
+</lov-code>
