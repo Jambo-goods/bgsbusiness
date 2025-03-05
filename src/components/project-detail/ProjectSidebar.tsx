@@ -19,7 +19,7 @@ export default function ProjectSidebar({
   remainingDays,
   investorCount
 }: ProjectSidebarProps) {
-  const [selectedAmount, setSelectedAmount] = useState(project.minInvestment);
+  const [investmentAmount, setInvestmentAmount] = useState(project.minInvestment);
   const [selectedDuration, setSelectedDuration] = useState(
     project.possibleDurations ? project.possibleDurations[0] : 12
   );
@@ -37,21 +37,21 @@ export default function ProjectSidebar({
         <h3 className="font-medium text-bgs-blue mb-4">Simulateur d'investissement</h3>
         
         <InvestmentAmountSection 
+          investmentAmount={investmentAmount}
+          setInvestmentAmount={setInvestmentAmount}
           minInvestment={project.minInvestment}
           maxInvestment={Math.min(project.price, 20000)}
-          selectedAmount={selectedAmount}
-          setSelectedAmount={setSelectedAmount}
         />
         
         <DurationSection 
-          possibleDurations={project.possibleDurations || [12, 24, 36]}
           selectedDuration={selectedDuration}
           setSelectedDuration={setSelectedDuration}
+          durations={project.possibleDurations || [12, 24, 36]}
         />
         
         <InvestmentOptionsSection 
           project={project}
-          selectedAmount={selectedAmount}
+          selectedAmount={investmentAmount}
           selectedDuration={selectedDuration}
           minInvestment={project.minInvestment}
           expectedYield={project.yield}
