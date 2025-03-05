@@ -119,6 +119,7 @@ export default function InvestmentOptionsSection({
         throw new Error("Impossible de créer le projet dans la base de données");
       }
       
+      console.log("Project created successfully:", newProject);
       return newProject.id;
     } catch (error) {
       console.error("Error in createProjectInDatabase:", error);
@@ -147,8 +148,11 @@ export default function InvestmentOptionsSection({
         }
       }
       
-      // Then try to find by name
-      console.log(`Attempting to find project with name: ${project.name}`);
+      // Encode the project name for URL safety
+      const encodedName = encodeURIComponent(project.name);
+      console.log(`Attempting to find project with name: ${project.name} (encoded: ${encodedName})`);
+      
+      // Try to find by exact name match
       const { data: projectByName, error: nameError } = await supabase
         .from('projects')
         .select('id')
@@ -157,7 +161,10 @@ export default function InvestmentOptionsSection({
       
       if (nameError) {
         console.error("Error fetching project by name:", nameError);
-        throw new Error("Erreur lors de la recherche du projet dans la base de données");
+        
+        // Try to create the project instead of throwing an error immediately
+        console.log("Failed to find project, attempting to create it...");
+        return await createProjectInDatabase();
       }
       
       if (projectByName) {
@@ -170,7 +177,7 @@ export default function InvestmentOptionsSection({
       return await createProjectInDatabase();
     } catch (error) {
       console.error("Error in findOrCreateProject:", error);
-      throw error;
+      throw new Error("Erreur lors de la création ou recherche du projet");
     }
   };
   
@@ -192,14 +199,25 @@ export default function InvestmentOptionsSection({
       
       const userId = session.session.user.id;
       
-      // Find or create project in the database
-      const projectUuid = await findOrCreateProject();
-      
-      if (!projectUuid) {
-        throw new Error("Impossible de déterminer l'identifiant du projet");
+      // Find or create project in the database - improved error handling
+      console.log("Finding or creating project for:", project.name);
+      let projectUuid;
+      try {
+        projectUuid = await findOrCreateProject();
+        if (!projectUuid) {
+          throw new Error("Impossible de déterminer l'identifiant du projet");
+        }
+        console.log("Using project UUID:", projectUuid);
+      } catch (projectError) {
+        console.error("Project lookup/creation error:", projectError);
+        toast({
+          title: "Erreur avec le projet",
+          description: "Impossible de trouver ou créer le projet. Veuillez réessayer plus tard.",
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+        return;
       }
-      
-      console.log("Using project UUID:", projectUuid);
       
       // Update user's wallet balance
       const { error: walletError } = await supabase.rpc(
