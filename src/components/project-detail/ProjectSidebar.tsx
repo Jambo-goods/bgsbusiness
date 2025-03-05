@@ -34,17 +34,7 @@ export default function ProjectSidebar({
                 </div>
               </div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
-              <div className="flex items-center">
-                <div className="p-1.5 bg-amber-50 rounded-md mr-2">
-                  <Clock className="h-4 w-4 text-amber-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-bgs-blue/70">Jours restants</p>
-                  <p className="text-sm font-semibold text-bgs-blue">{remainingDays}</p>
-                </div>
-              </div>
-            </div>
+            
           </div>
           
           {/* Investment Details */}
