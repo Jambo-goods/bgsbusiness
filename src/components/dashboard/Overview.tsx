@@ -29,18 +29,39 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
     const recentInvestmentData = localStorage.getItem("recentInvestment");
     
     if (recentInvestmentData) {
-      // Analyser les données d'investissement stockées
-      const investmentData = JSON.parse(recentInvestmentData);
-      setRecentInvestment(investmentData);
-      
-      // Afficher le toast de succès
-      toast({
-        title: "Investissement réussi !",
-        description: `Votre investissement de ${investmentData.amount}€ dans ${investmentData.projectName} a été enregistré.`,
-      });
-      
-      // Mettre à jour la base de données Supabase
-      updateSupabaseWithInvestment(investmentData);
+      try {
+        // Analyser les données d'investissement stockées
+        const investmentData = JSON.parse(recentInvestmentData);
+        
+        // Vérifier si l'investissement est récent (moins de 10 minutes)
+        const investmentTime = new Date(investmentData.timestamp || Date.now());
+        const currentTime = new Date();
+        const timeDifference = currentTime.getTime() - investmentTime.getTime();
+        const minutesDifference = timeDifference / (1000 * 60);
+        
+        // Ne montrer l'investissement que s'il a moins de 10 minutes
+        if (minutesDifference < 10) {
+          setRecentInvestment(investmentData);
+          
+          // Afficher le toast de succès
+          toast({
+            title: "Investissement réussi !",
+            description: `Votre investissement de ${investmentData.amount}€ dans ${investmentData.projectName} a été enregistré.`,
+          });
+          
+          // Mettre à jour la base de données Supabase
+          updateSupabaseWithInvestment(investmentData);
+          
+          // Montrer la confirmation d'investissement
+          setShowSuccess(true);
+        } else {
+          // Supprimer du localStorage car trop ancien
+          localStorage.removeItem("recentInvestment");
+        }
+      } catch (error) {
+        console.error("Erreur lors de l'analyse des données d'investissement:", error);
+        localStorage.removeItem("recentInvestment");
+      }
     }
   }, []);
 
@@ -55,11 +76,36 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
         return;
       }
       
+      // Vérifier si l'investissement existe déjà
+      const { data: existingInvestment, error: checkError } = await supabase
+        .from('investments')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('project_id', investmentData.projectId)
+        .eq('amount', investmentData.amount)
+        .order('date', { ascending: false })
+        .limit(1);
+      
+      if (checkError) {
+        console.error("Erreur lors de la vérification de l'investissement:", checkError);
+      } else if (existingInvestment && existingInvestment.length > 0) {
+        // L'investissement existe déjà, pas besoin de le recréer
+        console.log("Investissement déjà enregistré, pas besoin de le recréer");
+        
+        // Supprimer du localStorage pour éviter de montrer à nouveau
+        localStorage.removeItem("recentInvestment");
+        
+        // Rafraîchir les données du tableau de bord
+        refreshData();
+        
+        return;
+      }
+      
       // Calculer la date de fin (durée en mois à partir de maintenant)
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + investmentData.duration);
       
-      // Insérer l'investissement dans la table investments
+      // Insérer l'investissement dans la table investments s'il n'existe pas déjà
       const { error: investmentError } = await supabase
         .from('investments')
         .insert({
@@ -68,7 +114,8 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
           amount: investmentData.amount,
           yield_rate: investmentData.yield,
           duration: investmentData.duration,
-          end_date: endDate.toISOString()
+          end_date: endDate.toISOString(),
+          date: new Date().toISOString()
         });
       
       if (investmentError) {
@@ -79,7 +126,7 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
       // Mettre à jour le profil utilisateur
       const { data: profileData, error: profileFetchError } = await supabase
         .from('profiles')
-        .select('investment_total, projects_count')
+        .select('investment_total, projects_count, wallet_balance')
         .eq('id', userId)
         .single();
       
@@ -90,6 +137,7 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
       
       // Calculer les nouvelles valeurs
       const newTotal = (profileData.investment_total || 0) + investmentData.amount;
+      const newBalance = (profileData.wallet_balance || 0) - investmentData.amount;
       
       // Vérifier si l'utilisateur a déjà investi dans ce projet
       const { data: existingInvestments } = await supabase
@@ -109,7 +157,8 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
         .from('profiles')
         .update({
           investment_total: newTotal,
-          projects_count: newCount
+          projects_count: newCount,
+          wallet_balance: newBalance >= 0 ? newBalance : 0
         })
         .eq('id', userId);
       
@@ -118,11 +167,22 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
         return;
       }
       
+      // Créer une transaction pour l'investissement
+      const { error: transactionError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: userId,
+          amount: -investmentData.amount,
+          type: 'investment',
+          description: `Investissement dans ${investmentData.projectName}`
+        });
+      
+      if (transactionError) {
+        console.error("Erreur lors de la création de la transaction:", transactionError);
+      }
+      
       // Supprimer du localStorage pour éviter de montrer à nouveau
       localStorage.removeItem("recentInvestment");
-      
-      // Montrer la confirmation d'investissement
-      setShowSuccess(true);
       
       // Rafraîchir les données du tableau de bord
       refreshData();

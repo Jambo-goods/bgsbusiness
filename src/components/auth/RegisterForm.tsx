@@ -54,7 +54,7 @@ export default function RegisterForm() {
       if (signUpError) throw signUpError;
       
       if (data && data.user) {
-        // S'assurer que le solde du portefeuille est initialisé à 0
+        // S'assurer que les valeurs du profil sont correctement initialisées à 0
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ 
@@ -73,7 +73,7 @@ export default function RegisterForm() {
           description: "Votre compte a été créé avec succès",
         });
         
-        // Pour la démo, créer également une entrée dans localStorage
+        // Stocker les données utilisateur dans localStorage
         const userData = {
           firstName,
           lastName,

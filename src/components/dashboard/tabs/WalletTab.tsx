@@ -38,11 +38,38 @@ export default function WalletTab() {
       if (profileError) {
         console.error("Erreur lors de la récupération du profil:", profileError);
       } else if (profileData) {
-        // Utiliser l'opérateur nullish coalescing pour garantir que la valeur est 0 si null ou undefined
-        setBalance(profileData.wallet_balance ?? 0);
+        // S'assurer que la valeur est 0 si null ou undefined
+        const walletBalance = profileData.wallet_balance ?? 0;
+        setBalance(walletBalance);
+        
+        // Si la balance est null/undefined, l'initialiser à 0 dans la base de données
+        if (profileData.wallet_balance === null || profileData.wallet_balance === undefined) {
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ wallet_balance: 0 })
+            .eq('id', user.id);
+          
+          if (updateError) {
+            console.error("Erreur lors de l'initialisation du solde:", updateError);
+          }
+        }
       } else {
         // Cas où le profil n'existe pas encore, initialiser à 0
         setBalance(0);
+        
+        // Créer un profil avec des valeurs par défaut
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: user.id,
+            wallet_balance: 0,
+            investment_total: 0,
+            projects_count: 0
+          });
+        
+        if (insertError) {
+          console.error("Erreur lors de la création du profil:", insertError);
+        }
       }
       
       // Fetch wallet transactions
@@ -66,6 +93,37 @@ export default function WalletTab() {
 
   useEffect(() => {
     fetchWalletData();
+    
+    // Configurer un abonnement en temps réel aux mises à jour des transactions
+    const walletChannel = supabase
+      .channel('wallet-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wallet_transactions'
+      }, () => {
+        // Rafraîchir les données lorsqu'une transaction est ajoutée/modifiée
+        fetchWalletData();
+      })
+      .subscribe();
+    
+    // Configurer un abonnement en temps réel aux mises à jour du profil
+    const profileChannel = supabase
+      .channel('profile-changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles'
+      }, () => {
+        // Rafraîchir les données lorsque le profil est mis à jour
+        fetchWalletData();
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(walletChannel);
+      supabase.removeChannel(profileChannel);
+    };
   }, []);
 
   const handleDeposit = async () => {

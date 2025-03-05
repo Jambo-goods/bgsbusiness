@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
-  // Possible activeTab values: "overview", "wallet", "capital", "yield", "investments", "tracking", "profile", "settings"
+  // État initial du dashboard
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [userData, setUserData] = useState<{
@@ -23,6 +23,7 @@ export default function Dashboard() {
     address?: string;
     investmentTotal: number;
     projectsCount: number;
+    walletBalance?: number;
   } | null>(null);
   const [userInvestments, setUserInvestments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,6 +53,7 @@ export default function Dashboard() {
           // S'assurer que les valeurs par défaut sont à 0 si elles ne sont pas définies
           const investmentTotal = (parsedUser.investmentTotal || parsedUser.investment_total || 0) + additionalInvestment;
           const projectsCount = parsedUser.projectsCount || parsedUser.projects_count || 0;
+          const walletBalance = parsedUser.wallet_balance || parsedUser.walletBalance || 0;
           
           setUserData({
             firstName: parsedUser.firstName || "Jean",
@@ -60,7 +62,8 @@ export default function Dashboard() {
             phone: parsedUser.phone || "+33 6 12 34 56 78",
             address: parsedUser.address || "123 Avenue des Champs-Élysées, Paris",
             investmentTotal: investmentTotal,
-            projectsCount: projectsCount
+            projectsCount: projectsCount,
+            walletBalance: walletBalance
           });
           
           // Filtrer les investissements de l'utilisateur (dans une vraie application, ce serait spécifique à l'utilisateur)
@@ -100,12 +103,58 @@ export default function Dashboard() {
             description: "Impossible de récupérer votre profil.",
             variant: "destructive"
           });
+          
+          // Créer un profil si celui-ci n'existe pas encore
+          if (profileError.code === 'PGRST116') {
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert({
+                id: user.id,
+                first_name: user.user_metadata?.first_name || "Utilisateur",
+                last_name: user.user_metadata?.last_name || "",
+                email: user.email,
+                wallet_balance: 0,
+                investment_total: 0,
+                projects_count: 0
+              });
+            
+            if (insertError) {
+              console.error("Erreur lors de la création du profil:", insertError);
+              setLoading(false);
+              return;
+            } else {
+              // Réessayer de récupérer le profil après sa création
+              return fetchUserData();
+            }
+          }
+          
           setLoading(false);
           return;
         }
         
+        // S'assurer que les valeurs numériques sont initialisées à 0 si elles sont nulles
+        if (profileData.wallet_balance === null || profileData.wallet_balance === undefined) {
+          await supabase
+            .from('profiles')
+            .update({ wallet_balance: 0 })
+            .eq('id', user.id);
+        }
+        
+        if (profileData.investment_total === null || profileData.investment_total === undefined) {
+          await supabase
+            .from('profiles')
+            .update({ investment_total: 0 })
+            .eq('id', user.id);
+        }
+        
+        if (profileData.projects_count === null || profileData.projects_count === undefined) {
+          await supabase
+            .from('profiles')
+            .update({ projects_count: 0 })
+            .eq('id', user.id);
+        }
+        
         // Mettre à jour les données utilisateur
-        // Utiliser des valeurs par défaut de 0 pour les propriétés numériques
         setUserData({
           firstName: profileData.first_name || "Utilisateur",
           lastName: profileData.last_name || "",
@@ -113,13 +162,14 @@ export default function Dashboard() {
           phone: profileData.phone || "",
           address: profileData.address || "",
           investmentTotal: profileData.investment_total ?? 0,
-          projectsCount: profileData.projects_count ?? 0
+          projectsCount: profileData.projects_count ?? 0,
+          walletBalance: profileData.wallet_balance ?? 0
         });
         
         // Récupérer les investissements de l'utilisateur
         const { data: investments, error: investmentsError } = await supabase
           .from('investments')
-          .select('*, projects(*)')
+          .select('*, project:project_id(id, name, description, location, yield, status, image, minInvestment, fundingProgress)')
           .eq('user_id', user.id);
         
         if (investmentsError) {
@@ -127,7 +177,17 @@ export default function Dashboard() {
         } else if (investments && investments.length > 0) {
           // Transformer les données pour correspondre au format Project
           const formattedInvestments = investments.map(inv => ({
-            ...inv.projects,
+            ...projects.find(p => p.id === inv.project_id) || {
+              id: inv.project_id,
+              name: inv.project?.name || "Projet inconnu",
+              description: inv.project?.description || "Description non disponible",
+              location: inv.project?.location || "Emplacement inconnu",
+              yield: inv.yield_rate,
+              status: "active",
+              image: inv.project?.image || "/placeholder.svg",
+              minInvestment: inv.project?.minInvestment || 1000,
+              fundingProgress: inv.project?.fundingProgress || 50
+            },
             investmentAmount: inv.amount,
             investmentDate: inv.date,
             investmentStatus: inv.status
@@ -135,7 +195,7 @@ export default function Dashboard() {
           
           setUserInvestments(formattedInvestments);
         } else {
-          // Aucun investissement trouvé, utiliser des données de démo
+          // Aucun investissement trouvé, utiliser un tableau vide
           setUserInvestments([]);
         }
       }
@@ -154,6 +214,46 @@ export default function Dashboard() {
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchUserData();
+    
+    // Configurer un abonnement en temps réel aux mises à jour
+    const profileChannel = supabase
+      .channel('dashboard-profile-changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles'
+      }, () => {
+        fetchUserData();
+      })
+      .subscribe();
+    
+    const investmentsChannel = supabase
+      .channel('dashboard-investments-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'investments'
+      }, () => {
+        fetchUserData();
+      })
+      .subscribe();
+    
+    const transactionsChannel = supabase
+      .channel('dashboard-transactions-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wallet_transactions'
+      }, () => {
+        fetchUserData();
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(profileChannel);
+      supabase.removeChannel(investmentsChannel);
+      supabase.removeChannel(transactionsChannel);
+    };
   }, []);
 
   const handleLogout = async () => {

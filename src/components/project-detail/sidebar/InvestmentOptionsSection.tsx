@@ -47,12 +47,45 @@ export default function InvestmentOptionsSection({
         if (error) {
           console.error("Erreur lors de la récupération du solde:", error);
         } else if (data) {
-          setWalletBalance(data.wallet_balance || 0);
+          // Utiliser l'opérateur nullish coalescing pour garantir que la valeur est 0 si null ou undefined
+          setWalletBalance(data.wallet_balance ?? 0);
+          
+          // Si la balance est null/undefined, l'initialiser à 0 dans la base de données
+          if (data.wallet_balance === null || data.wallet_balance === undefined) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ wallet_balance: 0 })
+              .eq('id', user.id);
+            
+            if (updateError) {
+              console.error("Erreur lors de l'initialisation du solde:", updateError);
+            }
+          }
         }
       }
     };
     
     checkUserSession();
+    
+    // Configurer un abonnement en temps réel aux mises à jour du profil
+    const profileChannel = supabase
+      .channel('profile-changes-invest')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'profiles'
+      }, (payload) => {
+        // Mettre à jour le solde lorsque le profil est mis à jour
+        const newBalance = payload.new.wallet_balance;
+        if (newBalance !== undefined) {
+          setWalletBalance(newBalance);
+        }
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(profileChannel);
+    };
   }, []);
 
   const handleInvest = async () => {
@@ -108,7 +141,8 @@ export default function InvestmentOptionsSection({
           amount: selectedAmount,
           yield_rate: expectedYield,
           duration: selectedDuration,
-          end_date: endDate.toISOString()
+          end_date: endDate.toISOString(),
+          date: new Date().toISOString()
         });
       
       if (investmentError) {
@@ -185,7 +219,8 @@ export default function InvestmentOptionsSection({
         amount: selectedAmount,
         duration: selectedDuration,
         yield: expectedYield,
-        projectName: project.name
+        projectName: project.name,
+        timestamp: new Date().toISOString()
       }));
       
       // Afficher un message de succès
