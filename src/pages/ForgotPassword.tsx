@@ -1,9 +1,11 @@
 
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Mail, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -20,15 +22,24 @@ export default function ForgotPassword() {
     setError("");
     setIsLoading(true);
 
-    // Simuler une demande de réinitialisation pour la démonstration
     try {
-      // Simulation d'un délai de réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!email) {
+        setError("Veuillez entrer votre adresse email");
+        return;
+      }
       
-      console.log("Password reset request for:", email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      
+      if (error) throw error;
+      
       setSuccess(true);
-    } catch (err) {
-      setError("Une erreur s'est produite lors de la demande de réinitialisation");
+      toast("Email envoyé", {
+        description: "Vérifiez votre boîte de réception pour réinitialiser votre mot de passe",
+      });
+    } catch (err: any) {
+      setError(err.message || "Une erreur s'est produite lors de la demande de réinitialisation");
       console.error("Password reset error:", err);
     } finally {
       setIsLoading(false);
@@ -51,8 +62,9 @@ export default function ForgotPassword() {
             
             <div className="glass-card p-6 md:p-8">
               {error && (
-                <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
-                  {error}
+                <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
+                  <AlertCircle size={18} className="mr-2 flex-shrink-0" />
+                  <p>{error}</p>
                 </div>
               )}
               
@@ -91,9 +103,16 @@ export default function ForgotPassword() {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full btn-primary"
+                    className="w-full btn-primary flex items-center justify-center gap-2"
                   >
-                    {isLoading ? "Envoi en cours..." : "Envoyer le lien de réinitialisation"}
+                    {isLoading ? (
+                      <>
+                        <Loader2 size={18} className="animate-spin" />
+                        Envoi en cours...
+                      </>
+                    ) : (
+                      "Envoyer le lien de réinitialisation"
+                    )}
                   </button>
                   
                   <div className="text-center">

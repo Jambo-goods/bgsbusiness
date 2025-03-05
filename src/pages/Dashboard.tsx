@@ -53,34 +53,7 @@ export default function Dashboard() {
           .eq('id', userId)
           .single();
           
-        if (profileError) {
-          console.error("Profile error:", profileError);
-          // For new users, we'll initialize with default values
-          setUserData({
-            firstName: sessionData.session.user.user_metadata?.first_name || "Nouvel",
-            lastName: sessionData.session.user.user_metadata?.last_name || "Utilisateur",
-            email: sessionData.session.user.email || "",
-            investmentTotal: 0,
-            projectsCount: 0,
-            walletBalance: 0
-          });
-          
-          // Initialize wallet balance for new users
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: userId,
-              first_name: sessionData.session.user.user_metadata?.first_name || "Nouvel",
-              last_name: sessionData.session.user.user_metadata?.last_name || "Utilisateur",
-              email: sessionData.session.user.email || "",
-              investment_total: 0,
-              projects_count: 0,
-              wallet_balance: 0
-            });
-            
-          setIsLoading(false);
-          return;
-        }
+        if (profileError) throw profileError;
         
         // Récupérer les investissements de l'utilisateur
         const { data: investmentsData, error: investmentsError } = await supabase
@@ -93,7 +66,7 @@ export default function Dashboard() {
         // Filtrer les projets pour obtenir ceux dans lesquels l'utilisateur a investi
         let userInvestmentProjects = [];
         
-        if (investmentsData && investmentsData.length > 0) {
+        if (investmentsData.length > 0) {
           const projectIds = investmentsData.map(inv => inv.project_id);
           userInvestmentProjects = projects.filter(p => projectIds.includes(p.id));
         }
@@ -113,7 +86,7 @@ export default function Dashboard() {
       } catch (err) {
         console.error("Erreur lors de la récupération des données:", err);
         toast.error("Erreur lors du chargement des données utilisateur");
-        // Don't redirect to login here as it might cause an infinite loop
+        navigate("/login");
       } finally {
         setIsLoading(false);
       }

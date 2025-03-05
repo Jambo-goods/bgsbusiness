@@ -1,101 +1,79 @@
 
-import React from "react";
-import { LogOut, BarChart2, Wallet, LineChart, PieChart, Settings, User } from "lucide-react";
+import { useState, useEffect, useCallback, memo } from "react";
+import { cn } from "@/lib/utils";
 import SidebarSection from "./SidebarSection";
-import SidebarNavItem from "./SidebarNavItem";
+import PrincipalSection from "./sections/PrincipalSection";
+import AccountSection from "./sections/AccountSection";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isSidebarOpen: boolean;
   handleLogout: () => void;
-  toggleSidebar: () => void;
+  toggleSidebar?: () => void;
 }
 
-export default function Sidebar({ 
-  activeTab, 
-  setActiveTab, 
+const Sidebar = memo(({
+  activeTab,
+  setActiveTab,
   isSidebarOpen,
   handleLogout,
   toggleSidebar
-}: SidebarProps) {
+}: SidebarProps) => {
+  const [expanded, setExpanded] = useState(true);
+  
+  const handleToggle = useCallback(() => {
+    setExpanded(prev => !prev);
+  }, []);
+
+  // Add keyboard shortcut listener with useCallback for better performance
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Check for Ctrl/Cmd+B
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault(); // Prevent default browser behavior
+        if (toggleSidebar) {
+          toggleSidebar();
+        } else {
+          handleToggle();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    // Clean up event listener on component unmount
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [toggleSidebar, handleToggle]);
+  
   return (
-    <div className="flex flex-col h-full overflow-y-auto overscroll-contain py-4">
-      {/* Principal Section */}
-      <SidebarSection title="Principal" expanded={isSidebarOpen}>
-        <SidebarNavItem
-          icon={BarChart2}
-          label="Vue d'ensemble"
-          isActive={activeTab === "overview"}
-          expanded={isSidebarOpen}
-          onClick={() => setActiveTab("overview")}
-        />
-        <SidebarNavItem
-          icon={Wallet}
-          label="Portefeuille"
-          isActive={activeTab === "wallet"}
-          expanded={isSidebarOpen}
-          onClick={() => setActiveTab("wallet")}
-        />
-      </SidebarSection>
-
-      {/* Investments Section */}
-      <SidebarSection title="Investissements" expanded={isSidebarOpen}>
-        <SidebarNavItem
-          icon={LineChart}
-          label="Capital"
-          isActive={activeTab === "capital"}
-          expanded={isSidebarOpen}
-          onClick={() => setActiveTab("capital")}
-        />
-        <SidebarNavItem
-          icon={LineChart}
-          label="Rendement"
-          isActive={activeTab === "yield"}
-          expanded={isSidebarOpen}
-          onClick={() => setActiveTab("yield")}
-        />
-        <SidebarNavItem
-          icon={BarChart2}
-          label="Mes investissements"
-          isActive={activeTab === "investments"}
-          expanded={isSidebarOpen}
-          onClick={() => setActiveTab("investments")}
-        />
-        <SidebarNavItem
-          icon={PieChart}
-          label="Suivi des revenus"
-          isActive={activeTab === "tracking"}
-          expanded={isSidebarOpen}
-          onClick={() => setActiveTab("tracking")}
-        />
-      </SidebarSection>
-
-      {/* Account Section */}
-      <SidebarSection title="Compte" expanded={isSidebarOpen}>
-        <SidebarNavItem
-          icon={User}
-          label="Profil"
-          isActive={activeTab === "profile"}
-          expanded={isSidebarOpen}
-          onClick={() => setActiveTab("profile")}
-        />
-        <SidebarNavItem
-          icon={Settings}
-          label="Paramètres"
-          isActive={activeTab === "settings"}
-          expanded={isSidebarOpen}
-          onClick={() => setActiveTab("settings")}
-        />
-        <SidebarNavItem
-          icon={LogOut}
-          label="Déconnexion"
-          isActive={false}
-          expanded={isSidebarOpen}
-          onClick={handleLogout}
-          variant="danger"
-        />
-      </SidebarSection>
+    <div className={cn(
+      "flex flex-col h-full transition-all duration-300 bg-white shadow-md rounded-r-xl border-r", 
+      expanded ? "w-64" : "w-20"
+    )}>
+      <nav className="flex-1 py-4 overflow-y-auto px-2 overscroll-contain">
+        <SidebarSection title="Principal" expanded={expanded}>
+          <PrincipalSection 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            expanded={expanded} 
+          />
+        </SidebarSection>
+        
+        <SidebarSection title="Compte" expanded={expanded}>
+          <AccountSection 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            expanded={expanded} 
+            handleLogout={handleLogout} 
+          />
+        </SidebarSection>
+      </nav>
     </div>
   );
-}
+});
+
+Sidebar.displayName = "Sidebar";
+
+export default Sidebar;
