@@ -20,38 +20,20 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   
   // Calculer les rendements lorsque les entrées changent
   useEffect(() => {
-    // Rendement annuel converti en rendement pour la durée sélectionnée
-    const returnRate = (project.yield / 100) * (duration / 12);
-    const calculatedTotalReturn = investmentAmount * (1 + returnRate);
-    const calculatedMonthlyReturn = calculatedTotalReturn / duration;
+    // Le rendement est mensuel, donc pas besoin de le diviser par 12
+    const monthlyYield = project.yield / 100;
+    const annualYield = monthlyYield * 12; // Convertir en rendement annuel
+    
+    // Pour le nombre total de mois sélectionnés
+    const calculatedTotalReturn = investmentAmount * (1 + (monthlyYield * duration));
+    const calculatedMonthlyReturn = investmentAmount * monthlyYield;
     
     setTotalReturn(calculatedTotalReturn);
     setMonthlyReturn(calculatedMonthlyReturn);
   }, [investmentAmount, duration, project.yield]);
   
-  const handleInvestClick = () => {
-    if (investmentAmount > userBalance) {
-      toast.error("Solde insuffisant", {
-        description: "Veuillez recharger votre compte avant de procéder à cet investissement.",
-        action: {
-          label: "Déposer des fonds",
-          onClick: () => console.log("Redirection vers la page de dépôt")
-        }
-      });
-    } else {
-      toast.success("Investissement en cours de traitement", {
-        description: "Vous allez être redirigé vers la page de confirmation."
-      });
-      // Redirection vers la page de confirmation (simulation)
-      setTimeout(() => {
-        console.log("Redirection vers la page de confirmation avec:", {
-          projectId: project.id,
-          amount: investmentAmount,
-          duration
-        });
-      }, 1500);
-    }
-  };
+  // Calculer le rendement annuel (pour l'affichage)
+  const annualYieldPercentage = project.yield * 12;
   
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-fade-up">
@@ -107,17 +89,17 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
         <h3 className="text-sm font-medium text-bgs-blue mb-3">Simulation de rendement</h3>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-xs text-bgs-blue/70 mb-1">Rendement estimé</p>
+            <p className="text-xs text-bgs-blue/70 mb-1">Rendement mensuel</p>
             <div className="flex items-center text-green-600 font-bold">
               <TrendingUp className="h-4 w-4 mr-1" />
-              {project.yield}% par an
+              {project.yield}% par mois
             </div>
           </div>
           <div>
-            <p className="text-xs text-bgs-blue/70 mb-1">Durée choisie</p>
-            <div className="flex items-center text-bgs-blue font-bold">
-              <Calendar className="h-4 w-4 mr-1 text-bgs-blue/70" />
-              {duration} mois
+            <p className="text-xs text-bgs-blue/70 mb-1">Rendement annuel</p>
+            <div className="flex items-center text-green-600 font-bold">
+              <TrendingUp className="h-4 w-4 mr-1" />
+              {annualYieldPercentage}% par an
             </div>
           </div>
           <div>
