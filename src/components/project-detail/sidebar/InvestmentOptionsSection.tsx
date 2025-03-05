@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { ArrowRight, Edit, Save } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
@@ -22,7 +21,9 @@ export default function InvestmentOptionsSection({
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  const progressPercentage = (project.raised / project.target) * 100;
+  const raised = project.raised || project.price * (project.fundingProgress / 100);
+  const target = project.target || project.price;
+  const progressPercentage = (raised / target) * 100;
   const minInvestment = 100;
   const maxInvestment = 10000;
   
@@ -82,7 +83,7 @@ export default function InvestmentOptionsSection({
           <div className="mb-4">
             <div className="flex justify-between items-center mb-1">
               <span className="text-sm text-bgs-blue/70">{progressPercentage.toFixed(0)}% financé</span>
-              <span className="text-sm font-medium text-bgs-blue">{project.raised.toLocaleString()}€ / {project.target.toLocaleString()}€</span>
+              <span className="text-sm font-medium text-bgs-blue">{raised.toLocaleString()}€ / {target.toLocaleString()}€</span>
             </div>
             <Progress value={progressPercentage} className="h-2" />
           </div>
@@ -90,7 +91,7 @@ export default function InvestmentOptionsSection({
           <div className="mb-6">
             <div className="flex justify-between items-center mb-2">
               <span className="text-sm text-bgs-blue/70">{investorCount} investisseurs</span>
-              <span className="text-sm text-bgs-blue/70">Objectif: {project.target.toLocaleString()}€</span>
+              <span className="text-sm text-bgs-blue/70">Objectif: {target.toLocaleString()}€</span>
             </div>
             
             <div className="mb-4 bg-bgs-gray-light p-3 rounded-lg">

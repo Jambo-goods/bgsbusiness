@@ -18,4 +18,6 @@ export interface Project {
   possibleDurations?: number[];
   startDate?: string;
   endDate?: string;
+  raised?: number;
+  target?: number;
 }
