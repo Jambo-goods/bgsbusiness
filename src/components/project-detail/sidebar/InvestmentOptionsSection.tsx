@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, AlertCircle, TrendingUp } from "lucide-react";
+import { ArrowRight, AlertCircle, TrendingUp, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Project } from "@/types/project";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,6 +97,9 @@ export default function InvestmentOptionsSection({
 
     if (walletBalance < selectedAmount) {
       toast.error(`Solde insuffisant. Vous avez ${walletBalance}€ et vous essayez d'investir ${selectedAmount}€.`);
+      setTimeout(() => {
+        navigate("/dashboard/wallet?action=deposit");
+      }, 1500);
       return;
     }
 
@@ -215,13 +218,15 @@ export default function InvestmentOptionsSection({
       
       {isLoggedIn && walletBalance < selectedAmount && <div className="flex items-start gap-2 text-red-600 mb-4 p-3 bg-red-50 rounded-md">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="text-sm">
-            Solde insuffisant. Vous avez {walletBalance}€ dans votre portefeuille.
-            <br />
-            <Button variant="link" className="p-0 h-auto text-red-600 underline" onClick={() => navigate("/dashboard/wallet")}>
-              Ajoutez des fonds
+          <div className="text-sm">
+            <p>Solde insuffisant. Vous avez {walletBalance}€ dans votre portefeuille et vous souhaitez investir {selectedAmount}€.</p>
+            <p className="mt-1 font-medium">Un dépôt de {selectedAmount - walletBalance}€ est nécessaire pour continuer.</p>
+            <Button variant="link" className="p-0 h-auto text-red-600 hover:text-red-800 mt-1 flex items-center" 
+              onClick={() => navigate("/dashboard/wallet?action=deposit")}>
+              <Wallet className="mr-1 h-4 w-4" />
+              Effectuer un dépôt
             </Button>
-          </p>
+          </div>
         </div>}
       
       <Button 
