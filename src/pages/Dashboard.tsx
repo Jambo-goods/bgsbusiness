@@ -85,7 +85,7 @@ export default function Dashboard() {
         // Récupérer les données de profil depuis Supabase
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
-          .select('*')
+          .select('*, wallet_balance')
           .eq('id', user.id)
           .single();
         

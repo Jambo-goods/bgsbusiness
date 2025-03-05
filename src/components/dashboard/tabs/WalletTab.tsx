@@ -19,13 +19,13 @@ export default function WalletTab() {
         
         if (user) {
           // Vérifier si l'utilisateur a un portefeuille
-          const { data: walletData } = await supabase
+          const { data: walletData, error } = await supabase
             .from('profiles')
             .select('wallet_balance')
             .eq('id', user.id)
             .single();
           
-          if (walletData) {
+          if (walletData && walletData.wallet_balance !== undefined) {
             setBalance(walletData.wallet_balance || 0);
           }
         }

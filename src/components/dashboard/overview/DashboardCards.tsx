@@ -1,6 +1,8 @@
 
 import { Banknote, TrendingUpIcon, WalletIcon, BarChart3Icon } from "lucide-react";
 import DashboardCard from "../DashboardCard";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardCardsProps {
   userData: {
@@ -16,13 +18,33 @@ export default function DashboardCards({ userData }: DashboardCardsProps) {
   // Calculate yearly yield for display
   const monthlyYield = 1.125; // 1.125% per month
   const annualYield = monthlyYield * 12; // 13.5% per year
+  const [walletBalance, setWalletBalance] = useState(0);
+  
+  useEffect(() => {
+    async function fetchWalletBalance() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', user.id)
+          .single();
+          
+        if (data && data.wallet_balance !== undefined) {
+          setWalletBalance(data.wallet_balance);
+        }
+      }
+    }
+    
+    fetchWalletBalance();
+  }, []);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Solde disponible card */}
       <DashboardCard
         title="Solde disponible"
-        value="3,250 €"
+        value={`${walletBalance.toLocaleString('fr-FR')} €`}
         icon={<Banknote />}
         iconBgColor="bg-purple-100"
         iconColor="text-purple-600"
@@ -34,7 +56,7 @@ export default function DashboardCards({ userData }: DashboardCardsProps) {
       {/* Total investi card */}
       <DashboardCard
         title="Total investi"
-        value={`${userData.investmentTotal.toLocaleString()} €`}
+        value={`${userData.investmentTotal.toLocaleString('fr-FR')} €`}
         icon={<WalletIcon />}
         iconBgColor="bg-blue-100"
         iconColor="text-bgs-blue"

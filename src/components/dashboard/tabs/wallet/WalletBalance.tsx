@@ -17,7 +17,7 @@ export default function WalletBalance({ balance: initialBalance }: WalletBalance
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         // Vérifier si l'utilisateur a des transactions
-        const { data: userTransactions } = await supabase
+        const { data: userTransactions, error } = await supabase
           .from('wallet_transactions')
           .select('*')
           .eq('user_id', user.id);
