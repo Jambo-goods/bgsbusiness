@@ -67,17 +67,6 @@ export default function Sidebar({
           <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} handleLogout={handleLogout} />
         </SidebarSection>
       </nav>
-      
-      {/* Toggle button at the bottom */}
-      <div className="p-2 border-t flex justify-center">
-        <button 
-          onClick={handleToggle}
-          className="p-2 rounded-lg hover:bg-bgs-gray-light text-bgs-gray-medium transition-colors"
-          aria-label={expanded ? "Collapse sidebar" : "Expand sidebar"}
-        >
-          {expanded ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-        </button>
-      </div>
     </div>
   );
 }
