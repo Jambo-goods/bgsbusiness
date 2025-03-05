@@ -6,14 +6,16 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -32,11 +34,13 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setEmailNotConfirmed(false);
     setIsLoading(true);
 
     try {
       if (!email || !password) {
         setError("Veuillez remplir tous les champs");
+        setIsLoading(false);
         return;
       }
       
@@ -46,7 +50,17 @@ export default function Login() {
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        if (error.message === "Email not confirmed") {
+          setEmailNotConfirmed(true);
+          console.log("Email not confirmed error detected");
+        } else if (error.message === "Invalid login credentials") {
+          setError("Email ou mot de passe incorrect");
+        } else {
+          setError(error.message || "Une erreur s'est produite lors de la connexion");
+        }
+        throw error;
+      }
       
       toast({
         title: "Connexion réussie",
@@ -56,12 +70,33 @@ export default function Login() {
       navigate("/dashboard");
     } catch (err: any) {
       console.error("Login error:", err);
-      
-      if (err.message === "Invalid login credentials") {
-        setError("Email ou mot de passe incorrect");
-      } else {
-        setError("Une erreur s'est produite lors de la connexion");
-      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email) {
+      setError("Veuillez entrer votre adresse email");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email de confirmation envoyé",
+        description: "Veuillez vérifier votre boîte de réception",
+      });
+    } catch (err: any) {
+      console.error("Resend confirmation error:", err);
+      setError(err.message || "Impossible d'envoyer l'email de confirmation");
     } finally {
       setIsLoading(false);
     }
@@ -86,6 +121,20 @@ export default function Login() {
                 <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
                   <AlertCircle size={18} className="mr-2 flex-shrink-0" />
                   <p>{error}</p>
+                </div>
+              )}
+              
+              {emailNotConfirmed && (
+                <div className="bg-amber-100 border border-amber-200 text-amber-700 px-4 py-3 rounded mb-6">
+                  <p className="font-medium mb-2">Email non confirmé</p>
+                  <p className="mb-2">Vous devez confirmer votre adresse email avant de pouvoir vous connecter.</p>
+                  <button 
+                    onClick={handleResendConfirmation}
+                    className="text-amber-800 underline hover:text-amber-900"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Envoi en cours..." : "Renvoyer l'email de confirmation"}
+                  </button>
                 </div>
               )}
               
@@ -171,3 +220,4 @@ export default function Login() {
     </div>
   );
 }
+
