@@ -1,133 +1,111 @@
 
-import React, { useState, useEffect } from "react";
-import { ArrowRight } from "lucide-react";
-import { Project } from "@/types/project";
-import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowRight, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import InvestmentAmountInput from "./InvestmentAmountInput";
+import DurationSelector from "./DurationSelector";
+import YieldInfo from "./YieldInfo";
+import InvestmentSummary from "./InvestmentSummary";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-// Import our components
-import InvestmentAmountSection from "./InvestmentAmountSection";
-import DurationSection from "./DurationSection";
-import InvestmentSummary from "./InvestmentSummary";
-import InvestmentConfirmation from "./InvestmentConfirmation";
-
-interface InvestmentOptionsSectionProps {
-  project: Project;
-  investorCount: number;
-}
+type InvestmentOptionsProps = {
+  project: any;
+  minInvestment: number;
+  possibleDurations?: number[];
+  projectYield: number;
+  onInvestSuccess: () => void;
+};
 
 export default function InvestmentOptionsSection({
   project,
-  investorCount
-}: InvestmentOptionsSectionProps) {
-  const [investmentAmount, setInvestmentAmount] = useState(500);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [selectedDuration, setSelectedDuration] = useState(
-    project.possibleDurations ? project.possibleDurations[0] : parseInt(project.duration)
-  );
-  const [totalReturn, setTotalReturn] = useState(0);
-  const [monthlyReturn, setMonthlyReturn] = useState(0);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { toast } = useToast();
+  minInvestment = 1000,
+  possibleDurations = [12, 24, 36, 48],
+  projectYield = 13.5,
+  onInvestSuccess
+}: InvestmentOptionsProps) {
+  const [amount, setAmount] = useState(minInvestment);
+  const [duration, setDuration] = useState(possibleDurations[0] || 12);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const navigate = useNavigate();
+
+  const monthlyYield = projectYield / 12;
+  const totalReturn = amount * (1 + (projectYield / 100) * (duration / 12));
+  const totalProfit = totalReturn - amount;
   
-  const minInvestment = 100;
-  const maxInvestment = 10000;
-  
-  // Get possible durations from project, or create an array from the project duration
-  const durations = project.possibleDurations || 
-    [parseInt(project.duration.split(' ')[0])];
-  
-  // Vérifier si l'utilisateur est connecté
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsLoggedIn(!!user);
-    };
-    
-    checkAuthStatus();
-  }, []);
-  
-  // Calculate returns when investment amount or duration changes
-  useEffect(() => {
-    // Calculate monthly return
-    const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
-    
-    // Calculate total return after the full duration
-    const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * selectedDuration);
-    
-    setMonthlyReturn(calculatedMonthlyReturn);
-    setTotalReturn(calculatedTotalReturn);
-  }, [investmentAmount, selectedDuration, project.yield]);
-  
-  const handleInvest = () => {
-    if (!isLoggedIn) {
-      toast({
-        title: "Connexion requise",
-        description: "Veuillez vous connecter pour pouvoir investir.",
-        variant: "destructive"
-      });
-      
-      // Redirection vers la page de connexion
-      navigate("/login");
-      return;
+  const handleAmountChange = (value: number) => {
+    if (value < minInvestment) {
+      setAmount(minInvestment);
+    } else {
+      setAmount(value);
     }
-    
-    setShowConfirmation(true);
   };
   
-  const confirmInvestment = async () => {
-    setIsProcessing(true);
+  const handleInvest = async () => {
+    setIsSubmitting(true);
     
     try {
       // Vérifier si l'utilisateur est connecté
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
+        // Stocker les détails de l'investissement intention dans localStorage pour redirection après connexion
+        localStorage.setItem("pendingInvestment", JSON.stringify({
+          projectId: project.id,
+          projectName: project.name,
+          amount,
+          duration,
+          yield: projectYield
+        }));
+        
         toast({
           title: "Connexion requise",
-          description: "Veuillez vous connecter pour pouvoir investir.",
-          variant: "destructive"
+          description: "Veuillez vous connecter ou créer un compte pour investir",
         });
         
-        setIsProcessing(false);
+        // Rediriger vers la page de connexion
         navigate("/login");
         return;
       }
       
-      // Insérer l'investissement dans Supabase
-      const { error } = await supabase
+      // Si l'utilisateur est connecté, procéder à l'investissement
+      
+      // Calculer la date de fin (aujourd'hui + durée en mois)
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + duration);
+      
+      // Enregistrer l'investissement dans Supabase
+      const { error: investmentError } = await supabase
         .from('investments')
         .insert({
           user_id: user.id,
           project_id: project.id,
-          amount: investmentAmount,
-          yield_rate: project.yield,
-          duration: selectedDuration,
-          end_date: new Date(new Date().setMonth(new Date().getMonth() + selectedDuration))
+          amount: amount,
+          duration: duration,
+          yield_rate: projectYield,
+          end_date: endDate.toISOString() // Conversion de Date à string ISO
         });
       
-      if (error) {
-        console.error("Erreur lors de l'enregistrement de l'investissement:", error);
-        toast({
-          title: "Erreur",
-          description: "Une erreur est survenue lors de l'enregistrement de votre investissement.",
-          variant: "destructive"
-        });
-        setIsProcessing(false);
-        return;
+      if (investmentError) {
+        throw new Error("Erreur lors de l'enregistrement de l'investissement");
       }
       
-      // Mettre à jour le profil utilisateur (total investi et nombre de projets)
+      // Mettre à jour le profil utilisateur
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('investment_total, projects_count')
         .eq('id', user.id)
         .single();
       
-      if (!profileError && profileData) {
+      if (profileError) {
+        console.error("Erreur lors de la récupération du profil:", profileError);
+      } else {
+        // Mettre à jour les totaux
+        const newTotal = (profileData.investment_total || 0) + amount;
+        
         // Vérifier si l'utilisateur a déjà investi dans ce projet
         const { data: existingInvestments } = await supabase
           .from('investments')
@@ -136,7 +114,7 @@ export default function InvestmentOptionsSection({
           .eq('project_id', project.id);
         
         let newCount = profileData.projects_count || 0;
-        if (existingInvestments && existingInvestments.length <= 1) {
+        if (!existingInvestments || existingInvestments.length <= 1) {
           // Incrémenter uniquement si c'est le premier investissement dans ce projet
           newCount += 1;
         }
@@ -145,104 +123,112 @@ export default function InvestmentOptionsSection({
         await supabase
           .from('profiles')
           .update({
-            investment_total: (profileData.investment_total || 0) + investmentAmount,
+            investment_total: newTotal,
             projects_count: newCount
           })
           .eq('id', user.id);
       }
       
-      // Sauvegarder les données d'investissement dans le localStorage pour affichage sur le dashboard
-      const investmentData = {
+      // Stocker l'investissement dans localStorage pour le tableau de bord
+      localStorage.setItem("recentInvestment", JSON.stringify({
         projectId: project.id,
         projectName: project.name,
-        amount: investmentAmount,
-        duration: selectedDuration,
-        yield: project.yield,
-        date: new Date().toISOString(),
-        monthlyReturn: monthlyReturn,
-        totalReturn: totalReturn
-      };
+        amount,
+        duration,
+        yield: projectYield
+      }));
       
-      localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
+      // Afficher le succès
+      setShowSuccess(true);
       
-      toast({
-        title: "Investissement réussi !",
-        description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
-      });
+      // Informer le composant parent
+      onInvestSuccess();
       
-      // Rediriger vers le tableau de bord
-      navigate("/dashboard");
-      
+      // Rediriger vers le tableau de bord après un délai
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 2000);
     } catch (error) {
       console.error("Erreur lors de l'investissement:", error);
       toast({
         title: "Erreur",
-        description: "Une erreur est survenue lors de l'investissement.",
+        description: "Une erreur est survenue lors de l'investissement. Veuillez réessayer.",
         variant: "destructive"
       });
     } finally {
-      setIsProcessing(false);
-      setShowConfirmation(false);
+      setIsSubmitting(false);
     }
   };
-  
-  const cancelInvestment = () => {
-    setShowConfirmation(false);
-  };
+
+  if (showSuccess) {
+    return (
+      <div className="p-6 bg-white rounded-xl shadow-sm">
+        <div className="text-center space-y-4">
+          <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
+          <h3 className="text-xl font-semibold text-bgs-blue">Investissement réussi !</h3>
+          <p className="text-sm text-bgs-gray-medium">
+            Votre investissement de {amount.toLocaleString()}€ dans {project.name} a été enregistré.
+          </p>
+          <p className="text-sm text-bgs-gray-medium">
+            Vous allez être redirigé vers votre tableau de bord.
+          </p>
+          <Button 
+            onClick={() => navigate("/dashboard")} 
+            className="w-full mt-4"
+          >
+            Aller au tableau de bord
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100 transform transition-all duration-300 hover:shadow-lg">
-      <h3 className="text-xl font-semibold text-bgs-blue mb-5 flex items-center">
-        <span className="bg-bgs-orange/10 text-bgs-orange p-1.5 rounded-lg mr-2">
-          <ArrowRight size={16} />
-        </span>
-        Investir maintenant
-      </h3>
+    <div className="p-6 bg-white rounded-xl shadow-sm space-y-6">
+      <h3 className="text-lg font-semibold text-bgs-blue">Options d'investissement</h3>
       
-      {!showConfirmation ? (
-        <>
-          <div className="mb-6 space-y-4">
-            <InvestmentAmountSection 
-              investmentAmount={investmentAmount}
-              setInvestmentAmount={setInvestmentAmount}
-              minInvestment={minInvestment}
-              maxInvestment={maxInvestment}
-            />
-            
-            <DurationSection
-              selectedDuration={selectedDuration}
-              setSelectedDuration={setSelectedDuration}
-              durations={durations}
-            />
-            
-            <InvestmentSummary 
-              project={project} 
-              selectedDuration={selectedDuration}
-              monthlyReturn={monthlyReturn}
-              totalReturn={totalReturn}
-            />
-          </div>
-          
-          <button 
-            onClick={handleInvest} 
-            className="w-full btn-primary flex items-center justify-center gap-2 transform transition-all duration-300 hover:scale-[1.02]"
-          >
+      <InvestmentAmountInput 
+        amount={amount} 
+        setAmount={handleAmountChange} 
+        minInvestment={minInvestment} 
+      />
+      
+      <Separator />
+      
+      <DurationSelector 
+        duration={duration} 
+        setDuration={setDuration} 
+        options={possibleDurations} 
+      />
+      
+      <Separator />
+      
+      <YieldInfo 
+        monthlyYield={monthlyYield} 
+        annualYield={projectYield} 
+      />
+      
+      <Separator />
+      
+      <InvestmentSummary 
+        amount={amount} 
+        totalReturn={totalReturn} 
+        totalProfit={totalProfit} 
+        duration={duration} 
+      />
+      
+      <Button 
+        onClick={handleInvest} 
+        disabled={isSubmitting} 
+        className="w-full flex items-center justify-center gap-2"
+      >
+        {isSubmitting ? "Traitement en cours..." : (
+          <>
             Investir maintenant
-            <ArrowRight size={18} />
-          </button>
-        </>
-      ) : (
-        <InvestmentConfirmation
-          project={project}
-          investmentAmount={investmentAmount}
-          selectedDuration={selectedDuration}
-          isProcessing={isProcessing}
-          onConfirm={confirmInvestment}
-          onCancel={cancelInvestment}
-          monthlyReturn={monthlyReturn}
-          totalReturn={totalReturn}
-        />
-      )}
+            <ArrowRight size={16} />
+          </>
+        )}
+      </Button>
     </div>
   );
 }

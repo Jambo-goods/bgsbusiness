@@ -55,6 +55,10 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
         return;
       }
       
+      // Calculer la date de fin (aujourd'hui + durée en mois)
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + investmentData.duration);
+      
       // Insérer l'investissement dans la table investments
       const { error: investmentError } = await supabase
         .from('investments')
@@ -64,7 +68,7 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
           amount: investmentData.amount,
           yield_rate: investmentData.yield,
           duration: investmentData.duration,
-          end_date: new Date(new Date().setMonth(new Date().getMonth() + investmentData.duration))
+          end_date: endDate.toISOString() // Conversion de Date à string ISO
         });
       
       if (investmentError) {
