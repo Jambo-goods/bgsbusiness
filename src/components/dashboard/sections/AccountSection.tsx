@@ -1,5 +1,4 @@
 
-import { memo } from "react";
 import { Settings, LogOut, UserCircle, LineChart } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
@@ -10,12 +9,12 @@ interface AccountSectionProps {
   handleLogout: () => void;
 }
 
-const AccountSection = memo(({ 
+export default function AccountSection({ 
   activeTab, 
   setActiveTab, 
   expanded,
   handleLogout 
-}: AccountSectionProps) => {
+}: AccountSectionProps) {
   return (
     <>
       <SidebarNavItem
@@ -49,8 +48,4 @@ const AccountSection = memo(({
       />
     </>
   );
-});
-
-AccountSection.displayName = "AccountSection";
-
-export default AccountSection;
+}

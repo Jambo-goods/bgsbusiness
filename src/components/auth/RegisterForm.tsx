@@ -1,74 +1,67 @@
-import React, { useState } from "react";
+
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, Loader2 } from "lucide-react";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import EmailField from "./EmailField";
+import { ArrowRight, AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import NameFields from "./NameFields";
+import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import TermsCheckbox from "./TermsCheckbox";
 
 export default function RegisterForm() {
-  const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     
-    // Form validation
-    if (!email || !firstName || !lastName || !password || !confirmPassword) {
-      setError("Veuillez remplir tous les champs requis");
-      return;
-    }
-    
+    // Validation basique
     if (password !== confirmPassword) {
       setError("Les mots de passe ne correspondent pas");
       return;
     }
     
-    if (!agreedToTerms) {
+    if (!termsAccepted) {
       setError("Vous devez accepter les conditions d'utilisation");
       return;
     }
     
+    setIsLoading(true);
+
     try {
-      setIsLoading(true);
+      // Simulation d'un délai de réseau
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Register with Supabase
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          }
-        }
+      console.log("Registration attempt with:", { firstName, lastName, email });
+      
+      // For demo purposes, create a user and store in localStorage
+      // In a real app, this would send the data to a backend
+      const userData = {
+        firstName,
+        lastName,
+        email
+      };
+      
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      toast({
+        title: "Inscription réussie",
+        description: "Votre compte a été créé avec succès",
       });
       
-      if (error) throw error;
-      
-      // Success
-      toast.success("Inscription réussie! Vérifiez votre email pour confirmer votre compte.");
-      navigate("/login");
-      
-    } catch (err: any) {
+      navigate("/dashboard");
+    } catch (err) {
+      setError("Une erreur s'est produite lors de l'inscription");
       console.error("Registration error:", err);
-      
-      if (err.message === "User already registered") {
-        setError("Cet email est déjà utilisé.");
-      } else {
-        setError(err.message || "Une erreur s'est produite lors de l'inscription.");
-      }
     } finally {
       setIsLoading(false);
     }
@@ -84,25 +77,28 @@ export default function RegisterForm() {
       )}
       
       <form onSubmit={handleSubmit} className="space-y-6">
-        <EmailField email={email} setEmail={setEmail} />
-        
-        <NameFields 
-          firstName={firstName} 
-          setFirstName={setFirstName}
+        <NameFields
+          firstName={firstName}
           lastName={lastName}
+          setFirstName={setFirstName}
           setLastName={setLastName}
         />
         
-        <PasswordFields 
+        <EmailField
+          email={email}
+          setEmail={setEmail}
+        />
+        
+        <PasswordFields
           password={password}
-          setPassword={setPassword}
           confirmPassword={confirmPassword}
+          setPassword={setPassword}
           setConfirmPassword={setConfirmPassword}
         />
         
-        <TermsCheckbox 
-          agreedToTerms={agreedToTerms}
-          setAgreedToTerms={setAgreedToTerms}
+        <TermsCheckbox
+          termsAccepted={termsAccepted}
+          setTermsAccepted={setTermsAccepted}
         />
         
         <button
@@ -110,13 +106,11 @@ export default function RegisterForm() {
           disabled={isLoading}
           className="w-full btn-primary flex items-center justify-center gap-2"
         >
-          {isLoading ? (
+          {isLoading ? "Inscription en cours..." : (
             <>
-              <Loader2 size={18} className="animate-spin" />
-              Inscription en cours...
+              Créer mon compte
+              <ArrowRight size={18} />
             </>
-          ) : (
-            "Créer mon compte"
           )}
         </button>
       </form>

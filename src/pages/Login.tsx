@@ -1,100 +1,64 @@
 
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [emailNotConfirmed, setEmailNotConfirmed] = useState(false);
   const navigate = useNavigate();
-  const { toast: uiToast } = useToast();
+  const { toast } = useToast();
 
   useEffect(() => {
     window.scrollTo(0, 0);
     
     // Check if user is already logged in
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        navigate("/dashboard");
-      }
-    };
-    
-    checkSession();
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      navigate("/dashboard");
+    }
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setEmailNotConfirmed(false);
     setIsLoading(true);
 
     try {
-      if (!email || !password) {
+      // Simulation d'un délai de réseau
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Simple validation for demo
+      if (email && password) {
+        console.log("Login attempt with:", { email });
+        
+        // For demo purposes, any login credentials will work
+        // In a real app, this would validate against a backend
+        const userData = {
+          email,
+          firstName: "Utilisateur",
+          lastName: "BGS"
+        };
+        
+        localStorage.setItem("user", JSON.stringify(userData));
+        
+        toast({
+          title: "Connexion réussie",
+          description: "Bienvenue sur votre tableau de bord",
+        });
+        
+        navigate("/dashboard");
+      } else {
         setError("Veuillez remplir tous les champs");
-        setIsLoading(false);
-        return;
       }
-      
-      // Authentification avec Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      
-      if (error) {
-        if (error.message === "Email not confirmed") {
-          setEmailNotConfirmed(true);
-          console.log("Email not confirmed error detected");
-        } else if (error.message === "Invalid login credentials") {
-          setError("Email ou mot de passe incorrect");
-        } else {
-          setError(error.message || "Une erreur s'est produite lors de la connexion");
-        }
-        throw error;
-      }
-      
-      toast("Connexion réussie", {
-        description: "Bienvenue sur votre tableau de bord",
-      });
-      
-      navigate("/dashboard");
-    } catch (err: any) {
+    } catch (err) {
+      setError("Une erreur s'est produite lors de la connexion");
       console.error("Login error:", err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendConfirmation = async () => {
-    if (!email) {
-      setError("Veuillez entrer votre adresse email");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email,
-      });
-
-      if (error) throw error;
-
-      toast("Email de confirmation envoyé", {
-        description: "Veuillez vérifier votre boîte de réception",
-      });
-    } catch (err: any) {
-      console.error("Resend confirmation error:", err);
-      setError(err.message || "Impossible d'envoyer l'email de confirmation");
     } finally {
       setIsLoading(false);
     }
@@ -119,20 +83,6 @@ export default function Login() {
                 <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
                   <AlertCircle size={18} className="mr-2 flex-shrink-0" />
                   <p>{error}</p>
-                </div>
-              )}
-              
-              {emailNotConfirmed && (
-                <div className="bg-amber-100 border border-amber-200 text-amber-700 px-4 py-3 rounded mb-6">
-                  <p className="font-medium mb-2">Email non confirmé</p>
-                  <p className="mb-2">Vous devez confirmer votre adresse email avant de pouvoir vous connecter.</p>
-                  <button 
-                    onClick={handleResendConfirmation}
-                    className="text-amber-800 underline hover:text-amber-900"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Envoi en cours..." : "Renvoyer l'email de confirmation"}
-                  </button>
                 </div>
               )}
               
@@ -187,12 +137,7 @@ export default function Login() {
                   disabled={isLoading}
                   className="w-full btn-primary flex items-center justify-center gap-2"
                 >
-                  {isLoading ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      Connexion en cours...
-                    </>
-                  ) : (
+                  {isLoading ? "Connexion en cours..." : (
                     <>
                       Se connecter
                       <ArrowRight size={18} />

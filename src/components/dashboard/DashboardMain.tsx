@@ -31,7 +31,7 @@ export default function DashboardMain({
   return (
     <main className={cn(
       "flex-1 p-6 transition-all",
-      isSidebarOpen ? "md:ml-64" : "md:ml-20"
+      isSidebarOpen ? "md:ml-0" : "md:ml-0"
     )}>
       <div className="max-w-7xl mx-auto">
         <DashboardHeader userData={userData} />
