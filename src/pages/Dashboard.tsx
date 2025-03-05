@@ -138,6 +138,8 @@ export default function Dashboard() {
             .from('profiles')
             .update({ wallet_balance: 0 })
             .eq('id', user.id);
+          
+          profileData.wallet_balance = 0;
         }
         
         if (profileData.investment_total === null || profileData.investment_total === undefined) {
@@ -145,6 +147,8 @@ export default function Dashboard() {
             .from('profiles')
             .update({ investment_total: 0 })
             .eq('id', user.id);
+          
+          profileData.investment_total = 0;
         }
         
         if (profileData.projects_count === null || profileData.projects_count === undefined) {
@@ -152,6 +156,8 @@ export default function Dashboard() {
             .from('profiles')
             .update({ projects_count: 0 })
             .eq('id', user.id);
+          
+          profileData.projects_count = 0;
         }
         
         // Mettre à jour les données utilisateur
@@ -167,31 +173,47 @@ export default function Dashboard() {
         });
         
         // Récupérer les investissements de l'utilisateur
-        const { data: investments, error: investmentsError } = await supabase
+        const { data: investmentsData, error: investmentsError } = await supabase
           .from('investments')
-          .select('*, project:project_id(id, name, description, location, yield, status, image, minInvestment, fundingProgress)')
+          .select('*, project_id')
           .eq('user_id', user.id);
         
         if (investmentsError) {
           console.error("Erreur lors de la récupération des investissements:", investmentsError);
-        } else if (investments && investments.length > 0) {
-          // Transformer les données pour correspondre au format Project
-          const formattedInvestments = investments.map(inv => ({
-            ...projects.find(p => p.id === inv.project_id) || {
-              id: inv.project_id,
-              name: inv.project?.name || "Projet inconnu",
-              description: inv.project?.description || "Description non disponible",
-              location: inv.project?.location || "Emplacement inconnu",
-              yield: inv.yield_rate,
-              status: "active",
-              image: inv.project?.image || "/placeholder.svg",
-              minInvestment: inv.project?.minInvestment || 1000,
-              fundingProgress: inv.project?.fundingProgress || 50
-            },
-            investmentAmount: inv.amount,
-            investmentDate: inv.date,
-            investmentStatus: inv.status
-          }));
+        } else if (investmentsData && investmentsData.length > 0) {
+          const formattedInvestments = [];
+          
+          for (const inv of investmentsData) {
+            // Pour chaque investissement, récupérer les informations du projet associé
+            const { data: projectData } = await supabase
+              .from('projects')
+              .select('*')
+              .eq('id', inv.project_id)
+              .single();
+              
+            // Si le projet existe dans la base de données
+            if (projectData) {
+              formattedInvestments.push({
+                ...projectData,
+                investmentAmount: inv.amount,
+                investmentDate: inv.date,
+                investmentStatus: inv.status,
+                yield: inv.yield_rate // Utiliser le taux réel d'investissement
+              });
+            } else {
+              // Sinon, chercher dans les données statiques
+              const staticProject = projects.find(p => p.id === inv.project_id);
+              if (staticProject) {
+                formattedInvestments.push({
+                  ...staticProject,
+                  investmentAmount: inv.amount,
+                  investmentDate: inv.date,
+                  investmentStatus: inv.status,
+                  yield: inv.yield_rate
+                });
+              }
+            }
+          }
           
           setUserInvestments(formattedInvestments);
         } else {

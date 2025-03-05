@@ -68,8 +68,8 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
   // Fonction pour mettre à jour Supabase avec le nouvel investissement
   async function updateSupabaseWithInvestment(investmentData: any) {
     try {
-      const user = supabase.auth.getUser();
-      const userId = (await user).data.user?.id;
+      const user = await supabase.auth.getUser();
+      const userId = user.data.user?.id;
       
       if (!userId) {
         console.error("Utilisateur non connecté");
