@@ -1,6 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useSearchParams } from "react-router-dom";
 import WalletBalance from "./wallet/WalletBalance";
 import ActionButtons from "./wallet/ActionButtons";
 import WalletHistory from "./wallet/WalletHistory";
@@ -14,6 +14,7 @@ export default function WalletTab() {
   const [isDepositing, setIsDepositing] = useState(false);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const { toast: uiToast } = useToast();
+  const [searchParams] = useSearchParams();
 
   // Fetch wallet balance and transactions
   const fetchWalletData = async () => {
@@ -94,6 +95,15 @@ export default function WalletTab() {
   useEffect(() => {
     fetchWalletData();
     
+    // Check if there's a deposit action in URL parameters
+    const action = searchParams.get('action');
+    if (action === 'deposit') {
+      // Trigger deposit flow automatically
+      setTimeout(() => {
+        handleDeposit();
+      }, 500);
+    }
+    
     // Configurer un abonnement en temps réel aux mises à jour des transactions
     const walletChannel = supabase
       .channel('wallet-changes')
@@ -124,7 +134,7 @@ export default function WalletTab() {
       supabase.removeChannel(walletChannel);
       supabase.removeChannel(profileChannel);
     };
-  }, []);
+  }, [searchParams]);
 
   const handleDeposit = async () => {
     try {

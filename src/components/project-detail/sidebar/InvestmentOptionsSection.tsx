@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, AlertCircle, TrendingUp, Wallet } from "lucide-react";
+import { ArrowRight, AlertCircle, TrendingUp, Wallet, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Project } from "@/types/project";
 import { supabase } from "@/integrations/supabase/client";
@@ -96,10 +96,24 @@ export default function InvestmentOptionsSection({
     }
 
     if (walletBalance < selectedAmount) {
-      toast.error(`Solde insuffisant. Vous avez ${walletBalance}€ et vous essayez d'investir ${selectedAmount}€.`);
+      const amountNeeded = selectedAmount - walletBalance;
+      toast.error(
+        <div>
+          <p>Solde insuffisant pour investir {selectedAmount}€</p>
+          <p className="font-medium mt-1">Dépôt nécessaire: {amountNeeded}€</p>
+        </div>,
+        {
+          duration: 5000,
+          action: {
+            label: "Effectuer un dépôt",
+            onClick: () => navigate("/dashboard/wallet?action=deposit")
+          }
+        }
+      );
+      
       setTimeout(() => {
         navigate("/dashboard/wallet?action=deposit");
-      }, 1500);
+      }, 3000);
       return;
     }
 
@@ -219,12 +233,12 @@ export default function InvestmentOptionsSection({
       {isLoggedIn && walletBalance < selectedAmount && <div className="flex items-start gap-2 text-red-600 mb-4 p-3 bg-red-50 rounded-md">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p>Solde insuffisant. Vous avez {walletBalance}€ dans votre portefeuille et vous souhaitez investir {selectedAmount}€.</p>
-            <p className="mt-1 font-medium">Un dépôt de {selectedAmount - walletBalance}€ est nécessaire pour continuer.</p>
-            <Button variant="link" className="p-0 h-auto text-red-600 hover:text-red-800 mt-1 flex items-center" 
+            <p>Solde insuffisant. Vous avez {walletBalance}€ dans votre portefeuille.</p>
+            <p className="mt-1 font-medium">Pour investir {selectedAmount}€, un dépôt supplémentaire de {selectedAmount - walletBalance}€ est nécessaire.</p>
+            <Button variant="link" className="p-0 h-auto text-red-600 hover:text-red-800 mt-1 flex items-center gap-1.5" 
               onClick={() => navigate("/dashboard/wallet?action=deposit")}>
-              <Wallet className="mr-1 h-4 w-4" />
-              Effectuer un dépôt
+              <CreditCard className="h-4 w-4" />
+              Effectuer un dépôt maintenant
             </Button>
           </div>
         </div>}
