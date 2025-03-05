@@ -26,6 +26,8 @@ export default function InvestmentOptionsSection({
   const [totalReturn, setTotalReturn] = useState<number>(0);
   const [monthlyReturn, setMonthlyReturn] = useState<number>(0);
   const [useSlider, setUseSlider] = useState<boolean>(true);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const [isConfirming, setIsConfirming] = useState<boolean>(false);
   
   useEffect(() => {
     const returnRate = (project.yield / 100) * (duration / 12);
@@ -53,13 +55,34 @@ export default function InvestmentOptionsSection({
         }
       });
     } else {
-      toast.success("Redirection vers la page d'investissement", {
-        description: "Vous allez pouvoir confirmer votre montant de " + investmentAmount + "€ sur " + duration + " mois."
-      });
-      setTimeout(() => {
-        console.log("Redirection vers la page d'investissement avec montant:", investmentAmount, "et durée:", duration);
-      }, 1000);
+      // Afficher l'étape de confirmation
+      setIsConfirming(true);
     }
+  };
+  
+  const confirmInvestment = () => {
+    setIsProcessing(true);
+    
+    // Simuler le traitement de l'investissement avec un délai
+    setTimeout(() => {
+      toast.success("Investissement réussi", {
+        description: `Votre investissement de ${investmentAmount}€ a été effectué avec succès.`
+      });
+      
+      // Réinitialiser l'état et rediriger vers le tableau de bord
+      setIsProcessing(false);
+      setIsConfirming(false);
+      
+      // Simuler une redirection vers le tableau de bord
+      setTimeout(() => {
+        console.log("Redirection vers le tableau de bord");
+        window.location.href = "/dashboard";
+      }, 1500);
+    }, 2000);
+  };
+  
+  const cancelConfirmation = () => {
+    setIsConfirming(false);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,6 +100,69 @@ export default function InvestmentOptionsSection({
   const toggleInputMethod = () => {
     setUseSlider(!useSlider);
   };
+
+  // Afficher l'écran de confirmation
+  if (isConfirming) {
+    return (
+      <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold text-bgs-blue">Confirmation de l'investissement</h3>
+          
+          <div className="p-4 bg-bgs-gray-light rounded-lg space-y-3">
+            <div className="flex justify-between">
+              <span className="text-sm text-bgs-blue/80">Projet</span>
+              <span className="text-sm font-medium text-bgs-blue">{project.title}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-bgs-blue/80">Montant à investir</span>
+              <span className="text-sm font-medium text-bgs-blue">{investmentAmount.toLocaleString()} €</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-bgs-blue/80">Durée</span>
+              <span className="text-sm font-medium text-bgs-blue">{duration} mois</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-bgs-blue/80">Rendement cible</span>
+              <span className="text-sm font-medium text-green-600">{project.yield}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-sm text-bgs-blue/80">Retour estimé</span>
+              <span className="text-sm font-medium text-green-600">{totalReturn.toLocaleString(undefined, {maximumFractionDigits: 2})} €</span>
+            </div>
+          </div>
+          
+          <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+            <div className="flex items-start">
+              <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
+              <p className="text-xs text-bgs-blue/80">
+                En confirmant cet investissement, vous acceptez les conditions générales d'investissement et comprenez les risques associés.
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex gap-3 pt-2">
+            <Button 
+              onClick={confirmInvestment}
+              disabled={isProcessing}
+              className="flex-1 bg-bgs-orange hover:bg-bgs-orange-light text-white"
+            >
+              {isProcessing ? "Traitement en cours..." : "Confirmer l'investissement"}
+              {!isProcessing && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+            
+            <Button 
+              onClick={cancelConfirmation}
+              disabled={isProcessing}
+              variant="outline"
+              className="flex-1"
+            >
+              Annuler
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
