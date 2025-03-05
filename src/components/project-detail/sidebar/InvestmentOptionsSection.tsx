@@ -57,6 +57,20 @@ export default function InvestmentOptionsSection({
   const confirmInvestment = () => {
     setIsProcessing(true);
     
+    // Save investment data to local storage
+    const investmentData = {
+      projectId: project.id,
+      projectName: project.name,
+      amount: investmentAmount,
+      duration: selectedDuration,
+      yield: project.yield,
+      date: new Date().toISOString(),
+      monthlyReturn: monthlyReturn,
+      totalReturn: totalReturn
+    };
+    
+    localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
+    
     // Simulate API call
     setTimeout(() => {
       toast({

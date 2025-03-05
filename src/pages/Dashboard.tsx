@@ -22,6 +22,7 @@ export default function Dashboard() {
     investmentTotal: number;
     projectsCount: number;
   } | null>(null);
+  const [userInvestments, setUserInvestments] = useState<any[]>([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -31,19 +32,49 @@ export default function Dashboard() {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       const parsedUser = JSON.parse(storedUser);
+      
+      // Check for recent investment
+      const recentInvestment = localStorage.getItem("recentInvestment");
+      let additionalInvestment = 0;
+      
+      if (recentInvestment) {
+        const investmentData = JSON.parse(recentInvestment);
+        additionalInvestment = investmentData.amount;
+      }
+      
       setUserData({
         firstName: parsedUser.firstName || "Jean",
         lastName: parsedUser.lastName || "Dupont",
         email: parsedUser.email || "jean.dupont@example.com",
         phone: parsedUser.phone || "+33 6 12 34 56 78",
         address: parsedUser.address || "123 Avenue des Champs-Élysées, Paris",
-        investmentTotal: 7500,
+        investmentTotal: 7500 + additionalInvestment,
         projectsCount: 3
       });
     } else {
       // Redirect to login if no user is found
       window.location.href = "/login";
     }
+    
+    // Filter user's investments (in a real app, this would be user-specific)
+    let investments = projects.slice(0, 3);
+    
+    // Check if there's a recent investment to add
+    const recentInvestment = localStorage.getItem("recentInvestment");
+    if (recentInvestment) {
+      const investmentData = JSON.parse(recentInvestment);
+      
+      // Find the project in the projects list
+      const project = projects.find(p => p.id === investmentData.projectId);
+      
+      // If the project exists and it's not already in the investments list
+      if (project && !investments.some(i => i.id === project.id)) {
+        // Add the project to the beginning of the list
+        investments = [project, ...investments];
+      }
+    }
+    
+    setUserInvestments(investments);
   }, []);
 
   const handleLogout = () => {
@@ -54,9 +85,6 @@ export default function Dashboard() {
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
-
-  // Filter user's investments (in a real app, this would be user-specific)
-  const userInvestments = projects.slice(0, 3);
 
   if (!userData) {
     return <DashboardLoading />;
