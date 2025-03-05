@@ -47,21 +47,21 @@ export default function ProjectDetail() {
   }
 
   return (
-    <div className="min-h-screen page-transition bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <main className="pt-28 pb-20">
-        <div className="max-w-full mx-auto">
-          <div className="px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 mx-auto">
+      <main className="pt-24 pb-16">
+        <div className="w-full mx-auto">
+          <div className="px-4 md:px-6 lg:px-8 xl:px-12 max-w-[1600px] mx-auto">
             <ProjectHeader project={project} />
-            
-            <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} />
           </div>
             
-          <div className="px-4 md:px-8 lg:px-12 xl:px-16 2xl:px-24 mx-auto">  
-            <div className="grid grid-cols-1 lg:grid-cols-7 gap-8 items-start">
+          <div className="max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 xl:px-12">
+            <ProjectTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
               {/* Main Content */}
-              <div className="lg:col-span-5 space-y-8">
+              <div className="lg:col-span-2 xl:col-span-3 space-y-6">
                 {activeTab === 'overview' && <ProjectOverviewTab project={project} />}
                 {activeTab === 'documents' && <ProjectDocumentsTab />}
                 {activeTab === 'updates' && <ProjectUpdatesTab />}
@@ -71,7 +71,7 @@ export default function ProjectDetail() {
               </div>
               
               {/* Sidebar */}
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-1">
                 <ProjectSidebar 
                   project={project} 
                   remainingDays={remainingDays} 

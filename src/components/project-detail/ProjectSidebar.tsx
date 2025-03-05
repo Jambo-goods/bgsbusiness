@@ -14,9 +14,9 @@ interface ProjectSidebarProps {
 
 export default function ProjectSidebar({ project, remainingDays, investorCount }: ProjectSidebarProps) {
   return (
-    <div className="sticky top-32 space-y-5 animate-fade-up">
+    <div className="sticky top-24 space-y-4 animate-fade-up">
       {/* Project Status Card */}
-      <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+      <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <div className="space-y-4">
           {/* Progress Bar */}
           <div>
@@ -26,7 +26,7 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
             </div>
             <Progress 
               value={project.fundingProgress} 
-              className="h-2 bg-gray-100" 
+              className="h-2.5 bg-gray-100" 
               indicatorClassName={cn(
                 "bg-gradient-to-r",
                 project.fundingProgress < 30 ? "from-amber-400 to-amber-500" :
@@ -42,7 +42,7 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
           
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3 my-4">
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
               <div className="flex items-center">
                 <div className="p-1.5 bg-blue-50 rounded-md mr-2">
                   <Users className="h-4 w-4 text-blue-500" />
@@ -53,7 +53,7 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
                 </div>
               </div>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
+            <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
               <div className="flex items-center">
                 <div className="p-1.5 bg-amber-50 rounded-md mr-2">
                   <Clock className="h-4 w-4 text-amber-500" />
@@ -84,7 +84,7 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
           
           {/* CTA Button */}
           <Button 
-            className="w-full bg-bgs-orange hover:bg-bgs-orange-light text-white rounded-lg py-6 font-medium flex items-center justify-center"
+            className="w-full bg-bgs-orange hover:bg-bgs-orange-light text-white rounded-lg py-6 font-medium flex items-center justify-center shadow-md hover:shadow-lg transition-all"
           >
             Investir maintenant
             <ArrowRight className="ml-2 h-4 w-4" />
@@ -93,7 +93,7 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
       </div>
       
       {/* Quick Info */}
-      <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+      <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <h3 className="font-medium text-bgs-blue mb-3">Dates importantes</h3>
         <div className="space-y-3">
           <div className="flex items-center">
@@ -122,7 +122,7 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
       </div>
       
       {/* Project Metrics */}
-      <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-100">
+      <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <h3 className="font-medium text-bgs-blue mb-3">Performance attendue</h3>
         <div className="flex items-center mb-3">
           <div className="p-1.5 bg-green-50 rounded-md mr-2">
@@ -149,7 +149,7 @@ export default function ProjectSidebar({ project, remainingDays, investorCount }
       </div>
       
       {/* View Count */}
-      <div className="flex items-center justify-center text-xs text-bgs-blue/60">
+      <div className="flex items-center justify-center text-xs text-bgs-blue/60 bg-white rounded-lg py-2 shadow-sm border border-gray-100">
         <Eye className="h-3 w-3 mr-1" />
         <span>{100 + Math.floor(Math.random() * 900)} personnes ont consulté ce projet</span>
       </div>
