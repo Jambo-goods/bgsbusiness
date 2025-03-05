@@ -5,6 +5,7 @@ import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -18,10 +19,14 @@ export default function Login() {
     window.scrollTo(0, 0);
     
     // Check if user is already logged in
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      navigate("/dashboard");
-    }
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate("/dashboard");
+      }
+    };
+    
+    checkAuth();
   }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -30,35 +35,35 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // Simulation d'un délai de réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Authentification avec Supabase
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      // Simple validation for demo
-      if (email && password) {
-        console.log("Login attempt with:", { email });
-        
-        // For demo purposes, any login credentials will work
-        // In a real app, this would validate against a backend
-        const userData = {
-          email,
-          firstName: "Utilisateur",
-          lastName: "BGS"
-        };
-        
-        localStorage.setItem("user", JSON.stringify(userData));
-        
+      if (authError) {
+        throw authError;
+      }
+      
+      if (data.user) {
         toast({
           title: "Connexion réussie",
           description: "Bienvenue sur votre tableau de bord",
         });
         
         navigate("/dashboard");
-      } else {
-        setError("Veuillez remplir tous les champs");
       }
-    } catch (err) {
-      setError("Une erreur s'est produite lors de la connexion");
+    } catch (err: any) {
       console.error("Login error:", err);
+      
+      // Gestion des erreurs d'authentification
+      if (err.message === "Invalid login credentials") {
+        setError("Email ou mot de passe incorrect");
+      } else if (err.message.includes("rate limit")) {
+        setError("Trop de tentatives de connexion. Veuillez réessayer plus tard.");
+      } else {
+        setError("Une erreur s'est produite lors de la connexion");
+      }
     } finally {
       setIsLoading(false);
     }
