@@ -1,25 +1,41 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, Clock, Calendar, TrendingUp, AlertCircle, Eye } from "lucide-react";
 import { Project } from "@/types/project";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+
 interface ProjectSidebarProps {
   project: Project;
   remainingDays: number;
   investorCount: number;
 }
+
 export default function ProjectSidebar({
   project,
   remainingDays,
   investorCount
 }: ProjectSidebarProps) {
-  return <div className="sticky top-24 space-y-4 animate-fade-up">
+  const progressPercentage = project.fundingProgress;
+
+  return (
+    <div className="sticky top-24 space-y-4 animate-fade-up">
       {/* Project Status Card */}
       <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <div className="space-y-4">
           {/* Progress Bar */}
-          
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium text-bgs-blue">Progression</h3>
+              <span className="text-sm font-semibold text-bgs-orange">{progressPercentage}%</span>
+            </div>
+            <Progress value={progressPercentage} size="md" showValue={false} />
+            <div className="flex justify-between text-xs text-bgs-blue/70">
+              <span>Collecté: {Math.round(project.price * progressPercentage / 100).toLocaleString()} €</span>
+              <span>Objectif: {project.price.toLocaleString()} €</span>
+            </div>
+          </div>
           
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3 my-4">
@@ -34,7 +50,17 @@ export default function ProjectSidebar({
                 </div>
               </div>
             </div>
-            
+            <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
+              <div className="flex items-center">
+                <div className="p-1.5 bg-amber-50 rounded-md mr-2">
+                  <Clock className="h-4 w-4 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-bgs-blue/70">Jours restants</p>
+                  <p className="text-sm font-semibold text-bgs-blue">{remainingDays}</p>
+                </div>
+              </div>
+            </div>
           </div>
           
           {/* Investment Details */}
@@ -60,9 +86,6 @@ export default function ProjectSidebar({
           </Button>
         </div>
       </div>
-      
-      {/* Quick Info */}
-      
       
       {/* Project Metrics */}
       <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
@@ -96,5 +119,6 @@ export default function ProjectSidebar({
         <Eye className="h-3 w-3 mr-1" />
         <span>{100 + Math.floor(Math.random() * 900)} personnes ont consulté ce projet</span>
       </div>
-    </div>;
+    </div>
+  );
 }
