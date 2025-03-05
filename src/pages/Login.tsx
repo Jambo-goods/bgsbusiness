@@ -62,8 +62,7 @@ export default function Login() {
         throw error;
       }
       
-      toast({
-        title: "Connexion réussie",
+      toast("Connexion réussie", {
         description: "Bienvenue sur votre tableau de bord",
       });
       
@@ -90,8 +89,7 @@ export default function Login() {
 
       if (error) throw error;
 
-      toast({
-        title: "Email de confirmation envoyé",
+      toast("Email de confirmation envoyé", {
         description: "Veuillez vérifier votre boîte de réception",
       });
     } catch (err: any) {
@@ -220,4 +218,3 @@ export default function Login() {
     </div>
   );
 }
-

@@ -35,8 +35,7 @@ export default function ForgotPassword() {
       if (error) throw error;
       
       setSuccess(true);
-      toast({
-        title: "Email envoyé",
+      toast("Email envoyé", {
         description: "Vérifiez votre boîte de réception pour réinitialiser votre mot de passe",
       });
     } catch (err: any) {
