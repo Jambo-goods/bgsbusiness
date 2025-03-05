@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, Clock, Calendar, TrendingUp, AlertCircle, Eye, Building, MapPin, DollarSign } from "lucide-react";
 import { Project } from "@/types/project";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -93,19 +92,6 @@ export default function ProjectSidebar({
       {/* Project Status Card */}
       <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <div className="space-y-4">
-          {/* Progress Bar */}
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium text-bgs-blue">Progression</h3>
-              <span className="text-sm font-semibold text-bgs-orange">{progressPercentage}%</span>
-            </div>
-            <Progress value={progressPercentage} size="md" showValue={false} />
-            <div className="flex justify-between text-xs text-bgs-blue/70">
-              <span>Collecté: {Math.round(project.price * progressPercentage / 100).toLocaleString()} €</span>
-              <span>Objectif: {project.price.toLocaleString()} €</span>
-            </div>
-          </div>
-          
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3 my-4">
             <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
@@ -141,10 +127,6 @@ export default function ProjectSidebar({
             <div className="flex justify-between">
               <span className="text-sm text-bgs-blue/80">Rendement cible</span>
               <span className="text-sm font-medium text-green-600">{project.yield}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-bgs-blue/80">Durée</span>
-              <span className="text-sm font-medium text-bgs-blue">{project.duration}</span>
             </div>
           </div>
           
