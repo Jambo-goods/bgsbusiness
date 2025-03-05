@@ -92,6 +92,10 @@ export default function InvestmentOptionsSection({
     setShowConfirmation(true);
   };
   
+  const cancelInvestment = () => {
+    setShowConfirmation(false);
+  };
+  
   const confirmInvestment = async () => {
     setIsProcessing(true);
     
