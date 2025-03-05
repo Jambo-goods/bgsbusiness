@@ -66,13 +66,20 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
           {project.description}
         </p>
         
-        <Progress 
-          value={project.fundingProgress} 
-          className="bg-gray-100" 
-          size="sm"
-        />
+        <div className="mb-4 mt-4">
+          <div className="flex justify-between mb-2">
+            <span className="text-sm font-medium text-bgs-blue">Progression financement</span>
+            <span className="text-sm font-semibold text-bgs-blue">{project.fundingProgress}%</span>
+          </div>
+          <Progress 
+            value={project.fundingProgress} 
+            className="bg-gray-100" 
+            size="md"
+            indicatorClassName="bg-gradient-to-r from-bgs-orange to-bgs-orange-light"
+          />
+        </div>
         
-        <div className="grid grid-cols-2 gap-4 mt-6 mb-6">
+        <div className="grid grid-cols-2 gap-4 mt-6">
           <div className="bg-bgs-gray-light p-3 rounded-lg">
             <p className="text-xs text-bgs-gray-medium mb-1">Rentabilité annualisée</p>
             <p className="font-semibold text-green-600">{annualYield}%</p>
@@ -85,7 +92,7 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
         
         <Link
           to={`/project/${project.id}`}
-          className="flex items-center justify-center w-full bg-bgs-blue text-white py-3 rounded-lg hover:bg-bgs-blue-light transition-colors font-medium"
+          className="flex items-center justify-center w-full bg-bgs-blue text-white py-3 rounded-lg hover:bg-bgs-blue-light transition-colors font-medium mt-6"
         >
           Voir le projet
           <ArrowRight className="h-4 w-4 ml-2" />

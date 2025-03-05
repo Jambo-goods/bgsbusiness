@@ -14,7 +14,7 @@ const Progress = React.forwardRef<
   ProgressProps
 >(({ className, value, indicatorClassName, size = "md", ...props }, ref) => {
   const heightClass = 
-    size === "sm" ? "h-1.5" : 
+    size === "sm" ? "h-2" : 
     size === "lg" ? "h-6" : 
     "h-4";
   
