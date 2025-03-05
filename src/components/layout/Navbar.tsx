@@ -1,15 +1,23 @@
 
 import { useState, useEffect } from "react";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, useNavigate } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
+    // Check if user is logged in
+    const storedUser = localStorage.getItem("user");
+    setIsLoggedIn(!!storedUser);
+
     const handleScroll = () => {
       if (window.scrollY > 10) {
         setIsScrolled(true);
@@ -25,6 +33,16 @@ export default function Navbar() {
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    toast({
+      title: "Déconnexion réussie",
+      description: "Vous avez été déconnecté avec succès",
+    });
+    navigate("/");
+  };
 
   const isActive = (path: string) => location.pathname === path;
   
@@ -74,12 +92,26 @@ export default function Navbar() {
           >
             À propos
           </Link>
-          <Link to="/login" className="btn-secondary">
-            Connexion
-          </Link>
-          <Link to="/register" className="btn-primary">
-            S'inscrire
-          </Link>
+          
+          {isLoggedIn ? (
+            <>
+              <button onClick={handleLogout} className="btn-secondary">
+                Déconnexion
+              </button>
+              <Link to="/dashboard" className="btn-primary">
+                Tableau de bord
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link to="/login" className="btn-secondary">
+                Connexion
+              </Link>
+              <Link to="/register" className="btn-primary">
+                S'inscrire
+              </Link>
+            </>
+          )}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -141,12 +173,25 @@ export default function Navbar() {
               À propos
             </Link>
             <div className="pt-2 flex flex-col space-y-3">
-              <Link to="/login" className="btn-secondary w-full text-center">
-                Connexion
-              </Link>
-              <Link to="/register" className="btn-primary w-full text-center">
-                S'inscrire
-              </Link>
+              {isLoggedIn ? (
+                <>
+                  <button onClick={handleLogout} className="btn-secondary w-full text-center">
+                    Déconnexion
+                  </button>
+                  <Link to="/dashboard" className="btn-primary w-full text-center">
+                    Tableau de bord
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link to="/login" className="btn-secondary w-full text-center">
+                    Connexion
+                  </Link>
+                  <Link to="/register" className="btn-primary w-full text-center">
+                    S'inscrire
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

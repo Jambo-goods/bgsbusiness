@@ -1,311 +1,204 @@
 
-import React, { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, AlertCircle, Clock, CalendarClock } from "lucide-react";
+import React, { useState } from "react";
+import { ArrowRight, Edit, Save } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types/project";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import { Slider } from "@/components/ui/slider";
-import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface InvestmentOptionsSectionProps {
   project: Project;
   investorCount: number;
 }
 
-export default function InvestmentOptionsSection({ 
-  project, 
-  investorCount 
+export default function InvestmentOptionsSection({
+  project,
+  investorCount
 }: InvestmentOptionsSectionProps) {
-  const progressPercentage = project.fundingProgress;
-  const [userBalance] = useState<number>(1000); // Simuler le solde utilisateur
-  const [investmentAmount, setInvestmentAmount] = useState<number>(project.minInvestment);
-  const [duration, setDuration] = useState<number>(
-    project.possibleDurations ? project.possibleDurations[0] : 12
-  );
-  const [totalReturn, setTotalReturn] = useState<number>(0);
-  const [monthlyReturn, setMonthlyReturn] = useState<number>(0);
-  const [useSlider, setUseSlider] = useState<boolean>(true);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [isConfirming, setIsConfirming] = useState<boolean>(false);
+  const [isEditingAmount, setIsEditingAmount] = useState(false);
+  const [investmentAmount, setInvestmentAmount] = useState(500);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
-  useEffect(() => {
-    const returnRate = (project.yield / 100) * (duration / 12);
-    const calculatedTotalReturn = investmentAmount * (1 + returnRate);
-    const calculatedMonthlyReturn = calculatedTotalReturn / duration;
-    
-    setTotalReturn(calculatedTotalReturn);
-    setMonthlyReturn(calculatedMonthlyReturn);
-  }, [investmentAmount, duration, project.yield]);
-
-  const handleInvestClick = () => {
-    if (progressPercentage >= 100) {
-      toast.info("Ce projet est entièrement financé", {
-        description: "Découvrez d'autres opportunités d'investissement dans notre catalogue."
-      });
-      return;
+  const progressPercentage = (project.raised / project.target) * 100;
+  const minInvestment = 100;
+  const maxInvestment = 10000;
+  
+  const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInvestmentAmount(parseInt(e.target.value));
+  };
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value)) {
+      if (value < minInvestment) {
+        setInvestmentAmount(minInvestment);
+      } else if (value > maxInvestment) {
+        setInvestmentAmount(maxInvestment);
+      } else {
+        setInvestmentAmount(value);
+      }
     }
-    
-    if (investmentAmount > userBalance) {
-      toast.error("Solde insuffisant", {
-        description: "Veuillez recharger votre compte avant de procéder à cet investissement.",
-        action: {
-          label: "Déposer des fonds",
-          onClick: () => console.log("Redirection vers la page de dépôt")
-        }
-      });
-    } else {
-      // Afficher l'étape de confirmation
-      setIsConfirming(true);
-    }
+  };
+  
+  const toggleEditMode = () => {
+    setIsEditingAmount(!isEditingAmount);
+  };
+  
+  const handleInvest = () => {
+    setShowConfirmation(true);
   };
   
   const confirmInvestment = () => {
     setIsProcessing(true);
     
-    // Simuler le traitement de l'investissement avec un délai
+    // Simulate API call
     setTimeout(() => {
-      toast.success("Investissement réussi", {
-        description: `Votre investissement de ${investmentAmount}€ a été effectué avec succès.`
+      toast({
+        title: "Investissement réussi !",
+        description: `Vous avez investi ${investmentAmount}€ dans ${project.name}.`,
       });
       
-      // Réinitialiser l'état et rediriger vers le tableau de bord
       setIsProcessing(false);
-      setIsConfirming(false);
+      setShowConfirmation(false);
       
-      // Simuler une redirection vers le tableau de bord
-      setTimeout(() => {
-        console.log("Redirection vers le tableau de bord");
-        window.location.href = "/dashboard";
-      }, 1500);
+      // Redirect to dashboard
+      navigate("/dashboard");
     }, 2000);
   };
   
-  const cancelConfirmation = () => {
-    setIsConfirming(false);
+  const cancelInvestment = () => {
+    setShowConfirmation(false);
   };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value);
-    if (!isNaN(value)) {
-      // Ensure input is within min-max range
-      const clampedValue = Math.min(
-        Math.max(value, project.minInvestment),
-        Math.min(project.price, 20000)
-      );
-      setInvestmentAmount(clampedValue);
-    }
-  };
-
-  const toggleInputMethod = () => {
-    setUseSlider(!useSlider);
-  };
-
-  // Afficher l'écran de confirmation
-  if (isConfirming) {
-    return (
-      <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-bgs-blue">Confirmation de l'investissement</h3>
-          
-          <div className="p-4 bg-bgs-gray-light rounded-lg space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-bgs-blue/80">Projet</span>
-              <span className="text-sm font-medium text-bgs-blue">{project.title}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-bgs-blue/80">Montant à investir</span>
-              <span className="text-sm font-medium text-bgs-blue">{investmentAmount.toLocaleString()} €</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-bgs-blue/80">Durée</span>
-              <span className="text-sm font-medium text-bgs-blue">{duration} mois</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-bgs-blue/80">Rendement cible</span>
-              <span className="text-sm font-medium text-green-600">{project.yield}%</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-bgs-blue/80">Retour estimé</span>
-              <span className="text-sm font-medium text-green-600">{totalReturn.toLocaleString(undefined, {maximumFractionDigits: 2})} €</span>
-            </div>
-          </div>
-          
-          <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-            <div className="flex items-start">
-              <AlertCircle className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
-              <p className="text-xs text-bgs-blue/80">
-                En confirmant cet investissement, vous acceptez les conditions générales d'investissement et comprenez les risques associés.
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex gap-3 pt-2">
-            <Button 
-              onClick={confirmInvestment}
-              disabled={isProcessing}
-              className="flex-1 bg-bgs-orange hover:bg-bgs-orange-light text-white"
-            >
-              {isProcessing ? "Traitement en cours..." : "Confirmer l'investissement"}
-              {!isProcessing && <ArrowRight className="ml-2 h-4 w-4" />}
-            </Button>
-            
-            <Button 
-              onClick={cancelConfirmation}
-              disabled={isProcessing}
-              variant="outline"
-              className="flex-1"
-            >
-              Annuler
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-3 my-4">
-          <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
-            <div className="flex items-center">
-              <div className="p-1.5 bg-blue-50 rounded-md mr-2">
-                <Users className="h-4 w-4 text-blue-500" />
+    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+      <h3 className="text-lg font-medium text-bgs-blue mb-4">Investir maintenant</h3>
+      
+      {!showConfirmation ? (
+        <>
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-1">
+              <span className="text-sm text-bgs-blue/70">{progressPercentage.toFixed(0)}% financé</span>
+              <span className="text-sm font-medium text-bgs-blue">{project.raised.toLocaleString()}€ / {project.target.toLocaleString()}€</span>
+            </div>
+            <Progress value={progressPercentage} className="h-2" />
+          </div>
+          
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-sm text-bgs-blue/70">{investorCount} investisseurs</span>
+              <span className="text-sm text-bgs-blue/70">Objectif: {project.target.toLocaleString()}€</span>
+            </div>
+            
+            <div className="mb-4 bg-bgs-gray-light p-3 rounded-lg">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-bgs-blue">Montant d'investissement</span>
+                <button 
+                  onClick={toggleEditMode}
+                  className="text-bgs-orange hover:text-bgs-orange-light transition-colors"
+                >
+                  {isEditingAmount ? <Save size={16} /> : <Edit size={16} />}
+                </button>
               </div>
-              <div>
-                <p className="text-xs text-bgs-blue/70">Investisseurs</p>
-                <p className="text-sm font-semibold text-bgs-blue">{investorCount}</p>
+              
+              {isEditingAmount ? (
+                <input 
+                  type="number"
+                  value={investmentAmount}
+                  onChange={handleInputChange}
+                  min={minInvestment}
+                  max={maxInvestment}
+                  step={100}
+                  className="w-full p-2 border border-bgs-blue/20 rounded bg-white focus:outline-none focus:ring-2 focus:ring-bgs-orange/50"
+                />
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm text-bgs-blue/70">100€</span>
+                    <span className="text-xl font-bold text-bgs-blue">{investmentAmount}€</span>
+                    <span className="text-sm text-bgs-blue/70">10 000€</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={minInvestment}
+                    max={maxInvestment}
+                    step={100}
+                    value={investmentAmount}
+                    onChange={handleSliderChange}
+                    className="w-full accent-bgs-orange"
+                  />
+                </>
+              )}
+            </div>
+            
+            <div className="bg-bgs-blue/5 p-3 rounded-lg mb-4">
+              <div className="flex justify-between text-sm text-bgs-blue mb-1">
+                <span>Rendement estimé</span>
+                <span className="font-medium">{project.yield}%</span>
+              </div>
+              <div className="flex justify-between text-sm text-bgs-blue">
+                <span>Durée</span>
+                <span className="font-medium">{project.duration} ans</span>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-2">
-            <label className="text-sm font-medium text-bgs-blue">Montant à investir</label>
+          
+          <button onClick={handleInvest} className="w-full btn-primary flex items-center justify-center gap-2">
+            Investir maintenant
+            <ArrowRight size={18} />
+          </button>
+        </>
+      ) : (
+        <div className="animate-fade-in">
+          <div className="mb-6 text-center">
+            <h4 className="text-lg font-medium text-bgs-blue mb-2">Confirmation de votre investissement</h4>
+            <p className="text-bgs-blue/70 mb-4">Veuillez vérifier les détails de votre investissement</p>
+            
+            <div className="bg-bgs-gray-light p-4 rounded-lg mb-4">
+              <div className="mb-2">
+                <p className="text-sm text-bgs-blue/70">Projet</p>
+                <p className="font-medium text-bgs-blue">{project.name}</p>
+              </div>
+              <div className="mb-2">
+                <p className="text-sm text-bgs-blue/70">Montant</p>
+                <p className="font-medium text-bgs-blue">{investmentAmount}€</p>
+              </div>
+              <div className="mb-2">
+                <p className="text-sm text-bgs-blue/70">Rendement estimé</p>
+                <p className="font-medium text-bgs-blue">{project.yield}%</p>
+              </div>
+              <div className="mb-2">
+                <p className="text-sm text-bgs-blue/70">Durée</p>
+                <p className="font-medium text-bgs-blue">{project.duration} ans</p>
+              </div>
+            </div>
+            
+            <p className="text-sm text-bgs-blue/70 mb-4">
+              En confirmant, vous acceptez d'investir {investmentAmount}€ dans ce projet.
+            </p>
+          </div>
+          
+          <div className="flex space-x-4">
             <button 
-              onClick={toggleInputMethod}
-              className="text-xs text-bgs-blue bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+              onClick={cancelInvestment}
+              className="w-1/2 btn-secondary" 
+              disabled={isProcessing}
             >
-              {useSlider ? "Saisie manuelle" : "Utiliser le curseur"}
+              Annuler
+            </button>
+            <button 
+              onClick={confirmInvestment}
+              className="w-1/2 btn-primary flex items-center justify-center gap-2" 
+              disabled={isProcessing}
+            >
+              {isProcessing ? "Traitement en cours..." : "Confirmer"}
             </button>
           </div>
-          
-          {useSlider ? (
-            <>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-bold text-bgs-blue">{investmentAmount.toLocaleString()} €</span>
-              </div>
-              <Slider
-                value={[investmentAmount]}
-                min={project.minInvestment}
-                max={Math.min(project.price, 20000)}
-                step={100}
-                onValueChange={(value) => setInvestmentAmount(value[0])}
-                className="mb-2"
-              />
-            </>
-          ) : (
-            <div className="mb-2">
-              <Input
-                type="number"
-                value={investmentAmount}
-                onChange={handleInputChange}
-                min={project.minInvestment}
-                max={Math.min(project.price, 20000)}
-                className="w-full border-gray-200"
-              />
-            </div>
-          )}
-          
-          <div className="flex justify-between text-xs text-bgs-blue/60">
-            <span>Min: {project.minInvestment} €</span>
-            <span>Max: {Math.min(project.price, 20000).toLocaleString()} €</span>
-          </div>
         </div>
-        
-        {project.possibleDurations && (
-          <div className="mb-4">
-            <div className="flex justify-between items-center mb-2">
-              <label className="text-sm font-medium text-bgs-blue">Durée d'investissement</label>
-              <span className="text-sm font-bold text-bgs-blue">{duration} mois</span>
-            </div>
-            <div className="flex justify-between gap-2">
-              {project.possibleDurations.map((months) => (
-                <button
-                  key={months}
-                  onClick={() => setDuration(months)}
-                  className={`flex-1 py-3 text-sm rounded-md transition-colors ${
-                    duration === months
-                      ? "bg-bgs-blue text-white"
-                      : "bg-gray-100 text-bgs-blue hover:bg-gray-200"
-                  }`}
-                >
-                  {months} mois
-                </button>
-              ))}
-            </div>
-            <div className="flex justify-between mt-2 text-xs text-bgs-blue/60">
-              <div className="flex items-center">
-                <Clock className="h-4 w-4 mr-1" />
-                <span>Min: {Math.min(...project.possibleDurations!)} mois</span>
-              </div>
-              <div className="flex items-center">
-                <CalendarClock className="h-4 w-4 mr-1" />
-                <span>Max: {Math.max(...project.possibleDurations!)} mois</span>
-              </div>
-            </div>
-          </div>
-        )}
-        
-        <div className="p-3 bg-bgs-gray-light rounded-lg mb-4">
-          <h3 className="text-sm font-medium text-bgs-blue mb-2">Simulation de rendement</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-xs text-bgs-blue/70">Retour total estimé</p>
-              <p className="text-sm font-semibold text-bgs-blue">{totalReturn.toLocaleString(undefined, {maximumFractionDigits: 2})} €</p>
-            </div>
-            <div>
-              <p className="text-xs text-bgs-blue/70">Retour mensuel</p>
-              <p className="text-sm font-semibold text-bgs-blue">{monthlyReturn.toLocaleString(undefined, {maximumFractionDigits: 2})} €</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="space-y-3 pt-2 border-t border-gray-100">
-          <div className="flex justify-between">
-            <span className="text-sm text-bgs-blue/80">Investissement min.</span>
-            <span className="text-sm font-medium text-bgs-blue">{project.minInvestment.toLocaleString()} €</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-sm text-bgs-blue/80">Rendement cible</span>
-            <span className="text-sm font-medium text-green-600">{project.yield}%</span>
-          </div>
-        </div>
-        
-        <Button 
-          onClick={handleInvestClick}
-          className={cn(
-            "w-full text-white rounded-lg py-6 font-medium flex items-center justify-center shadow-md hover:shadow-lg transition-all",
-            investmentAmount > userBalance ? "bg-gray-400 hover:bg-gray-500" : "bg-bgs-orange hover:bg-bgs-orange-light"
-          )}
-        >
-          {investmentAmount > userBalance ? "Solde insuffisant" : "Investir maintenant"}
-          {investmentAmount <= userBalance && <ArrowRight className="ml-2 h-4 w-4" />}
-        </Button>
-        
-        {investmentAmount > userBalance && (
-          <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 mt-2">
-            <div className="flex items-start">
-              <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5 mr-2 flex-shrink-0" />
-              <p className="text-xs text-bgs-blue/80">
-                Votre solde actuel ({userBalance.toLocaleString()} €) est insuffisant pour l'investissement de {investmentAmount.toLocaleString()} €
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
