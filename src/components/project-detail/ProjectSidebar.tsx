@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Users, Clock, Calendar, TrendingUp, AlertCircle, Eye, Building, MapPin, DollarSign } from "lucide-react";
+import { ArrowRight, Users, TrendingUp, AlertCircle, Eye, Building, MapPin } from "lucide-react";
 import { Project } from "@/types/project";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -93,7 +93,7 @@ export default function ProjectSidebar({
       <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
         <div className="space-y-4">
           {/* Stats */}
-          <div className="grid grid-cols-2 gap-3 my-4">
+          <div className="grid grid-cols-1 gap-3 my-4">
             <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
               <div className="flex items-center">
                 <div className="p-1.5 bg-blue-50 rounded-md mr-2">
@@ -102,17 +102,6 @@ export default function ProjectSidebar({
                 <div>
                   <p className="text-xs text-bgs-blue/70">Investisseurs</p>
                   <p className="text-sm font-semibold text-bgs-blue">{investorCount}</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
-              <div className="flex items-center">
-                <div className="p-1.5 bg-amber-50 rounded-md mr-2">
-                  <Clock className="h-4 w-4 text-amber-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-bgs-blue/70">Jours restants</p>
-                  <p className="text-sm font-semibold text-bgs-blue">{remainingDays}</p>
                 </div>
               </div>
             </div>
