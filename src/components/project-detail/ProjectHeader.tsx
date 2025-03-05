@@ -9,6 +9,9 @@ interface ProjectHeaderProps {
 }
 
 export default function ProjectHeader({ project }: ProjectHeaderProps) {
+  // Calculate annual yield from monthly yield
+  const annualYield = project.yield * 12;
+  
   return (
     <>
       {/* Navigation */}
@@ -59,14 +62,24 @@ export default function ProjectHeader({ project }: ProjectHeaderProps) {
           <div className="flex flex-wrap gap-8 justify-between items-center">
             <div className="flex items-center gap-6">
               <div>
-                <p className="text-sm text-bgs-gray-medium mb-1">Rendement cible</p>
+                <p className="text-sm text-bgs-gray-medium mb-1">Rendement mensuel</p>
                 <div className="flex items-center text-green-500 font-bold text-xl">
                   <TrendingUp className="h-5 w-5 mr-1" />
-                  {project.yield}%
+                  {project.yield}% <span className="text-sm font-medium ml-1">par mois</span>
                 </div>
               </div>
               
               <div className="h-12 w-0.5 bg-gray-200"></div>
+              
+              <div>
+                <p className="text-sm text-bgs-gray-medium mb-1">Rendement annualisé</p>
+                <div className="flex items-center text-green-600 font-bold text-xl">
+                  <TrendingUp className="h-5 w-5 mr-1" />
+                  {annualYield}% <span className="text-sm font-medium ml-1">par an</span>
+                </div>
+              </div>
+              
+              <div className="h-12 w-0.5 bg-gray-200 hidden md:block"></div>
               
               <div>
                 <p className="text-sm text-bgs-gray-medium mb-1">Durée</p>
