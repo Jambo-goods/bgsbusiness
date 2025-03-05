@@ -36,7 +36,6 @@ export default function DurationSection({
           value={[selectedDuration]}
           onValueChange={handleDurationChange}
           className="my-4"
-          marks={durations.map(d => ({ value: d }))}
           minStepsBetweenThumbs={1}
         />
         
