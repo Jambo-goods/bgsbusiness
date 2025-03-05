@@ -16,6 +16,8 @@ export default function Dashboard() {
     firstName: string;
     lastName: string;
     email: string;
+    phone?: string;
+    address?: string;
     investmentTotal: number;
     projectsCount: number;
   } | null>(null);
@@ -32,6 +34,8 @@ export default function Dashboard() {
         firstName: parsedUser.firstName || "Jean",
         lastName: parsedUser.lastName || "Dupont",
         email: parsedUser.email || "jean.dupont@example.com",
+        phone: parsedUser.phone || "+33 6 12 34 56 78",
+        address: parsedUser.address || "123 Avenue des Champs-Élysées, Paris",
         investmentTotal: 7500,
         projectsCount: 3
       });

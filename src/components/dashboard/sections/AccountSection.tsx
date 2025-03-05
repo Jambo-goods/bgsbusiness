@@ -1,5 +1,5 @@
 
-import { Settings, LogOut } from "lucide-react";
+import { Settings, LogOut, UserCircle } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
 interface AccountSectionProps {
@@ -17,6 +17,13 @@ export default function AccountSection({
 }: AccountSectionProps) {
   return (
     <>
+      <SidebarNavItem
+        icon={UserCircle}
+        label="Profil"
+        isActive={activeTab === "profile"}
+        expanded={expanded}
+        onClick={() => setActiveTab("profile")}
+      />
       <SidebarNavItem
         icon={Settings}
         label="Paramètres"
