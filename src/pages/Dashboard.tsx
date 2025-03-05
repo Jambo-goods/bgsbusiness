@@ -10,6 +10,7 @@ import DashboardLoading from "@/components/dashboard/DashboardLoading";
 import { projects } from "@/data/projects";
 
 export default function Dashboard() {
+  // Possible activeTab values: "overview", "wallet", "capital", "yield", "investments", "tracking", "profile", "settings"
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [userData, setUserData] = useState<{

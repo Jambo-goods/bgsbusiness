@@ -7,6 +7,7 @@ import YieldTab from "./tabs/YieldTab";
 import Investments from "./Investments";
 import TransfersTab from "./tabs/TransfersTab";
 import ProfileTab from "./tabs/ProfileTab";
+import InvestmentTrackingTab from "./tabs/InvestmentTrackingTab";
 
 interface TabContentProps {
   activeTab: string;
@@ -48,6 +49,10 @@ export default function TabContent({
       
       {activeTab === "investments" && (
         <Investments userInvestments={userInvestments} />
+      )}
+      
+      {activeTab === "tracking" && (
+        <InvestmentTrackingTab userInvestments={userInvestments} />
       )}
       
       {activeTab === "profile" && (

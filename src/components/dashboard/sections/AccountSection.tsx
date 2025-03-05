@@ -1,5 +1,5 @@
 
-import { Settings, LogOut, UserCircle } from "lucide-react";
+import { Settings, LogOut, UserCircle, LineChart } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
 interface AccountSectionProps {
@@ -17,6 +17,13 @@ export default function AccountSection({
 }: AccountSectionProps) {
   return (
     <>
+      <SidebarNavItem
+        icon={LineChart}
+        label="Suivi des rendements"
+        isActive={activeTab === "tracking"}
+        expanded={expanded}
+        onClick={() => setActiveTab("tracking")}
+      />
       <SidebarNavItem
         icon={UserCircle}
         label="Profil"
