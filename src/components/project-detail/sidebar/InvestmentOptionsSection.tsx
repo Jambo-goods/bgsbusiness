@@ -1,4 +1,4 @@
-<lov-codelov-code>
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, AlertCircle, TrendingUp, Wallet } from "lucide-react";
@@ -204,4 +204,3 @@ export default function InvestmentOptionsSection({
       {!isLoggedIn}
     </div>;
 }
-</lov-code>
