@@ -34,7 +34,7 @@ export default function ProjectSidebar({
       <CompanyInfoSection project={project} />
       
       <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
-        <h3 className="font-medium text-bgs-blue mb-4">Simulateur d'investissement</h3>
+        <h3 className="font-medium text-bgs-blue mb-4">Investir dans ce projet</h3>
         
         <InvestmentAmountSection 
           investmentAmount={investmentAmount}
