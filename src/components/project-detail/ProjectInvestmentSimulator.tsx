@@ -20,13 +20,11 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   
   // Calculer les rendements lorsque les entrées changent
   useEffect(() => {
-    // Le rendement est mensuel, donc pas besoin de le diviser par 12
-    const monthlyYield = project.yield / 100;
-    const annualYield = monthlyYield * 12; // Convertir en rendement annuel
+    // Calculer le rendement mensuel (en euros)
+    const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
     
-    // Pour le nombre total de mois sélectionnés
-    const calculatedTotalReturn = investmentAmount * (1 + (monthlyYield * duration));
-    const calculatedMonthlyReturn = investmentAmount * monthlyYield;
+    // Calculer le rendement total sur la durée complète (capital + intérêts)
+    const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * duration);
     
     setTotalReturn(calculatedTotalReturn);
     setMonthlyReturn(calculatedMonthlyReturn);

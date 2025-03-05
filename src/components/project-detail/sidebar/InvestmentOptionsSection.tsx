@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
@@ -26,6 +26,8 @@ export default function InvestmentOptionsSection({
   const [selectedDuration, setSelectedDuration] = useState(
     project.possibleDurations ? project.possibleDurations[0] : parseInt(project.duration)
   );
+  const [totalReturn, setTotalReturn] = useState(0);
+  const [monthlyReturn, setMonthlyReturn] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -35,6 +37,18 @@ export default function InvestmentOptionsSection({
   // Get possible durations from project, or create an array from the project duration
   const durations = project.possibleDurations || 
     [parseInt(project.duration.split(' ')[0])];
+  
+  // Calculate returns when investment amount or duration changes
+  useEffect(() => {
+    // Calculate monthly return
+    const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
+    
+    // Calculate total return after the full duration
+    const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * selectedDuration);
+    
+    setMonthlyReturn(calculatedMonthlyReturn);
+    setTotalReturn(calculatedTotalReturn);
+  }, [investmentAmount, selectedDuration, project.yield]);
   
   const handleInvest = () => {
     setShowConfirmation(true);
@@ -89,7 +103,9 @@ export default function InvestmentOptionsSection({
             
             <InvestmentSummary 
               project={project} 
-              selectedDuration={selectedDuration} 
+              selectedDuration={selectedDuration}
+              monthlyReturn={monthlyReturn}
+              totalReturn={totalReturn}
             />
           </div>
           
@@ -109,6 +125,8 @@ export default function InvestmentOptionsSection({
           isProcessing={isProcessing}
           onConfirm={confirmInvestment}
           onCancel={cancelInvestment}
+          monthlyReturn={monthlyReturn}
+          totalReturn={totalReturn}
         />
       )}
     </div>

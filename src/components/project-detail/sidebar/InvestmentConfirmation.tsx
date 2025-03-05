@@ -9,6 +9,8 @@ interface InvestmentConfirmationProps {
   isProcessing: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  monthlyReturn: number;
+  totalReturn: number;
 }
 
 export default function InvestmentConfirmation({
@@ -17,7 +19,9 @@ export default function InvestmentConfirmation({
   selectedDuration,
   isProcessing,
   onConfirm,
-  onCancel
+  onCancel,
+  monthlyReturn,
+  totalReturn
 }: InvestmentConfirmationProps) {
   // Calculate annual yield for display
   const annualYield = project.yield * 12;
@@ -44,6 +48,14 @@ export default function InvestmentConfirmation({
           <div className="mb-2">
             <p className="text-sm text-bgs-blue/70">Rendement mensuel</p>
             <p className="font-medium text-bgs-blue">{project.yield}% ({annualYield}% annualisé)</p>
+          </div>
+          <div className="mb-2">
+            <p className="text-sm text-bgs-blue/70">Revenu mensuel estimé</p>
+            <p className="font-medium text-green-600">{monthlyReturn.toFixed(2)}€ par mois</p>
+          </div>
+          <div className="mb-2">
+            <p className="text-sm text-bgs-blue/70">Montant total estimé en fin de période</p>
+            <p className="font-medium text-green-600">{totalReturn.toFixed(2)}€</p>
           </div>
         </div>
         

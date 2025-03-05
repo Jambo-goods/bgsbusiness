@@ -1,14 +1,21 @@
 
 import React from "react";
 import { Project } from "@/types/project";
-import { TrendingUp, Clock } from "lucide-react";
+import { TrendingUp, Clock, Calculator } from "lucide-react";
 
 interface InvestmentSummaryProps {
   project: Project;
   selectedDuration: number;
+  monthlyReturn: number;
+  totalReturn: number;
 }
 
-export default function InvestmentSummary({ project, selectedDuration }: InvestmentSummaryProps) {
+export default function InvestmentSummary({ 
+  project, 
+  selectedDuration,
+  monthlyReturn,
+  totalReturn
+}: InvestmentSummaryProps) {
   // Calculate annual yield from monthly yield
   const annualYield = project.yield * 12;
   
@@ -45,6 +52,26 @@ export default function InvestmentSummary({ project, selectedDuration }: Investm
             <span>Durée</span>
           </div>
           <span className="font-semibold text-bgs-blue">{selectedDuration} mois</span>
+        </div>
+        
+        <div className="flex justify-between items-center text-sm">
+          <div className="flex items-center gap-2 text-bgs-blue">
+            <div className="bg-purple-100 p-1.5 rounded-lg">
+              <Calculator size={14} className="text-purple-600" />
+            </div>
+            <span>Revenus mensuels</span>
+          </div>
+          <span className="font-semibold text-purple-600">{monthlyReturn.toFixed(2)}€ par mois</span>
+        </div>
+        
+        <div className="flex justify-between items-center text-sm">
+          <div className="flex items-center gap-2 text-bgs-blue">
+            <div className="bg-purple-100 p-1.5 rounded-lg">
+              <Calculator size={14} className="text-purple-600" />
+            </div>
+            <span>Total sur la période</span>
+          </div>
+          <span className="font-semibold text-purple-600">{totalReturn.toFixed(2)}€</span>
         </div>
       </div>
     </div>
