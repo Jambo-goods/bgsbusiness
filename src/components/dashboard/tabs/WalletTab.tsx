@@ -110,7 +110,7 @@ export default function WalletTab() {
       // Success! Refresh wallet data
       await fetchWalletData();
       
-      toast.success("Dépôt de " + amount + "€ effectué avec succès");
+      toast.success(`Dépôt de ${amount}€ effectué avec succès`);
     } catch (error) {
       console.error("Erreur lors du dépôt:", error);
       toast.error("Une erreur est survenue lors du dépôt");
@@ -171,7 +171,7 @@ export default function WalletTab() {
       // Success! Refresh wallet data
       await fetchWalletData();
       
-      toast.success("Retrait de " + amount + "€ effectué avec succès");
+      toast.success(`Retrait de ${amount}€ effectué avec succès`);
     } catch (error) {
       console.error("Erreur lors du retrait:", error);
       toast.error("Une erreur est survenue lors du retrait");

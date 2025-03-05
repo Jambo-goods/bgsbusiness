@@ -60,7 +60,7 @@ export default function TabContent({
       )}
       
       {activeTab === "profile" && (
-        <ProfileTab userData={userData} refreshData={refreshData} />
+        <ProfileTab userData={userData} />
       )}
 
       {activeTab === "settings" && (

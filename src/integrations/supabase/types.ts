@@ -205,7 +205,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_wallet_balance: {
+        Args: {
+          user_id: string
+          increment_amount: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
