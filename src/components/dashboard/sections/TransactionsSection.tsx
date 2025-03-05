@@ -1,5 +1,5 @@
 
-import { History, Upload } from "lucide-react";
+import { History } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
 interface TransactionsSectionProps {
@@ -11,7 +11,6 @@ interface TransactionsSectionProps {
 export default function TransactionsSection({ activeTab, setActiveTab, expanded }: TransactionsSectionProps) {
   const navItems = [
     { id: "history", label: "Historique", icon: History },
-    { id: "transfers", label: "Dépôt & Retrait", icon: Upload },
   ];
 
   return (
