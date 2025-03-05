@@ -6,6 +6,7 @@ import { Project } from "@/types/project";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 
 interface InvestmentOptionsSectionProps {
   project: Project;
@@ -24,6 +25,7 @@ export default function InvestmentOptionsSection({
   );
   const [totalReturn, setTotalReturn] = useState<number>(0);
   const [monthlyReturn, setMonthlyReturn] = useState<number>(0);
+  const [useSlider, setUseSlider] = useState<boolean>(true);
   
   useEffect(() => {
     const returnRate = (project.yield / 100) * (duration / 12);
@@ -60,6 +62,22 @@ export default function InvestmentOptionsSection({
     }
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value)) {
+      // Ensure input is within min-max range
+      const clampedValue = Math.min(
+        Math.max(value, project.minInvestment),
+        Math.min(project.price, 20000)
+      );
+      setInvestmentAmount(clampedValue);
+    }
+  };
+
+  const toggleInputMethod = () => {
+    setUseSlider(!useSlider);
+  };
+
   return (
     <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
       <div className="space-y-4">
@@ -80,16 +98,41 @@ export default function InvestmentOptionsSection({
         <div className="mb-4">
           <div className="flex justify-between items-center mb-2">
             <label className="text-sm font-medium text-bgs-blue">Montant à investir</label>
-            <span className="text-sm font-bold text-bgs-blue">{investmentAmount.toLocaleString()} €</span>
+            <button 
+              onClick={toggleInputMethod}
+              className="text-xs text-bgs-blue bg-blue-50 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+            >
+              {useSlider ? "Saisie manuelle" : "Utiliser le curseur"}
+            </button>
           </div>
-          <Slider
-            value={[investmentAmount]}
-            min={project.minInvestment}
-            max={Math.min(project.price, 20000)}
-            step={100}
-            onValueChange={(value) => setInvestmentAmount(value[0])}
-            className="mb-2"
-          />
+          
+          {useSlider ? (
+            <>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-bold text-bgs-blue">{investmentAmount.toLocaleString()} €</span>
+              </div>
+              <Slider
+                value={[investmentAmount]}
+                min={project.minInvestment}
+                max={Math.min(project.price, 20000)}
+                step={100}
+                onValueChange={(value) => setInvestmentAmount(value[0])}
+                className="mb-2"
+              />
+            </>
+          ) : (
+            <div className="mb-2">
+              <Input
+                type="number"
+                value={investmentAmount}
+                onChange={handleInputChange}
+                min={project.minInvestment}
+                max={Math.min(project.price, 20000)}
+                className="w-full border-gray-200"
+              />
+            </div>
+          )}
+          
           <div className="flex justify-between text-xs text-bgs-blue/60">
             <span>Min: {project.minInvestment} €</span>
             <span>Max: {Math.min(project.price, 20000).toLocaleString()} €</span>
