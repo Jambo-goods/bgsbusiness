@@ -47,27 +47,24 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
   // Fonction pour mettre à jour Supabase avec le nouvel investissement
   async function updateSupabaseWithInvestment(investmentData: any) {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = supabase.auth.getUser();
+      const userId = (await user).data.user?.id;
       
-      if (!user) {
+      if (!userId) {
         console.error("Utilisateur non connecté");
         return;
       }
-      
-      // Calculer la date de fin (aujourd'hui + durée en mois)
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + investmentData.duration);
       
       // Insérer l'investissement dans la table investments
       const { error: investmentError } = await supabase
         .from('investments')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           project_id: investmentData.projectId,
           amount: investmentData.amount,
           yield_rate: investmentData.yield,
           duration: investmentData.duration,
-          end_date: endDate.toISOString() // Conversion de Date à string ISO
+          end_date: new Date(new Date().setMonth(new Date().getMonth() + investmentData.duration))
         });
       
       if (investmentError) {
@@ -78,8 +75,8 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
       // Mettre à jour le profil utilisateur
       const { data: profileData, error: profileFetchError } = await supabase
         .from('profiles')
-        .select('investment_total, projects_count, wallet_balance')
-        .eq('id', user.id)
+        .select('investment_total, projects_count')
+        .eq('id', userId)
         .single();
       
       if (profileFetchError) {
@@ -89,13 +86,12 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
       
       // Calculer les nouvelles valeurs
       const newTotal = (profileData.investment_total || 0) + investmentData.amount;
-      const newWalletBalance = (profileData.wallet_balance || 0) - investmentData.amount;
       
       // Vérifier si l'utilisateur a déjà investi dans ce projet
       const { data: existingInvestments } = await supabase
         .from('investments')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('project_id', investmentData.projectId);
       
       let newCount = profileData.projects_count || 0;
@@ -109,28 +105,13 @@ export default function Overview({ userData, userInvestments, setActiveTab, refr
         .from('profiles')
         .update({
           investment_total: newTotal,
-          projects_count: newCount,
-          wallet_balance: newWalletBalance >= 0 ? newWalletBalance : 0
+          projects_count: newCount
         })
-        .eq('id', user.id);
+        .eq('id', userId);
       
       if (updateError) {
         console.error("Erreur lors de la mise à jour du profil:", updateError);
         return;
-      }
-      
-      // Ajouter une transaction dans wallet_transactions
-      const { error: transactionError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: user.id,
-          amount: investmentData.amount,
-          type: 'investment',
-          description: `Investissement dans ${investmentData.projectName}`
-        });
-      
-      if (transactionError) {
-        console.error("Erreur lors de l'enregistrement de la transaction:", transactionError);
       }
       
       // Supprimer du localStorage pour éviter de montrer à nouveau

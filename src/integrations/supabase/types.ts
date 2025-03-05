@@ -65,7 +65,6 @@ export type Database = {
           phone: string | null
           projects_count: number | null
           updated_at: string | null
-          wallet_balance: number | null
         }
         Insert: {
           address?: string | null
@@ -78,7 +77,6 @@ export type Database = {
           phone?: string | null
           projects_count?: number | null
           updated_at?: string | null
-          wallet_balance?: number | null
         }
         Update: {
           address?: string | null
@@ -91,7 +89,6 @@ export type Database = {
           phone?: string | null
           projects_count?: number | null
           updated_at?: string | null
-          wallet_balance?: number | null
         }
         Relationships: []
       }
@@ -167,36 +164,6 @@ export type Database = {
           target?: number | null
           updated_at?: string | null
           yield?: number
-        }
-        Relationships: []
-      }
-      wallet_transactions: {
-        Row: {
-          amount: number
-          created_at: string | null
-          description: string | null
-          id: string
-          status: string
-          type: string
-          user_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          status?: string
-          type: string
-          user_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string | null
-          description?: string | null
-          id?: string
-          status?: string
-          type?: string
-          user_id?: string
         }
         Relationships: []
       }

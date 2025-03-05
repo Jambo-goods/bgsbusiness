@@ -1,37 +1,12 @@
 
 import React from "react";
 import { WalletCards, Euro } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
 
 interface WalletBalanceProps {
   balance: number;
 }
 
-export default function WalletBalance({ balance: initialBalance }: WalletBalanceProps) {
-  const [balance, setBalance] = useState(initialBalance);
-  
-  useEffect(() => {
-    // Pour un nouvel utilisateur, on s'assure que le solde est à 0 et non 3 250 €
-    async function checkUserStatus() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        // Vérifier si l'utilisateur a des transactions
-        const { data: userTransactions, error } = await supabase
-          .from('wallet_transactions')
-          .select('*')
-          .eq('user_id', user.id);
-        
-        // S'il n'y a pas de transactions, le solde devrait être à 0
-        if (!userTransactions || userTransactions.length === 0) {
-          setBalance(0);
-        }
-      }
-    }
-    
-    checkUserStatus();
-  }, []);
-
+export default function WalletBalance({ balance }: WalletBalanceProps) {
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
       <div className="flex items-center gap-2 mb-2">
