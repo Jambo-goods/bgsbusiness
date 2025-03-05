@@ -13,8 +13,12 @@ import {
   PanelLeft, 
   Languages, 
   Save, 
-  RefreshCw 
+  RefreshCw,
+  Shield,
+  Lock,
+  FingerPrint
 } from "lucide-react";
+import PasswordFields from "@/components/auth/PasswordFields";
 
 // Type définition pour les paramètres
 type UserSettings = {
@@ -26,6 +30,9 @@ type UserSettings = {
     app: boolean;
     marketing: boolean;
   };
+  security: {
+    twoFactorEnabled: boolean;
+  }
 };
 
 // Valeurs par défaut des paramètres
@@ -37,6 +44,9 @@ const defaultSettings: UserSettings = {
     email: true,
     app: true,
     marketing: false
+  },
+  security: {
+    twoFactorEnabled: false
   }
 };
 
@@ -44,6 +54,11 @@ export default function SettingsTab() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
 
   // Charger les paramètres depuis localStorage au chargement du composant
   useEffect(() => {
@@ -69,19 +84,27 @@ export default function SettingsTab() {
     console.log(`Thème appliqué: ${settings.theme}`);
   }, [settings.theme]);
 
-  const handleSwitchChange = (key: keyof Omit<UserSettings, "notifications">, subKey?: keyof UserSettings["notifications"]) => {
-    if (subKey) {
+  const handleSwitchChange = (key: string, subKey?: string) => {
+    if (key === "notifications" && subKey) {
       setSettings(prev => ({
         ...prev,
         notifications: {
           ...prev.notifications,
-          [subKey]: !prev.notifications[subKey]
+          [subKey]: !prev.notifications[subKey as keyof typeof prev.notifications]
+        }
+      }));
+    } else if (key === "security" && subKey) {
+      setSettings(prev => ({
+        ...prev,
+        security: {
+          ...prev.security,
+          [subKey]: !prev.security[subKey as keyof typeof prev.security]
         }
       }));
     } else {
       setSettings(prev => ({
         ...prev,
-        [key]: !prev[key]
+        [key]: !prev[key as keyof typeof prev]
       }));
     }
   };
@@ -98,6 +121,43 @@ export default function SettingsTab() {
       ...prev,
       theme
     }));
+  };
+
+  const handlePasswordChange = () => {
+    setPasswordError("");
+    
+    // Validation basique
+    if (!currentPassword) {
+      setPasswordError("Le mot de passe actuel est requis");
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Les mots de passe ne correspondent pas");
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      setPasswordError("Le mot de passe doit contenir au moins 8 caractères");
+      return;
+    }
+    
+    // Simuler la mise à jour du mot de passe
+    setIsLoading(true);
+    
+    // Simuler un délai de réseau (en production, ce serait un appel API)
+    setTimeout(() => {
+      setIsLoading(false);
+      setShowPasswordChange(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      
+      toast({
+        title: "Mot de passe mis à jour",
+        description: "Votre mot de passe a été modifié avec succès",
+      });
+    }, 1000);
   };
 
   const handleSaveSettings = async () => {
@@ -222,7 +282,112 @@ export default function SettingsTab() {
                 <Switch 
                   id="sidebar-collapsed" 
                   checked={settings.sidebarCollapsed}
-                  onCheckedChange={() => handleSwitchChange('sidebarCollapsed')}
+                  onCheckedChange={() => handleSwitchChange("sidebarCollapsed")}
+                />
+              </div>
+            </div>
+          </div>
+
+          <Separator />
+          
+          {/* Sécurité */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Shield className="text-bgs-blue" size={20} />
+              <h3 className="text-lg font-medium text-bgs-blue">Sécurité</h3>
+            </div>
+            <div className="space-y-6">
+              {/* Changement de mot de passe */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="space-y-0.5">
+                    <Label className="text-bgs-blue flex items-center gap-2">
+                      <Lock size={16} />
+                      Mot de passe
+                    </Label>
+                    <p className="text-sm text-bgs-gray-medium">Modifier votre mot de passe actuel</p>
+                  </div>
+                  {!showPasswordChange ? (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowPasswordChange(true)}
+                      className="border-bgs-blue text-bgs-blue hover:bg-bgs-blue hover:text-white"
+                    >
+                      Changer
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowPasswordChange(false);
+                        setPasswordError("");
+                      }}
+                      className="border-red-500 text-red-500 hover:bg-red-500 hover:text-white"
+                    >
+                      Annuler
+                    </Button>
+                  )}
+                </div>
+                
+                {showPasswordChange && (
+                  <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                    {passwordError && (
+                      <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded">
+                        {passwordError}
+                      </div>
+                    )}
+                    
+                    <div>
+                      <Label htmlFor="current-password" className="text-bgs-blue mb-1 block">
+                        Mot de passe actuel
+                      </Label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                          <Lock size={18} className="text-bgs-blue/50" />
+                        </div>
+                        <input
+                          id="current-password"
+                          type="password"
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="bg-white/50 border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full pl-10 p-2.5"
+                          placeholder="••••••••"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <PasswordFields
+                      password={newPassword}
+                      confirmPassword={confirmPassword}
+                      setPassword={setNewPassword}
+                      setConfirmPassword={setConfirmPassword}
+                    />
+                    
+                    <Button 
+                      onClick={handlePasswordChange}
+                      disabled={isLoading}
+                      className="w-full bg-bgs-blue hover:bg-bgs-blue-light text-white"
+                    >
+                      {isLoading ? "Traitement en cours..." : "Mettre à jour le mot de passe"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Authentification à deux facteurs */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="2fa-enabled" className="text-bgs-blue flex items-center gap-2">
+                    <FingerPrint size={16} />
+                    Authentification à deux facteurs
+                  </Label>
+                  <p className="text-sm text-bgs-gray-medium">Renforce la sécurité de votre compte</p>
+                </div>
+                <Switch 
+                  id="2fa-enabled" 
+                  checked={settings.security.twoFactorEnabled}
+                  onCheckedChange={() => handleSwitchChange("security", "twoFactorEnabled")}
                 />
               </div>
             </div>
@@ -245,7 +410,7 @@ export default function SettingsTab() {
                 <Switch 
                   id="email-notifications" 
                   checked={settings.notifications.email}
-                  onCheckedChange={() => handleSwitchChange('notifications', 'email')}
+                  onCheckedChange={() => handleSwitchChange("notifications", "email")}
                 />
               </div>
               
@@ -257,7 +422,7 @@ export default function SettingsTab() {
                 <Switch 
                   id="app-notifications" 
                   checked={settings.notifications.app}
-                  onCheckedChange={() => handleSwitchChange('notifications', 'app')}
+                  onCheckedChange={() => handleSwitchChange("notifications", "app")}
                 />
               </div>
               
@@ -269,7 +434,7 @@ export default function SettingsTab() {
                 <Switch 
                   id="marketing-notifications" 
                   checked={settings.notifications.marketing}
-                  onCheckedChange={() => handleSwitchChange('notifications', 'marketing')}
+                  onCheckedChange={() => handleSwitchChange("notifications", "marketing")}
                 />
               </div>
             </div>
