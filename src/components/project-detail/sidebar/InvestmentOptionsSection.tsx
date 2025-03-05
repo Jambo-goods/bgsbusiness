@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
@@ -64,14 +63,19 @@ export default function InvestmentOptionsSection({
   };
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-      <h3 className="text-lg font-medium text-bgs-blue mb-4">Investir maintenant</h3>
+    <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100 transform transition-all duration-300 hover:shadow-lg">
+      <h3 className="text-xl font-semibold text-bgs-blue mb-5 flex items-center">
+        <span className="bg-bgs-orange/10 text-bgs-orange p-1.5 rounded-lg mr-2">
+          <ArrowRight size={16} />
+        </span>
+        Investir maintenant
+      </h3>
       
       {!showConfirmation ? (
         <>
           <FundingProgress project={project} investorCount={investorCount} />
           
-          <div className="mb-6">
+          <div className="mb-6 space-y-4">
             <InvestmentAmountSection 
               investmentAmount={investmentAmount}
               setInvestmentAmount={setInvestmentAmount}
@@ -91,7 +95,10 @@ export default function InvestmentOptionsSection({
             />
           </div>
           
-          <button onClick={handleInvest} className="w-full btn-primary flex items-center justify-center gap-2">
+          <button 
+            onClick={handleInvest} 
+            className="w-full btn-primary flex items-center justify-center gap-2 transform transition-all duration-300 hover:scale-[1.02]"
+          >
             Investir maintenant
             <ArrowRight size={18} />
           </button>

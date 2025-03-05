@@ -18,16 +18,16 @@ export default function DurationSection({
   };
 
   return (
-    <div className="mb-4 bg-bgs-gray-light p-3 rounded-lg">
-      <div className="flex justify-between items-center mb-2">
+    <div className="mb-4 bg-gradient-to-br from-white to-bgs-gray-light p-4 rounded-lg shadow-sm border border-gray-100">
+      <div className="flex justify-between items-center mb-3">
         <span className="text-sm font-medium text-bgs-blue">Durée d'investissement</span>
       </div>
       
-      <div className="mb-2">
-        <span className="block text-center text-xl font-bold text-bgs-blue">{selectedDuration} mois</span>
+      <div className="mb-3">
+        <span className="block text-center text-2xl font-bold text-gradient bg-gradient-to-r from-bgs-blue to-bgs-orange">{selectedDuration} mois</span>
       </div>
       
-      <div className="px-2 py-4">
+      <div className="px-2 py-3">
         <Slider
           defaultValue={[selectedDuration]}
           max={Math.max(...durations)}
@@ -39,16 +39,26 @@ export default function DurationSection({
           minStepsBetweenThumbs={1}
         />
         
-        <div className="flex justify-between mt-2">
+        <div className="flex justify-between mt-3">
           {durations.map((duration) => (
-            <span 
+            <div 
               key={duration} 
-              className={`text-sm ${selectedDuration === duration ? 'text-bgs-orange font-medium' : 'text-bgs-blue/70'}`}
-              style={{ cursor: 'pointer' }}
+              className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
+                selectedDuration === duration 
+                ? 'transform scale-110' 
+                : 'opacity-70 hover:opacity-100'
+              }`}
               onClick={() => setSelectedDuration(duration)}
             >
-              {duration} mois
-            </span>
+              <span className={`
+                px-3 py-1 rounded-full text-sm font-medium 
+                ${selectedDuration === duration 
+                  ? 'bg-bgs-orange text-white shadow-md' 
+                  : 'text-bgs-blue/70 hover:text-bgs-blue'}
+              `}>
+                {duration} mois
+              </span>
+            </div>
           ))}
         </div>
       </div>
