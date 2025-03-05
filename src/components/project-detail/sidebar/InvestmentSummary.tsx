@@ -9,7 +9,7 @@ interface InvestmentSummaryProps {
 }
 
 export default function InvestmentSummary({ project, selectedDuration }: InvestmentSummaryProps) {
-  // Calculate annual yield for display
+  // Calculate annual yield from monthly yield
   const annualYield = project.yield * 12;
   
   return (
@@ -24,7 +24,7 @@ export default function InvestmentSummary({ project, selectedDuration }: Investm
             </div>
             <span>Rendement mensuel</span>
           </div>
-          <span className="font-semibold text-bgs-orange">{project.yield}%</span>
+          <span className="font-semibold text-bgs-orange">{project.yield}% par mois</span>
         </div>
         
         <div className="flex justify-between items-center text-sm">
@@ -34,7 +34,7 @@ export default function InvestmentSummary({ project, selectedDuration }: Investm
             </div>
             <span>Rendement annualisé</span>
           </div>
-          <span className="font-semibold text-green-600">{annualYield}%</span>
+          <span className="font-semibold text-green-600">{annualYield}% par an</span>
         </div>
         
         <div className="flex justify-between items-center text-sm">

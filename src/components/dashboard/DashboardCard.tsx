@@ -11,6 +11,7 @@ interface DashboardCardProps {
   changePercentage?: string;
   changeValue?: string;
   changeTimeframe?: string;
+  description?: string;
 }
 
 export default function DashboardCard({
@@ -22,6 +23,7 @@ export default function DashboardCard({
   changePercentage,
   changeValue,
   changeTimeframe,
+  description,
 }: DashboardCardProps) {
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
@@ -41,6 +43,9 @@ export default function DashboardCard({
       <p className="text-xl font-bold text-bgs-blue">
         {value}
       </p>
+      {description && (
+        <p className="text-xs text-green-600 font-medium mt-1">{description}</p>
+      )}
       {changeValue && changeTimeframe && (
         <div className="mt-2 text-xs text-bgs-gray-medium">
           <span className="text-green-500">{changeValue}</span> depuis {changeTimeframe}

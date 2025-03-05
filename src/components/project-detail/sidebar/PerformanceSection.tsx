@@ -8,7 +8,7 @@ interface PerformanceSectionProps {
 }
 
 export default function PerformanceSection({ project }: PerformanceSectionProps) {
-  // Calculate annual yield for display
+  // Calculate annual yield from monthly yield
   const annualYield = project.yield * 12;
   
   return (
@@ -21,7 +21,7 @@ export default function PerformanceSection({ project }: PerformanceSectionProps)
         </div>
         <div>
           <p className="text-xs text-bgs-blue/70">Rendement mensuel</p>
-          <p className="text-sm font-bold text-green-600">{project.yield}%</p>
+          <p className="text-sm font-bold text-green-600">{project.yield}% par mois</p>
         </div>
       </div>
       
@@ -31,12 +31,12 @@ export default function PerformanceSection({ project }: PerformanceSectionProps)
         </div>
         <div>
           <p className="text-xs text-bgs-blue/70">Rendement annualisé</p>
-          <p className="text-sm font-bold text-green-600">{annualYield}%</p>
+          <p className="text-sm font-bold text-green-600">{annualYield}% par an</p>
         </div>
       </div>
       
       <p className="text-xs text-bgs-blue/70 mb-2">
-        Ce rendement mensuel de {project.yield}% ({annualYield}% annualisé) est une estimation basée sur les performances historiques de projets similaires. 
+        Ce rendement mensuel de {project.yield}% ({annualYield}% annualisé par an) est une estimation basée sur les performances historiques de projets similaires. 
         Les rendements réels peuvent varier.
       </p>
       

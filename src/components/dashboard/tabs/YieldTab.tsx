@@ -2,16 +2,16 @@
 import React from "react";
 
 export default function YieldTab() {
-  // Now clearly indicating monthly yield, and showing annual conversion
+  // Monthly yield
   const monthlyYield = 84;
   const annualYield = monthlyYield * 12;
   
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
       <h2 className="text-lg font-semibold text-bgs-blue mb-4">Rendement mensuel estimé</h2>
-      <div className="text-3xl font-bold text-green-600 mb-4">{monthlyYield} €</div>
+      <div className="text-3xl font-bold text-green-600 mb-4">{monthlyYield} € par mois</div>
       <p className="text-sm text-bgs-gray-medium mb-4">
-        Basé sur un rendement mensuel moyen de 1.125% ({annualYield / monthlyYield}% annualisé) sur votre capital investi.
+        Basé sur un rendement mensuel moyen de 1.125% ({annualYield / monthlyYield}% annualisé par an) sur votre capital investi.
       </p>
       <div className="space-y-4">
         <div>
