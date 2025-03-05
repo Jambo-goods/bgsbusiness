@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
@@ -36,11 +35,9 @@ export default function InvestmentOptionsSection({
   const minInvestment = 100;
   const maxInvestment = 10000;
   
-  // Get possible durations from project, or create an array from the project duration
   const durations = project.possibleDurations || 
     [parseInt(project.duration.split(' ')[0])];
   
-  // Fetch user balance on component mount
   useEffect(() => {
     const fetchUserBalance = async () => {
       try {
@@ -66,12 +63,8 @@ export default function InvestmentOptionsSection({
     fetchUserBalance();
   }, []);
   
-  // Calculate returns when investment amount or duration changes
   useEffect(() => {
-    // Calculate monthly return
     const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
-    
-    // Calculate total return after the full duration
     const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * selectedDuration);
     
     setMonthlyReturn(calculatedMonthlyReturn);
@@ -79,7 +72,6 @@ export default function InvestmentOptionsSection({
   }, [investmentAmount, selectedDuration, project.yield]);
   
   const handleInvest = () => {
-    // Check if user has enough balance
     if (userBalance < investmentAmount) {
       toast({
         title: "Solde insuffisant",
@@ -100,7 +92,6 @@ export default function InvestmentOptionsSection({
     setIsProcessing(true);
     
     try {
-      // Get the current user
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
@@ -115,50 +106,64 @@ export default function InvestmentOptionsSection({
       
       const userId = session.session.user.id;
       
-      // Check if project.id is a valid UUID
-      let projectUuid = project.id;
+      let projectUuid;
       
-      if (!isUUID(project.id)) {
-        console.log("Project ID is not a UUID, fetching the actual UUID...");
+      console.log(`Attempting to find project with name: ${project.name}`);
+      const { data: projectByName, error: nameError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('name', project.name)
+        .maybeSingle();
+      
+      if (nameError) {
+        console.error("Error fetching project by name:", nameError);
+        throw new Error("Erreur lors de la recherche du projet dans la base de données");
+      }
+      
+      if (projectByName) {
+        console.log("Found project by name:", projectByName);
+        projectUuid = projectByName.id;
+      } else {
+        console.log("Project not found by name, checking if it exists in the database");
         
-        // Try to fetch project by ID first (in case it's a numeric ID)
-        let { data: projectData, error: projectError } = await supabase
+        console.log("Creating project in database:", project);
+        const { data: newProject, error: insertError } = await supabase
           .from('projects')
+          .insert({
+            name: project.name,
+            company_name: project.companyName,
+            description: project.description,
+            duration: project.duration,
+            location: project.location,
+            min_investment: project.minInvestment,
+            category: project.category,
+            price: project.price,
+            yield: project.yield,
+            funding_progress: project.fundingProgress,
+            featured: project.featured || false,
+            possible_durations: project.possibleDurations,
+            status: project.status,
+            profitability: project.profitability,
+            image: project.image
+          })
           .select('id')
-          .eq('id', project.id);
-          
-        // If that fails, try fetching by name
-        if (projectError || !projectData || projectData.length === 0) {
-          console.log("Couldn't find project by ID, trying by name...");
-          const { data: projectByName, error: nameError } = await supabase
-            .from('projects')
-            .select('id')
-            .eq('name', project.name);
-            
-          if (nameError) {
-            console.error("Error fetching project UUID by name:", nameError);
-            throw new Error("Impossible de trouver le projet dans la base de données");
-          }
-          
-          if (!projectByName || projectByName.length === 0) {
-            throw new Error("Projet non trouvé dans la base de données");
-          }
-          
-          projectData = projectByName;
+          .single();
+        
+        if (insertError) {
+          console.error("Error creating project:", insertError);
+          throw new Error("Impossible de créer le projet dans la base de données");
         }
         
-        if (projectData && projectData.length > 0) {
-          projectUuid = projectData[0].id;
-          console.log("Found project UUID:", projectUuid);
-        } else {
-          throw new Error("Projet non trouvé dans la base de données");
-        }
+        projectUuid = newProject.id;
+        console.log("Created new project with ID:", projectUuid);
+      }
+      
+      if (!projectUuid) {
+        throw new Error("Impossible de déterminer l'identifiant du projet");
       }
       
       console.log("Using project UUID:", projectUuid);
       
-      // Start a transaction to update multiple tables
-      // 1. Deduct from user's wallet balance
       const { error: walletError } = await supabase.rpc(
         'increment_wallet_balance',
         { user_id: userId, increment_amount: -investmentAmount }
@@ -169,7 +174,6 @@ export default function InvestmentOptionsSection({
         throw walletError;
       }
       
-      // 2. Create investment record
       const { error: investmentError } = await supabase
         .from('investments')
         .insert({
@@ -187,7 +191,6 @@ export default function InvestmentOptionsSection({
         throw investmentError;
       }
       
-      // 3. Update profile statistics
       const { data: profileData, error: profileFetchError } = await supabase
         .from('profiles')
         .select('investment_total, projects_count')
@@ -199,7 +202,6 @@ export default function InvestmentOptionsSection({
         throw profileFetchError;
       }
       
-      // Prepare the update
       const updates = {
         investment_total: (profileData.investment_total || 0) + investmentAmount,
         projects_count: (profileData.projects_count || 0) + 1
@@ -215,7 +217,6 @@ export default function InvestmentOptionsSection({
         throw profileUpdateError;
       }
       
-      // 4. Save transaction record
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
@@ -230,7 +231,6 @@ export default function InvestmentOptionsSection({
         throw transactionError;
       }
       
-      // Investment data to save in localStorage
       const investmentData = {
         projectId: project.id,
         projectName: project.name,
@@ -249,7 +249,6 @@ export default function InvestmentOptionsSection({
         description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
       });
       
-      // Redirect to dashboard after success
       navigate("/dashboard");
       
     } catch (error) {
@@ -265,7 +264,6 @@ export default function InvestmentOptionsSection({
     }
   };
   
-  // Helper function to check if a string is a valid UUID
   function isUUID(str) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     return uuidRegex.test(str);
