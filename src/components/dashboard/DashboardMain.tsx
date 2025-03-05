@@ -15,10 +15,12 @@ interface DashboardMainProps {
     address?: string;
     investmentTotal: number;
     projectsCount: number;
+    walletBalance?: number;
   };
   activeTab: string;
   userInvestments: Project[];
   setActiveTab: (tab: string) => void;
+  refreshData?: () => Promise<void>;
 }
 
 export default function DashboardMain({ 
@@ -26,7 +28,8 @@ export default function DashboardMain({
   userData, 
   activeTab, 
   userInvestments, 
-  setActiveTab 
+  setActiveTab,
+  refreshData
 }: DashboardMainProps) {
   return (
     <main className={cn(
@@ -42,6 +45,7 @@ export default function DashboardMain({
           userData={userData} 
           userInvestments={userInvestments} 
           setActiveTab={setActiveTab} 
+          refreshData={refreshData}
         />
       </div>
     </main>

@@ -9,6 +9,7 @@ interface DashboardCardsProps {
     email: string;
     investmentTotal: number;
     projectsCount: number;
+    walletBalance?: number;
   };
 }
 
@@ -22,7 +23,7 @@ export default function DashboardCards({ userData }: DashboardCardsProps) {
       {/* Solde disponible card */}
       <DashboardCard
         title="Solde disponible"
-        value="3,250 €"
+        value={`${userData.walletBalance?.toLocaleString() || "3,250"} €`}
         icon={<Banknote />}
         iconBgColor="bg-purple-100"
         iconColor="text-purple-600"

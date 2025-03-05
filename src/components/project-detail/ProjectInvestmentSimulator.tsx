@@ -4,6 +4,7 @@ import { Project } from "@/types/project";
 import { Slider } from "@/components/ui/slider";
 import { Check, AlertCircle, Calculator, Calendar, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProjectInvestmentSimulatorProps {
   project: Project;
@@ -16,7 +17,36 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   );
   const [totalReturn, setTotalReturn] = useState<number>(0);
   const [monthlyReturn, setMonthlyReturn] = useState<number>(0);
-  const [userBalance] = useState<number>(1000); // Simuler le solde utilisateur
+  const [userBalance, setUserBalance] = useState<number>(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  
+  // Fetch user balance on component mount
+  useEffect(() => {
+    const fetchUserBalance = async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        if (!session.session) return;
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', session.session.user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setUserBalance(data.wallet_balance || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching user balance:", error);
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
+    
+    fetchUserBalance();
+  }, []);
   
   // Calculer les rendements lorsque les entrées changent
   useEffect(() => {

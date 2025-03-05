@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 // Import our components
 import InvestmentAmountSection from "./InvestmentAmountSection";
@@ -28,6 +29,7 @@ export default function InvestmentOptionsSection({
   );
   const [totalReturn, setTotalReturn] = useState(0);
   const [monthlyReturn, setMonthlyReturn] = useState(0);
+  const [userBalance, setUserBalance] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -37,6 +39,32 @@ export default function InvestmentOptionsSection({
   // Get possible durations from project, or create an array from the project duration
   const durations = project.possibleDurations || 
     [parseInt(project.duration.split(' ')[0])];
+  
+  // Fetch user balance on component mount
+  useEffect(() => {
+    const fetchUserBalance = async () => {
+      try {
+        const { data: session } = await supabase.auth.getSession();
+        if (!session.session) return;
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', session.session.user.id)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data) {
+          setUserBalance(data.wallet_balance || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching user balance:", error);
+      }
+    };
+    
+    fetchUserBalance();
+  }, []);
   
   // Calculate returns when investment amount or duration changes
   useEffect(() => {
@@ -51,39 +79,129 @@ export default function InvestmentOptionsSection({
   }, [investmentAmount, selectedDuration, project.yield]);
   
   const handleInvest = () => {
+    // Check if user has enough balance
+    if (userBalance < investmentAmount) {
+      toast({
+        title: "Solde insuffisant",
+        description: `Vous n'avez pas assez de fonds disponibles. Votre solde: ${userBalance}€`,
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setShowConfirmation(true);
   };
   
-  const confirmInvestment = () => {
+  const confirmInvestment = async () => {
     setIsProcessing(true);
     
-    // Save investment data to local storage
-    const investmentData = {
-      projectId: project.id,
-      projectName: project.name,
-      amount: investmentAmount,
-      duration: selectedDuration,
-      yield: project.yield,
-      date: new Date().toISOString(),
-      monthlyReturn: monthlyReturn,
-      totalReturn: totalReturn
-    };
-    
-    localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
-    
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      // Get the current user
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Veuillez vous connecter pour investir",
+          variant: "destructive"
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      const userId = session.session.user.id;
+      
+      // Start a transaction to update multiple tables
+      // 1. Deduct from user's wallet balance
+      const { error: walletError } = await supabase.rpc(
+        'increment_wallet_balance',
+        { user_id: userId, increment_amount: -investmentAmount }
+      );
+      
+      if (walletError) throw walletError;
+      
+      // 2. Create investment record
+      const { error: investmentError } = await supabase
+        .from('investments')
+        .insert({
+          user_id: userId,
+          project_id: project.id,
+          amount: investmentAmount,
+          duration: selectedDuration,
+          yield_rate: project.yield,
+          status: 'active',
+          date: new Date().toISOString()
+        });
+      
+      if (investmentError) throw investmentError;
+      
+      // 3. Update profile statistics
+      const { data: profileData, error: profileFetchError } = await supabase
+        .from('profiles')
+        .select('investment_total, projects_count')
+        .eq('id', userId)
+        .single();
+      
+      if (profileFetchError) throw profileFetchError;
+      
+      // Prepare the update
+      const updates = {
+        investment_total: (profileData.investment_total || 0) + investmentAmount,
+        projects_count: (profileData.projects_count || 0) + 1
+      };
+      
+      const { error: profileUpdateError } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId);
+      
+      if (profileUpdateError) throw profileUpdateError;
+      
+      // 4. Save transaction record
+      const { error: transactionError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: userId,
+          amount: investmentAmount,
+          type: 'investment',
+          description: `Investissement dans ${project.name}`
+        });
+      
+      if (transactionError) throw transactionError;
+      
+      // Investment data to save in localStorage
+      const investmentData = {
+        projectId: project.id,
+        projectName: project.name,
+        amount: investmentAmount,
+        duration: selectedDuration,
+        yield: project.yield,
+        date: new Date().toISOString(),
+        monthlyReturn: monthlyReturn,
+        totalReturn: totalReturn
+      };
+      
+      localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
+      
       toast({
         title: "Investissement réussi !",
         description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
       });
       
+      // Redirect to dashboard after success
+      navigate("/dashboard");
+      
+    } catch (error) {
+      console.error("Erreur lors de l'investissement:", error);
+      toast({
+        title: "Erreur lors de l'investissement",
+        description: "Une erreur est survenue lors de la création de votre investissement.",
+        variant: "destructive"
+      });
+    } finally {
       setIsProcessing(false);
       setShowConfirmation(false);
-      
-      // Redirect to dashboard
-      navigate("/dashboard");
-    }, 2000);
+    }
   };
   
   const cancelInvestment = () => {

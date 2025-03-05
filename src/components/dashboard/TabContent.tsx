@@ -14,13 +14,15 @@ interface TabContentProps {
   userData: any;
   userInvestments: any[];
   setActiveTab: (tab: string) => void;
+  refreshData?: () => Promise<void>;
 }
 
 export default function TabContent({
   activeTab,
   userData,
   userInvestments,
-  setActiveTab
+  setActiveTab,
+  refreshData
 }: TabContentProps) {
   return (
     <div className={cn("w-full")}>
@@ -31,6 +33,7 @@ export default function TabContent({
           userData={userData} 
           userInvestments={userInvestments}
           setActiveTab={setActiveTab}
+          refreshData={refreshData}
         />
       )}
       
