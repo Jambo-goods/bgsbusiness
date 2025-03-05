@@ -1,11 +1,11 @@
+
 import React, { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 
-// Import our new components
-import FundingProgress from "./FundingProgress";
+// Import our components
 import InvestmentAmountSection from "./InvestmentAmountSection";
 import DurationSection from "./DurationSection";
 import InvestmentSummary from "./InvestmentSummary";
@@ -73,8 +73,6 @@ export default function InvestmentOptionsSection({
       
       {!showConfirmation ? (
         <>
-          <FundingProgress project={project} investorCount={investorCount} />
-          
           <div className="mb-6 space-y-4">
             <InvestmentAmountSection 
               investmentAmount={investmentAmount}
