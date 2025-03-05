@@ -16,7 +16,11 @@ interface Transaction {
   status: string;
 }
 
-export default function WalletHistory() {
+interface WalletHistoryProps {
+  refreshBalance?: () => Promise<void>;
+}
+
+export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
