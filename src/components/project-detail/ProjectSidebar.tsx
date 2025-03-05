@@ -148,7 +148,7 @@ export default function ProjectSidebar({
                   <button
                     key={months}
                     onClick={() => setDuration(months)}
-                    className={`flex-1 py-2 px-1 text-sm rounded-md transition-colors ${
+                    className={`flex-1 py-3 text-sm rounded-md transition-colors ${
                       duration === months
                         ? "bg-bgs-blue text-white"
                         : "bg-gray-100 text-bgs-blue hover:bg-gray-200"
@@ -158,13 +158,13 @@ export default function ProjectSidebar({
                   </button>
                 ))}
               </div>
-              <div className="flex justify-between items-center mt-2 text-xs text-bgs-blue/60">
+              <div className="flex justify-between mt-2 text-xs text-bgs-blue/60">
                 <div className="flex items-center">
-                  <Clock className="h-3.5 w-3.5 mr-1 text-bgs-blue/70" />
+                  <Clock className="h-4 w-4 mr-1" />
                   <span>Min: {Math.min(...project.possibleDurations!)} mois</span>
                 </div>
                 <div className="flex items-center">
-                  <CalendarClock className="h-3.5 w-3.5 mr-1 text-bgs-blue/70" />
+                  <CalendarClock className="h-4 w-4 mr-1" />
                   <span>Max: {Math.max(...project.possibleDurations!)} mois</span>
                 </div>
               </div>
