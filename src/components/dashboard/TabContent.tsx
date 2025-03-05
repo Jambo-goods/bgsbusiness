@@ -5,9 +5,9 @@ import WalletTab from "./tabs/WalletTab";
 import CapitalTab from "./tabs/CapitalTab";
 import YieldTab from "./tabs/YieldTab";
 import Investments from "./Investments";
-import TransfersTab from "./tabs/TransfersTab";
 import ProfileTab from "./tabs/ProfileTab";
 import InvestmentTrackingTab from "./tabs/InvestmentTrackingTab";
+import SettingsTab from "./tabs/SettingsTab";
 
 interface TabContentProps {
   activeTab: string;
@@ -35,7 +35,6 @@ export default function TabContent({
       {activeTab === "wallet" && (
         <div className="space-y-6">
           <WalletTab />
-          <TransfersTab userData={userData} />
         </div>
       )}
       
@@ -57,6 +56,10 @@ export default function TabContent({
       
       {activeTab === "profile" && (
         <ProfileTab userData={userData} />
+      )}
+
+      {activeTab === "settings" && (
+        <SettingsTab />
       )}
     </div>
   );
