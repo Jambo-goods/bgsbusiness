@@ -1,16 +1,28 @@
 
-import React from "react";
+import React, { useState } from "react";
+import { toast } from "sonner";
+import WalletBalance from "./wallet/WalletBalance";
+import ActionButtons from "./wallet/ActionButtons";
+import WalletHistory from "./wallet/WalletHistory";
 
 export default function WalletTab() {
+  const [balance, setBalance] = useState(3250);
+
+  const handleDeposit = () => {
+    // This is a placeholder for actual deposit functionality
+    toast.success("Cette fonctionnalité sera bientôt disponible");
+  };
+
+  const handleWithdraw = () => {
+    // This is a placeholder for actual withdrawal functionality
+    toast.info("Cette fonctionnalité sera bientôt disponible");
+  };
+
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
-      <h2 className="text-lg font-semibold text-bgs-blue mb-4">Solde disponible</h2>
-      <div className="text-3xl font-bold text-bgs-blue mb-4">3,250 €</div>
-      <p className="text-sm text-bgs-gray-medium mb-4">Votre solde disponible peut être utilisé pour investir dans de nouveaux projets ou être retiré sur votre compte bancaire.</p>
-      <div className="flex space-x-4">
-        <button className="btn-primary">Déposer des fonds</button>
-        <button className="btn-secondary">Retirer des fonds</button>
-      </div>
+    <div className="space-y-6">
+      <WalletBalance balance={balance} />
+      <ActionButtons onDeposit={handleDeposit} onWithdraw={handleWithdraw} />
+      <WalletHistory />
     </div>
   );
 }
