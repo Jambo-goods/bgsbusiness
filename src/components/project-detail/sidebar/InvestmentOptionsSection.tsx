@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from "react";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +23,7 @@ export default function InvestmentOptionsSection({
   const [investmentAmount, setInvestmentAmount] = useState(500);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState(
     project.possibleDurations ? project.possibleDurations[0] : parseInt(project.duration)
   );
@@ -129,7 +129,6 @@ export default function InvestmentOptionsSection({
   
   const findOrCreateProject = async () => {
     try {
-      // First, try to find the project by ID if it's a UUID
       if (isUUID(project.id)) {
         console.log(`Checking if project with ID ${project.id} exists`);
         const { data: projectById, error: idError } = await supabase
@@ -148,11 +147,9 @@ export default function InvestmentOptionsSection({
         }
       }
       
-      // Encode the project name for URL safety
       const encodedName = encodeURIComponent(project.name);
       console.log(`Attempting to find project with name: ${project.name} (encoded: ${encodedName})`);
       
-      // Try to find by exact name match
       const { data: projectByName, error: nameError } = await supabase
         .from('projects')
         .select('id')
@@ -162,7 +159,6 @@ export default function InvestmentOptionsSection({
       if (nameError) {
         console.error("Error fetching project by name:", nameError);
         
-        // Try to create the project instead of throwing an error immediately
         console.log("Failed to find project, attempting to create it...");
         return await createProjectInDatabase();
       }
@@ -172,7 +168,6 @@ export default function InvestmentOptionsSection({
         return projectByName.id;
       }
       
-      // If project not found, create it
       console.log("Project not found, creating in database");
       return await createProjectInDatabase();
     } catch (error) {
@@ -181,6 +176,69 @@ export default function InvestmentOptionsSection({
     }
   };
   
+  function isUUID(str) {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(str);
+  }
+
+  const handleCreateProject = async () => {
+    setIsCreatingProject(true);
+    
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        toast({
+          title: "Erreur d'authentification",
+          description: "Veuillez vous connecter pour créer un projet",
+          variant: "destructive"
+        });
+        setIsCreatingProject(false);
+        return;
+      }
+      
+      const encodedName = encodeURIComponent(project.name);
+      console.log(`Checking if project exists: ${project.name} (encoded: ${encodedName})`);
+      
+      const { data: existingProject, error: searchError } = await supabase
+        .from('projects')
+        .select('id')
+        .eq('name', project.name)
+        .maybeSingle();
+      
+      if (searchError) {
+        console.error("Error checking existing project:", searchError);
+      }
+      
+      if (existingProject) {
+        toast({
+          title: "Projet déjà existant",
+          description: `Le projet '${project.name}' existe déjà dans la base de données.`
+        });
+        setIsCreatingProject(false);
+        return;
+      }
+      
+      const projectId = await createProjectInDatabase();
+      
+      toast({
+        title: "Projet créé avec succès",
+        description: `Le projet '${project.name}' a été créé dans la base de données.`
+      });
+      
+      console.log("Created project with ID:", projectId);
+    } catch (error) {
+      console.error("Error creating project:", error);
+      toast({
+        title: "Erreur lors de la création du projet",
+        description: error instanceof Error ? error.message : "Une erreur est survenue lors de la création du projet.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingProject(false);
+    }
+  };
+
   const confirmInvestment = async () => {
     setIsProcessing(true);
     
@@ -199,8 +257,6 @@ export default function InvestmentOptionsSection({
       
       const userId = session.session.user.id;
       
-      // Find or create project in the database - improved error handling
-      console.log("Finding or creating project for:", project.name);
       let projectUuid;
       try {
         projectUuid = await findOrCreateProject();
@@ -219,7 +275,6 @@ export default function InvestmentOptionsSection({
         return;
       }
       
-      // Update user's wallet balance
       const { error: walletError } = await supabase.rpc(
         'increment_wallet_balance',
         { user_id: userId, increment_amount: -investmentAmount }
@@ -230,7 +285,6 @@ export default function InvestmentOptionsSection({
         throw walletError;
       }
       
-      // Create investment record
       const { error: investmentError } = await supabase
         .from('investments')
         .insert({
@@ -248,7 +302,6 @@ export default function InvestmentOptionsSection({
         throw investmentError;
       }
       
-      // Update user profile statistics
       const { data: profileData, error: profileFetchError } = await supabase
         .from('profiles')
         .select('investment_total, projects_count')
@@ -275,7 +328,6 @@ export default function InvestmentOptionsSection({
         throw profileUpdateError;
       }
       
-      // Record transaction
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
@@ -290,7 +342,6 @@ export default function InvestmentOptionsSection({
         throw transactionError;
       }
       
-      // Store investment data for dashboard display
       const investmentData = {
         projectId: project.id,
         projectName: project.name,
@@ -324,11 +375,6 @@ export default function InvestmentOptionsSection({
     }
   };
   
-  function isUUID(str) {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
-  }
-
   return (
     <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100 transform transition-all duration-300 hover:shadow-lg">
       <h3 className="text-xl font-semibold text-bgs-blue mb-5 flex items-center">
@@ -362,13 +408,24 @@ export default function InvestmentOptionsSection({
             />
           </div>
           
-          <button 
-            onClick={handleInvest} 
-            className="w-full btn-primary flex items-center justify-center gap-2 transform transition-all duration-300 hover:scale-[1.02]"
-          >
-            Investir maintenant
-            <ArrowRight size={18} />
-          </button>
+          <div className="space-y-3">
+            <button 
+              onClick={handleInvest} 
+              className="w-full btn-primary flex items-center justify-center gap-2 transform transition-all duration-300 hover:scale-[1.02]"
+            >
+              Investir maintenant
+              <ArrowRight size={18} />
+            </button>
+            
+            <button
+              onClick={handleCreateProject}
+              disabled={isCreatingProject}
+              className="w-full btn-secondary flex items-center justify-center gap-2 transform transition-all duration-300 hover:scale-[1.02]"
+            >
+              {isCreatingProject ? "Création en cours..." : "Créer le projet dans la base de données"}
+              <Plus size={18} />
+            </button>
+          </div>
         </>
       ) : (
         <InvestmentConfirmation
