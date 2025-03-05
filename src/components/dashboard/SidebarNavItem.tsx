@@ -1,4 +1,5 @@
 
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { LucideIcon } from "lucide-react";
 
@@ -11,14 +12,14 @@ interface SidebarNavItemProps {
   variant?: "default" | "danger";
 }
 
-export default function SidebarNavItem({
+const SidebarNavItem = memo(({
   icon: Icon,
   label,
   isActive,
   expanded,
   onClick,
   variant = "default",
-}: SidebarNavItemProps) {
+}: SidebarNavItemProps) => {
   return (
     <li>
       <button
@@ -38,4 +39,8 @@ export default function SidebarNavItem({
       </button>
     </li>
   );
-}
+});
+
+SidebarNavItem.displayName = "SidebarNavItem";
+
+export default SidebarNavItem;

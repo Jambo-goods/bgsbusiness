@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SidebarSection from "./SidebarSection";
@@ -14,20 +14,20 @@ interface SidebarProps {
   toggleSidebar?: () => void;
 }
 
-export default function Sidebar({
+const Sidebar = memo(({
   activeTab,
   setActiveTab,
   isSidebarOpen,
   handleLogout,
   toggleSidebar
-}: SidebarProps) {
+}: SidebarProps) => {
   const [expanded, setExpanded] = useState(true);
   
-  const handleToggle = () => {
-    setExpanded(!expanded);
-  };
+  const handleToggle = useCallback(() => {
+    setExpanded(prev => !prev);
+  }, []);
 
-  // Add keyboard shortcut listener
+  // Add keyboard shortcut listener with useCallback for better performance
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Check for Ctrl/Cmd+B
@@ -46,14 +46,14 @@ export default function Sidebar({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [toggleSidebar]);
+  }, [toggleSidebar, handleToggle]);
   
   return (
     <div className={cn(
       "flex flex-col h-full transition-all duration-300 bg-white shadow-md rounded-r-xl border-r", 
       expanded ? "w-64" : "w-20"
     )}>
-      <nav className="flex-1 py-4 overflow-y-auto px-2">
+      <nav className="flex-1 py-4 overflow-y-auto px-2 overscroll-contain">
         <SidebarSection title="Principal" expanded={expanded}>
           <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} />
         </SidebarSection>
@@ -64,4 +64,8 @@ export default function Sidebar({
       </nav>
     </div>
   );
-}
+});
+
+Sidebar.displayName = "Sidebar";
+
+export default Sidebar;

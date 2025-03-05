@@ -1,5 +1,5 @@
 
-import { ReactNode } from "react";
+import { ReactNode, memo } from "react";
 
 interface SidebarSectionProps {
   title?: string;
@@ -7,9 +7,9 @@ interface SidebarSectionProps {
   children: ReactNode;
 }
 
-export default function SidebarSection({ title, expanded, children }: SidebarSectionProps) {
+const SidebarSection = memo(({ title, expanded, children }: SidebarSectionProps) => {
   return (
-    <div className={expanded ? "mb-4" : "mb-4"}>
+    <div className="mb-4">
       {expanded && title && (
         <p className="text-xs font-medium text-bgs-gray-medium uppercase tracking-wider px-3 mb-2 mt-2">
           {title}
@@ -20,4 +20,8 @@ export default function SidebarSection({ title, expanded, children }: SidebarSec
       </ul>
     </div>
   );
-}
+});
+
+SidebarSection.displayName = "SidebarSection";
+
+export default SidebarSection;

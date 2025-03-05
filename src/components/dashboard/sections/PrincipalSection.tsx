@@ -1,4 +1,5 @@
 
+import { memo } from "react";
 import { LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
@@ -8,15 +9,15 @@ interface PrincipalSectionProps {
   expanded: boolean;
 }
 
-export default function PrincipalSection({ activeTab, setActiveTab, expanded }: PrincipalSectionProps) {
-  const navItems = [
-    { id: "overview", label: "Tableau de bord", icon: LayoutDashboard },
-    { id: "wallet", label: "Solde disponible", icon: Wallet },
-    { id: "capital", label: "Capital investi", icon: TrendingUp },
-    { id: "yield", label: "Rendement mensuel", icon: BarChart3 },
-    { id: "investments", label: "Investissements", icon: Briefcase },
-  ];
+const navItems = [
+  { id: "overview", label: "Tableau de bord", icon: LayoutDashboard },
+  { id: "wallet", label: "Solde disponible", icon: Wallet },
+  { id: "capital", label: "Capital investi", icon: TrendingUp },
+  { id: "yield", label: "Rendement mensuel", icon: BarChart3 },
+  { id: "investments", label: "Investissements", icon: Briefcase },
+];
 
+const PrincipalSection = memo(({ activeTab, setActiveTab, expanded }: PrincipalSectionProps) => {
   return (
     <>
       {navItems.map((item) => (
@@ -31,4 +32,8 @@ export default function PrincipalSection({ activeTab, setActiveTab, expanded }: 
       ))}
     </>
   );
-}
+});
+
+PrincipalSection.displayName = "PrincipalSection";
+
+export default PrincipalSection;

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 import Sidebar from "./Sidebar";
 
@@ -11,13 +11,13 @@ interface DashboardSidebarProps {
   handleLogout: () => void;
 }
 
-export default function DashboardSidebar({
+const DashboardSidebar = memo(({
   activeTab,
   setActiveTab,
   isSidebarOpen,
   toggleSidebar,
   handleLogout
-}: DashboardSidebarProps) {
+}: DashboardSidebarProps) => {
   return (
     <div 
       className={cn(
@@ -34,4 +34,8 @@ export default function DashboardSidebar({
       />
     </div>
   );
-}
+});
+
+DashboardSidebar.displayName = "DashboardSidebar";
+
+export default DashboardSidebar;
