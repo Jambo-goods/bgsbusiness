@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Building, TrendingUp, MapPin, Calendar } from "lucide-react";
+import { Building, TrendingUp, MapPin } from "lucide-react";
 import { Project } from "@/types/project";
 
 interface CompanyInfoSectionProps {
@@ -8,15 +8,6 @@ interface CompanyInfoSectionProps {
 }
 
 export default function CompanyInfoSection({ project }: CompanyInfoSectionProps) {
-  // Determine status display
-  const statusConfig = {
-    active: { bg: 'bg-blue-50', color: 'text-blue-500', label: 'En cours' },
-    completed: { bg: 'bg-green-50', color: 'text-green-500', label: 'Terminé' },
-    upcoming: { bg: 'bg-orange-50', color: 'text-orange-500', label: 'À venir' }
-  };
-  
-  const status = statusConfig[project.status];
-  
   return (
     <div className="bg-white rounded-xl shadow-md p-5 border border-gray-100">
       <div className="flex items-center mb-4">
@@ -41,7 +32,7 @@ export default function CompanyInfoSection({ project }: CompanyInfoSectionProps)
           </div>
           <div>
             <p className="text-xs text-bgs-blue/70">Rentabilité estimée</p>
-            <p className="text-sm font-semibold text-green-600">{project.profitability}%</p>
+            <p className="text-sm font-semibold text-green-600">{project.yield}%</p>
           </div>
         </div>
         
@@ -52,16 +43,6 @@ export default function CompanyInfoSection({ project }: CompanyInfoSectionProps)
           <div>
             <p className="text-xs text-bgs-blue/70">Localisation</p>
             <p className="text-sm font-semibold text-bgs-blue">{project.location}</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start">
-          <div className="p-1.5 bg-purple-50 rounded-md mr-2">
-            <Calendar className="h-4 w-4 text-purple-500" />
-          </div>
-          <div>
-            <p className="text-xs text-bgs-blue/70">Statut du projet</p>
-            <p className={`text-sm font-semibold ${status.color}`}>{status.label}</p>
           </div>
         </div>
       </div>

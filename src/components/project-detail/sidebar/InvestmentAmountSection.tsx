@@ -40,19 +40,12 @@ export default function InvestmentAmountSection({
   };
 
   return (
-    <div className="mb-5 bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-      <div className="flex justify-between items-center mb-3">
-        <span className="text-sm font-medium text-bgs-blue flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          Montant d'investissement
-        </span>
+    <div className="mb-4 bg-gradient-to-br from-white to-bgs-gray-light p-4 rounded-lg shadow-sm border border-gray-100">
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-sm font-medium text-bgs-blue">Montant d'investissement</span>
         <button 
           onClick={toggleEditMode}
-          className="text-bgs-orange hover:text-bgs-orange-light transition-colors p-1 rounded-full hover:bg-bgs-orange/10"
+          className="text-bgs-orange hover:text-bgs-orange-light transition-colors"
         >
           {isEditingAmount ? <Save size={16} /> : <Edit size={16} />}
         </button>
@@ -66,13 +59,12 @@ export default function InvestmentAmountSection({
           min={minInvestment}
           max={maxInvestment}
           step={100}
-          className="w-full p-3 border border-bgs-blue/20 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-bgs-orange/50 transition-shadow"
-          autoFocus
+          className="w-full p-2 border border-bgs-blue/20 rounded bg-white focus:outline-none focus:ring-2 focus:ring-bgs-orange/50"
         />
       ) : (
         <>
-          <div className="mb-4">
-            <span className="block text-center text-3xl font-bold text-gradient bg-gradient-to-r from-bgs-blue to-bgs-orange">{investmentAmount.toLocaleString()}€</span>
+          <div className="mb-3">
+            <span className="block text-center text-2xl font-bold text-gradient bg-gradient-to-r from-bgs-blue to-bgs-orange">{investmentAmount}€</span>
           </div>
           
           <div className="px-2 py-3">
@@ -86,9 +78,9 @@ export default function InvestmentAmountSection({
               className="my-4"
             />
             
-            <div className="flex justify-between mt-4">
-              <span className="text-sm font-medium text-bgs-blue/70">{minInvestment.toLocaleString()}€</span>
-              <span className="text-sm font-medium text-bgs-blue/70">{maxInvestment.toLocaleString()}€</span>
+            <div className="flex justify-between mt-3">
+              <span className="text-sm text-bgs-blue/70">{minInvestment}€</span>
+              <span className="text-sm text-bgs-blue/70">{maxInvestment}€</span>
             </div>
           </div>
         </>

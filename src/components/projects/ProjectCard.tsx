@@ -2,7 +2,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Project } from "@/types/project";
-import { ArrowRight, Clock, MapPin, TrendingUp, Building, Calendar, Factory } from "lucide-react";
+import { ArrowRight, Clock, MapPin, TrendingUp, Building, Calendar } from "lucide-react";
 
 interface ProjectCardProps {
   project: Project;
@@ -49,21 +49,16 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
         </div>
         
         <div className="flex items-center text-bgs-gray-medium text-sm mb-2">
-          <Factory className="h-4 w-4 mr-1" />
+          <Building className="h-4 w-4 mr-1" />
           {project.companyName}
         </div>
         
-        <div className="flex items-center text-bgs-gray-medium text-sm mb-2">
+        <div className="flex items-center text-bgs-gray-medium text-sm mb-4">
           <MapPin className="h-4 w-4 mr-1" />
           {project.location}
-        </div>
-        
-        <div className="flex items-center text-bgs-gray-medium text-sm mb-4">
+          <span className="mx-2">•</span>
           <Calendar className="h-4 w-4 mr-1" />
           {project.duration}
-          <span className="mx-2">•</span>
-          <TrendingUp className="h-4 w-4 mr-1" />
-          {project.profitability}% rentabilité
         </div>
         
         <p className="text-bgs-blue/80 mb-4 line-clamp-2">

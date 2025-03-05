@@ -3,55 +3,17 @@ import { Link } from "react-router-dom";
 import { Project } from "@/types/project";
 import { Progress } from "@/components/ui/progress";
 import { SearchIcon, FilterIcon, ArrowUpDownIcon } from "lucide-react";
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { useState } from "react";
 
 interface InvestmentsProps {
   userInvestments: Project[];
-  refreshData?: () => void;
 }
 
-export default function Investments({ userInvestments, refreshData }: InvestmentsProps) {
+export default function Investments({ userInvestments }: InvestmentsProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [filterActive, setFilterActive] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const [investmentDetails, setInvestmentDetails] = useState<Record<string, { amount: number, date: string }>>({});
-  
-  // Récupérer les détails des investissements depuis Supabase
-  useEffect(() => {
-    const fetchInvestmentDetails = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data, error } = await supabase
-          .from('investments')
-          .select('project_id, amount, date')
-          .eq('user_id', user.id);
-        
-        if (error) {
-          console.error("Erreur lors de la récupération des détails d'investissement:", error);
-          return;
-        }
-        
-        if (data) {
-          const details: Record<string, { amount: number, date: string }> = {};
-          
-          data.forEach(investment => {
-            details[investment.project_id] = {
-              amount: investment.amount,
-              date: investment.date
-            };
-          });
-          
-          setInvestmentDetails(details);
-        }
-      }
-    };
-    
-    fetchInvestmentDetails();
-  }, [userInvestments]);
   
   // Filtered and sorted investments
   const filteredInvestments = userInvestments
@@ -146,73 +108,65 @@ export default function Investments({ userInvestments, refreshData }: Investment
               <p className="text-sm text-bgs-gray-medium">Aucun investissement trouvé</p>
             </div>
           ) : (
-            filteredInvestments.map((project) => {
-              const investmentDetail = investmentDetails[project.id];
-              const amount = investmentDetail?.amount || 2500;
-              const date = investmentDetail?.date 
-                ? format(new Date(investmentDetail.date), "dd/MM/yyyy") 
-                : "15/03/2023";
-              
-              return (
-                <div key={project.id} className="border bg-white rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex flex-col md:flex-row">
-                    <img 
-                      src={project.image} 
-                      alt={project.name} 
-                      className="w-full md:w-40 h-32 object-cover"
-                    />
-                    <div className="p-3 flex-1">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium text-bgs-blue text-sm mb-0.5">{project.name}</h3>
-                          <p className="text-xs text-bgs-gray-medium mb-2">{project.location}</p>
-                        </div>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                          project.status === 'active' 
-                            ? 'bg-blue-100 text-blue-600' 
-                            : project.status === 'completed'
-                            ? 'bg-green-100 text-green-600'
-                            : 'bg-orange-100 text-orange-600'
-                        }`}>
-                          {project.status === 'active' ? 'Actif' : project.status === 'completed' ? 'Complété' : 'À venir'}
-                        </span>
+            filteredInvestments.map((project) => (
+              <div key={project.id} className="border bg-white rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex flex-col md:flex-row">
+                  <img 
+                    src={project.image} 
+                    alt={project.name} 
+                    className="w-full md:w-40 h-32 object-cover"
+                  />
+                  <div className="p-3 flex-1">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-bgs-blue text-sm mb-0.5">{project.name}</h3>
+                        <p className="text-xs text-bgs-gray-medium mb-2">{project.location}</p>
                       </div>
-                      
-                      <p className="text-xs text-bgs-blue/80 mb-3 line-clamp-1">
-                        {project.description}
-                      </p>
-                      
-                      <div className="mb-3">
-                        <div className="flex justify-between text-xs mb-1">
-                          <span className="text-bgs-gray-medium">Progression</span>
-                          <span className="font-medium text-bgs-blue">{project.fundingProgress}%</span>
-                        </div>
-                        <Progress value={project.fundingProgress} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        project.status === 'active' 
+                          ? 'bg-blue-100 text-blue-600' 
+                          : project.status === 'completed'
+                          ? 'bg-green-100 text-green-600'
+                          : 'bg-orange-100 text-orange-600'
+                      }`}>
+                        {project.status === 'active' ? 'Actif' : project.status === 'completed' ? 'Complété' : 'À venir'}
+                      </span>
+                    </div>
+                    
+                    <p className="text-xs text-bgs-blue/80 mb-3 line-clamp-1">
+                      {project.description}
+                    </p>
+                    
+                    <div className="mb-3">
+                      <div className="flex justify-between text-xs mb-1">
+                        <span className="text-bgs-gray-medium">Progression</span>
+                        <span className="font-medium text-bgs-blue">{project.fundingProgress}%</span>
                       </div>
-                      
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div>
-                          <p className="text-xs text-bgs-gray-medium">Montant investi</p>
-                          <p className="font-medium text-bgs-blue text-sm">{amount} €</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-bgs-gray-medium">Rendement mensuel</p>
-                          <p className="font-medium text-green-500 text-sm">{project.yield}%</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-bgs-gray-medium">Date</p>
-                          <p className="font-medium text-bgs-blue text-sm">{date}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-bgs-gray-medium">Duration</p>
-                          <p className="font-medium text-bgs-blue text-sm">{project.duration}</p>
-                        </div>
+                      <Progress value={project.fundingProgress} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      <div>
+                        <p className="text-xs text-bgs-gray-medium">Montant investi</p>
+                        <p className="font-medium text-bgs-blue text-sm">2500 €</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-bgs-gray-medium">Rendement mensuel</p>
+                        <p className="font-medium text-green-500 text-sm">{project.yield}%</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-bgs-gray-medium">Date</p>
+                        <p className="font-medium text-bgs-blue text-sm">15/03/2023</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-bgs-gray-medium">Duration</p>
+                        <p className="font-medium text-bgs-blue text-sm">{project.duration}</p>
                       </div>
                     </div>
                   </div>
                 </div>
-              );
-            })
+              </div>
+            ))
           )}
         </div>
         

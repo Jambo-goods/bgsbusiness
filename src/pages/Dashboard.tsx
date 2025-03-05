@@ -1,84 +1,127 @@
 
 import { useState, useEffect } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import Footer from "@/components/layout/Footer";
+import Navbar from "@/components/layout/Navbar";
+import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import DashboardMain from "@/components/dashboard/DashboardMain";
+import MobileSidebarToggle from "@/components/dashboard/MobileSidebarToggle";
 import DashboardLoading from "@/components/dashboard/DashboardLoading";
-import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { useDashboardData } from "@/hooks/use-dashboard-data";
-import { useRealtimeUpdates } from "@/hooks/use-realtime-updates";
-import { useAuthActions } from "@/hooks/use-auth-actions";
+import { projects } from "@/data/projects";
 
 export default function Dashboard() {
-  // État initial du dashboard
+  // Possible activeTab values: "overview", "wallet", "capital", "yield", "investments", "tracking", "profile", "settings"
   const [activeTab, setActiveTab] = useState("overview");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const { userData, userInvestments, loading, fetchUserData } = useDashboardData();
-  const { handleLogout } = useAuthActions();
-  const navigate = useNavigate();
+  const [userData, setUserData] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    investmentTotal: number;
+    projectsCount: number;
+  } | null>(null);
+  const [userInvestments, setUserInvestments] = useState<any[]>([]);
 
-  // Configure realtime updates
-  useRealtimeUpdates(fetchUserData);
-
-  // Initial data fetch
   useEffect(() => {
     window.scrollTo(0, 0);
-    fetchUserData();
+    
+    // Simulate fetching user data
+    // In a real app, this would come from an authentication context or API
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      
+      // Check for recent investment
+      const recentInvestment = localStorage.getItem("recentInvestment");
+      let additionalInvestment = 0;
+      
+      if (recentInvestment) {
+        const investmentData = JSON.parse(recentInvestment);
+        additionalInvestment = investmentData.amount;
+      }
+      
+      setUserData({
+        firstName: parsedUser.firstName || "Jean",
+        lastName: parsedUser.lastName || "Dupont",
+        email: parsedUser.email || "jean.dupont@example.com",
+        phone: parsedUser.phone || "+33 6 12 34 56 78",
+        address: parsedUser.address || "123 Avenue des Champs-Élysées, Paris",
+        investmentTotal: 7500 + additionalInvestment,
+        projectsCount: 3
+      });
+    } else {
+      // Redirect to login if no user is found
+      window.location.href = "/login";
+    }
+    
+    // Filter user's investments (in a real app, this would be user-specific)
+    let investments = projects.slice(0, 3);
+    
+    // Check if there's a recent investment to add
+    const recentInvestment = localStorage.getItem("recentInvestment");
+    if (recentInvestment) {
+      const investmentData = JSON.parse(recentInvestment);
+      
+      // Find the project in the projects list
+      const project = projects.find(p => p.id === investmentData.projectId);
+      
+      // If the project exists and it's not already in the investments list
+      if (project && !investments.some(i => i.id === project.id)) {
+        // Add the project to the beginning of the list
+        investments = [project, ...investments];
+      }
+    }
+    
+    setUserInvestments(investments);
   }, []);
 
-  // Handle routing for specific tabs
-  useEffect(() => {
-    const path = window.location.pathname;
-    if (path.includes('/dashboard/wallet')) {
-      setActiveTab("wallet");
-    } else if (path.includes('/dashboard/investments')) {
-      setActiveTab("investments");
-    } else if (path.includes('/dashboard/tracking')) {
-      setActiveTab("tracking");
-    } else if (path.includes('/dashboard/profile')) {
-      setActiveTab("profile");
-    } else if (path.includes('/dashboard/settings')) {
-      setActiveTab("settings");
-    } else {
-      setActiveTab("overview");
-    }
-  }, [window.location.pathname]);
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    window.location.href = "/login";
+  };
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
-
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-    
-    // Update URL based on selected tab
-    if (tab === "overview") {
-      navigate("/dashboard");
-    } else {
-      navigate(`/dashboard/${tab}`);
-    }
-  };
-
-  if (loading) {
-    return <DashboardLoading />;
-  }
 
   if (!userData) {
     return <DashboardLoading />;
   }
 
   return (
-    <Routes>
-      <Route path="/*" element={
-        <DashboardLayout
+    <div className="min-h-screen bg-bgs-gray-light flex flex-col">
+      <Navbar />
+      
+      <div className="flex flex-1 pt-20">
+        {/* Mobile sidebar toggle */}
+        <MobileSidebarToggle 
+          isSidebarOpen={isSidebarOpen} 
+          toggleSidebar={toggleSidebar} 
+        />
+        
+        {/* Sidebar */}
+        <DashboardSidebar
           activeTab={activeTab}
-          setActiveTab={handleTabChange}
+          setActiveTab={setActiveTab}
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
-          userData={userData}
-          userInvestments={userInvestments}
           handleLogout={handleLogout}
-          refreshData={fetchUserData}
         />
-      } />
-    </Routes>
+        
+        {/* Main content */}
+        <DashboardMain
+          isSidebarOpen={isSidebarOpen}
+          userData={userData}
+          activeTab={activeTab}
+          userInvestments={userInvestments}
+          setActiveTab={setActiveTab}
+        />
+      </div>
+      
+      {/* Footer */}
+      <Footer />
+    </div>
   );
 }

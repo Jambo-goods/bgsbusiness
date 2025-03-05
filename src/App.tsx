@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Projects from "./pages/Projects";
 import ProjectDetail from "./pages/ProjectDetail";
-import InvestmentConfirmation from "./pages/InvestmentConfirmation"; // Add the new component import
 import HowItWorks from "./pages/HowItWorks";
 import About from "./pages/About";
 import Login from "./pages/Login";
@@ -31,7 +30,6 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
-          <Route path="/project/:projectId/confirmation" element={<InvestmentConfirmation />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
