@@ -2,19 +2,19 @@
 import { Link } from "react-router-dom";
 
 interface TermsCheckboxProps {
-  termsAccepted: boolean;
-  setTermsAccepted: (value: boolean) => void;
+  agreedToTerms: boolean;
+  setAgreedToTerms: (value: boolean) => void;
 }
 
-export default function TermsCheckbox({ termsAccepted, setTermsAccepted }: TermsCheckboxProps) {
+export default function TermsCheckbox({ agreedToTerms, setAgreedToTerms }: TermsCheckboxProps) {
   return (
     <div className="flex items-start">
       <div className="flex items-center h-5">
         <input
           id="terms"
           type="checkbox"
-          checked={termsAccepted}
-          onChange={(e) => setTermsAccepted(e.target.checked)}
+          checked={agreedToTerms}
+          onChange={(e) => setAgreedToTerms(e.target.checked)}
           className="w-4 h-4 border border-bgs-blue/30 rounded bg-white/50 focus:ring-2 focus:ring-bgs-orange"
           required
         />
