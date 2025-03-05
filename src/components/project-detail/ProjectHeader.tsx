@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, ChevronRight, Share2, Download, Calendar, DollarSign, TrendingUp } from "lucide-react";
+import { ArrowLeft, ChevronRight, Share2, Download, Calendar, DollarSign, TrendingUp, Factory, MapPin } from "lucide-react";
 import { Project } from "@/types/project";
 
 interface ProjectHeaderProps {
@@ -11,6 +11,15 @@ interface ProjectHeaderProps {
 export default function ProjectHeader({ project }: ProjectHeaderProps) {
   // Calculate annual yield from monthly yield
   const annualYield = project.yield * 12;
+  
+  // Determine status display
+  const statusConfig = {
+    active: { bg: 'bg-blue-500', text: 'text-white', label: 'En cours' },
+    completed: { bg: 'bg-green-500', text: 'text-white', label: 'Terminé' },
+    upcoming: { bg: 'bg-orange-500', text: 'text-white', label: 'À venir' }
+  };
+  
+  const status = statusConfig[project.status];
   
   return (
     <>
@@ -43,18 +52,15 @@ export default function ProjectHeader({ project }: ProjectHeaderProps) {
               <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-bgs-orange text-white">
                 {project.category}
               </span>
-              <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                project.status === 'active' 
-                  ? 'bg-blue-500 text-white' 
-                  : project.status === 'completed'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-orange-500 text-white'
-              }`}>
-                {project.status === 'active' ? 'Projet actif' : project.status === 'completed' ? 'Projet complété' : 'À venir'}
+              <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${status.bg} ${status.text}`}>
+                {status.label}
               </span>
             </div>
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">{project.name}</h1>
-            <p className="text-white/80">{project.location}</p>
+            <p className="text-white/80 flex items-center">
+              <MapPin className="h-4 w-4 mr-1" />
+              {project.location}
+            </p>
           </div>
         </div>
         
@@ -62,20 +68,30 @@ export default function ProjectHeader({ project }: ProjectHeaderProps) {
           <div className="flex flex-wrap gap-8 justify-between items-center">
             <div className="flex items-center gap-6">
               <div>
-                <p className="text-sm text-bgs-gray-medium mb-1">Rendement mensuel</p>
-                <div className="flex items-center text-green-500 font-bold text-xl">
-                  <TrendingUp className="h-5 w-5 mr-1" />
-                  {project.yield}% <span className="text-sm font-medium ml-1">par mois</span>
+                <p className="text-sm text-bgs-gray-medium mb-1">Entreprise</p>
+                <div className="flex items-center text-bgs-blue font-bold text-xl">
+                  <Factory className="h-5 w-5 mr-2 text-bgs-blue/70" />
+                  {project.companyName}
                 </div>
               </div>
               
               <div className="h-12 w-0.5 bg-gray-200"></div>
               
               <div>
-                <p className="text-sm text-bgs-gray-medium mb-1">Rendement annualisé</p>
-                <div className="flex items-center text-green-600 font-bold text-xl">
+                <p className="text-sm text-bgs-gray-medium mb-1">Rentabilité estimée</p>
+                <div className="flex items-center text-green-500 font-bold text-xl">
                   <TrendingUp className="h-5 w-5 mr-1" />
-                  {annualYield}% <span className="text-sm font-medium ml-1">par an</span>
+                  {project.profitability}%
+                </div>
+              </div>
+              
+              <div className="h-12 w-0.5 bg-gray-200"></div>
+              
+              <div>
+                <p className="text-sm text-bgs-gray-medium mb-1">Rendement mensuel</p>
+                <div className="flex items-center text-green-500 font-bold text-xl">
+                  <TrendingUp className="h-5 w-5 mr-1" />
+                  {project.yield}% <span className="text-sm font-medium ml-1">par mois</span>
                 </div>
               </div>
               
