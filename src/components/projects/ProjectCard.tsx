@@ -2,7 +2,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Project } from "@/types/project";
-import { Progress } from "@/components/ui/progress";
 import { ArrowRight, Clock, MapPin, TrendingUp, Building, Calendar } from "lucide-react";
 
 interface ProjectCardProps {
@@ -65,19 +64,6 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
         <p className="text-bgs-blue/80 mb-4 line-clamp-2">
           {project.description}
         </p>
-        
-        <div className="mb-4 mt-4">
-          <div className="flex justify-between mb-2">
-            <span className="text-sm font-medium text-bgs-blue">Progression financement</span>
-            <span className="text-sm font-semibold text-bgs-blue">{project.fundingProgress}%</span>
-          </div>
-          <Progress 
-            value={project.fundingProgress} 
-            className="bg-gray-100" 
-            size="md"
-            indicatorClassName="bg-gradient-to-r from-bgs-orange to-bgs-orange-light"
-          />
-        </div>
         
         <div className="grid grid-cols-2 gap-4 mt-6">
           <div className="bg-bgs-gray-light p-3 rounded-lg">
