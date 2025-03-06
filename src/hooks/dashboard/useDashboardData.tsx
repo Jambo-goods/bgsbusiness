@@ -6,9 +6,9 @@ import { useUserSession } from "./useUserSession";
 import { useRealTimeSubscriptions } from "./useRealTimeSubscriptions";
 import { projects } from "@/data/projects";
 import { Project } from "@/types/project";
-import { UserData, DashboardCardData } from "./types";
+import { UserData } from "./types";
 
-interface DashboardDataReturn extends DashboardCardData {
+interface DashboardDataReturn {
   userData: UserData | null;
   userInvestments: Project[];
   isLoading: boolean;
@@ -194,52 +194,11 @@ export const useDashboardData = (): DashboardDataReturn => {
     }
   }, [userId, fetchUserData]);
 
-  // Calculate dashboard card metrics
-  const calculateDashboardMetrics = () => {
-    // Calculate wallet change
-    const walletChange = {
-      percentage: "+5.2%",
-      value: "+150€"
-    };
-
-    // Calculate investment change
-    const investmentChange = {
-      percentage: "+2.8%",
-      value: "+320€"
-    };
-
-    // Calculate projects change
-    const projectsChange = {
-      value: "+2"
-    };
-
-    // Calculate yield change
-    const yieldChange = {
-      value: "+0.5%"
-    };
-
-    // Calculate monthly and annual yield
-    const monthlyYield = userData ? (userData.investmentTotal > 0 ? 12.5 : 0) : 0;
-    const annualYield = monthlyYield * 12;
-
-    return {
-      monthlyYield,
-      annualYield,
-      walletChange,
-      investmentChange,
-      projectsChange,
-      yieldChange
-    };
-  };
-
-  const dashboardMetrics = calculateDashboardMetrics();
-
   return {
     userData,
     userInvestments,
     isLoading: isLoading || isSessionLoading,
     realTimeStatus,
-    refreshData: fetchUserData,
-    ...dashboardMetrics
+    refreshData: fetchUserData
   };
 };
