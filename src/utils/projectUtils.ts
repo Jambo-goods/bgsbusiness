@@ -81,24 +81,36 @@ export const fetchProjectsFromDatabase = async () => {
       throw error;
     }
     
-    return data.map(project => ({
-      id: project.id,
-      name: project.name,
-      companyName: project.company_name,
-      description: project.description,
-      profitability: project.profitability,
-      duration: project.duration,
-      location: project.location,
-      status: project.status,
-      minInvestment: project.min_investment,
-      category: project.category,
-      price: project.price,
-      yield: project.yield,
-      fundingProgress: project.funding_progress,
-      featured: project.featured,
-      possibleDurations: project.possible_durations,
-      image: project.image
-    }));
+    return data.map(project => {
+      // Vérifier que le statut est l'une des valeurs autorisées
+      let validStatus: "active" | "upcoming" | "completed" = "active";
+      
+      if (project.status === "active" || project.status === "upcoming" || project.status === "completed") {
+        validStatus = project.status as "active" | "upcoming" | "completed";
+      } else {
+        // Log pour débugger si un statut inattendu est trouvé
+        console.warn(`Statut de projet non reconnu: ${project.status}, utilisation de la valeur par défaut 'active'`);
+      }
+      
+      return {
+        id: project.id,
+        name: project.name,
+        companyName: project.company_name,
+        description: project.description,
+        profitability: project.profitability,
+        duration: project.duration,
+        location: project.location,
+        status: validStatus,
+        minInvestment: project.min_investment,
+        category: project.category,
+        price: project.price,
+        yield: project.yield,
+        fundingProgress: project.funding_progress,
+        featured: project.featured,
+        possibleDurations: project.possible_durations,
+        image: project.image
+      };
+    });
   } catch (error) {
     console.error("Erreur dans fetchProjectsFromDatabase:", error);
     throw error;
