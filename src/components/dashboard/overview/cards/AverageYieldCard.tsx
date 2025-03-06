@@ -1,7 +1,7 @@
 
 import { TrendingUpIcon } from "lucide-react";
 import DashboardCard from "../../DashboardCard";
-import { YieldChange } from "@/hooks/useDashboardCardData";
+import { YieldChange } from "@/hooks/dashboard/types";
 
 interface AverageYieldCardProps {
   monthlyYield: number;

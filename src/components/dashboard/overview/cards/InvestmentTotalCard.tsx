@@ -1,7 +1,7 @@
 
 import { WalletIcon } from "lucide-react";
 import DashboardCard from "../../DashboardCard";
-import { InvestmentChange } from "@/hooks/useDashboardCardData";
+import { InvestmentChange } from "@/hooks/dashboard/types";
 
 interface InvestmentTotalCardProps {
   investmentTotal: number;

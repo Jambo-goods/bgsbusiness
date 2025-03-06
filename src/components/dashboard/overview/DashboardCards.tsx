@@ -1,19 +1,13 @@
 
-import { useDashboardCardData } from "@/hooks/useDashboardCardData";
+import { useDashboardData } from "@/hooks/dashboard/useDashboardData";
 import WalletBalanceCard from "./cards/WalletBalanceCard";
 import InvestmentTotalCard from "./cards/InvestmentTotalCard";
 import ActiveProjectsCard from "./cards/ActiveProjectsCard";
 import AverageYieldCard from "./cards/AverageYieldCard";
+import { UserData } from "@/hooks/dashboard/types";
 
 interface DashboardCardsProps {
-  userData: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    investmentTotal: number;
-    projectsCount: number;
-    walletBalance?: number;
-  };
+  userData: UserData;
 }
 
 export default function DashboardCards({ userData }: DashboardCardsProps) {
@@ -24,7 +18,7 @@ export default function DashboardCards({ userData }: DashboardCardsProps) {
     investmentChange,
     projectsChange,
     yieldChange
-  } = useDashboardCardData(userData);
+  } = useDashboardData(userData);
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

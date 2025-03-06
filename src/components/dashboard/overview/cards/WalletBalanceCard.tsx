@@ -1,7 +1,7 @@
 
 import { Banknote } from "lucide-react";
 import DashboardCard from "../../DashboardCard";
-import { WalletChange } from "@/hooks/useDashboardCardData";
+import { WalletChange } from "@/hooks/dashboard/types";
 
 interface WalletBalanceCardProps {
   walletBalance?: number;

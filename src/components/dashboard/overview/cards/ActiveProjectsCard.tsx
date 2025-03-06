@@ -1,7 +1,7 @@
 
 import { BarChart3Icon } from "lucide-react";
 import DashboardCard from "../../DashboardCard";
-import { ProjectsChange } from "@/hooks/useDashboardCardData";
+import { ProjectsChange } from "@/hooks/dashboard/types";
 
 interface ActiveProjectsCardProps {
   projectsCount: number;
