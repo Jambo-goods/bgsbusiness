@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -256,9 +257,9 @@ export default function AdminDashboard() {
         <h1 className="text-2xl font-semibold text-bgs-blue">Tableau de bord administrateur</h1>
         <div className="flex items-center gap-3">
           <div className="flex items-center">
-            <div className={`h-2 w-2 rounded-full mr-2 animate-pulse ${
-              realTimeStatus === 'connected' ? 'bg-green-500' : 
-              realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+            <div className={`h-2 w-2 rounded-full mr-2 ${
+              realTimeStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
+              realTimeStatus === 'error' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500 animate-pulse'
             }`}></div>
             <span className="text-sm text-gray-600 mr-3">
               {realTimeStatus === 'connected' ? 'Temps réel actif' : 
