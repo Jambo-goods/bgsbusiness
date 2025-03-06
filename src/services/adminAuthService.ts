@@ -1,7 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import * as bcrypt from 'bcryptjs';
 
 export type AdminCredentials = {
   email: string;
@@ -32,7 +31,6 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
 
     // In a real implementation, you would use bcrypt to compare passwords
     // For demo purposes, we're doing a simple comparison
-    // In production, replace with: const isValidPassword = await bcrypt.compare(password, adminUser.password);
     const isValidPassword = password === adminUser.password;
 
     if (!isValidPassword) {

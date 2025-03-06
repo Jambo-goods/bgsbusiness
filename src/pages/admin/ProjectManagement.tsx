@@ -42,7 +42,8 @@ export default function ProjectManagement() {
     category: '',
     status: 'active',
     funding_progress: '',
-    possible_durations: ''
+    possible_durations: '',
+    profitability: '' // Added missing profitability field
   });
 
   useEffect(() => {
@@ -96,6 +97,7 @@ export default function ProjectManagement() {
         ...formData,
         price: parseInt(formData.price),
         yield: parseFloat(formData.yield),
+        profitability: parseFloat(formData.profitability), // Parse the profitability field
         min_investment: parseInt(formData.min_investment),
         funding_progress: parseInt(formData.funding_progress) || 0,
         possible_durations: formData.possible_durations ? 
@@ -162,7 +164,8 @@ export default function ProjectManagement() {
         category: '',
         status: 'active',
         funding_progress: '',
-        possible_durations: ''
+        possible_durations: '',
+        profitability: '' // Reset profitability as well
       });
       setIsAddProjectModalOpen(false);
       setEditingProject(null);
@@ -191,7 +194,8 @@ export default function ProjectManagement() {
       category: project.category || '',
       status: project.status || 'active',
       funding_progress: project.funding_progress?.toString() || '',
-      possible_durations: project.possible_durations ? project.possible_durations.join(', ') : ''
+      possible_durations: project.possible_durations ? project.possible_durations.join(', ') : '',
+      profitability: project.profitability?.toString() || '' // Add profitability to the form when editing
     });
     setIsAddProjectModalOpen(true);
   };
@@ -279,7 +283,8 @@ export default function ProjectManagement() {
                 category: '',
                 status: 'active',
                 funding_progress: '',
-                possible_durations: ''
+                possible_durations: '',
+                profitability: '' // Reset profitability
               });
               setIsAddProjectModalOpen(true);
             }}
@@ -637,23 +642,47 @@ export default function ProjectManagement() {
                 </div>
               </div>
               
-              <div>
-                <Label htmlFor="status" className="text-sm font-medium text-gray-700">
-                  Statut *
-                </Label>
-                <select
-                  id="status"
-                  name="status"
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                  value={formData.status}
-                  onChange={handleFormChange}
-                  required
-                >
-                  <option value="active">Actif</option>
-                  <option value="completed">Terminé</option>
-                  <option value="pending">En attente</option>
-                  <option value="suspended">Suspendu</option>
-                </select>
+              {/* Add profitability field */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="profitability" className="text-sm font-medium text-gray-700">
+                    Rentabilité (%) *
+                  </Label>
+                  <div className="relative mt-1">
+                    <TrendingUp className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <Input
+                      id="profitability"
+                      name="profitability"
+                      type="number"
+                      min="0.1"
+                      step="0.1"
+                      className="pl-10"
+                      placeholder="Rentabilité"
+                      value={formData.profitability}
+                      onChange={handleFormChange}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="status" className="text-sm font-medium text-gray-700">
+                    Statut *
+                  </Label>
+                  <select
+                    id="status"
+                    name="status"
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                    value={formData.status}
+                    onChange={handleFormChange}
+                    required
+                  >
+                    <option value="active">Actif</option>
+                    <option value="completed">Terminé</option>
+                    <option value="upcoming">À venir</option>
+                    <option value="suspended">Suspendu</option>
+                  </select>
+                </div>
               </div>
               
               <div className="flex justify-end gap-2 mt-6">
