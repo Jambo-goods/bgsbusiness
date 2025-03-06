@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow 
 } from "@/components/ui/table";
-import { Calendar, Euro, SortAsc, SortDesc } from "lucide-react";
+import { Calendar, Euro, SortAsc, SortDesc, Check, Clock, AlertCircle } from "lucide-react";
 import { Project } from "@/types/project";
 import { PaymentRecord } from "./types";
 
@@ -30,6 +30,17 @@ export default function PaymentsTable({
   handleSort,
   userInvestments
 }: PaymentsTableProps) {
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Check className="h-3.5 w-3.5 mr-1.5 text-green-500" />;
+      case 'pending':
+        return <Clock className="h-3.5 w-3.5 mr-1.5 text-orange-500" />;
+      default:
+        return <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-blue-500" />;
+    }
+  };
+  
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -76,12 +87,16 @@ export default function PaymentsTable({
               ? cumulativeReturns.find(record => record.id === payment.id)
               : null;
             
+            // Find project image - first try from userInvestments, then use a default
+            const projectImage = userInvestments.find(p => p.id === payment.projectId)?.image || 
+              "https://via.placeholder.com/40";
+              
             return (
-              <TableRow key={payment.id}>
+              <TableRow key={payment.id} className="animate-in fade-in duration-300">
                 <TableCell className="font-medium">
                   <div className="flex items-center">
                     <img
-                      src={userInvestments.find(p => p.id === payment.projectId)?.image}
+                      src={projectImage}
                       alt={payment.projectName}
                       className="h-6 w-6 rounded-md object-cover mr-2"
                     />
@@ -91,7 +106,7 @@ export default function PaymentsTable({
                 <TableCell>
                   <div className="flex items-center">
                     <Calendar className="h-3.5 w-3.5 mr-1.5 text-bgs-gray-medium" />
-                    {format(payment.date, "dd/MM/yyyy")}
+                    {format(new Date(payment.date), "dd/MM/yyyy")}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -110,15 +125,18 @@ export default function PaymentsTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    payment.status === 'paid' 
-                      ? 'bg-green-100 text-green-600' 
-                      : payment.status === 'pending'
-                      ? 'bg-orange-100 text-orange-600'
-                      : 'bg-blue-100 text-blue-600'
-                  }`}>
-                    {payment.status === 'paid' ? 'Payé' : payment.status === 'pending' ? 'En attente' : 'Programmé'}
-                  </span>
+                  <div className="flex items-center">
+                    {getStatusIcon(payment.status)}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      payment.status === 'paid' 
+                        ? 'bg-green-100 text-green-600' 
+                        : payment.status === 'pending'
+                        ? 'bg-orange-100 text-orange-600'
+                        : 'bg-blue-100 text-blue-600'
+                    }`}>
+                      {payment.status === 'paid' ? 'Payé' : payment.status === 'pending' ? 'En attente' : 'Programmé'}
+                    </span>
+                  </div>
                 </TableCell>
               </TableRow>
             );
