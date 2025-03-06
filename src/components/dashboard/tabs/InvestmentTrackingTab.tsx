@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Project } from "@/types/project";
 import FilterControls from "./investment-tracking/FilterControls";
@@ -9,7 +8,7 @@ import HeaderSection from "./investment-tracking/HeaderSection";
 import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracking";
 import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
 import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, RefreshCcw } from "lucide-react";
 
 interface InvestmentTrackingTabProps {
   userInvestments: Project[];
@@ -37,7 +36,6 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
     averageMonthlyReturn
   } = useReturnsStatistics(paymentRecords, filterStatus, sortColumn, sortDirection);
   
-  // Set up real-time subscriptions
   useInvestmentSubscriptions(userId, handleRefresh);
   
   const hasData = paymentRecords && paymentRecords.length > 0;
