@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -35,6 +34,7 @@ export default function UserManagement() {
     email: '',
     wallet_balance: '0'
   });
+  const [realTimeStatus, setRealTimeStatus] = useState('connecting');
 
   useEffect(() => {
     fetchUsers();
@@ -57,8 +57,10 @@ export default function UserManagement() {
         console.log('Realtime subscription status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('Successfully subscribed to profiles table');
+          setRealTimeStatus('connected');
         } else if (status === 'CHANNEL_ERROR') {
           console.error('Error subscribing to profiles table');
+          setRealTimeStatus('error');
           toast.error("Erreur de connexion en temps réel", {
             description: "La mise à jour automatique des utilisateurs peut ne pas fonctionner."
           });
@@ -98,7 +100,20 @@ export default function UserManagement() {
       }
       
       console.log("Fetched users:", data);
-      setUsers(data || []);
+      
+      if (data) {
+        // Make sure we have data
+        setUsers(data);
+        
+        if (data.length === 0) {
+          console.log("No users found in the profiles table");
+          toast.info("Base de données vide", {
+            description: "Aucun utilisateur trouvé dans la base de données. Vous pouvez créer un utilisateur test."
+          });
+        }
+      } else {
+        setUsers([]);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       setHasError(true);
@@ -276,8 +291,14 @@ export default function UserManagement() {
       
       {/* Realtime status indicator */}
       <div className="mb-4 flex items-center">
-        <div className="h-2 w-2 rounded-full bg-green-500 mr-2 animate-pulse"></div>
-        <span className="text-sm text-gray-600">Mise à jour en temps réel active</span>
+        <div className={`h-2 w-2 rounded-full mr-2 animate-pulse ${
+          realTimeStatus === 'connected' ? 'bg-green-500' : 
+          realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+        }`}></div>
+        <span className="text-sm text-gray-600">
+          {realTimeStatus === 'connected' ? 'Mise à jour en temps réel active' : 
+           realTimeStatus === 'error' ? 'Erreur de connexion en temps réel' : 'Connexion en cours...'}
+        </span>
       </div>
       
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
