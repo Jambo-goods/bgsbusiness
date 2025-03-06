@@ -19,54 +19,112 @@ export type AdminUser = {
 // Login admin user
 export const loginAdmin = async ({ email, password }: AdminCredentials) => {
   try {
-    // Fetch admin user with the given email
-    const { data: adminUser, error } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
+    console.log("Attempting login with email:", email);
+    
+    // Log the credentials being used (without the full password)
+    console.log("Login attempt with:", { 
+      email, 
+      passwordLength: password ? password.length : 0 
+    });
 
-    if (error) {
-      console.error("Database error:", error);
-      return { success: false, error: "Une erreur est survenue lors de la connexion" };
+    // Check if any admin users exist
+    const { data: adminUsers, error: checkError } = await supabase
+      .from('admin_users')
+      .select('*');
+      
+    if (checkError) {
+      console.error("Error checking admin users:", checkError);
+      return { success: false, error: "Erreur de connexion à la base de données" };
     }
     
-    if (!adminUser) {
-      console.log("No admin user found with this email");
-      return { success: false, error: "Identifiants invalides" };
+    // If no admin users exist, create one
+    if (!adminUsers || adminUsers.length === 0) {
+      console.log("No admin users found. Creating default admin");
+      const { data: newAdmin, error: insertError } = await supabase
+        .from('admin_users')
+        .insert({
+          email: 'bamboguirassy93@gmail.com',
+          password: 'Toshino201292@',
+          first_name: 'Admin',
+          last_name: 'User'
+        })
+        .select()
+        .single();
+        
+      if (insertError) {
+        console.error("Error creating default admin:", insertError);
+        return { success: false, error: "Erreur lors de la création de l'administrateur par défaut" };
+      } else {
+        console.log("Default admin created successfully", newAdmin);
+        
+        // If the created admin matches the login credentials, log them in
+        if (email === 'bamboguirassy93@gmail.com' && password === 'Toshino201292@') {
+          // Store admin session in localStorage
+          localStorage.setItem('admin_user', JSON.stringify(newAdmin));
+          return { success: true, admin: newAdmin };
+        }
+      }
     }
 
-    // In a real implementation, you would use bcrypt to compare passwords
-    // For demo purposes, we're doing a simple comparison
+    // Fetch admin user with the given email
+    const { data: matchingAdmins, error } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', email.toLowerCase());
+
+    if (error) {
+      console.error("Error fetching admin user:", error);
+      toast.error("Erreur lors de la récupération des informations de l'administrateur");
+      return { success: false, error: "Erreur de connexion à la base de données" };
+    }
+    
+    if (!matchingAdmins || matchingAdmins.length === 0) {
+      console.log("No admin user found with this email");
+      return { success: false, error: "Email ou mot de passe incorrect" };
+    }
+
+    const adminUser = matchingAdmins[0];
+    console.log("Admin user found:", adminUser);
+    
+    // Direct password comparison
     const isValidPassword = password === adminUser.password;
 
+    console.log("Password validation result:", isValidPassword);
+
     if (!isValidPassword) {
-      console.log("Invalid password");
-      return { success: false, error: "Identifiants invalides" };
+      console.log("Invalid password provided");
+      return { success: false, error: "Email ou mot de passe incorrect" };
     }
 
+    console.log("Password validated successfully");
+
     // Update last login time
-    await supabase
+    const { error: updateError } = await supabase
       .from('admin_users')
       .update({ last_login: new Date().toISOString() })
       .eq('id', adminUser.id);
+      
+    if (updateError) {
+      console.error("Error updating last login:", updateError);
+    }
 
     // Log admin action
-    try {
-      await supabase
-        .from('admin_logs')
-        .insert({
-          admin_id: adminUser.id,
-          action_type: 'login',
-          description: `Admin ${adminUser.email} s'est connecté`
-        });
-    } catch (logError) {
-      // Still proceed with login even if logging fails
-      console.warn("Failed to log admin action:", logError);
+    const { error: logError } = await supabase
+      .from('admin_logs')
+      .insert({
+        admin_id: adminUser.id,
+        action_type: 'login',
+        description: `Admin ${adminUser.email} s'est connecté`
+      });
+      
+    if (logError) {
+      console.error("Error logging admin action:", logError);
     }
 
     // Store admin session in localStorage
     localStorage.setItem('admin_user', JSON.stringify(adminUser));
+    
+    console.log("Login successful, admin session stored");
 
     return { 
       success: true, 

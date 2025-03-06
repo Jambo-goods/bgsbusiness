@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logAdminAction } from '@/services/adminAuthService';
 import { 
   Search, Plus, ArrowUp, ArrowDown, Euro,
-  Loader2, MoreHorizontal, Pencil, Wallet
+  Loader2, MoreHorizontal, Pencil, Wallet, UserPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -14,6 +13,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function UserManagement() {
   const { adminUser } = useAdmin();
@@ -22,31 +23,160 @@ export default function UserManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isAddFundsModalOpen, setIsAddFundsModalOpen] = useState(false);
+  const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [hasError, setHasError] = useState(false);
+  const [newUser, setNewUser] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    wallet_balance: '0'
+  });
+  const [realTimeStatus, setRealTimeStatus] = useState('connecting');
 
   useEffect(() => {
     fetchUsers();
+    
+    // Set up real-time subscription for profiles with better error handling
+    const profilesChannel = supabase
+      .channel('admin_profiles_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles'
+      }, (payload) => {
+        console.log('Profiles data changed, refreshing users...', payload);
+        fetchUsers();
+        toast.info("Mise à jour détectée", {
+          description: "Les données utilisateurs ont été mises à jour."
+        });
+      })
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to profiles table');
+          setRealTimeStatus('connected');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to profiles table');
+          setRealTimeStatus('error');
+          toast.error("Erreur de connexion en temps réel", {
+            description: "La mise à jour automatique des utilisateurs peut ne pas fonctionner."
+          });
+        }
+      });
+      
+    // Clean up subscription on component unmount
+    return () => {
+      console.log('Cleaning up realtime subscription');
+      supabase.removeChannel(profilesChannel);
+    };
+  }, []);
+  
+  // Separate effect for sorting changes to avoid duplicate fetching
+  useEffect(() => {
+    if (!isLoading) {
+      console.log('Sort criteria changed, refreshing data');
+      fetchUsers();
+    }
   }, [sortField, sortDirection]);
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
+      setHasError(false);
+      
+      console.log("Fetching users with sort field:", sortField, "direction:", sortDirection);
       
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order(sortField, { ascending: sortDirection === 'asc' });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+      }
       
-      setUsers(data || []);
+      console.log("Fetched users:", data);
+      
+      if (data) {
+        // Make sure we have data
+        setUsers(data);
+        
+        if (data.length === 0) {
+          console.log("No users found in the profiles table");
+          toast.info("Base de données vide", {
+            description: "Aucun utilisateur trouvé dans la base de données. Vous pouvez créer un utilisateur test."
+          });
+        }
+      } else {
+        setUsers([]);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
+      setHasError(true);
       toast.error("Erreur lors du chargement des utilisateurs");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCreateTestUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!adminUser) return;
+    
+    try {
+      // Validate input
+      if (!newUser.first_name || !newUser.last_name || !newUser.email) {
+        toast.error("Veuillez remplir tous les champs obligatoires");
+        return;
+      }
+      
+      // Create user directly in profiles table (for testing)
+      const walletBalance = parseInt(newUser.wallet_balance) || 0;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: crypto.randomUUID(), // Generate a UUID for the test user
+          first_name: newUser.first_name,
+          last_name: newUser.last_name,
+          email: newUser.email,
+          wallet_balance: walletBalance,
+          investment_total: 0
+        })
+        .select();
+        
+      if (error) throw error;
+      
+      // Log admin action
+      await logAdminAction(
+        adminUser.id,
+        'user_management',
+        `Création d'un utilisateur test: ${newUser.first_name} ${newUser.last_name}`,
+        data?.[0]?.id
+      );
+      
+      toast.success(`Utilisateur test créé avec succès`);
+      setIsCreateUserModalOpen(false);
+      
+      // Reset form
+      setNewUser({
+        first_name: '',
+        last_name: '',
+        email: '',
+        wallet_balance: '0'
+      });
+      
+      // Refresh users list
+      fetchUsers();
+      
+    } catch (error) {
+      console.error("Erreur lors de la création de l'utilisateur test:", error);
+      toast.error("Une erreur s'est produite lors de la création de l'utilisateur test");
     }
   };
 
@@ -141,12 +271,34 @@ export default function UserManagement() {
           />
         </div>
         
-        <Button
-          onClick={() => fetchUsers()}
-          className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
-        >
-          Actualiser
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setIsCreateUserModalOpen(true)}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Créer utilisateur test
+          </Button>
+          
+          <Button
+            onClick={() => fetchUsers()}
+            className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
+          >
+            Actualiser
+          </Button>
+        </div>
+      </div>
+      
+      {/* Realtime status indicator */}
+      <div className="mb-4 flex items-center">
+        <div className={`h-2 w-2 rounded-full mr-2 animate-pulse ${
+          realTimeStatus === 'connected' ? 'bg-green-500' : 
+          realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+        }`}></div>
+        <span className="text-sm text-gray-600">
+          {realTimeStatus === 'connected' ? 'Mise à jour en temps réel active' : 
+           realTimeStatus === 'error' ? 'Erreur de connexion en temps réel' : 'Connexion en cours...'}
+        </span>
       </div>
       
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -154,9 +306,33 @@ export default function UserManagement() {
           <div className="flex justify-center items-center p-12">
             <Loader2 className="h-8 w-8 animate-spin text-bgs-blue" />
           </div>
+        ) : hasError ? (
+          <div className="text-center p-8 text-red-500">
+            Une erreur est survenue lors du chargement des utilisateurs. 
+            <Button 
+              variant="link" 
+              onClick={fetchUsers} 
+              className="text-bgs-blue"
+            >
+              Réessayer
+            </Button>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="text-center p-8 text-gray-500">
+            Aucun utilisateur trouvé dans la base de données.
+            <div className="mt-4">
+              <Button
+                onClick={() => setIsCreateUserModalOpen(true)}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Créer un premier utilisateur test
+              </Button>
+            </div>
+          </div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center p-8 text-gray-500">
-            Aucun utilisateur trouvé
+            Aucun utilisateur ne correspond à votre recherche
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -240,6 +416,9 @@ export default function UserManagement() {
                           onClick={() => {
                             // View user details
                             console.log("View user details:", user);
+                            toast.info(`Détails pour ${user.first_name} ${user.last_name}`, {
+                              description: "Cette fonctionnalité sera disponible prochainement."
+                            });
                           }}
                           title="Voir les détails"
                         >
@@ -303,6 +482,83 @@ export default function UserManagement() {
                   className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
                 >
                   Confirmer
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      {/* Create User Modal */}
+      {isCreateUserModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-semibold text-bgs-blue mb-4">
+              Créer un utilisateur test
+            </h2>
+            <p className="text-gray-600 mb-4">
+              Cet utilisateur sera créé uniquement pour les tests et n'aura pas d'accès au compte.
+            </p>
+            
+            <form onSubmit={handleCreateTestUser}>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="first_name">Prénom</Label>
+                  <Input
+                    id="first_name"
+                    value={newUser.first_name}
+                    onChange={(e) => setNewUser({...newUser, first_name: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="last_name">Nom</Label>
+                  <Input
+                    id="last_name"
+                    value={newUser.last_name}
+                    onChange={(e) => setNewUser({...newUser, last_name: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={newUser.email}
+                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="wallet_balance">Solde initial (€)</Label>
+                  <Input
+                    id="wallet_balance"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={newUser.wallet_balance}
+                    onChange={(e) => setNewUser({...newUser, wallet_balance: e.target.value})}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsCreateUserModalOpen(false)}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  Créer l'utilisateur
                 </Button>
               </div>
             </form>
