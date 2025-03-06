@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface PortfolioDataPoint {
   name: string;
@@ -15,6 +16,8 @@ export const usePortfolioData = () => {
     // Fetch initial portfolio data
     fetchPortfolioData();
     
+    console.log("Setting up real-time subscription for portfolio data...");
+    
     // Set up real-time subscription for portfolio updates
     const portfolioChannel = supabase
       .channel('portfolio_updates')
@@ -22,8 +25,11 @@ export const usePortfolioData = () => {
         event: '*',
         schema: 'public',
         table: 'investments'
-      }, () => {
-        console.log('Investment data changed, refreshing portfolio chart...');
+      }, (payload) => {
+        console.log('Investment data changed, refreshing portfolio chart...', payload);
+        toast.info("Mise à jour du portefeuille détectée", {
+          description: "Les données du graphique sont en cours d'actualisation."
+        });
         fetchPortfolioData();
       })
       .subscribe();
@@ -35,13 +41,17 @@ export const usePortfolioData = () => {
         event: '*',
         schema: 'public',
         table: 'wallet_transactions'
-      }, () => {
-        console.log('Wallet transaction detected, refreshing portfolio chart...');
+      }, (payload) => {
+        console.log('Wallet transaction detected, refreshing portfolio chart...', payload);
+        toast.info("Transaction détectée", {
+          description: "Les données du portefeuille sont en cours d'actualisation."
+        });
         fetchPortfolioData();
       })
       .subscribe();
     
     return () => {
+      console.log("Cleaning up portfolio data subscriptions");
       supabase.removeChannel(portfolioChannel);
       supabase.removeChannel(walletChannel);
     };
@@ -50,6 +60,8 @@ export const usePortfolioData = () => {
   const fetchPortfolioData = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching portfolio data...");
+      
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
@@ -58,6 +70,8 @@ export const usePortfolioData = () => {
         setPortfolioData(generatePlaceholderData());
         return;
       }
+      
+      console.log(`Fetching investment data for user: ${session.session.user.id}`);
       
       // Get all investments for the user grouped by month
       const { data: investments, error } = await supabase
@@ -68,6 +82,9 @@ export const usePortfolioData = () => {
         
       if (error) {
         console.error("Error fetching investment data:", error);
+        toast.error("Erreur lors du chargement des données", {
+          description: error.message
+        });
         setPortfolioData(generatePlaceholderData());
         return;
       }
@@ -84,6 +101,9 @@ export const usePortfolioData = () => {
       setPortfolioData(aggregatedData);
     } catch (error) {
       console.error("Error in fetchPortfolioData:", error);
+      toast.error("Erreur inattendue", {
+        description: "Un problème est survenu lors de la récupération des données du portefeuille."
+      });
       setPortfolioData(generatePlaceholderData());
     } finally {
       setIsLoading(false);
@@ -148,6 +168,7 @@ export const usePortfolioData = () => {
 
   return {
     portfolioData,
-    isLoading
+    isLoading,
+    refreshData: fetchPortfolioData
   };
 };
