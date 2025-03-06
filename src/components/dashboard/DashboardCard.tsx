@@ -25,8 +25,10 @@ export default function DashboardCard({
   changeTimeframe,
   description,
 }: DashboardCardProps) {
-  // Determine if change is positive or negative
-  const isPositive = changePercentage?.startsWith('+') || changeValue?.startsWith('↑');
+  // Determine if change is positive or negative (only if changePercentage is provided)
+  const isPositive = changePercentage ? 
+    changePercentage.startsWith('+') || (changeValue && changeValue.startsWith('↑')) : 
+    false;
   
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md">
@@ -35,7 +37,7 @@ export default function DashboardCard({
           <div className={`h-5 w-5 ${iconColor}`}>{icon}</div>
         </div>
         {changePercentage && (
-          <span className={`${isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-xs px-2 py-0.5 rounded-full font-medium flex items-center animate-pulse`}>
+          <span className={`${isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-xs px-2 py-0.5 rounded-full font-medium flex items-center`}>
             {isPositive ? (
               <ArrowUpIcon className="h-3 w-3 mr-1" />
             ) : (
