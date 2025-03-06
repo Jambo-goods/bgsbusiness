@@ -25,7 +25,7 @@ export default function DashboardCard({
   changeTimeframe,
   description,
 }: DashboardCardProps) {
-  // Determine if change is positive or negative (only if changePercentage is provided)
+  // Determine if change is positive based on the actual data
   const isPositive = changePercentage ? 
     changePercentage.startsWith('+') || (changeValue && changeValue.startsWith('↑')) : 
     false;
