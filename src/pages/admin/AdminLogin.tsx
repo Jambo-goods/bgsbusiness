@@ -7,8 +7,8 @@ import { loginAdmin } from "@/services/adminAuthService";
 import { useAdmin } from "@/contexts/AdminContext";
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState("bamboguirassy93@gmail.com");
-  const [password, setPassword] = useState("Toshino201292@");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -26,39 +26,23 @@ export default function AdminLogin() {
     setError("");
     setIsLoading(true);
 
-    // Validate inputs
-    if (!email || !password) {
-      setError("Veuillez remplir tous les champs");
-      toast.error("Veuillez remplir tous les champs");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      console.log("Attempting admin login with:", email);
-      const { success, error, admin } = await loginAdmin({ 
-        email, 
-        password 
-      });
+      const { success, error, admin } = await loginAdmin({ email, password });
       
-      if (!success || !admin) {
-        const errorMessage = error || "Une erreur s'est produite lors de la connexion";
-        setError(errorMessage);
-        toast.error(errorMessage);
+      if (!success) {
+        setError(error || "Une erreur s'est produite lors de la connexion");
         setIsLoading(false);
         return;
       }
       
-      toast.success("Connexion réussie");
-      setAdminUser(admin);
-      
-      // Ensure we navigate to the dashboard
-      console.log("Navigating to dashboard...");
-      navigate("/admin/dashboard");
+      if (admin) {
+        toast.success("Connexion réussie");
+        setAdminUser(admin);
+        navigate("/admin/dashboard");
+      }
     } catch (err: any) {
       console.error("Admin login error:", err);
       setError("Une erreur s'est produite lors de la connexion");
-      toast.error("Une erreur s'est produite lors de la connexion");
     } finally {
       setIsLoading(false);
     }
@@ -136,11 +120,6 @@ export default function AdminLogin() {
               )}
             </button>
           </form>
-          
-          <div className="mt-4 text-sm text-gray-500 text-center">
-            <p>Email: bamboguirassy93@gmail.com</p>
-            <p>Mot de passe: Toshino201292@</p>
-          </div>
         </div>
       </div>
     </div>
