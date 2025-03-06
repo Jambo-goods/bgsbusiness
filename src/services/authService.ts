@@ -55,6 +55,9 @@ export const registerUser = async (userData: UserRegistrationData) => {
     if (error.message.includes("User already registered")) {
       toast.error("Cet email est déjà utilisé. Veuillez vous connecter.");
       return { success: false, error: "Cet email est déjà utilisé" };
+    } else if (error.code === "signup_disabled" || error.message.includes("Signups not allowed")) {
+      toast.error("Les inscriptions sont actuellement désactivées. Veuillez contacter l'administrateur.");
+      return { success: false, error: "Les inscriptions sont désactivées" };
     }
 
     toast.error(error.message || "Erreur lors de l'inscription");

@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowRight, AlertCircle, Info } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import NameFields from "./NameFields";
@@ -72,6 +72,11 @@ export default function RegisterForm() {
 
   return (
     <div className="glass-card p-6 md:p-8">
+      <div className="bg-blue-100 border border-blue-200 text-blue-700 px-4 py-3 rounded mb-6 flex items-center">
+        <Info size={18} className="mr-2 flex-shrink-0" />
+        <p>Pour créer un compte, demandez à l'administrateur d'activer les inscriptions dans Supabase.</p>
+      </div>
+      
       {error && (
         <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
           <AlertCircle size={18} className="mr-2 flex-shrink-0" />
