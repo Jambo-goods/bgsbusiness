@@ -11,6 +11,8 @@ import { projects } from "@/data/projects";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useRealTimeSubscriptions } from "@/hooks/dashboard/useRealTimeSubscriptions";
+import { useUserSession } from "@/hooks/dashboard/useUserSession";
 
 export default function Dashboard() {
   // Possible activeTab values: "overview", "wallet", "capital", "yield", "investments", "tracking", "profile", "settings"
@@ -28,102 +30,31 @@ export default function Dashboard() {
   } | null>(null);
   const [userInvestments, setUserInvestments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [realTimeStatus, setRealTimeStatus] = useState('connecting');
   const navigate = useNavigate();
+  
+  // Get user session
+  const { userId, isLoading: isSessionLoading } = useUserSession();
+  
+  // Setup real-time subscriptions
+  const { realTimeStatus } = useRealTimeSubscriptions({
+    userId: userId || '',
+    onProfileUpdate: fetchUserData,
+    onInvestmentUpdate: fetchUserData,
+    onTransactionUpdate: fetchUserData
+  });
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    fetchUserData();
-    
-    // Set up real-time subscription for profile changes
-    const { data: sessionData } = supabase.auth.getSession();
-    if (sessionData && sessionData.session && sessionData.session.user) {
-      const userId = sessionData.session.user.id;
-      
-      console.log("Setting up real-time subscriptions for user dashboard");
-      
-      // Profile changes (wallet balance, investment total, etc.)
-      const profilesChannel = supabase
-        .channel('dashboard_profile_changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${userId}`
-        }, (payload) => {
-          console.log('Profile data changed, refreshing dashboard...', payload);
-          fetchUserData();
-          toast.info("Mise à jour du profil", {
-            description: "Vos informations ont été mises à jour."
-          });
-        })
-        .subscribe((status) => {
-          console.log('Profile subscription status:', status);
-          if (status === 'SUBSCRIBED') {
-            setRealTimeStatus('connected');
-          } else if (status === 'CHANNEL_ERROR') {
-            setRealTimeStatus('error');
-            console.error('Error subscribing to profile changes');
-          }
-        });
-      
-      // Investments changes
-      const investmentsChannel = supabase
-        .channel('dashboard_investments_changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'investments',
-          filter: `user_id=eq.${userId}`
-        }, (payload) => {
-          console.log('Investment data changed, refreshing dashboard...', payload);
-          fetchUserData();
-          toast.info("Mise à jour des investissements", {
-            description: "Vos investissements ont été mis à jour."
-          });
-        })
-        .subscribe();
-      
-      // Wallet transactions
-      const transactionsChannel = supabase
-        .channel('dashboard_transactions_changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'wallet_transactions',
-          filter: `user_id=eq.${userId}`
-        }, (payload) => {
-          console.log('Wallet transaction detected, refreshing dashboard...', payload);
-          fetchUserData();
-          toast.info("Transaction détectée", {
-            description: "Votre solde a été mis à jour."
-          });
-        })
-        .subscribe();
-        
-      return () => {
-        console.log('Cleaning up dashboard real-time subscriptions');
-        supabase.removeChannel(profilesChannel);
-        supabase.removeChannel(investmentsChannel);
-        supabase.removeChannel(transactionsChannel);
-      };
+    if (userId) {
+      fetchUserData();
     }
-  }, []);
+  }, [userId]);
   
   const fetchUserData = async () => {
+    if (!userId) return;
+    
     try {
       setIsLoading(true);
-      
-      // Get current session
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      if (!sessionData.session) {
-        // Redirect to login if no user is found
-        navigate("/login");
-        return;
-      }
-      
-      const userId = sessionData.session.user.id;
       
       // Fetch user profile data
       let { data: profileData, error: profileError } = await supabase
@@ -137,7 +68,8 @@ export default function Dashboard() {
         
         // If profile doesn't exist, create a default one
         if (profileError.message.includes("contains 0 rows")) {
-          const userMeta = sessionData.session.user.user_metadata || {};
+          const { data: sessionData } = await supabase.auth.getSession();
+          const userMeta = sessionData.session?.user.user_metadata || {};
           
           // Create a default profile with data from the user metadata
           const { error: insertError } = await supabase
@@ -146,7 +78,7 @@ export default function Dashboard() {
               id: userId,
               first_name: userMeta.first_name || "Utilisateur",
               last_name: userMeta.last_name || "",
-              email: sessionData.session.user.email,
+              email: sessionData.session?.user.email,
               investment_total: 0,
               projects_count: 0,
               wallet_balance: 0
@@ -233,10 +165,12 @@ export default function Dashboard() {
       }
       
       // Use profile data if available, otherwise use default values
+      const { data: sessionData } = await supabase.auth.getSession();
+      
       setUserData({
-        firstName: profileData?.first_name || sessionData.session.user.user_metadata?.first_name || "Utilisateur",
-        lastName: profileData?.last_name || sessionData.session.user.user_metadata?.last_name || "",
-        email: profileData?.email || sessionData.session.user.email || "",
+        firstName: profileData?.first_name || sessionData.session?.user.user_metadata?.first_name || "Utilisateur",
+        lastName: profileData?.last_name || sessionData.session?.user.user_metadata?.last_name || "",
+        email: profileData?.email || sessionData.session?.user.email || "",
         phone: profileData?.phone || "",
         address: profileData?.address || "",
         investmentTotal: profileData?.investment_total || 0,
@@ -264,7 +198,7 @@ export default function Dashboard() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  if (isLoading) {
+  if (isSessionLoading || isLoading) {
     return <DashboardLoading />;
   }
 
