@@ -27,17 +27,6 @@ export const fetchRealTimeInvestmentData = async (userId: string | undefined) =>
     
     if (!investments || investments.length === 0) {
       console.log("No investments found for user:", userId);
-      // Check if there's data in the database at all
-      const { data: allInvestments, error: allError } = await supabase
-        .from('investments')
-        .select('id, user_id')
-        .limit(5);
-        
-      if (allError) {
-        console.error("Error checking investments table:", allError);
-      } else {
-        console.log("Sample of all investments in database:", allInvestments);
-      }
     }
     
     return investments || [];

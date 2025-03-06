@@ -16,7 +16,6 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const [isLoading, setIsLoading] = useState(true);
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
   const [animateRefresh, setAnimateRefresh] = useState(false);
-  const [realInvestments, setRealInvestments] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   
   const loadRealTimeData = useCallback(async () => {
@@ -40,7 +39,6 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       
       const investments = await fetchRealTimeInvestmentData(currentUserId);
       
-      setRealInvestments(investments);
       console.log("Fetched real investments:", investments.length);
       
       if (investments && investments.length > 0) {
