@@ -43,24 +43,29 @@ export default function Overview({ userData, userInvestments, setActiveTab }: Ov
       setShowSuccess(true);
     }
     
-    // Set up real-time check
+    // Set up real-time check with better error handling
     const setupRealTimeCheck = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data && data.session) {
-        const channel = supabase
-          .channel('overview_realtime_check')
-          .subscribe((status) => {
-            console.log('Overview realtime status check:', status);
-            if (status === 'SUBSCRIBED') {
-              setRealTimeStatus('connected');
-            } else if (status === 'CHANNEL_ERROR') {
-              setRealTimeStatus('error');
-            }
-          });
-          
-        return () => {
-          supabase.removeChannel(channel);
-        };
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data && data.session) {
+          const channel = supabase
+            .channel('overview_realtime_check')
+            .subscribe((status) => {
+              console.log('Overview realtime status check:', status);
+              if (status === 'SUBSCRIBED') {
+                setRealTimeStatus('connected');
+              } else if (status === 'CHANNEL_ERROR') {
+                setRealTimeStatus('error');
+              }
+            });
+            
+          return () => {
+            supabase.removeChannel(channel);
+          };
+        }
+      } catch (error) {
+        console.error("Error setting up real-time connection:", error);
+        setRealTimeStatus('error');
       }
     };
     

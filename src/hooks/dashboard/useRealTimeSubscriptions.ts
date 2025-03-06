@@ -24,7 +24,7 @@ export const useRealTimeSubscriptions = ({
       return;
     }
     
-    console.log("Setting up real-time subscriptions for user dashboard");
+    console.log("Setting up real-time subscriptions for user dashboard with ID:", userId);
     
     // Profile changes (wallet balance, investment total, etc.)
     const profilesChannel = supabase
@@ -66,7 +66,11 @@ export const useRealTimeSubscriptions = ({
           description: "Vos investissements ont été mis à jour."
         });
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to investment changes');
+        }
+      });
     
     // Wallet transactions
     const transactionsChannel = supabase
@@ -83,7 +87,11 @@ export const useRealTimeSubscriptions = ({
           description: "Votre solde a été mis à jour."
         });
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to transaction changes');
+        }
+      });
       
     return () => {
       console.log('Cleaning up dashboard real-time subscriptions');
