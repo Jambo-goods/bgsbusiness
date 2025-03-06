@@ -28,35 +28,46 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
     });
 
     // Check if any admin users exist
-    const { data: adminCount, error: checkError } = await supabase
+    const { data: adminUsers, error: checkError } = await supabase
       .from('admin_users')
-      .select('*', { count: 'exact' });
+      .select('*');
       
     if (checkError) {
       console.error("Error checking admin users:", checkError);
+      return { success: false, error: "Erreur de connexion à la base de données" };
     }
     
     // If no admin users exist, create one
-    if (!adminCount || adminCount.length === 0) {
+    if (!adminUsers || adminUsers.length === 0) {
       console.log("No admin users found. Creating default admin");
-      const { error: insertError } = await supabase
+      const { data: newAdmin, error: insertError } = await supabase
         .from('admin_users')
         .insert({
           email: 'bamboguirassy93@gmail.com',
           password: 'Toshino201292@',
           first_name: 'Admin',
           last_name: 'User'
-        });
+        })
+        .select()
+        .single();
         
       if (insertError) {
         console.error("Error creating default admin:", insertError);
+        return { success: false, error: "Erreur lors de la création de l'administrateur par défaut" };
       } else {
-        console.log("Default admin created successfully");
+        console.log("Default admin created successfully", newAdmin);
+        
+        // If the created admin matches the login credentials, log them in
+        if (email === 'bamboguirassy93@gmail.com' && password === 'Toshino201292@') {
+          // Store admin session in localStorage
+          localStorage.setItem('admin_user', JSON.stringify(newAdmin));
+          return { success: true, admin: newAdmin };
+        }
       }
     }
 
     // Fetch admin user with the given email
-    const { data: adminUsers, error } = await supabase
+    const { data: matchingAdmins, error } = await supabase
       .from('admin_users')
       .select('*')
       .eq('email', email.toLowerCase());
@@ -67,15 +78,15 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
       return { success: false, error: "Erreur de connexion à la base de données" };
     }
     
-    if (!adminUsers || adminUsers.length === 0) {
+    if (!matchingAdmins || matchingAdmins.length === 0) {
       console.log("No admin user found with this email");
       return { success: false, error: "Email ou mot de passe incorrect" };
     }
 
-    const adminUser = adminUsers[0];
+    const adminUser = matchingAdmins[0];
     console.log("Admin user found:", adminUser);
     
-    // Direct password comparison without any transformations
+    // Direct password comparison
     const isValidPassword = password === adminUser.password;
 
     console.log("Password validation result:", isValidPassword);
