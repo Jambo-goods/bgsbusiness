@@ -5,7 +5,8 @@ import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { loginUser, getCurrentUser } from "@/services/authService";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -13,15 +14,15 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   useEffect(() => {
     window.scrollTo(0, 0);
     
     // Check if user is already logged in
     const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
+      const { user } = await getCurrentUser();
+      if (user) {
         navigate("/dashboard");
       }
     };
@@ -35,18 +36,18 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      // Authentification avec Supabase
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { success, error, data } = await loginUser({ email, password });
       
-      if (authError) {
-        throw authError;
+      if (!success) {
+        setError(error || "Une erreur s'est produite lors de la connexion");
+        setIsLoading(false);
+        return;
       }
       
-      if (data.user) {
-        toast({
+      if (data?.user) {
+        toast.success("Connexion réussie");
+        
+        uiToast({
           title: "Connexion réussie",
           description: "Bienvenue sur votre tableau de bord",
         });
@@ -55,15 +56,7 @@ export default function Login() {
       }
     } catch (err: any) {
       console.error("Login error:", err);
-      
-      // Gestion des erreurs d'authentification
-      if (err.message === "Invalid login credentials") {
-        setError("Email ou mot de passe incorrect");
-      } else if (err.message.includes("rate limit")) {
-        setError("Trop de tentatives de connexion. Veuillez réessayer plus tard.");
-      } else {
-        setError("Une erreur s'est produite lors de la connexion");
-      }
+      setError("Une erreur s'est produite lors de la connexion");
     } finally {
       setIsLoading(false);
     }

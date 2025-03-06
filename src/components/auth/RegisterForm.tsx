@@ -3,10 +3,12 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import NameFields from "./NameFields";
 import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import TermsCheckbox from "./TermsCheckbox";
+import { registerUser } from "@/services/authService";
 
 export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
@@ -18,7 +20,7 @@ export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,28 +40,29 @@ export default function RegisterForm() {
     setIsLoading(true);
 
     try {
-      // Simulation d'un délai de réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       console.log("Registration attempt with:", { firstName, lastName, email });
       
-      // For demo purposes, create a user and store in localStorage
-      // In a real app, this would send the data to a backend
-      const userData = {
+      const { success, error } = await registerUser({
         firstName,
         lastName,
-        email
-      };
+        email,
+        password
+      });
       
-      localStorage.setItem("user", JSON.stringify(userData));
+      if (!success) {
+        setError(error || "Une erreur s'est produite lors de l'inscription");
+        return;
+      }
       
-      toast({
+      toast.success("Inscription réussie");
+      
+      uiToast({
         title: "Inscription réussie",
         description: "Votre compte a été créé avec succès",
       });
       
       navigate("/dashboard");
-    } catch (err) {
+    } catch (err: any) {
       setError("Une erreur s'est produite lors de l'inscription");
       console.error("Registration error:", err);
     } finally {

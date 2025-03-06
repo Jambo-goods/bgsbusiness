@@ -2,12 +2,14 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { useNavScroll } from "@/hooks/useNavScroll";
 import NavbarHeader from "./NavbarHeader";
 import NavLogo from "./NavLogo";
 import DesktopNav from "./DesktopNav";
 import MobileMenuToggle from "./MobileMenuToggle";
 import MobileMenu from "./MobileMenu";
+import { logoutUser, getCurrentUser } from "@/services/authService";
 
 export default function Navbar() {
   const isScrolled = useNavScroll();
@@ -15,28 +17,40 @@ export default function Navbar() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   
   const logoPath = "lovable-uploads/d9a3204a-06aa-470d-8255-7f3bd0852557.png";
 
   useEffect(() => {
     // Check if user is logged in
-    const storedUser = localStorage.getItem("user");
-    setIsLoggedIn(!!storedUser);
-  }, []);
+    const checkAuth = async () => {
+      const { user } = await getCurrentUser();
+      setIsLoggedIn(!!user);
+    };
+    
+    checkAuth();
+  }, [location.pathname]);
 
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    setIsLoggedIn(false);
-    toast({
-      title: "Déconnexion réussie",
-      description: "Vous avez été déconnecté avec succès",
-    });
-    navigate("/");
+  const handleLogout = async () => {
+    const { success, error } = await logoutUser();
+    
+    if (success) {
+      setIsLoggedIn(false);
+      toast.success("Déconnexion réussie");
+      
+      uiToast({
+        title: "Déconnexion réussie",
+        description: "Vous avez été déconnecté avec succès",
+      });
+      
+      navigate("/");
+    } else {
+      toast.error("Erreur lors de la déconnexion: " + error);
+    }
   };
 
   const isActive = (path: string) => location.pathname === path;
