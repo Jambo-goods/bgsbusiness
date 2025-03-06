@@ -35,7 +35,7 @@ export default function DashboardCard({
           <div className={`h-5 w-5 ${iconColor}`}>{icon}</div>
         </div>
         {changePercentage && (
-          <span className={`${isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-xs px-2 py-0.5 rounded-full font-medium flex items-center`}>
+          <span className={`${isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-xs px-2 py-0.5 rounded-full font-medium flex items-center animate-pulse`}>
             {isPositive ? (
               <ArrowUpIcon className="h-3 w-3 mr-1" />
             ) : (

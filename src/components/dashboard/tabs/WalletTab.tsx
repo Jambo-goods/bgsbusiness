@@ -12,6 +12,37 @@ export default function WalletTab() {
 
   useEffect(() => {
     fetchWalletBalance();
+    
+    // Set up realtime subscription for profile changes
+    const profileChannel = supabase
+      .channel('wallet_balance_updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles'
+      }, () => {
+        console.log('Profile updated, refreshing wallet balance...');
+        fetchWalletBalance();
+      })
+      .subscribe();
+      
+    // Set up realtime subscription for wallet transactions
+    const transactionsChannel = supabase
+      .channel('wallet_transaction_updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wallet_transactions'
+      }, () => {
+        console.log('Wallet transaction detected, refreshing balance...');
+        fetchWalletBalance();
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(profileChannel);
+      supabase.removeChannel(transactionsChannel);
+    };
   }, []);
 
   const fetchWalletBalance = async () => {
@@ -34,6 +65,7 @@ export default function WalletTab() {
       if (error) throw error;
       
       if (data) {
+        console.log('Wallet balance updated:', data.wallet_balance);
         setBalance(data.wallet_balance || 0);
       }
     } catch (error) {
