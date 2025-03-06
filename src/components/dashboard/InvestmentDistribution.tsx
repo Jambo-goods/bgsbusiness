@@ -1,12 +1,80 @@
 
 import { Progress } from "@/components/ui/progress";
 import { ChevronRightIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface InvestmentDistributionProps {
   setActiveTab: (tab: string) => void;
 }
 
 export default function InvestmentDistribution({ setActiveTab }: InvestmentDistributionProps) {
+  const [investments, setInvestments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const [totalInvested, setTotalInvested] = useState(0);
+
+  useEffect(() => {
+    async function fetchUserInvestments() {
+      setIsLoading(true);
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        
+        if (!user.user) {
+          setInvestments([]);
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from('investments')
+          .select(`
+            *,
+            projects(*)
+          `)
+          .eq('user_id', user.user.id);
+          
+        if (error) {
+          console.error("Erreur lors du chargement des investissements:", error);
+          throw error;
+        }
+        
+        // Calculate total invested amount
+        const total = (data || []).reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        setTotalInvested(total);
+        
+        // Group investments by project
+        const groupedInvestments = (data || []).reduce((acc, inv) => {
+          const projectId = inv.project_id;
+          if (!acc[projectId]) {
+            acc[projectId] = {
+              project: inv.projects,
+              totalAmount: 0,
+              investments: []
+            };
+          }
+          acc[projectId].totalAmount += inv.amount;
+          acc[projectId].investments.push(inv);
+          return acc;
+        }, {});
+        
+        setInvestments(Object.values(groupedInvestments));
+      } catch (error) {
+        console.error("Erreur:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger vos investissements",
+          variant: "destructive"
+        });
+        setInvestments([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchUserInvestments();
+  }, [toast]);
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
       <div className="flex justify-between items-center mb-4">
@@ -15,31 +83,34 @@ export default function InvestmentDistribution({ setActiveTab }: InvestmentDistr
         </h2>
       </div>
       
-      <div className="space-y-3">
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-bgs-gray-medium">BGS Wood Africa (1.25% par mois)</span>
-            <span className="font-medium text-bgs-blue">2500 €</span>
-          </div>
-          <Progress value={33} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
+      {isLoading ? (
+        <div className="flex justify-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-bgs-orange"></div>
         </div>
-        
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-bgs-gray-medium">BGS Energy (1% par mois)</span>
-            <span className="font-medium text-bgs-blue">2000 €</span>
-          </div>
-          <Progress value={27} className="h-1 bg-gray-100" indicatorClassName="bg-blue-500" />
+      ) : investments.length === 0 ? (
+        <div className="text-center py-4">
+          <p className="text-xs text-bgs-gray-medium">Aucun investissement trouvé</p>
         </div>
-        
-        <div>
-          <div className="flex justify-between text-xs mb-1">
-            <span className="text-bgs-gray-medium">BGS Logistics (1.08% par mois)</span>
-            <span className="font-medium text-bgs-blue">3000 €</span>
-          </div>
-          <Progress value={40} className="h-1 bg-gray-100" indicatorClassName="bg-green-500" />
+      ) : (
+        <div className="space-y-3">
+          {investments.map((item: any, index) => (
+            <div key={index}>
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-bgs-gray-medium">{item.project.name} ({item.project.yield}% par mois)</span>
+                <span className="font-medium text-bgs-blue">{item.totalAmount} €</span>
+              </div>
+              <Progress 
+                value={totalInvested > 0 ? (item.totalAmount / totalInvested) * 100 : 0} 
+                className="h-1 bg-gray-100" 
+                indicatorClassName={
+                  index % 3 === 0 ? "bg-bgs-orange" : 
+                  index % 3 === 1 ? "bg-blue-500" : "bg-green-500"
+                } 
+              />
+            </div>
+          ))}
         </div>
-      </div>
+      )}
       
       <div className="mt-4 pt-3 border-t border-gray-100">
         <button 

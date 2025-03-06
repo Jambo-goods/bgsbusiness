@@ -3,7 +3,9 @@ import { Link } from "react-router-dom";
 import { Project } from "@/types/project";
 import { Progress } from "@/components/ui/progress";
 import { SearchIcon, FilterIcon, ArrowUpDownIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface InvestmentsProps {
   userInvestments: Project[];
@@ -14,21 +16,65 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
   const [sortBy, setSortBy] = useState("date");
   const [filterActive, setFilterActive] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [investments, setInvestments] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    async function fetchUserInvestments() {
+      setIsLoading(true);
+      try {
+        const { data: user } = await supabase.auth.getUser();
+        
+        if (!user.user) {
+          setInvestments([]);
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from('investments')
+          .select(`
+            *,
+            projects(*)
+          `)
+          .eq('user_id', user.user.id);
+          
+        if (error) {
+          console.error("Erreur lors du chargement des investissements:", error);
+          throw error;
+        }
+        
+        setInvestments(data || []);
+      } catch (error) {
+        console.error("Erreur:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger vos investissements",
+          variant: "destructive"
+        });
+        setInvestments([]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchUserInvestments();
+  }, [toast]);
   
   // Filtered and sorted investments
-  const filteredInvestments = userInvestments
-    .filter(project => 
-      filterActive ? project.status === "active" : true
+  const filteredInvestments = investments
+    .filter(investment => 
+      filterActive ? investment.projects?.status === "active" : true
     )
-    .filter(project => 
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.location.toLowerCase().includes(searchTerm.toLowerCase())
+    .filter(investment => 
+      investment.projects?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      investment.projects?.location.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
-      if (sortBy === "name") return a.name.localeCompare(b.name);
-      if (sortBy === "yield") return b.yield - a.yield;
+      if (sortBy === "name") return a.projects?.name.localeCompare(b.projects?.name);
+      if (sortBy === "yield") return b.projects?.yield - a.projects?.yield;
       // Default sort by date (newest first)
-      return -1; // Simulating date sort (in a real app, we'd compare actual dates)
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   
   return (
@@ -103,64 +149,68 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
         </div>
         
         <div className="space-y-3">
-          {filteredInvestments.length === 0 ? (
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-bgs-orange"></div>
+            </div>
+          ) : filteredInvestments.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-sm text-bgs-gray-medium">Aucun investissement trouvé</p>
             </div>
           ) : (
-            filteredInvestments.map((project) => (
-              <div key={project.id} className="border bg-white rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            filteredInvestments.map((investment) => (
+              <div key={investment.id} className="border bg-white rounded-md overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex flex-col md:flex-row">
                   <img 
-                    src={project.image} 
-                    alt={project.name} 
+                    src={investment.projects?.image} 
+                    alt={investment.projects?.name} 
                     className="w-full md:w-40 h-32 object-cover"
                   />
                   <div className="p-3 flex-1">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-medium text-bgs-blue text-sm mb-0.5">{project.name}</h3>
-                        <p className="text-xs text-bgs-gray-medium mb-2">{project.location}</p>
+                        <h3 className="font-medium text-bgs-blue text-sm mb-0.5">{investment.projects?.name}</h3>
+                        <p className="text-xs text-bgs-gray-medium mb-2">{investment.projects?.location}</p>
                       </div>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        project.status === 'active' 
+                        investment.projects?.status === 'active' 
                           ? 'bg-blue-100 text-blue-600' 
-                          : project.status === 'completed'
+                          : investment.projects?.status === 'completed'
                           ? 'bg-green-100 text-green-600'
                           : 'bg-orange-100 text-orange-600'
                       }`}>
-                        {project.status === 'active' ? 'Actif' : project.status === 'completed' ? 'Complété' : 'À venir'}
+                        {investment.projects?.status === 'active' ? 'Actif' : investment.projects?.status === 'completed' ? 'Complété' : 'À venir'}
                       </span>
                     </div>
                     
                     <p className="text-xs text-bgs-blue/80 mb-3 line-clamp-1">
-                      {project.description}
+                      {investment.projects?.description}
                     </p>
                     
                     <div className="mb-3">
                       <div className="flex justify-between text-xs mb-1">
                         <span className="text-bgs-gray-medium">Progression</span>
-                        <span className="font-medium text-bgs-blue">{project.fundingProgress}%</span>
+                        <span className="font-medium text-bgs-blue">{investment.projects?.fundingProgress}%</span>
                       </div>
-                      <Progress value={project.fundingProgress} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
+                      <Progress value={investment.projects?.fundingProgress} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
                     </div>
                     
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       <div>
                         <p className="text-xs text-bgs-gray-medium">Montant investi</p>
-                        <p className="font-medium text-bgs-blue text-sm">2500 €</p>
+                        <p className="font-medium text-bgs-blue text-sm">{investment.amount} €</p>
                       </div>
                       <div>
                         <p className="text-xs text-bgs-gray-medium">Rendement mensuel</p>
-                        <p className="font-medium text-green-500 text-sm">{project.yield}%</p>
+                        <p className="font-medium text-green-500 text-sm">{investment.projects?.yield}%</p>
                       </div>
                       <div>
                         <p className="text-xs text-bgs-gray-medium">Date</p>
-                        <p className="font-medium text-bgs-blue text-sm">15/03/2023</p>
+                        <p className="font-medium text-bgs-blue text-sm">{new Date(investment.created_at).toLocaleDateString('fr-FR')}</p>
                       </div>
                       <div>
                         <p className="text-xs text-bgs-gray-medium">Duration</p>
-                        <p className="font-medium text-bgs-blue text-sm">{project.duration}</p>
+                        <p className="font-medium text-bgs-blue text-sm">{investment.duration} mois</p>
                       </div>
                     </div>
                   </div>
