@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, AlertCircle } from "lucide-react";
@@ -6,6 +7,10 @@ import NameFields from "./NameFields";
 import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import TermsCheckbox from "./TermsCheckbox";
+import { registerUser } from "@/services/authService";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
 export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -16,73 +21,107 @@ export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // Validation basique
+    // Validation
+    if (!firstName.trim() || !lastName.trim()) {
+      setError("Veuillez remplir tous les champs");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Les mots de passe ne correspondent pas");
       return;
     }
+
+    if (password.length < 6) {
+      setError("Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
     if (!termsAccepted) {
       setError("Vous devez accepter les conditions d'utilisation");
       return;
     }
+
     setIsLoading(true);
+    
     try {
-      // Simulation d'un délai de réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log("Registration attempt with:", {
+      const result = await registerUser({
         firstName,
         lastName,
-        email
+        email,
+        password
       });
 
-      // For demo purposes, create a user and store in localStorage
-      // In a real app, this would send the data to a backend
-      const userData = {
-        firstName,
-        lastName,
-        email
-      };
-      localStorage.setItem("user", JSON.stringify(userData));
-      toast({
-        title: "Inscription réussie",
-        description: "Votre compte a été créé avec succès"
-      });
-      navigate("/dashboard");
+      if (result.success) {
+        toast({
+          title: "Inscription réussie",
+          description: "Votre compte a été créé avec succès"
+        });
+        navigate("/dashboard");
+      } else {
+        setError(result.error || "Une erreur s'est produite lors de l'inscription");
+      }
     } catch (err) {
-      setError("Une erreur s'est produite lors de l'inscription");
       console.error("Registration error:", err);
+      setError("Une erreur s'est produite lors de l'inscription");
     } finally {
       setIsLoading(false);
     }
   };
-  return <div className="glass-card p-6 md:p-8">
-      {error && <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
-          <AlertCircle size={18} className="mr-2 flex-shrink-0" />
-          
-        </div>}
+
+  return (
+    <div className="glass-card p-6 md:p-8">
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-6">
-        <NameFields firstName={firstName} lastName={lastName} setFirstName={setFirstName} setLastName={setLastName} />
+        <NameFields 
+          firstName={firstName} 
+          lastName={lastName} 
+          setFirstName={setFirstName} 
+          setLastName={setLastName} 
+        />
         
-        <EmailField email={email} setEmail={setEmail} />
+        <EmailField 
+          email={email} 
+          setEmail={setEmail} 
+        />
         
-        <PasswordFields password={password} confirmPassword={confirmPassword} setPassword={setPassword} setConfirmPassword={setConfirmPassword} />
+        <PasswordFields 
+          password={password} 
+          confirmPassword={confirmPassword} 
+          setPassword={setPassword} 
+          setConfirmPassword={setConfirmPassword} 
+        />
         
-        <TermsCheckbox termsAccepted={termsAccepted} setTermsAccepted={setTermsAccepted} />
+        <TermsCheckbox 
+          termsAccepted={termsAccepted} 
+          setTermsAccepted={setTermsAccepted} 
+        />
         
-        <button type="submit" disabled={isLoading} className="w-full btn-primary flex items-center justify-center gap-2">
-          {isLoading ? "Inscription en cours..." : <>
+        <Button 
+          type="submit" 
+          disabled={isLoading}
+          className="w-full btn-primary flex items-center justify-center gap-2"
+        >
+          {isLoading ? "Inscription en cours..." : (
+            <>
               Créer mon compte
               <ArrowRight size={18} />
-            </>}
-        </button>
+            </>
+          )}
+        </Button>
       </form>
-    </div>;
+    </div>
+  );
 }
