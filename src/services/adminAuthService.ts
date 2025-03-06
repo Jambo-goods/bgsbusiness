@@ -21,12 +21,11 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
   try {
     console.log("Attempting login with email:", email);
     
-    // Fetch admin user with the given email
-    const { data: adminUser, error } = await supabase
+    // Fetch admin user with the given email - using maybeSingle instead of single
+    const { data: adminUsers, error } = await supabase
       .from('admin_users')
       .select('*')
-      .eq('email', email)
-      .single();
+      .eq('email', email);
 
     if (error) {
       console.error("Error fetching admin user:", error);
@@ -34,11 +33,12 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
       return { success: false, error: "Erreur de connexion à la base de données" };
     }
     
-    if (!adminUser) {
+    if (!adminUsers || adminUsers.length === 0) {
       console.log("No admin user found with this email");
       return { success: false, error: "Email ou mot de passe incorrect" };
     }
 
+    const adminUser = adminUsers[0];
     console.log("Admin user found:", adminUser);
     
     // Direct password comparison - we'll trim both just in case there are whitespace issues
