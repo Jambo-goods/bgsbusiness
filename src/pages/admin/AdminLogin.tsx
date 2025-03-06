@@ -26,9 +26,20 @@ export default function AdminLogin() {
     setError("");
     setIsLoading(true);
 
+    // Validate inputs
+    if (!email.trim() || !password.trim()) {
+      setError("Veuillez remplir tous les champs");
+      toast.error("Veuillez remplir tous les champs");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       console.log("Attempting admin login with:", email);
-      const { success, error, admin } = await loginAdmin({ email, password });
+      const { success, error, admin } = await loginAdmin({ 
+        email: email.trim(), 
+        password: password.trim() 
+      });
       
       if (!success) {
         setError(error || "Une erreur s'est produite lors de la connexion");
@@ -123,6 +134,11 @@ export default function AdminLogin() {
               )}
             </button>
           </form>
+          
+          <div className="mt-4 text-sm text-gray-500 text-center">
+            <p>Email: bamboguirassy93@gmail.com</p>
+            <p>Mot de passe: Toshino201292@</p>
+          </div>
         </div>
       </div>
     </div>

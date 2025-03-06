@@ -30,41 +30,49 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
 
     if (error) {
       console.error("Error fetching admin user:", error);
-      throw error;
+      toast.error("Erreur lors de la récupération des informations de l'administrateur");
+      return { success: false, error: "Erreur de connexion à la base de données" };
     }
     
     if (!adminUser) {
       console.log("No admin user found with this email");
-      return { success: false, error: "Identifiants invalides" };
+      return { success: false, error: "Email ou mot de passe incorrect" };
     }
 
-    console.log("Admin user found:", adminUser.email);
+    console.log("Admin user found:", adminUser);
     
-    // Direct password comparison
-    // Note: In a production environment, you should use hashed passwords
-    const isValidPassword = password === adminUser.password;
+    // Direct password comparison - we'll trim both just in case there are whitespace issues
+    const isValidPassword = password.trim() === adminUser.password.trim();
 
     if (!isValidPassword) {
       console.log("Invalid password provided");
-      return { success: false, error: "Identifiants invalides" };
+      return { success: false, error: "Email ou mot de passe incorrect" };
     }
 
     console.log("Password validated successfully");
 
     // Update last login time
-    await supabase
+    const { error: updateError } = await supabase
       .from('admin_users')
       .update({ last_login: new Date().toISOString() })
       .eq('id', adminUser.id);
+      
+    if (updateError) {
+      console.error("Error updating last login:", updateError);
+    }
 
     // Log admin action
-    await supabase
+    const { error: logError } = await supabase
       .from('admin_logs')
       .insert({
         admin_id: adminUser.id,
         action_type: 'login',
         description: `Admin ${adminUser.email} s'est connecté`
       });
+      
+    if (logError) {
+      console.error("Error logging admin action:", logError);
+    }
 
     // Store admin session in localStorage
     localStorage.setItem('admin_user', JSON.stringify(adminUser));
