@@ -27,11 +27,39 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
       passwordLength: password ? password.length : 0 
     });
 
+    // Create a hardcoded admin user for testing if none exists in DB
+    const { data: adminCheckData, error: checkError } = await supabase
+      .from('admin_users')
+      .select('count(*)', { count: 'exact', head: true });
+      
+    if (checkError) {
+      console.error("Error checking admin users:", checkError);
+    }
+    
+    // If no admin users exist, create one
+    if (!adminCheckData || adminCheckData.count === 0) {
+      console.log("No admin users found. Creating default admin");
+      const { error: insertError } = await supabase
+        .from('admin_users')
+        .insert({
+          email: 'bamboguirassy93@gmail.com',
+          password: 'Toshino201292@',
+          first_name: 'Admin',
+          last_name: 'User'
+        });
+        
+      if (insertError) {
+        console.error("Error creating default admin:", insertError);
+      } else {
+        console.log("Default admin created successfully");
+      }
+    }
+
     // Fetch admin user with the given email
     const { data: adminUsers, error } = await supabase
       .from('admin_users')
       .select('*')
-      .eq('email', email.trim().toLowerCase());
+      .eq('email', email.toLowerCase());
 
     if (error) {
       console.error("Error fetching admin user:", error);
@@ -47,7 +75,7 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
     const adminUser = adminUsers[0];
     console.log("Admin user found:", adminUser);
     
-    // Direct password comparison - without trimming to be exact
+    // Direct password comparison without any transformations
     const isValidPassword = password === adminUser.password;
 
     console.log("Password validation result:", isValidPassword);

@@ -41,18 +41,20 @@ export default function AdminLogin() {
         password 
       });
       
-      if (!success) {
-        setError(error || "Une erreur s'est produite lors de la connexion");
-        toast.error(error || "Une erreur s'est produite lors de la connexion");
+      if (!success || !admin) {
+        const errorMessage = error || "Une erreur s'est produite lors de la connexion";
+        setError(errorMessage);
+        toast.error(errorMessage);
         setIsLoading(false);
         return;
       }
       
-      if (admin) {
-        toast.success("Connexion réussie");
-        setAdminUser(admin);
-        navigate("/admin/dashboard");
-      }
+      toast.success("Connexion réussie");
+      setAdminUser(admin);
+      
+      // Ensure we navigate to the dashboard
+      console.log("Navigating to dashboard...");
+      navigate("/admin/dashboard");
     } catch (err: any) {
       console.error("Admin login error:", err);
       setError("Une erreur s'est produite lors de la connexion");
