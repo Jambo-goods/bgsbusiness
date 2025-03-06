@@ -143,11 +143,16 @@ export const useDashboardCardData = (userData: {
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       
-      const { data: investmentsData } = await supabase
+      const { data: investmentsData, error } = await supabase
         .from('investments')
-        .select('amount, project_id, created_at')
+        .select('amount, project_id, date')
         .eq('user_id', userId)
-        .gte('created_at', threeMonthsAgo.toISOString());
+        .gte('date', threeMonthsAgo.toISOString());
+      
+      if (error) {
+        console.error("Error fetching investments:", error);
+        return;
+      }
         
       if (investmentsData) {
         // Calculate new projects count in last 3 months
@@ -156,7 +161,7 @@ export const useDashboardCardData = (userData: {
         
         // Calculate investment change in last month
         const lastMonthInvestments = investmentsData
-          .filter(inv => new Date(inv.created_at) >= oneMonthAgo)
+          .filter(inv => new Date(inv.date) >= oneMonthAgo)
           .reduce((sum, inv) => sum + inv.amount, 0);
         
         if (userData.investmentTotal > 0) {
