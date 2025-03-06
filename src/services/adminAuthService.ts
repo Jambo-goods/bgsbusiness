@@ -27,17 +27,17 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
       passwordLength: password ? password.length : 0 
     });
 
-    // Create a hardcoded admin user for testing if none exists in DB
-    const { data: adminCheckData, error: checkError } = await supabase
+    // Check if any admin users exist
+    const { data: adminCount, error: checkError } = await supabase
       .from('admin_users')
-      .select('count(*)', { count: 'exact', head: true });
+      .select('*', { count: 'exact' });
       
     if (checkError) {
       console.error("Error checking admin users:", checkError);
     }
     
     // If no admin users exist, create one
-    if (!adminCheckData || adminCheckData.count === 0) {
+    if (!adminCount || adminCount.length === 0) {
       console.log("No admin users found. Creating default admin");
       const { error: insertError } = await supabase
         .from('admin_users')
