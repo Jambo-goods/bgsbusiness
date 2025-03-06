@@ -83,4 +83,24 @@ export const projects: Project[] = [
     endDate: "2025-02-15",
     image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
   },
+  {
+    id: "poules-pondeuses",
+    name: "BGS Poules Pondeuses",
+    companyName: "BGS Aviculture",
+    description: "Installation d'un poulailler moderne pour la production d'œufs biologiques avec des poules élevées en plein air.",
+    profitability: 18,
+    duration: "24 mois",
+    location: "Afrique centrale",
+    status: "active",
+    minInvestment: 2000,
+    category: "Agriculture",
+    price: 80000,
+    yield: 18,
+    fundingProgress: 10,
+    featured: true,
+    possibleDurations: [12, 24, 36],
+    startDate: "2024-07-01",
+    endDate: "2026-07-01",
+    image: "https://images.unsplash.com/photo-1569615313731-7294bb3843be?q=80&w=1000&auto=format&fit=crop"
+  },
 ];

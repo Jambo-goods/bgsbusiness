@@ -68,3 +68,39 @@ export const createProjectInDatabase = async (project: Project, toast: any) => {
     throw error;
   }
 };
+
+// Fonction pour récupérer tous les projets de la base de données
+export const fetchProjectsFromDatabase = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*');
+      
+    if (error) {
+      console.error("Erreur lors de la récupération des projets:", error);
+      throw error;
+    }
+    
+    return data.map(project => ({
+      id: project.id,
+      name: project.name,
+      companyName: project.company_name,
+      description: project.description,
+      profitability: project.profitability,
+      duration: project.duration,
+      location: project.location,
+      status: project.status,
+      minInvestment: project.min_investment,
+      category: project.category,
+      price: project.price,
+      yield: project.yield,
+      fundingProgress: project.funding_progress,
+      featured: project.featured,
+      possibleDurations: project.possible_durations,
+      image: project.image
+    }));
+  } catch (error) {
+    console.error("Erreur dans fetchProjectsFromDatabase:", error);
+    throw error;
+  }
+};

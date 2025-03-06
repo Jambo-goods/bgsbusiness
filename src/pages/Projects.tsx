@@ -4,11 +4,17 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import ProjectsHero from "@/components/projects/ProjectsHero";
 import ProjectsList from "@/components/projects/ProjectsList";
-import { projects } from "@/data/projects";
+import { projects as localProjects } from "@/data/projects";
 import { ArrowUpIcon } from "lucide-react";
+import { Project } from "@/types/project";
+import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Projects() {
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [projects, setProjects] = useState<Project[]>(localProjects);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
   
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -24,6 +30,30 @@ export default function Projects() {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        setIsLoading(true);
+        const databaseProjects = await fetchProjectsFromDatabase();
+        
+        if (databaseProjects && databaseProjects.length > 0) {
+          setProjects(databaseProjects);
+        }
+      } catch (error) {
+        console.error("Erreur lors du chargement des projets:", error);
+        toast({
+          title: "Erreur de chargement",
+          description: "Impossible de charger les projets depuis la base de données. Affichage des projets locaux.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadProjects();
+  }, [toast]);
   
   const scrollToTop = () => {
     window.scrollTo({
@@ -73,7 +103,13 @@ export default function Projects() {
         
         {/* Projects list */}
         <section className="container px-4 md:px-6 mx-auto">
-          <ProjectsList projects={projects} />
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
+            </div>
+          ) : (
+            <ProjectsList projects={projects} />
+          )}
         </section>
       </main>
       
