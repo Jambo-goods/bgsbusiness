@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { Slider } from "@/components/ui/slider";
@@ -46,6 +45,23 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
     };
     
     fetchUserBalance();
+    
+    // Set up realtime subscription for profile changes
+    const profileChannel = supabase
+      .channel('simulator_balance_updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles'
+      }, () => {
+        console.log('Profile updated, refreshing user balance...');
+        fetchUserBalance();
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(profileChannel);
+    };
   }, []);
   
   // Calculer les rendements lorsque les entrées changent
@@ -127,7 +143,7 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
             <p className="text-xs text-bgs-blue/70 mb-1">Rendement annuel</p>
             <div className="flex items-center text-green-600 font-bold">
               <TrendingUp className="h-4 w-4 mr-1" />
-              {annualYieldPercentage}% par an
+              {project.yield * 12}% par an
             </div>
           </div>
           <div>

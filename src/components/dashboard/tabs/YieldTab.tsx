@@ -17,6 +17,23 @@ export default function YieldTab() {
 
   useEffect(() => {
     fetchInvestmentYields();
+    
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('public:investments')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'investments'
+      }, () => {
+        // When any change happens to investments, refetch
+        fetchInvestmentYields();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchInvestmentYields = async () => {
