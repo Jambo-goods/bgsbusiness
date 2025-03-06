@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import { Edit, Save } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface InvestmentAmountSectionProps {
   investmentAmount: number;
@@ -52,15 +54,22 @@ export default function InvestmentAmountSection({
       </div>
       
       {isEditingAmount ? (
-        <input 
-          type="number"
-          value={investmentAmount}
-          onChange={handleInputChange}
-          min={minInvestment}
-          max={maxInvestment}
-          step={100}
-          className="w-full p-2 border border-bgs-blue/20 rounded bg-white focus:outline-none focus:ring-2 focus:ring-bgs-orange/50"
-        />
+        <div className="space-y-2">
+          <Label htmlFor="investment-amount">Montant (€)</Label>
+          <Input 
+            id="investment-amount"
+            type="number"
+            value={investmentAmount}
+            onChange={handleInputChange}
+            min={minInvestment}
+            max={maxInvestment}
+            step={100}
+            className="w-full p-2 border border-bgs-blue/20 rounded bg-white focus:outline-none focus:ring-2 focus:ring-bgs-orange/50"
+          />
+          <div className="text-xs text-bgs-blue/70 mt-1">
+            Montant minimum: {minInvestment}€ | Maximum: {maxInvestment}€
+          </div>
+        </div>
       ) : (
         <>
           <div className="mb-3">
