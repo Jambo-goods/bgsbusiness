@@ -27,15 +27,18 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
+      console.log("Attempting admin login with:", email);
       const { success, error, admin } = await loginAdmin({ email, password });
       
       if (!success) {
+        console.log("Login failed:", error);
         setError(error || "Une erreur s'est produite lors de la connexion");
         setIsLoading(false);
         return;
       }
       
       if (admin) {
+        console.log("Login successful, redirecting to dashboard");
         toast.success("Connexion réussie");
         setAdminUser(admin);
         navigate("/admin/dashboard");

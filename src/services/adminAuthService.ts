@@ -24,16 +24,24 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
       .from('admin_users')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
-    if (error) throw error;
-    if (!adminUser) return { success: false, error: "Identifiants invalides" };
+    if (error) {
+      console.error("Database error:", error);
+      return { success: false, error: "Une erreur est survenue lors de la connexion" };
+    }
+    
+    if (!adminUser) {
+      console.log("No admin user found with this email");
+      return { success: false, error: "Identifiants invalides" };
+    }
 
     // In a real implementation, you would use bcrypt to compare passwords
     // For demo purposes, we're doing a simple comparison
     const isValidPassword = password === adminUser.password;
 
     if (!isValidPassword) {
+      console.log("Invalid password");
       return { success: false, error: "Identifiants invalides" };
     }
 
@@ -44,13 +52,18 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
       .eq('id', adminUser.id);
 
     // Log admin action
-    await supabase
-      .from('admin_logs')
-      .insert({
-        admin_id: adminUser.id,
-        action_type: 'login',
-        description: `Admin ${adminUser.email} s'est connecté`
-      });
+    try {
+      await supabase
+        .from('admin_logs')
+        .insert({
+          admin_id: adminUser.id,
+          action_type: 'login',
+          description: `Admin ${adminUser.email} s'est connecté`
+        });
+    } catch (logError) {
+      // Still proceed with login even if logging fails
+      console.warn("Failed to log admin action:", logError);
+    }
 
     // Store admin session in localStorage
     localStorage.setItem('admin_user', JSON.stringify(adminUser));
