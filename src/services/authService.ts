@@ -27,6 +27,26 @@ export const registerUser = async (userData: UserRegistrationData) => {
 
     if (error) throw error;
     
+    // Manually create the profile after successful registration
+    if (data?.user?.id) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          email: userData.email,
+          investment_total: 0,
+          projects_count: 0,
+          wallet_balance: 0
+        });
+        
+      if (profileError) {
+        console.error("Error creating profile:", profileError);
+        // Continue anyway, as the auth trigger should handle this in production
+      }
+    }
+    
     return { success: true, data };
   } catch (error: any) {
     console.error("Registration error:", error);

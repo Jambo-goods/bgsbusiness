@@ -10,6 +10,7 @@ import DashboardLoading from "@/components/dashboard/DashboardLoading";
 import { projects } from "@/data/projects";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export default function Dashboard() {
   // Possible activeTab values: "overview", "wallet", "capital", "yield", "investments", "tracking", "profile", "settings"
@@ -54,9 +55,45 @@ export default function Dashboard() {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Changed from single() to maybeSingle() to handle missing profile
         
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile fetch error:", profileError);
+        
+        // If profile doesn't exist, create a default one
+        if (profileError.message.includes("contains 0 rows")) {
+          const userMeta = sessionData.session.user.user_metadata || {};
+          
+          // Create a default profile with data from the user metadata
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({
+              id: userId,
+              first_name: userMeta.first_name || "Utilisateur",
+              last_name: userMeta.last_name || "",
+              email: sessionData.session.user.email,
+              investment_total: 0,
+              projects_count: 0,
+              wallet_balance: 0
+            });
+            
+          if (insertError) {
+            console.error("Error creating default profile:", insertError);
+            toast.error("Erreur lors de la création du profil");
+          } else {
+            // Refetch the profile
+            const { data: newProfileData } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', userId)
+              .maybeSingle();
+              
+            if (newProfileData) {
+              profileData = newProfileData;
+            }
+          }
+        }
+      }
       
       // Fetch user investments
       const { data: investmentsData, error: investmentsError } = await supabase
@@ -65,12 +102,14 @@ export default function Dashboard() {
         .eq('user_id', userId)
         .order('date', { ascending: false });
         
-      if (investmentsError) throw investmentsError;
+      if (investmentsError) {
+        console.error("Investments fetch error:", investmentsError);
+      }
       
       // Get actual project details for each investment
       let userProjects = [];
       
-      if (investmentsData.length > 0) {
+      if (investmentsData && investmentsData.length > 0) {
         // Get unique project IDs
         const projectIds = [...new Set(investmentsData.map(inv => inv.project_id))];
         
@@ -80,17 +119,21 @@ export default function Dashboard() {
           .select('*')
           .in('id', projectIds);
           
-        if (projectsError) throw projectsError;
+        if (projectsError) {
+          console.error("Projects fetch error:", projectsError);
+        }
         
-        // Combine with investment data
-        userProjects = projectsData.map(project => {
-          const investment = investmentsData.find(inv => inv.project_id === project.id);
-          return {
-            ...project,
-            investedAmount: investment ? investment.amount : 0,
-            investmentDate: investment ? investment.date : null
-          };
-        });
+        if (projectsData) {
+          // Combine with investment data
+          userProjects = projectsData.map(project => {
+            const investment = investmentsData.find(inv => inv.project_id === project.id);
+            return {
+              ...project,
+              investedAmount: investment ? investment.amount : 0,
+              investmentDate: investment ? investment.date : null
+            };
+          });
+        }
       } else {
         // If no investments, show demo projects (only in development)
         userProjects = projects.slice(0, 3);
@@ -114,21 +157,23 @@ export default function Dashboard() {
         localStorage.removeItem("recentInvestment");
       }
       
+      // Use profile data if available, otherwise use default values
       setUserData({
-        firstName: profileData.first_name || "Jean",
-        lastName: profileData.last_name || "Dupont",
-        email: profileData.email || "jean.dupont@example.com",
-        phone: profileData.phone || "+33 6 12 34 56 78",
-        address: profileData.address || "123 Avenue des Champs-Élysées, Paris",
-        investmentTotal: profileData.investment_total || 0,
-        projectsCount: profileData.projects_count || 0,
-        walletBalance: profileData.wallet_balance || 0
+        firstName: profileData?.first_name || sessionData.session.user.user_metadata?.first_name || "Utilisateur",
+        lastName: profileData?.last_name || sessionData.session.user.user_metadata?.last_name || "",
+        email: profileData?.email || sessionData.session.user.email || "",
+        phone: profileData?.phone || "",
+        address: profileData?.address || "",
+        investmentTotal: profileData?.investment_total || 0,
+        projectsCount: profileData?.projects_count || 0,
+        walletBalance: profileData?.wallet_balance || 0
       });
       
       setUserInvestments(userProjects);
       
     } catch (error) {
       console.error("Error fetching user data:", error);
+      toast.error("Erreur lors du chargement des données utilisateur");
     } finally {
       setIsLoading(false);
     }
