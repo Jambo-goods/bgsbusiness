@@ -1,160 +1,146 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-type AdminDashboardStats = {
+export interface AdminStats {
   userCount: number;
   totalInvestments: number;
   totalProjects: number;
   pendingWithdrawals: number;
-};
+}
 
-export default function useAdminDashboard() {
-  const [stats, setStats] = useState<AdminDashboardStats>({
+export interface AdminLog {
+  id: string;
+  action_type: string;
+  description: string;
+  created_at: string;
+  admin_id: string;
+  admin_users?: {
+    first_name: string | null;
+    last_name: string | null;
+  };
+}
+
+export function useAdminDashboard() {
+  const [stats, setStats] = useState<AdminStats>({
     userCount: 0,
     totalInvestments: 0,
     totalProjects: 0,
     pendingWithdrawals: 0
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [adminLogs, setAdminLogs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [realTimeStatus, setRealTimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
 
-  const fetchDashboardStats = async () => {
+  // Fetch dashboard data
+  const fetchDashboardData = useCallback(async () => {
     try {
-      setIsLoading(true);
+      setIsRefreshing(true);
+      console.log("Fetching admin dashboard data...");
       
-      // Fetch user count
+      // Get user count
       const { count: userCount, error: userError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
-        
+      
       if (userError) throw userError;
       
-      // Fetch total investment amount
-      const { data: investmentData, error: investmentError } = await supabase
+      // Get total investments
+      const { data: investmentsData, error: investmentsError } = await supabase
         .from('investments')
-        .select('amount')
-        .eq('status', 'active');
-        
-      if (investmentError) throw investmentError;
+        .select('amount');
       
-      const totalInvestments = investmentData.reduce((sum, item) => sum + item.amount, 0);
+      if (investmentsError) throw investmentsError;
       
-      // Fetch project count
-      const { count: projectCount, error: projectError } = await supabase
+      const totalInvestments = investmentsData?.reduce((sum, inv) => sum + inv.amount, 0) || 0;
+      
+      // Get total projects
+      const { count: totalProjects, error: projectsError } = await supabase
         .from('projects')
         .select('*', { count: 'exact', head: true });
-        
-      if (projectError) throw projectError;
       
-      // Fetch pending withdrawals
-      const { count: pendingWithdrawals, error: withdrawalError } = await supabase
+      if (projectsError) throw projectsError;
+      
+      // Get pending withdrawals
+      const { count: pendingWithdrawals, error: withdrawalsError } = await supabase
         .from('withdrawal_requests')
         .select('*', { count: 'exact', head: true })
         .eq('status', 'pending');
-        
-      if (withdrawalError) throw withdrawalError;
       
+      if (withdrawalsError) throw withdrawalsError;
+      
+      // Get recent admin logs
+      const { data: logsData, error: logsError } = await supabase
+        .from('admin_logs')
+        .select(`
+          *,
+          admin_users(first_name, last_name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (logsError) throw logsError;
+      
+      // Update state with fetched data
       setStats({
         userCount: userCount || 0,
-        totalInvestments: totalInvestments,
-        totalProjects: projectCount || 0,
+        totalInvestments,
+        totalProjects: totalProjects || 0,
         pendingWithdrawals: pendingWithdrawals || 0
       });
       
-      console.log("Dashboard stats updated:", {
+      setAdminLogs(logsData || []);
+      
+      console.log("Admin dashboard data fetched successfully:", {
         userCount,
         totalInvestments,
-        projectCount,
-        pendingWithdrawals
+        totalProjects,
+        pendingWithdrawals,
+        logs: logsData?.length || 0
       });
       
+      setRealTimeStatus('connected');
+      
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
-      toast.error("Erreur de chargement", {
-        description: "Impossible de récupérer les statistiques du tableau de bord."
+      console.error("Error fetching admin dashboard data:", error);
+      toast.error("Erreur lors du chargement du tableau de bord", {
+        description: "Veuillez réessayer plus tard ou contacter le support."
       });
+      setRealTimeStatus('error');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
-  
-  const fetchRecentAdminLogs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('admin_logs')
-        .select(`
-          id,
-          action_type,
-          description,
-          created_at,
-          admin_id,
-          admin_users(first_name, last_name)
-        `)
-        .order('created_at', { ascending: false })
-        .limit(5);
-        
-      if (error) throw error;
-      
-      setAdminLogs(data || []);
-    } catch (error) {
-      console.error('Error fetching admin logs:', error);
-    }
-  };
-  
-  const handleManualRefresh = () => {
-    setIsRefreshing(true);
-    fetchDashboardStats();
-    fetchRecentAdminLogs();
-    toast.info("Actualisation en cours", {
-      description: "Les données du tableau de bord sont en cours d'actualisation."
-    });
-  };
+  }, []);
 
+  // Set up real-time subscriptions
   useEffect(() => {
-    // Fetch initial dashboard stats
-    fetchDashboardStats();
-    fetchRecentAdminLogs();
+    fetchDashboardData();
     
-    // Set up real-time subscriptions for changes in relevant tables
+    // Set up real-time subscriptions for dashboard data
     console.log("Setting up real-time subscriptions for admin dashboard...");
     
-    // Subscription for profiles (user count)
+    // Profiles subscription (for user count)
     const profilesChannel = supabase
       .channel('admin_profiles_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'profiles'
-      }, (payload) => {
-        console.log('Profiles data changed, refreshing stats...', payload);
-        fetchDashboardStats();
-        if (payload.eventType === 'INSERT') {
-          toast.success("Nouvel utilisateur", {
-            description: "Un nouvel utilisateur vient de s'inscrire."
-          });
-        } else {
-          toast.info("Mise à jour détectée", {
-            description: "Les données utilisateurs ont été mises à jour."
-          });
-        }
+      }, () => {
+        console.log('Profile data changed, refreshing admin dashboard...');
+        fetchDashboardData();
       })
       .subscribe((status) => {
-        console.log('Profiles subscription status:', status);
+        console.log('Admin profiles subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          setRealTimeStatus('connected');
           console.log('Successfully subscribed to profiles table');
-        } else if (status === 'CHANNEL_ERROR') {
-          setRealTimeStatus('error');
-          console.error('Error subscribing to profiles changes');
         }
       });
-      
-    // Subscription for investments
+    
+    // Investments subscription
     const investmentsChannel = supabase
       .channel('admin_investments_changes')
       .on('postgres_changes', {
@@ -162,15 +148,12 @@ export default function useAdminDashboard() {
         schema: 'public',
         table: 'investments'
       }, () => {
-        console.log('Investments data changed, refreshing stats...');
-        fetchDashboardStats();
-        toast.info("Mise à jour détectée", {
-          description: "Les données d'investissements ont été mises à jour."
-        });
+        console.log('Investment data changed, refreshing admin dashboard...');
+        fetchDashboardData();
       })
       .subscribe();
-      
-    // Subscription for projects
+    
+    // Projects subscription
     const projectsChannel = supabase
       .channel('admin_projects_changes')
       .on('postgres_changes', {
@@ -178,15 +161,12 @@ export default function useAdminDashboard() {
         schema: 'public',
         table: 'projects'
       }, () => {
-        console.log('Projects data changed, refreshing stats...');
-        fetchDashboardStats();
-        toast.info("Mise à jour détectée", {
-          description: "Les données des projets ont été mises à jour."
-        });
+        console.log('Project data changed, refreshing admin dashboard...');
+        fetchDashboardData();
       })
       .subscribe();
-      
-    // Subscription for withdrawal requests
+    
+    // Withdrawal requests subscription
     const withdrawalsChannel = supabase
       .channel('admin_withdrawals_changes')
       .on('postgres_changes', {
@@ -194,15 +174,12 @@ export default function useAdminDashboard() {
         schema: 'public',
         table: 'withdrawal_requests'
       }, () => {
-        console.log('Withdrawal requests changed, refreshing stats...');
-        fetchDashboardStats();
-        toast.info("Mise à jour détectée", {
-          description: "Des demandes de retrait ont été mises à jour."
-        });
+        console.log('Withdrawal data changed, refreshing admin dashboard...');
+        fetchDashboardData();
       })
       .subscribe();
-      
-    // Subscription for admin logs
+    
+    // Admin logs subscription
     const logsChannel = supabase
       .channel('admin_logs_changes')
       .on('postgres_changes', {
@@ -210,28 +187,27 @@ export default function useAdminDashboard() {
         schema: 'public',
         table: 'admin_logs'
       }, () => {
-        console.log('Admin logs changed, refreshing recent actions...');
-        fetchRecentAdminLogs();
+        console.log('Admin logs changed, refreshing admin dashboard...');
+        fetchDashboardData();
       })
       .subscribe();
     
-    // Clean up subscriptions on component unmount
     return () => {
-      console.log("Cleaning up real-time subscriptions");
+      console.log('Cleaning up admin dashboard real-time subscriptions');
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(investmentsChannel);
       supabase.removeChannel(projectsChannel);
       supabase.removeChannel(withdrawalsChannel);
       supabase.removeChannel(logsChannel);
     };
-  }, []);
+  }, [fetchDashboardData]);
 
   return {
     stats,
+    adminLogs,
     isLoading,
     isRefreshing,
-    adminLogs,
     realTimeStatus,
-    handleManualRefresh
+    refreshData: fetchDashboardData
   };
 }
