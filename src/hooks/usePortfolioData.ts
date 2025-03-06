@@ -66,8 +66,7 @@ export const usePortfolioData = () => {
       
       if (!session.session) {
         console.log('No active session found for portfolio data');
-        // Use placeholder data for unauthenticated users
-        setPortfolioData(generatePlaceholderData());
+        setPortfolioData([]);
         return;
       }
       
@@ -85,13 +84,13 @@ export const usePortfolioData = () => {
         toast.error("Erreur lors du chargement des données", {
           description: error.message
         });
-        setPortfolioData(generatePlaceholderData());
+        setPortfolioData([]);
         return;
       }
       
       if (!investments || investments.length === 0) {
-        console.log('No investment data found, using placeholder data');
-        setPortfolioData(generatePlaceholderData());
+        console.log('No investment data found');
+        setPortfolioData([]);
         return;
       }
       
@@ -104,7 +103,7 @@ export const usePortfolioData = () => {
       toast.error("Erreur inattendue", {
         description: "Un problème est survenu lors de la récupération des données du portefeuille."
       });
-      setPortfolioData(generatePlaceholderData());
+      setPortfolioData([]);
     } finally {
       setIsLoading(false);
     }
@@ -146,24 +145,6 @@ export const usePortfolioData = () => {
       name,
       value
     }));
-  };
-  
-  // Generate placeholder data for development/preview
-  const generatePlaceholderData = (): PortfolioDataPoint[] => {
-    return [
-      { name: 'Jan', value: 1500 },
-      { name: 'Fév', value: 1800 },
-      { name: 'Mar', value: 2000 },
-      { name: 'Avr', value: 2400 },
-      { name: 'Mai', value: 2200 },
-      { name: 'Juin', value: 2800 },
-      { name: 'Juil', value: 3000 },
-      { name: 'Août', value: 3300 },
-      { name: 'Sep', value: 3500 },
-      { name: 'Oct', value: 3800 },
-      { name: 'Nov', value: 4100 },
-      { name: 'Déc', value: 4500 },
-    ];
   };
 
   return {

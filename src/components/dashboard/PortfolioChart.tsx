@@ -54,8 +54,9 @@ export default function PortfolioChart() {
           </div>
         </div>
       ) : portfolioData.length === 0 ? (
-        <div className="h-60 flex items-center justify-center">
-          <p className="text-center text-gray-500">Aucune donnée disponible pour le portefeuille</p>
+        <div className="h-60 flex flex-col items-center justify-center space-y-2">
+          <p className="text-center text-gray-500">Aucune donnée d'investissement disponible</p>
+          <p className="text-center text-sm text-gray-400">Effectuez votre premier investissement pour voir le graphique</p>
         </div>
       ) : (
         <div className="h-60">

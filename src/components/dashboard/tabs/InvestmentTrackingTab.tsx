@@ -1,15 +1,13 @@
-
 import React from "react";
 import { Project } from "@/types/project";
+import { RefreshCcw } from "lucide-react";
 import FilterControls from "./investment-tracking/FilterControls";
-import ReturnsSummary from "./investment-tracking/ReturnsSummary";
 import PaymentsTable from "./investment-tracking/PaymentsTable";
-import LoadingIndicator from "./investment-tracking/LoadingIndicator";
+import ReturnsSummary from "./investment-tracking/ReturnsSummary";
 import HeaderSection from "./investment-tracking/HeaderSection";
+import LoadingIndicator from "./investment-tracking/LoadingIndicator";
 import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracking";
 import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
-import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
-import { AlertCircle, RefreshCcw } from "lucide-react";
 
 interface InvestmentTrackingTabProps {
   userInvestments: Project[];
