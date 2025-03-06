@@ -101,9 +101,9 @@ export default function DashboardCards({ userData }: DashboardCardsProps) {
       
       const { data: investmentsData } = await supabase
         .from('investments')
-        .select('amount, project_id')
+        .select('amount, project_id, created_at')
         .eq('user_id', userId)
-        .gte('date', threeMonthsAgo.toISOString());
+        .gte('created_at', threeMonthsAgo.toISOString());
         
       if (investmentsData) {
         // Calculate new projects count in last 3 months
@@ -112,7 +112,7 @@ export default function DashboardCards({ userData }: DashboardCardsProps) {
         
         // Calculate investment change in last month
         const lastMonthInvestments = investmentsData
-          .filter(inv => new Date(inv.date) >= oneMonthAgo)
+          .filter(inv => new Date(inv.created_at) >= oneMonthAgo)
           .reduce((sum, inv) => sum + inv.amount, 0);
         
         if (userData.investmentTotal > 0) {
