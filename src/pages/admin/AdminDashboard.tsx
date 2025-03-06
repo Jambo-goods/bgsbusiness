@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -16,6 +15,7 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [adminLogs, setAdminLogs] = useState<any[]>([]);
+  const [realTimeStatus, setRealTimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
 
   useEffect(() => {
     // Fetch initial dashboard stats
@@ -32,14 +32,29 @@ export default function AdminDashboard() {
         event: '*',
         schema: 'public',
         table: 'profiles'
-      }, () => {
-        console.log('Profiles data changed, refreshing stats...');
+      }, (payload) => {
+        console.log('Profiles data changed, refreshing stats...', payload);
         fetchDashboardStats();
-        toast.info("Mise à jour détectée", {
-          description: "Les données utilisateurs ont été mises à jour."
-        });
+        if (payload.eventType === 'INSERT') {
+          toast.success("Nouvel utilisateur", {
+            description: "Un nouvel utilisateur vient de s'inscrire."
+          });
+        } else {
+          toast.info("Mise à jour détectée", {
+            description: "Les données utilisateurs ont été mises à jour."
+          });
+        }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Profiles subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          setRealTimeStatus('connected');
+          console.log('Successfully subscribed to profiles table');
+        } else if (status === 'CHANNEL_ERROR') {
+          setRealTimeStatus('error');
+          console.error('Error subscribing to profiles changes');
+        }
+      });
       
     // Subscription for investments
     const investmentsChannel = supabase
@@ -239,17 +254,29 @@ export default function AdminDashboard() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-bgs-blue">Tableau de bord administrateur</h1>
-        <button 
-          onClick={handleManualRefresh}
-          disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-bgs-blue text-white rounded-lg hover:bg-bgs-blue-dark transition-colors"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Actualiser
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center">
+            <div className={`h-2 w-2 rounded-full mr-2 animate-pulse ${
+              realTimeStatus === 'connected' ? 'bg-green-500' : 
+              realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+            }`}></div>
+            <span className="text-sm text-gray-600 mr-3">
+              {realTimeStatus === 'connected' ? 'Temps réel actif' : 
+              realTimeStatus === 'error' ? 'Erreur de connexion' : 'Connexion...'}
+            </span>
+          </div>
+          <button 
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-bgs-blue text-white rounded-lg hover:bg-bgs-blue-dark transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Actualiser
+          </button>
+        </div>
       </div>
       
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+      <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
         <p className="text-gray-500">
           Bienvenue, <span className="font-medium text-bgs-blue">{adminUser?.first_name} {adminUser?.last_name}</span>.
           Dernière connexion: {lastLogin}

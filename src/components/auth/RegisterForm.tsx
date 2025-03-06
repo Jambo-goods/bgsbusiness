@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, AlertCircle } from "lucide-react";
@@ -51,6 +50,7 @@ export default function RegisterForm() {
     setIsLoading(true);
     
     try {
+      console.log("Tentative d'inscription avec:", { firstName, lastName, email });
       const result = await registerUser({
         firstName,
         lastName,
@@ -59,12 +59,16 @@ export default function RegisterForm() {
       });
 
       if (result.success) {
+        console.log("Inscription réussie:", result.data);
         toast({
           title: "Inscription réussie",
           description: "Votre compte a été créé avec succès"
         });
+        
+        // Redirection vers le tableau de bord après inscription réussie
         navigate("/dashboard");
       } else {
+        console.error("Erreur d'inscription:", result.error);
         setError(result.error || "Une erreur s'est produite lors de l'inscription");
       }
     } catch (err) {
