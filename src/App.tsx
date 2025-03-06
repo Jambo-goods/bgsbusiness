@@ -27,7 +27,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
-          <Route path="/projects/:id" element={<ProjectDetail />} />
+          {/* Removed duplicate route "/projects/:id" */}
           <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/about" element={<About />} />
           <Route path="/login" element={<Login />} />

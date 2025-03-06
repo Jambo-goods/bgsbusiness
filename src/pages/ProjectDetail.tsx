@@ -1,5 +1,6 @@
+
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { projects as localProjects } from "@/data/projects";
@@ -20,6 +21,7 @@ import ProjectInvestmentSimulator from "@/components/project-detail/ProjectInves
 
 export default function ProjectDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'updates'>('overview');
@@ -28,6 +30,13 @@ export default function ProjectDetail() {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Redirect if the user came from the old path "/projects/:id"
+    const path = window.location.pathname;
+    if (path.startsWith('/projects/') && id) {
+      navigate(`/project/${id}`, { replace: true });
+      return;
+    }
+
     window.scrollTo(0, 0);
     
     // Function to load project from database and local data
@@ -78,7 +87,7 @@ export default function ProjectDetail() {
     };
     
     loadProject();
-  }, [id, toast]);
+  }, [id, toast, navigate]);
 
   if (loading) {
     return <ProjectLoading />;
