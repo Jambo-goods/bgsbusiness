@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import Footer from "@/components/layout/Footer";
@@ -27,11 +28,86 @@ export default function Dashboard() {
   } | null>(null);
   const [userInvestments, setUserInvestments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [realTimeStatus, setRealTimeStatus] = useState('connecting');
   const navigate = useNavigate();
 
   useEffect(() => {
     window.scrollTo(0, 0);
     fetchUserData();
+    
+    // Set up real-time subscription for profile changes
+    const { data: sessionData } = supabase.auth.getSession();
+    if (sessionData && sessionData.session && sessionData.session.user) {
+      const userId = sessionData.session.user.id;
+      
+      console.log("Setting up real-time subscriptions for user dashboard");
+      
+      // Profile changes (wallet balance, investment total, etc.)
+      const profilesChannel = supabase
+        .channel('dashboard_profile_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`
+        }, (payload) => {
+          console.log('Profile data changed, refreshing dashboard...', payload);
+          fetchUserData();
+          toast.info("Mise à jour du profil", {
+            description: "Vos informations ont été mises à jour."
+          });
+        })
+        .subscribe((status) => {
+          console.log('Profile subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            setRealTimeStatus('connected');
+          } else if (status === 'CHANNEL_ERROR') {
+            setRealTimeStatus('error');
+            console.error('Error subscribing to profile changes');
+          }
+        });
+      
+      // Investments changes
+      const investmentsChannel = supabase
+        .channel('dashboard_investments_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'investments',
+          filter: `user_id=eq.${userId}`
+        }, (payload) => {
+          console.log('Investment data changed, refreshing dashboard...', payload);
+          fetchUserData();
+          toast.info("Mise à jour des investissements", {
+            description: "Vos investissements ont été mis à jour."
+          });
+        })
+        .subscribe();
+      
+      // Wallet transactions
+      const transactionsChannel = supabase
+        .channel('dashboard_transactions_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'wallet_transactions',
+          filter: `user_id=eq.${userId}`
+        }, (payload) => {
+          console.log('Wallet transaction detected, refreshing dashboard...', payload);
+          fetchUserData();
+          toast.info("Transaction détectée", {
+            description: "Votre solde a été mis à jour."
+          });
+        })
+        .subscribe();
+        
+      return () => {
+        console.log('Cleaning up dashboard real-time subscriptions');
+        supabase.removeChannel(profilesChannel);
+        supabase.removeChannel(investmentsChannel);
+        supabase.removeChannel(transactionsChannel);
+      };
+    }
   }, []);
   
   const fetchUserData = async () => {
@@ -206,6 +282,20 @@ export default function Dashboard() {
           isSidebarOpen={isSidebarOpen} 
           toggleSidebar={toggleSidebar} 
         />
+        
+        {/* Real-time status indicator (only visible in debugging mode) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="fixed bottom-4 right-4 flex items-center bg-white p-2 rounded-lg shadow-md z-50">
+            <div className={`h-2 w-2 rounded-full mr-2 animate-pulse ${
+              realTimeStatus === 'connected' ? 'bg-green-500' : 
+              realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+            }`}></div>
+            <span className="text-xs text-gray-600">
+              {realTimeStatus === 'connected' ? 'Temps réel actif' : 
+               realTimeStatus === 'error' ? 'Erreur temps réel' : 'Connexion...'}
+            </span>
+          </div>
+        )}
         
         {/* Sidebar */}
         <DashboardSidebar

@@ -5,6 +5,7 @@ import ChartsSection from "./overview/ChartsSection";
 import RecentProjects from "./RecentProjects";
 import { useEffect, useState } from "react";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OverviewProps {
   userData: {
@@ -20,6 +21,7 @@ interface OverviewProps {
 
 export default function Overview({ userData, userInvestments, setActiveTab }: OverviewProps) {
   const [showSuccess, setShowSuccess] = useState(false);
+  const [realTimeStatus, setRealTimeStatus] = useState('connecting');
   
   // Check local storage for recent investment
   useEffect(() => {
@@ -40,6 +42,25 @@ export default function Overview({ userData, userInvestments, setActiveTab }: Ov
       // Set state to indicate new investment
       setShowSuccess(true);
     }
+    
+    // Set up real-time check
+    const { data: sessionData } = supabase.auth.getSession();
+    if (sessionData && sessionData.session) {
+      const channel = supabase
+        .channel('overview_realtime_check')
+        .subscribe((status) => {
+          console.log('Overview realtime status check:', status);
+          if (status === 'SUBSCRIBED') {
+            setRealTimeStatus('connected');
+          } else if (status === 'CHANNEL_ERROR') {
+            setRealTimeStatus('error');
+          }
+        });
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, []);
 
   return (
@@ -50,6 +71,22 @@ export default function Overview({ userData, userInvestments, setActiveTab }: Ov
           <p className="text-sm">Vous pouvez voir les détails dans la section Investissements.</p>
         </div>
       )}
+      
+      {process.env.NODE_ENV === 'development' && (
+        <div className="text-right mb-2">
+          <div className="inline-flex items-center bg-white px-2 py-1 rounded text-xs">
+            <div className={`h-1.5 w-1.5 rounded-full mr-1 ${
+              realTimeStatus === 'connected' ? 'bg-green-500' : 
+              realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+            }`}></div>
+            <span className="text-gray-500">
+              {realTimeStatus === 'connected' ? 'Données en temps réel' : 
+               realTimeStatus === 'error' ? 'Mode hors ligne' : 'Connexion...'}
+            </span>
+          </div>
+        </div>
+      )}
+      
       <DashboardCards userData={userData} />
       <ChartsSection setActiveTab={setActiveTab} />
       <RecentProjects userInvestments={userInvestments} setActiveTab={setActiveTab} />
