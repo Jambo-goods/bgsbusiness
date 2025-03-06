@@ -83,24 +83,4 @@ export const projects: Project[] = [
     endDate: "2025-02-15",
     image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
   },
-  {
-    id: "laying-hens",
-    name: "BGS Poules Pondeuses",
-    companyName: "BGS Aviculture",
-    description: "Acquisition de poules pondeuses et construction d'installations modernes pour la production d'œufs biologiques destinés aux marchés locaux et à l'exportation.",
-    profitability: 14,
-    duration: "18 mois",
-    location: "Afrique Centrale",
-    status: "active",
-    minInvestment: 2000,
-    category: "Agriculture",
-    price: 85000,
-    yield: 14,
-    fundingProgress: 35,
-    featured: true,
-    possibleDurations: [6, 12, 18, 24],
-    startDate: new Date().toISOString(),
-    endDate: new Date(Date.now() + 18 * 30 * 24 * 60 * 60 * 1000).toISOString(),
-    image: "https://images.unsplash.com/photo-1569283864533-f9c2b6ae940f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-  },
 ];

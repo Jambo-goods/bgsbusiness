@@ -3,8 +3,6 @@ import React from "react";
 import { ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
 import { useInvestment } from "@/hooks/useInvestment";
-import { useToast } from "@/hooks/use-toast";
-import { createLayingHensProject } from "@/utils/projectUtils";
 
 // Import our components
 import InvestmentAmountSection from "./InvestmentAmountSection";
@@ -21,7 +19,6 @@ export default function InvestmentOptionsSection({
   project,
   investorCount
 }: InvestmentOptionsSectionProps) {
-  const { toast } = useToast();
   const {
     investmentAmount,
     setInvestmentAmount,
@@ -39,18 +36,6 @@ export default function InvestmentOptionsSection({
     confirmInvestment
   } = useInvestment(project, investorCount);
 
-  const handleCreateLayingHensProject = async () => {
-    try {
-      await createLayingHensProject(toast);
-      toast({
-        title: "Nouveau projet créé",
-        description: "Le projet de poules pondeuses a été créé avec succès.",
-      });
-    } catch (error) {
-      console.error("Erreur lors de la création du projet:", error);
-    }
-  };
-
   return (
     <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100 transform transition-all duration-300 hover:shadow-lg">
       <h3 className="text-xl font-semibold text-bgs-blue mb-5 flex items-center">
@@ -59,15 +44,6 @@ export default function InvestmentOptionsSection({
         </span>
         Investir maintenant
       </h3>
-      
-      {/* Button to create the laying hens project */}
-      <button 
-        onClick={handleCreateLayingHensProject} 
-        className="mb-4 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-      >
-        Créer Projet Poules Pondeuses
-        <ArrowRight size={18} />
-      </button>
       
       {!showConfirmation ? (
         <>
