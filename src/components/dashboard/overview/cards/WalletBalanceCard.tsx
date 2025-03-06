@@ -8,7 +8,7 @@ interface WalletBalanceCardProps {
   walletChange: WalletChange;
 }
 
-export default function WalletBalanceCard({ walletBalance, walletChange }: WalletBalanceCardProps) {
+export default function WalletBalanceCard({ walletBalance = 0, walletChange }: WalletBalanceCardProps) {
   return (
     <DashboardCard
       title="Solde disponible"
@@ -16,8 +16,8 @@ export default function WalletBalanceCard({ walletBalance, walletChange }: Walle
       icon={<Banknote />}
       iconBgColor="bg-purple-100"
       iconColor="text-purple-600"
-      changePercentage={walletChange.percentage}
-      changeValue={walletChange.value}
+      changePercentage={walletChange.percentage || "0%"}
+      changeValue={walletChange.value || "0€"}
       changeTimeframe="le dernier mois"
     />
   );

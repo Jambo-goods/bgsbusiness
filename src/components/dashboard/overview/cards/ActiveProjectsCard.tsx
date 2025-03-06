@@ -8,7 +8,10 @@ interface ActiveProjectsCardProps {
   projectsChange: ProjectsChange;
 }
 
-export default function ActiveProjectsCard({ projectsCount, projectsChange }: ActiveProjectsCardProps) {
+export default function ActiveProjectsCard({ 
+  projectsCount = 0, 
+  projectsChange 
+}: ActiveProjectsCardProps) {
   return (
     <DashboardCard
       title="Projets actifs"
@@ -16,8 +19,8 @@ export default function ActiveProjectsCard({ projectsCount, projectsChange }: Ac
       icon={<BarChart3Icon />}
       iconBgColor="bg-orange-100"
       iconColor="text-bgs-orange"
-      changePercentage={projectsChange.value}
-      changeValue={projectsChange.value}
+      changePercentage={projectsChange.value || "0"}
+      changeValue={projectsChange.value || "0"}
       changeTimeframe="le dernier trimestre"
     />
   );

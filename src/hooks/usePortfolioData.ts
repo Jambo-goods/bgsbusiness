@@ -18,43 +18,54 @@ export const usePortfolioData = () => {
     
     console.log("Setting up real-time subscription for portfolio data...");
     
-    // Set up real-time subscription for portfolio updates
-    const portfolioChannel = supabase
-      .channel('portfolio_updates')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'investments'
-      }, (payload) => {
-        console.log('Investment data changed, refreshing portfolio chart...', payload);
-        toast.info("Mise à jour du portefeuille détectée", {
-          description: "Les données du graphique sont en cours d'actualisation."
-        });
-        fetchPortfolioData();
-      })
-      .subscribe();
-      
-    // Set up real-time subscription for wallet transactions that could affect portfolio
-    const walletChannel = supabase
-      .channel('wallet_portfolio_updates')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'wallet_transactions'
-      }, (payload) => {
-        console.log('Wallet transaction detected, refreshing portfolio chart...', payload);
-        toast.info("Transaction détectée", {
-          description: "Les données du portefeuille sont en cours d'actualisation."
-        });
-        fetchPortfolioData();
-      })
-      .subscribe();
-    
-    return () => {
-      console.log("Cleaning up portfolio data subscriptions");
-      supabase.removeChannel(portfolioChannel);
-      supabase.removeChannel(walletChannel);
+    // Get the current user
+    const getUserId = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      return session?.session?.user.id;
     };
+    
+    getUserId().then(userId => {
+      if (!userId) {
+        console.log("No user ID available for portfolio subscriptions");
+        return;
+      }
+      
+      // Set up real-time subscription for portfolio updates
+      const portfolioChannel = supabase
+        .channel('portfolio_updates')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'investments',
+          filter: `user_id=eq.${userId}`
+        }, () => {
+          console.log('Investment data changed, refreshing portfolio chart...');
+          fetchPortfolioData();
+        })
+        .subscribe();
+        
+      // Set up real-time subscription for wallet transactions
+      const walletChannel = supabase
+        .channel('wallet_portfolio_updates')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'wallet_transactions',
+          filter: `user_id=eq.${userId}`
+        }, () => {
+          console.log('Wallet transaction detected, refreshing portfolio chart...');
+          fetchPortfolioData();
+        })
+        .subscribe();
+      
+      return () => {
+        console.log("Cleaning up portfolio data subscriptions");
+        supabase.removeChannel(portfolioChannel);
+        supabase.removeChannel(walletChannel);
+      };
+    }).catch(error => {
+      console.error("Error setting up portfolio subscriptions:", error);
+    });
   }, []);
 
   const fetchPortfolioData = async () => {
@@ -81,16 +92,13 @@ export const usePortfolioData = () => {
         
       if (error) {
         console.error("Error fetching investment data:", error);
-        toast.error("Erreur lors du chargement des données", {
-          description: error.message
-        });
         setPortfolioData([]);
         return;
       }
       
       if (!investments || investments.length === 0) {
         console.log('No investment data found');
-        setPortfolioData([]);
+        setPortfolioData(generateEmptyPortfolioData());
         return;
       }
       
@@ -100,17 +108,20 @@ export const usePortfolioData = () => {
       setPortfolioData(aggregatedData);
     } catch (error) {
       console.error("Error in fetchPortfolioData:", error);
-      toast.error("Erreur inattendue", {
-        description: "Un problème est survenu lors de la récupération des données du portefeuille."
-      });
-      setPortfolioData([]);
+      setPortfolioData(generateEmptyPortfolioData());
     } finally {
       setIsLoading(false);
     }
   };
   
+  // Generate empty portfolio data with zero values for all months
+  const generateEmptyPortfolioData = (): PortfolioDataPoint[] => {
+    const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    return monthNames.map(name => ({ name, value: 0 }));
+  };
+  
   // Aggregate investment data by month
-  const aggregateDataByMonth = (investments: any[]) => {
+  const aggregateDataByMonth = (investments: any[]): PortfolioDataPoint[] => {
     const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
     const currentYear = new Date().getFullYear();
     
@@ -134,9 +145,14 @@ export const usePortfolioData = () => {
         const monthIndex = investmentDate.getMonth();
         const monthName = monthNames[monthIndex];
         
-        // Use cumulative value to show portfolio growth
+        // Add investment amount to cumulative value
         cumulativeValue += investment.amount;
-        monthlyData[monthName] = cumulativeValue;
+        
+        // Update all months from the investment month to December
+        for (let i = monthIndex; i < 12; i++) {
+          const currentMonthName = monthNames[i];
+          monthlyData[currentMonthName] = Math.max(monthlyData[currentMonthName], cumulativeValue);
+        }
       }
     });
     

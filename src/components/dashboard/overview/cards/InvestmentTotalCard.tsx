@@ -8,7 +8,10 @@ interface InvestmentTotalCardProps {
   investmentChange: InvestmentChange;
 }
 
-export default function InvestmentTotalCard({ investmentTotal, investmentChange }: InvestmentTotalCardProps) {
+export default function InvestmentTotalCard({ 
+  investmentTotal = 0, 
+  investmentChange 
+}: InvestmentTotalCardProps) {
   return (
     <DashboardCard
       title="Total investi"
@@ -16,8 +19,8 @@ export default function InvestmentTotalCard({ investmentTotal, investmentChange 
       icon={<WalletIcon />}
       iconBgColor="bg-blue-100"
       iconColor="text-bgs-blue"
-      changePercentage={investmentChange.percentage}
-      changeValue={investmentChange.value}
+      changePercentage={investmentChange.percentage || "0%"}
+      changeValue={investmentChange.value || "0€"}
       changeTimeframe="le dernier mois"
     />
   );

@@ -9,16 +9,20 @@ interface AverageYieldCardProps {
   yieldChange: YieldChange;
 }
 
-export default function AverageYieldCard({ monthlyYield, annualYield, yieldChange }: AverageYieldCardProps) {
+export default function AverageYieldCard({ 
+  monthlyYield = 0, 
+  annualYield = 0, 
+  yieldChange 
+}: AverageYieldCardProps) {
   return (
     <DashboardCard
       title="Rendement mensuel moyen"
-      value={`${monthlyYield}%`}
+      value={`${monthlyYield.toFixed(2)}%`}
       icon={<TrendingUpIcon />}
       iconBgColor="bg-green-100"
       iconColor="text-green-600"
-      changePercentage={yieldChange.value}
-      changeValue={yieldChange.value}
+      changePercentage={yieldChange.value || "0%"}
+      changeValue={yieldChange.value || "0%"}
       changeTimeframe="le dernier mois"
       description={`${annualYield.toFixed(1)}% annualisé`}
     />

@@ -2,13 +2,14 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { YieldChange } from "./types";
+import { toast } from "sonner";
 
 export const useYieldData = (
   userId: string | null
 ): { monthlyYield: number; annualYield: number; yieldChange: YieldChange } => {
-  const [monthlyYield, setMonthlyYield] = useState(1.125);
+  const [monthlyYield, setMonthlyYield] = useState(0);
   const [yieldChange, setYieldChange] = useState<YieldChange>({
-    value: "+0.1%",
+    value: "0%",
   });
 
   // Calculate yearly yield for display
@@ -35,14 +36,14 @@ export const useYieldData = (
           console.log(`Found ${activeInvestments.length} active investments`);
           const totalInvestment = activeInvestments.reduce((sum, inv) => sum + inv.amount, 0);
           const weightedYield = activeInvestments.reduce(
-            (sum, inv) => sum + inv.yield_rate * inv.amount,
+            (sum, inv) => sum + (inv.yield_rate || 0) * inv.amount,
             0
           );
 
           const avgMonthlyYield =
             totalInvestment > 0
               ? parseFloat((weightedYield / totalInvestment).toFixed(3))
-              : 1.125;
+              : 0;
 
           const previousYield = monthlyYield;
           setMonthlyYield(avgMonthlyYield);
@@ -52,22 +53,39 @@ export const useYieldData = (
           setYieldChange({
             value: `${parseFloat(yieldChangeValue) >= 0 ? "+" : ""}${yieldChangeValue}%`,
           });
-          console.log(
-            "Updated monthly yield:",
-            avgMonthlyYield,
-            "Change:",
-            yieldChangeValue
-          );
         } else {
           console.log("No active investments found");
+          setMonthlyYield(0);
+          setYieldChange({
+            value: "0%",
+          });
         }
       } catch (error) {
         console.error("Error in fetchYieldData:", error);
+        toast.error("Erreur lors du calcul des rendements");
       }
     };
 
     fetchYieldData();
-  }, [userId, monthlyYield]);
+    
+    // Set up real-time subscription for yield changes
+    const yieldChannel = supabase
+      .channel('yield_data_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'investments',
+        filter: `user_id=eq.${userId}`
+      }, () => {
+        console.log('Investment data changed, refreshing yield data...');
+        fetchYieldData();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(yieldChannel);
+    };
+  }, [userId]);
 
   return { monthlyYield, annualYield, yieldChange };
 };

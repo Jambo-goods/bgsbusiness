@@ -18,6 +18,9 @@ export default function PortfolioChart() {
     refreshData();
     setTimeout(() => setAnimateRefresh(false), 1000);
   };
+
+  // Determine if there's actual data (not just zeros)
+  const hasActualData = portfolioData.some(point => point.value > 0);
   
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 lg:col-span-2">
@@ -48,7 +51,7 @@ export default function PortfolioChart() {
             <p className="text-center text-xs text-gray-500">Chargement des données du portefeuille...</p>
           </div>
         </div>
-      ) : portfolioData.length === 0 ? (
+      ) : !hasActualData ? (
         <div className="h-60 flex flex-col items-center justify-center space-y-2">
           <p className="text-center text-gray-500">Aucune donnée d'investissement disponible</p>
           <p className="text-center text-sm text-gray-400">Effectuez votre premier investissement pour voir le graphique</p>
@@ -65,7 +68,10 @@ export default function PortfolioChart() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-              <YAxis tick={{ fontSize: 10 }} />
+              <YAxis 
+                tick={{ fontSize: 10 }} 
+                tickFormatter={(value) => `${value} €`}
+              />
               <Tooltip 
                 formatter={(value) => [`${value} €`, 'Montant']} 
                 labelFormatter={(label) => `${label} ${currentYear}`}

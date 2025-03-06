@@ -2,14 +2,15 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { WalletChange } from "./types";
+import { toast } from "sonner";
 
 export const useWalletData = (
   userId: string | null,
   walletBalance?: number
 ): { walletChange: WalletChange } => {
   const [walletChange, setWalletChange] = useState<WalletChange>({
-    percentage: "+8.3%",
-    value: "↑ 250€",
+    percentage: "0%",
+    value: "0€",
   });
 
   useEffect(() => {
@@ -44,26 +45,52 @@ export const useWalletData = (
 
           const netChange = depositsLastMonth - withdrawalsLastMonth;
 
+          // Only calculate percentage if we have balance data and it's not zero
           if (walletBalance && walletBalance > 0) {
             const percentChange = Math.round((netChange / walletBalance) * 100);
             setWalletChange({
-              percentage: `${netChange >= 0 ? "+" : "-"}${Math.abs(percentChange)}%`,
+              percentage: `${netChange >= 0 ? "+" : ""}${Math.abs(percentChange)}%`,
               value: `${netChange >= 0 ? "↑" : "↓"} ${Math.abs(netChange)}€`,
             });
-            console.log(
-              "Updated wallet change:",
-              `${netChange >= 0 ? "+" : "-"}${Math.abs(percentChange)}%`
-            );
+          } else {
+            // Just show absolute change if we can't calculate percentage
+            setWalletChange({
+              percentage: `${netChange >= 0 ? "+" : ""}${Math.abs(netChange)}€`,
+              value: `${netChange >= 0 ? "↑" : "↓"} ${Math.abs(netChange)}€`,
+            });
           }
         } else {
-          console.log("No wallet transactions found or error occurred");
+          // No transactions found, set neutral values
+          setWalletChange({
+            percentage: "0%",
+            value: "0€",
+          });
         }
       } catch (error) {
         console.error("Error in fetchWalletTransactions:", error);
+        toast.error("Erreur lors de la récupération des données de votre portefeuille");
       }
     };
 
     fetchWalletTransactions();
+    
+    // Set up real-time subscription for wallet transactions
+    const walletChannel = supabase
+      .channel('wallet_data_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wallet_transactions',
+        filter: `user_id=eq.${userId}`
+      }, () => {
+        console.log('Wallet transaction detected, refreshing wallet data...');
+        fetchWalletTransactions();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(walletChannel);
+    };
   }, [userId, walletBalance]);
 
   return { walletChange };
