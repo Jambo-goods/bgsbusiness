@@ -1,7 +1,5 @@
-
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { TrendingUp } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { projects as localProjects } from "@/data/projects";
@@ -32,24 +30,22 @@ export default function ProjectDetail() {
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    // Fonction pour charger le projet depuis la base de données et les données locales
+    // Function to load project from database and local data
     const loadProject = async () => {
       setLoading(true);
       try {
-        // Essayer de récupérer les projets depuis la base de données d'abord
+        console.log("Chargement du projet avec ID:", id);
+        // Try to get projects from database first
         const databaseProjects = await fetchProjectsFromDatabase();
         
-        // Combiner les projets de la base de données avec les projets locaux
-        const allProjects = [...databaseProjects];
-        
-        // Vérifier si le projet existe déjà dans les projets de la base de données
-        const databaseProject = allProjects.find(p => p.id === id);
+        // Check if project exists in database
+        const databaseProject = databaseProjects.find(p => p.id === id);
         
         if (databaseProject) {
           console.log("Projet trouvé dans la base de données:", databaseProject);
           setProject(databaseProject);
         } else {
-          // Si le projet n'est pas trouvé dans la base de données, chercher dans les projets locaux
+          // If not found in database, look in local projects
           console.log("Projet non trouvé dans la base de données, recherche dans les projets locaux");
           const localProject = localProjects.find(p => p.id === id);
           
@@ -69,7 +65,7 @@ export default function ProjectDetail() {
           variant: "destructive"
         });
         
-        // En cas d'erreur, essayer de charger depuis les données locales
+        // In case of error, try loading from local data
         const localProject = localProjects.find(p => p.id === id);
         if (localProject) {
           setProject(localProject);

@@ -12,9 +12,6 @@ import About from "./pages/About";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import FAQ from "./pages/FAQ";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
@@ -37,9 +34,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/dashboard/*" element={<Dashboard />} />
-          <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
-          <Route path="/conditions-dutilisation" element={<TermsOfService />} />
-          <Route path="/faq" element={<FAQ />} />
+          {/* Removed privacy policy, terms of service, and FAQ routes */}
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
