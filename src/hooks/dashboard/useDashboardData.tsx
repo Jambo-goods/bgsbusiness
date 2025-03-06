@@ -5,19 +5,20 @@ import { toast } from "sonner";
 import { useUserSession } from "./useUserSession";
 import { useRealTimeSubscriptions } from "./useRealTimeSubscriptions";
 import { projects } from "@/data/projects";
+import { Project } from "@/types/project";
+import { UserData } from "./types";
 
-export const useDashboardData = () => {
-  const [userData, setUserData] = useState<{
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-    address?: string;
-    investmentTotal: number;
-    projectsCount: number;
-    walletBalance: number;
-  } | null>(null);
-  const [userInvestments, setUserInvestments] = useState<any[]>([]);
+interface DashboardDataReturn {
+  userData: UserData | null;
+  userInvestments: Project[];
+  isLoading: boolean;
+  realTimeStatus: string;
+  refreshData: () => Promise<void>;
+}
+
+export const useDashboardData = (): DashboardDataReturn => {
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [userInvestments, setUserInvestments] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Get user session
@@ -87,7 +88,7 @@ export const useDashboardData = () => {
       }
       
       // Get actual project details for each investment
-      let userProjects = [];
+      let userProjects: Project[] = [];
       
       if (investmentsData && investmentsData.length > 0) {
         // Get unique project IDs
@@ -116,7 +117,7 @@ export const useDashboardData = () => {
         }
       } else {
         // If no investments, show demo projects (only in development)
-        userProjects = projects.slice(0, 3);
+        userProjects = projects.slice(0, 3) as Project[];
       }
       
       // Check for recent investment to add
@@ -130,7 +131,7 @@ export const useDashboardData = () => {
         // If the project exists and it's not already in the investments list
         if (project && !userProjects.some(i => i.id === project.id)) {
           // Add the project to the beginning of the list
-          userProjects = [project, ...userProjects];
+          userProjects = [project as Project, ...userProjects];
         }
         
         // Remove from local storage to prevent showing again on refresh
@@ -144,8 +145,6 @@ export const useDashboardData = () => {
         firstName: profileData?.first_name || sessionData.session?.user.user_metadata?.first_name || "Utilisateur",
         lastName: profileData?.last_name || sessionData.session?.user.user_metadata?.last_name || "",
         email: profileData?.email || sessionData.session?.user.email || "",
-        phone: profileData?.phone || "",
-        address: profileData?.address || "",
         investmentTotal: profileData?.investment_total || 0,
         projectsCount: profileData?.projects_count || 0,
         walletBalance: profileData?.wallet_balance || 0
