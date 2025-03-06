@@ -77,6 +77,22 @@ export const fetchRealTimeInvestmentData = async (userId: string | undefined) =>
     }
     
     console.log(`Fetched ${investments?.length || 0} investments for real-time tracking`);
+    
+    if (!investments || investments.length === 0) {
+      console.log("No investments found for user:", userId);
+      // Try to fetch with fewer constraints to confirm data exists
+      const { data: allInvestments, error: allError } = await supabase
+        .from('investments')
+        .select('id, user_id')
+        .limit(5);
+        
+      if (allError) {
+        console.error("Error checking investments table:", allError);
+      } else {
+        console.log("Sample of all investments in database:", allInvestments);
+      }
+    }
+    
     return investments || [];
   } catch (error) {
     console.error("Error in fetchRealTimeInvestmentData:", error);
@@ -126,13 +142,21 @@ export const filterAndSortPayments = (
 };
 
 export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[] => {
-  if (!investments || investments.length === 0) return [];
+  if (!investments || investments.length === 0) {
+    console.log("No investments provided to generate payment records");
+    return [];
+  }
+  
+  console.log(`Generating payment records from ${investments.length} real investments`);
   
   let payments: PaymentRecord[] = [];
   const now = new Date();
   
-  investments.forEach(investment => {
-    if (!investment.projects) return;
+  investments.forEach((investment, index) => {
+    if (!investment.projects) {
+      console.log(`Investment at index ${index} missing projects data:`, investment);
+      return;
+    }
     
     // Calculate payments based on actual investment data
     const startDate = investment.date ? new Date(investment.date) : new Date();
@@ -140,12 +164,16 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     const yield_rate = investment.yield_rate || investment.projects.yield || 0;
     const monthlyReturn = Math.round((yield_rate / 100) * amount);
     
+    console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}`);
+    
     // Generate past payments based on actual investment date
     const monthsSinceInvestment = Math.max(
       0,
       (now.getFullYear() - startDate.getFullYear()) * 12 + 
       now.getMonth() - startDate.getMonth()
     );
+    
+    console.log(`Investment ${index}: months since start=${monthsSinceInvestment}`);
     
     // Past and current payments (paid)
     for (let i = 0; i <= monthsSinceInvestment; i++) {

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Project } from "@/types/project";
 import FilterControls from "./investment-tracking/FilterControls";
 import ReturnsSummary from "./investment-tracking/ReturnsSummary";
@@ -27,6 +27,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
   const [paymentRecords, setPaymentRecords] = useState(generatePayments(userInvestments));
   const [animateRefresh, setAnimateRefresh] = useState(false);
   const [realInvestments, setRealInvestments] = useState<any[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   
   // Calculate cumulative returns
   const cumulativeReturns = calculateCumulativeReturns(paymentRecords);
@@ -39,74 +40,46 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
     sortDirection
   );
   
-  useEffect(() => {
-    loadRealTimeData();
-    
-    // Set up real-time subscriptions
-    const investmentChannel = supabase
-      .channel('investment_tracking_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'investments'
-      }, (payload) => {
-        console.log('Investment data changed, refreshing tracking tab...', payload);
-        toast.info("Mise à jour des investissements", {
-          description: "Les données de suivi sont en cours d'actualisation."
-        });
-        loadRealTimeData();
-      })
-      .subscribe();
-      
-    // Wallet transactions could affect yields
-    const walletChannel = supabase
-      .channel('wallet_tracking_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'wallet_transactions'
-      }, (payload) => {
-        console.log('Wallet transaction detected, refreshing tracking...', payload);
-        toast.info("Transaction détectée", {
-          description: "Les données de rendement sont en cours d'actualisation."
-        });
-        loadRealTimeData();
-      })
-      .subscribe();
-      
-    return () => {
-      console.log("Cleaning up investment tracking subscriptions");
-      supabase.removeChannel(investmentChannel);
-      supabase.removeChannel(walletChannel);
-    };
-  }, []);
-  
-  const loadRealTimeData = async () => {
+  const loadRealTimeData = useCallback(async () => {
     setIsLoading(true);
     try {
+      console.log("Fetching investment data for real-time updates...");
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
         console.log("No active session found for investment tracking");
+        toast.error("Pas de session active", {
+          description: "Connectez-vous pour voir vos données en temps réel."
+        });
         // Fall back to sample data for unauthenticated users
         setPaymentRecords(generatePayments(userInvestments));
         return;
       }
       
-      const userId = session.session.user.id;
-      const investments = await fetchRealTimeInvestmentData(userId);
+      const currentUserId = session.session.user.id;
+      setUserId(currentUserId);
+      console.log("Using user ID for investment tracking:", currentUserId);
+      
+      const investments = await fetchRealTimeInvestmentData(currentUserId);
       
       setRealInvestments(investments);
+      console.log("Fetched real investments:", investments.length);
       
       if (investments && investments.length > 0) {
         // Use real investment data to generate payment records
         const realPayments = generatePaymentsFromRealData(investments);
         setPaymentRecords(realPayments);
         console.log("Updated payment records with real-time data:", realPayments.length);
+        toast.success("Données mises à jour", {
+          description: `${realPayments.length} versements chargés avec succès.`
+        });
       } else {
         // Fall back to sample data if no real investments found
-        setPaymentRecords(generatePayments(userInvestments));
         console.log("No real investments found, using sample data");
+        setPaymentRecords(generatePayments(userInvestments));
+        toast.info("Données d'exemple", {
+          description: "Aucun investissement réel trouvé, utilisation de données d'exemple."
+        });
       }
     } catch (error) {
       console.error("Error loading real-time investment data:", error);
@@ -117,8 +90,70 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
       setPaymentRecords(generatePayments(userInvestments));
     } finally {
       setIsLoading(false);
+      setAnimateRefresh(false);
     }
-  };
+  }, [userInvestments]);
+  
+  useEffect(() => {
+    loadRealTimeData();
+    
+    // Set up real-time subscriptions
+    let investmentChannel: any;
+    let walletChannel: any;
+    
+    const setupSubscriptions = async () => {
+      // Get current user ID
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return;
+      
+      const currentUserId = session.session.user.id;
+      console.log("Setting up real-time subscriptions for user:", currentUserId);
+      
+      // Investments channel with filter for user's investments
+      investmentChannel = supabase
+        .channel('investment_tracking_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'investments',
+          filter: `user_id=eq.${currentUserId}`
+        }, (payload) => {
+          console.log('Investment data changed, refreshing tracking tab...', payload);
+          toast.info("Mise à jour des investissements", {
+            description: "Les données de suivi sont en cours d'actualisation."
+          });
+          loadRealTimeData();
+        })
+        .subscribe();
+        
+      // Wallet transactions could affect yields
+      walletChannel = supabase
+        .channel('wallet_tracking_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'wallet_transactions',
+          filter: `user_id=eq.${currentUserId}`
+        }, (payload) => {
+          console.log('Wallet transaction detected, refreshing tracking...', payload);
+          toast.info("Transaction détectée", {
+            description: "Les données de rendement sont en cours d'actualisation."
+          });
+          loadRealTimeData();
+        })
+        .subscribe();
+        
+      console.log("Real-time subscriptions set up successfully");
+    };
+    
+    setupSubscriptions();
+    
+    return () => {
+      console.log("Cleaning up investment tracking subscriptions");
+      if (investmentChannel) supabase.removeChannel(investmentChannel);
+      if (walletChannel) supabase.removeChannel(walletChannel);
+    };
+  }, [loadRealTimeData]);
   
   // Toggle sort direction when clicking on a column header
   const handleSort = (column: string) => {
@@ -132,9 +167,9 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
   
   // Handle manual refresh
   const handleRefresh = () => {
+    console.log("Manual refresh requested");
     setAnimateRefresh(true);
     loadRealTimeData();
-    setTimeout(() => setAnimateRefresh(false), 1000);
   };
   
   // Calculate total returns
@@ -161,6 +196,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
               onClick={handleRefresh}
               className="text-gray-500 hover:text-bgs-blue transition-colors"
               title="Rafraîchir les données"
+              disabled={isLoading}
             >
               <RefreshCcw 
                 className={`h-4 w-4 ${animateRefresh ? 'animate-spin' : ''}`} 
@@ -184,6 +220,8 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
               totalPaid={totalPaid}
               totalPending={totalPending}
               averageMonthlyReturn={averageMonthlyReturn}
+              isRefreshing={animateRefresh}
+              onRefresh={handleRefresh}
             />
             
             <PaymentsTable 
