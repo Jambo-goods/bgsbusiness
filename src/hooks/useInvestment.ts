@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
@@ -7,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { createProjectInDatabase } from "@/utils/projectUtils";
 
 export const useInvestment = (project: Project, investorCount: number) => {
-  const [investmentAmount, setInvestmentAmount] = useState(500);
+  const [investmentAmount, setInvestmentAmount] = useState(project.minInvestment || 500);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState(
@@ -19,7 +18,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  const minInvestment = 100;
+  const minInvestment = project.minInvestment;
   const maxInvestment = 10000;
   
   const durations = project.possibleDurations || 
@@ -93,7 +92,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
       
       const userId = session.session.user.id;
       
-      // Créer ou trouver le projet dans la base de données
       console.log("Création/recherche du projet:", project.name);
       let projectId;
       try {
@@ -113,7 +111,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
         return;
       }
       
-      // Mettre à jour le solde de l'utilisateur (déduire le montant investi)
       const { error: walletError } = await supabase.rpc(
         'increment_wallet_balance',
         { user_id: userId, increment_amount: -investmentAmount }
@@ -124,7 +121,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw walletError;
       }
       
-      // Créer l'enregistrement d'investissement
       const { error: investmentError } = await supabase
         .from('investments')
         .insert({
@@ -142,7 +138,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw investmentError;
       }
       
-      // Mettre à jour les statistiques du profil utilisateur
       const { data: profileData, error: profileFetchError } = await supabase
         .from('profiles')
         .select('investment_total, projects_count')
@@ -169,12 +164,11 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw profileUpdateError;
       }
       
-      // Enregistrer la transaction
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
           user_id: userId,
-          amount: -investmentAmount, // Montant négatif car c'est une sortie d'argent
+          amount: -investmentAmount,
           type: 'withdrawal',
           description: `Investissement dans ${project.name}`,
           status: 'completed'
@@ -185,7 +179,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw transactionError;
       }
       
-      // Stocker les données d'investissement pour l'affichage du tableau de bord
       const investmentData = {
         projectId: projectId,
         projectName: project.name,
@@ -204,7 +197,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
         description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
       });
       
-      // Rediriger vers le tableau de bord
       navigate("/dashboard");
       
     } catch (error) {

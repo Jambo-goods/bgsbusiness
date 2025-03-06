@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Edit, Save } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,13 @@ export default function InvestmentAmountSection({
   maxInvestment
 }: InvestmentAmountSectionProps) {
   const [isEditingAmount, setIsEditingAmount] = useState(false);
+  
+  useEffect(() => {
+    // Set the investment amount to at least the minimum investment when component mounts
+    if (investmentAmount < minInvestment) {
+      setInvestmentAmount(minInvestment);
+    }
+  }, [minInvestment, investmentAmount, setInvestmentAmount]);
   
   const handleSliderChange = (values: number[]) => {
     setInvestmentAmount(values[0]);
