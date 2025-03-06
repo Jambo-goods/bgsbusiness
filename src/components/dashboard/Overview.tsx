@@ -13,6 +13,7 @@ interface OverviewProps {
     email: string;
     investmentTotal: number;
     projectsCount: number;
+    walletBalance?: number;
   };
   userInvestments: Project[];
   setActiveTab: (tab: string) => void;

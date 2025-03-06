@@ -6,7 +6,7 @@ import { useInvestmentData } from "./useInvestmentData";
 import { useYieldData } from "./useYieldData";
 import { DashboardCardData, UserData } from "./types";
 
-export const useDashboardData = (userData: UserData): DashboardCardData => {
+export const useDashboardData = (userData: UserData) => {
   const [userId, setUserId] = useState<string | null>(null);
   
   useEffect(() => {
@@ -86,20 +86,7 @@ export const useDashboardData = (userData: UserData): DashboardCardData => {
     return cleanup;
   }, []);
 
-  // Use the smaller, focused hooks
-  const { walletChange } = useWalletData(userId, userData.walletBalance);
-  const { investmentChange, projectsChange } = useInvestmentData(
-    userId,
-    userData.investmentTotal
-  );
-  const { monthlyYield, annualYield, yieldChange } = useYieldData(userId);
-
   return {
-    monthlyYield,
-    annualYield,
-    walletChange,
-    investmentChange,
-    projectsChange,
-    yieldChange,
+    userId
   };
 };
