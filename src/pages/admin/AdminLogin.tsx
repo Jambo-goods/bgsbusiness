@@ -5,10 +5,11 @@ import { Mail, Lock, ArrowRight, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { loginAdmin } from "@/services/adminAuthService";
 import { useAdmin } from "@/contexts/AdminContext";
+import { Button } from "@/components/ui/button";
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState("bamboguirassy93@gmail.com");
-  const [password, setPassword] = useState("Toshino201292@");
+  const [email, setEmail] = useState("admin@example.com");
+  const [password, setPassword] = useState("admin123");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -123,7 +124,7 @@ export default function AdminLogin() {
               </div>
             </div>
             
-            <button
+            <Button
               type="submit"
               disabled={isLoading}
               className="w-full bg-bgs-orange hover:bg-bgs-orange/90 text-white font-medium rounded-lg py-3 px-4 flex items-center justify-center gap-2"
@@ -134,12 +135,12 @@ export default function AdminLogin() {
                   <ArrowRight size={18} />
                 </>
               )}
-            </button>
+            </Button>
           </form>
           
           <div className="mt-4 text-sm text-gray-500 text-center">
-            <p>Email: bamboguirassy93@gmail.com</p>
-            <p>Mot de passe: Toshino201292@</p>
+            <p>Email: admin@example.com</p>
+            <p>Mot de passe: admin123</p>
           </div>
         </div>
       </div>
