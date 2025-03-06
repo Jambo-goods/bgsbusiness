@@ -25,25 +25,55 @@ export default function UserManagement() {
   const [fundAmount, setFundAmount] = useState('');
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     fetchUsers();
+    
+    // Set up real-time subscription for profiles
+    const profilesChannel = supabase
+      .channel('admin_profiles_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles'
+      }, () => {
+        console.log('Profiles data changed, refreshing users...');
+        fetchUsers();
+        toast.info("Mise à jour détectée", {
+          description: "Les données utilisateurs ont été mises à jour."
+        });
+      })
+      .subscribe();
+      
+    // Clean up subscription on component unmount
+    return () => {
+      supabase.removeChannel(profilesChannel);
+    };
   }, [sortField, sortDirection]);
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
+      setHasError(false);
+      
+      console.log("Fetching users with sort field:", sortField, "direction:", sortDirection);
       
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .order(sortField, { ascending: sortDirection === 'asc' });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+      }
       
+      console.log("Fetched users:", data);
       setUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
+      setHasError(true);
       toast.error("Erreur lors du chargement des utilisateurs");
     } finally {
       setIsLoading(false);
@@ -154,9 +184,24 @@ export default function UserManagement() {
           <div className="flex justify-center items-center p-12">
             <Loader2 className="h-8 w-8 animate-spin text-bgs-blue" />
           </div>
+        ) : hasError ? (
+          <div className="text-center p-8 text-red-500">
+            Une erreur est survenue lors du chargement des utilisateurs. 
+            <Button 
+              variant="link" 
+              onClick={fetchUsers} 
+              className="text-bgs-blue"
+            >
+              Réessayer
+            </Button>
+          </div>
+        ) : users.length === 0 ? (
+          <div className="text-center p-8 text-gray-500">
+            Aucun utilisateur trouvé dans la base de données
+          </div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center p-8 text-gray-500">
-            Aucun utilisateur trouvé
+            Aucun utilisateur ne correspond à votre recherche
           </div>
         ) : (
           <div className="overflow-x-auto">
