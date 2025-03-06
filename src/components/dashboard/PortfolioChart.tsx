@@ -19,11 +19,6 @@ export default function PortfolioChart() {
     setTimeout(() => setAnimateRefresh(false), 1000);
   };
   
-  // Log when portfolio data changes for debugging
-  useEffect(() => {
-    console.log("Portfolio chart data updated:", portfolioData);
-  }, [portfolioData]);
-  
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 lg:col-span-2">
       <div className="flex justify-between items-center mb-4">
