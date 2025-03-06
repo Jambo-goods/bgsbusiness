@@ -61,7 +61,7 @@ export const useDashboardCardData = (userData: {
     
     // Set up realtime subscription for wallet transactions
     const walletChannel = supabase
-      .channel('public:wallet_transactions')
+      .channel('wallet_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -73,7 +73,7 @@ export const useDashboardCardData = (userData: {
       
     // Set up realtime subscription for investments
     const investmentsChannel = supabase
-      .channel('public:investments')
+      .channel('investment_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -83,11 +83,24 @@ export const useDashboardCardData = (userData: {
       })
       .subscribe();
       
+    // Set up realtime subscription for profiles
+    const profilesChannel = supabase
+      .channel('profile_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles'
+      }, () => {
+        fetchRecentChanges();
+      })
+      .subscribe();
+      
     return () => {
       supabase.removeChannel(walletChannel);
       supabase.removeChannel(investmentsChannel);
+      supabase.removeChannel(profilesChannel);
     };
-  }, []);
+  }, [userData]); // Add userData as a dependency to re-fetch when it changes
   
   const fetchRecentChanges = async () => {
     try {
@@ -102,7 +115,7 @@ export const useDashboardCardData = (userData: {
       
       const { data: walletData } = await supabase
         .from('wallet_transactions')
-        .select('amount, type')
+        .select('amount, type, created_at')
         .eq('user_id', userId)
         .gte('created_at', oneMonthAgo.toISOString());
         
@@ -132,25 +145,25 @@ export const useDashboardCardData = (userData: {
       
       const { data: investmentsData } = await supabase
         .from('investments')
-        .select('amount, project_id, date')
+        .select('amount, project_id, created_at')
         .eq('user_id', userId)
-        .gte('date', threeMonthsAgo.toISOString());
+        .gte('created_at', threeMonthsAgo.toISOString());
         
       if (investmentsData) {
         // Calculate new projects count in last 3 months
         const uniqueProjectsLastThreeMonths = new Set(investmentsData.map(inv => inv.project_id)).size;
-        setProjectsChange({ value: `+${uniqueProjectsLastThreeMonths}` });
+        setProjectsChange({ value: `${uniqueProjectsLastThreeMonths > 0 ? '+' : ''}${uniqueProjectsLastThreeMonths}` });
         
         // Calculate investment change in last month
         const lastMonthInvestments = investmentsData
-          .filter(inv => new Date(inv.date) >= oneMonthAgo)
+          .filter(inv => new Date(inv.created_at) >= oneMonthAgo)
           .reduce((sum, inv) => sum + inv.amount, 0);
         
         if (userData.investmentTotal > 0) {
           const investPercentChange = Math.round((lastMonthInvestments / userData.investmentTotal) * 100);
           setInvestmentChange({
-            percentage: `+${investPercentChange}%`,
-            value: `↑ ${lastMonthInvestments}€`
+            percentage: `${lastMonthInvestments > 0 ? '+' : ''}${investPercentChange}%`,
+            value: `${lastMonthInvestments > 0 ? '↑' : '↓'} ${Math.abs(lastMonthInvestments)}€`
           });
         }
       }
@@ -171,10 +184,14 @@ export const useDashboardCardData = (userData: {
         const avgMonthlyYield = totalInvestment > 0 ? 
           parseFloat((weightedYield / totalInvestment).toFixed(3)) : 1.125;
         
+        const previousYield = monthlyYield;
         setMonthlyYield(avgMonthlyYield);
         
-        // For simplicity, we'll set a small positive change in yield
-        setYieldChange({ value: "+0.1%" });
+        // Calculate yield change
+        const yieldChangeValue = (avgMonthlyYield - previousYield).toFixed(2);
+        setYieldChange({ 
+          value: `${parseFloat(yieldChangeValue) >= 0 ? '+' : ''}${yieldChangeValue}%` 
+        });
       }
       
     } catch (error) {
