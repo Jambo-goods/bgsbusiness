@@ -39,26 +39,45 @@ export default function UserManagement() {
   useEffect(() => {
     fetchUsers();
     
-    // Set up real-time subscription for profiles
+    // Set up real-time subscription for profiles with better error handling
     const profilesChannel = supabase
       .channel('admin_profiles_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'profiles'
-      }, () => {
-        console.log('Profiles data changed, refreshing users...');
+      }, (payload) => {
+        console.log('Profiles data changed, refreshing users...', payload);
         fetchUsers();
         toast.info("Mise à jour détectée", {
           description: "Les données utilisateurs ont été mises à jour."
         });
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to profiles table');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to profiles table');
+          toast.error("Erreur de connexion en temps réel", {
+            description: "La mise à jour automatique des utilisateurs peut ne pas fonctionner."
+          });
+        }
+      });
       
     // Clean up subscription on component unmount
     return () => {
+      console.log('Cleaning up realtime subscription');
       supabase.removeChannel(profilesChannel);
     };
+  }, []);
+  
+  // Separate effect for sorting changes to avoid duplicate fetching
+  useEffect(() => {
+    if (!isLoading) {
+      console.log('Sort criteria changed, refreshing data');
+      fetchUsers();
+    }
   }, [sortField, sortDirection]);
 
   const fetchUsers = async () => {
@@ -255,6 +274,12 @@ export default function UserManagement() {
         </div>
       </div>
       
+      {/* Realtime status indicator */}
+      <div className="mb-4 flex items-center">
+        <div className="h-2 w-2 rounded-full bg-green-500 mr-2 animate-pulse"></div>
+        <span className="text-sm text-gray-600">Mise à jour en temps réel active</span>
+      </div>
+      
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center items-center p-12">
@@ -273,7 +298,16 @@ export default function UserManagement() {
           </div>
         ) : users.length === 0 ? (
           <div className="text-center p-8 text-gray-500">
-            Aucun utilisateur trouvé dans la base de données
+            Aucun utilisateur trouvé dans la base de données.
+            <div className="mt-4">
+              <Button
+                onClick={() => setIsCreateUserModalOpen(true)}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                <UserPlus className="mr-2 h-4 w-4" />
+                Créer un premier utilisateur test
+              </Button>
+            </div>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="text-center p-8 text-gray-500">
@@ -361,6 +395,9 @@ export default function UserManagement() {
                           onClick={() => {
                             // View user details
                             console.log("View user details:", user);
+                            toast.info(`Détails pour ${user.first_name} ${user.last_name}`, {
+                              description: "Cette fonctionnalité sera disponible prochainement."
+                            });
                           }}
                           title="Voir les détails"
                         >
