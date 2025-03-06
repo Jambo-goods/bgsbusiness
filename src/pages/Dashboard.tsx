@@ -51,7 +51,7 @@ export default function Dashboard() {
       const userId = sessionData.session.user.id;
       
       // Fetch user profile data
-      const { data: profileData, error: profileError } = await supabase
+      let { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
