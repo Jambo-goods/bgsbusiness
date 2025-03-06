@@ -16,64 +16,83 @@ export default function InvestmentDistribution({ setActiveTab }: InvestmentDistr
   const [totalInvested, setTotalInvested] = useState(0);
 
   useEffect(() => {
-    async function fetchUserInvestments() {
-      setIsLoading(true);
-      try {
-        const { data: user } = await supabase.auth.getUser();
-        
-        if (!user.user) {
-          setInvestments([]);
-          return;
-        }
-        
-        const { data, error } = await supabase
-          .from('investments')
-          .select(`
-            *,
-            projects(*)
-          `)
-          .eq('user_id', user.user.id);
-          
-        if (error) {
-          console.error("Erreur lors du chargement des investissements:", error);
-          throw error;
-        }
-        
-        // Calculate total invested amount
-        const total = (data || []).reduce((sum, inv) => sum + (inv.amount || 0), 0);
-        setTotalInvested(total);
-        
-        // Group investments by project
-        const groupedInvestments = (data || []).reduce((acc, inv) => {
-          const projectId = inv.project_id;
-          if (!acc[projectId]) {
-            acc[projectId] = {
-              project: inv.projects,
-              totalAmount: 0,
-              investments: []
-            };
-          }
-          acc[projectId].totalAmount += inv.amount;
-          acc[projectId].investments.push(inv);
-          return acc;
-        }, {});
-        
-        setInvestments(Object.values(groupedInvestments));
-      } catch (error) {
-        console.error("Erreur:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger vos investissements",
-          variant: "destructive"
-        });
-        setInvestments([]);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('public:investments')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'investments'
+      }, () => {
+        // When any change happens to investments, refetch
+        fetchUserInvestments();
+      })
+      .subscribe();
+      
     fetchUserInvestments();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [toast]);
+
+  async function fetchUserInvestments() {
+    setIsLoading(true);
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      
+      if (!user.user) {
+        setInvestments([]);
+        setTotalInvested(0);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('investments')
+        .select(`
+          *,
+          projects(*)
+        `)
+        .eq('user_id', user.user.id);
+        
+      if (error) {
+        console.error("Erreur lors du chargement des investissements:", error);
+        throw error;
+      }
+      
+      // Calculate total invested amount
+      const total = (data || []).reduce((sum, inv) => sum + (inv.amount || 0), 0);
+      setTotalInvested(total);
+      
+      // Group investments by project
+      const groupedInvestments = (data || []).reduce((acc, inv) => {
+        const projectId = inv.project_id;
+        if (!acc[projectId]) {
+          acc[projectId] = {
+            project: inv.projects,
+            totalAmount: 0,
+            investments: []
+          };
+        }
+        acc[projectId].totalAmount += inv.amount;
+        acc[projectId].investments.push(inv);
+        return acc;
+      }, {});
+      
+      setInvestments(Object.values(groupedInvestments));
+    } catch (error) {
+      console.error("Erreur:", error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger vos investissements",
+        variant: "destructive"
+      });
+      setInvestments([]);
+      setTotalInvested(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
