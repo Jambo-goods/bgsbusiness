@@ -19,6 +19,8 @@ export type AdminUser = {
 // Login admin user
 export const loginAdmin = async ({ email, password }: AdminCredentials) => {
   try {
+    console.log("Attempting login with email:", email);
+    
     // Fetch admin user with the given email
     const { data: adminUser, error } = await supabase
       .from('admin_users')
@@ -26,16 +28,28 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
       .eq('email', email)
       .single();
 
-    if (error) throw error;
-    if (!adminUser) return { success: false, error: "Identifiants invalides" };
+    if (error) {
+      console.error("Error fetching admin user:", error);
+      throw error;
+    }
+    
+    if (!adminUser) {
+      console.log("No admin user found with this email");
+      return { success: false, error: "Identifiants invalides" };
+    }
 
+    console.log("Admin user found:", adminUser.email);
+    
     // Direct password comparison
     // Note: In a production environment, you should use hashed passwords
     const isValidPassword = password === adminUser.password;
 
     if (!isValidPassword) {
+      console.log("Invalid password provided");
       return { success: false, error: "Identifiants invalides" };
     }
+
+    console.log("Password validated successfully");
 
     // Update last login time
     await supabase
@@ -54,6 +68,8 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
 
     // Store admin session in localStorage
     localStorage.setItem('admin_user', JSON.stringify(adminUser));
+    
+    console.log("Login successful, admin session stored");
 
     return { 
       success: true, 

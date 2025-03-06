@@ -27,10 +27,12 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     try {
+      console.log("Attempting admin login with:", email);
       const { success, error, admin } = await loginAdmin({ email, password });
       
       if (!success) {
         setError(error || "Une erreur s'est produite lors de la connexion");
+        toast.error(error || "Une erreur s'est produite lors de la connexion");
         setIsLoading(false);
         return;
       }
@@ -43,6 +45,7 @@ export default function AdminLogin() {
     } catch (err: any) {
       console.error("Admin login error:", err);
       setError("Une erreur s'est produite lors de la connexion");
+      toast.error("Une erreur s'est produite lors de la connexion");
     } finally {
       setIsLoading(false);
     }
