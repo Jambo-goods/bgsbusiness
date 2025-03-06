@@ -44,24 +44,18 @@ export default function WalletTab() {
     }
   };
 
-  const handleDeposit = () => {
-    // This is a placeholder for actual deposit functionality
-    toast.success("Cette fonctionnalité sera bientôt disponible");
-    // After successful deposit, refresh the balance
-    fetchWalletBalance();
+  const handleDeposit = async () => {
+    await fetchWalletBalance();
   };
 
-  const handleWithdraw = () => {
-    // This is a placeholder for actual withdrawal functionality
-    toast.info("Cette fonctionnalité sera bientôt disponible");
-    // After successful withdrawal, refresh the balance
-    fetchWalletBalance();
+  const handleWithdraw = async () => {
+    await fetchWalletBalance();
   };
 
   return (
     <div className="space-y-6">
       <WalletBalance balance={balance} isLoading={isLoading} />
-      <ActionButtons onDeposit={handleDeposit} onWithdraw={handleWithdraw} />
+      <ActionButtons onDeposit={handleDeposit} onWithdraw={handleWithdraw} refreshBalance={fetchWalletBalance} />
       <WalletHistory refreshBalance={fetchWalletBalance} />
     </div>
   );

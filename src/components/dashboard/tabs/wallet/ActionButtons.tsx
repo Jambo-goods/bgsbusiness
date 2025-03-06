@@ -3,26 +3,21 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface ActionButtonsProps {
   onDeposit: () => void;
   onWithdraw: () => void;
+  refreshBalance?: () => Promise<void>;
 }
 
-export default function ActionButtons({ onDeposit, onWithdraw }: ActionButtonsProps) {
-  const { toast } = useToast();
-
+export default function ActionButtons({ onDeposit, onWithdraw, refreshBalance }: ActionButtonsProps) {
   const handleDeposit = async () => {
     try {
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez vous connecter pour effectuer un dépôt",
-          variant: "destructive"
-        });
+        toast.error("Veuillez vous connecter pour effectuer un dépôt");
         return;
       }
 
@@ -49,21 +44,15 @@ export default function ActionButtons({ onDeposit, onWithdraw }: ActionButtonsPr
 
       if (walletError) throw walletError;
 
-      toast({
-        title: "Dépôt réussi",
-        description: `${depositAmount}€ ont été ajoutés à votre portefeuille`,
-      });
+      toast.success(`${depositAmount}€ ont été ajoutés à votre portefeuille`);
 
-      // Appel de la fonction de rappel
+      // Appel de la fonction de rafraîchissement
+      if (refreshBalance) await refreshBalance();
       onDeposit();
 
     } catch (error) {
       console.error("Erreur lors du dépôt:", error);
-      toast({
-        title: "Erreur de dépôt",
-        description: "Une erreur s'est produite lors du dépôt des fonds",
-        variant: "destructive"
-      });
+      toast.error("Une erreur s'est produite lors du dépôt des fonds");
     }
   };
 
@@ -72,11 +61,7 @@ export default function ActionButtons({ onDeposit, onWithdraw }: ActionButtonsPr
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
-        toast({
-          title: "Erreur",
-          description: "Veuillez vous connecter pour effectuer un retrait",
-          variant: "destructive"
-        });
+        toast.error("Veuillez vous connecter pour effectuer un retrait");
         return;
       }
 
@@ -93,11 +78,7 @@ export default function ActionButtons({ onDeposit, onWithdraw }: ActionButtonsPr
 
       // Vérification que le solde est suffisant
       if (profileData.wallet_balance < withdrawalAmount) {
-        toast({
-          title: "Solde insuffisant",
-          description: "Vous n'avez pas assez de fonds pour effectuer ce retrait",
-          variant: "destructive"
-        });
+        toast.error("Vous n'avez pas assez de fonds pour effectuer ce retrait");
         return;
       }
 
@@ -121,21 +102,15 @@ export default function ActionButtons({ onDeposit, onWithdraw }: ActionButtonsPr
 
       if (walletError) throw walletError;
 
-      toast({
-        title: "Retrait réussi",
-        description: `${withdrawalAmount}€ ont été retirés de votre portefeuille`,
-      });
+      toast.success(`${withdrawalAmount}€ ont été retirés de votre portefeuille`);
 
-      // Appel de la fonction de rappel
+      // Appel de la fonction de rafraîchissement
+      if (refreshBalance) await refreshBalance();
       onWithdraw();
 
     } catch (error) {
       console.error("Erreur lors du retrait:", error);
-      toast({
-        title: "Erreur de retrait",
-        description: "Une erreur s'est produite lors du retrait des fonds",
-        variant: "destructive"
-      });
+      toast.error("Une erreur s'est produite lors du retrait des fonds");
     }
   };
 

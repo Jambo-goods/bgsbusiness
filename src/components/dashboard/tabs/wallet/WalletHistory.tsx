@@ -26,36 +26,57 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const { data: session } = await supabase.auth.getSession();
-        
-        if (!session.session) {
-          setError("Veuillez vous connecter pour voir votre historique");
-          setIsLoading(false);
-          return;
-        }
-
-        // Récupération des transactions de l'utilisateur connecté
-        const { data, error } = await supabase
-          .from('wallet_transactions')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        if (error) throw error;
-        
-        setTransactions(data as Transaction[]);
-      } catch (err) {
-        console.error("Erreur lors de la récupération des transactions:", err);
-        setError("Erreur lors du chargement de l'historique des transactions");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchTransactions();
-  }, []);
+    
+    // Set up realtime subscription
+    const channel = supabase
+      .channel('public:wallet_transactions')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wallet_transactions'
+      }, () => {
+        // When any change happens to wallet_transactions, refetch
+        fetchTransactions();
+        if (refreshBalance) refreshBalance();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refreshBalance]);
+
+  const fetchTransactions = async () => {
+    try {
+      setIsLoading(true);
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        setError("Veuillez vous connecter pour voir votre historique");
+        setIsLoading(false);
+        return;
+      }
+
+      // Récupération des transactions de l'utilisateur connecté
+      const { data, error } = await supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('user_id', session.session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      
+      setTransactions(data as Transaction[]);
+      setError(null);
+    } catch (err) {
+      console.error("Erreur lors de la récupération des transactions:", err);
+      setError("Erreur lors du chargement de l'historique des transactions");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Fonction pour formater le montant avec un signe + ou -
   const formatAmount = (amount: number, type: string) => {
