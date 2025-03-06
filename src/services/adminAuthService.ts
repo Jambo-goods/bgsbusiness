@@ -21,11 +21,17 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
   try {
     console.log("Attempting login with email:", email);
     
-    // Fetch admin user with the given email - using maybeSingle instead of single
+    // Log the credentials being used (without the full password)
+    console.log("Login attempt with:", { 
+      email, 
+      passwordLength: password ? password.length : 0 
+    });
+
+    // Fetch admin user with the given email
     const { data: adminUsers, error } = await supabase
       .from('admin_users')
       .select('*')
-      .eq('email', email);
+      .eq('email', email.trim().toLowerCase());
 
     if (error) {
       console.error("Error fetching admin user:", error);
@@ -41,8 +47,10 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
     const adminUser = adminUsers[0];
     console.log("Admin user found:", adminUser);
     
-    // Direct password comparison - we'll trim both just in case there are whitespace issues
-    const isValidPassword = password.trim() === adminUser.password.trim();
+    // Direct password comparison - without trimming to be exact
+    const isValidPassword = password === adminUser.password;
+
+    console.log("Password validation result:", isValidPassword);
 
     if (!isValidPassword) {
       console.log("Invalid password provided");

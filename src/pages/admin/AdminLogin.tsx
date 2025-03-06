@@ -7,8 +7,8 @@ import { loginAdmin } from "@/services/adminAuthService";
 import { useAdmin } from "@/contexts/AdminContext";
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("bamboguirassy93@gmail.com");
+  const [password, setPassword] = useState("Toshino201292@");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ export default function AdminLogin() {
     setIsLoading(true);
 
     // Validate inputs
-    if (!email.trim() || !password.trim()) {
+    if (!email || !password) {
       setError("Veuillez remplir tous les champs");
       toast.error("Veuillez remplir tous les champs");
       setIsLoading(false);
@@ -37,8 +37,8 @@ export default function AdminLogin() {
     try {
       console.log("Attempting admin login with:", email);
       const { success, error, admin } = await loginAdmin({ 
-        email: email.trim(), 
-        password: password.trim() 
+        email, 
+        password 
       });
       
       if (!success) {
