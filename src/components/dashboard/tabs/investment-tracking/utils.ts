@@ -1,59 +1,6 @@
 
-import { Project } from "@/types/project";
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
-
-export const generatePayments = (userInvestments: Project[]): PaymentRecord[] => {
-  let payments: PaymentRecord[] = [];
-  const now = new Date();
-  
-  userInvestments.forEach(project => {
-    // Generate past payments (3 months of history)
-    for (let i = 1; i <= 3; i++) {
-      const pastDate = new Date();
-      pastDate.setMonth(now.getMonth() - i);
-      
-      payments.push({
-        id: `payment-${project.id}-past-${i}`,
-        projectId: project.id,
-        projectName: project.name,
-        amount: Math.round((project.yield / 100) * 2500), // Assuming 2500€ investment per project
-        date: pastDate,
-        type: 'yield',
-        status: 'paid'
-      });
-    }
-    
-    // Current month payment
-    payments.push({
-      id: `payment-${project.id}-current`,
-      projectId: project.id,
-      projectName: project.name,
-      amount: Math.round((project.yield / 100) * 2500),
-      date: now,
-      type: 'yield',
-      status: 'paid'
-    });
-    
-    // Future payments (2 months ahead)
-    for (let i = 1; i <= 2; i++) {
-      const futureDate = new Date();
-      futureDate.setMonth(now.getMonth() + i);
-      
-      payments.push({
-        id: `payment-${project.id}-future-${i}`,
-        projectId: project.id,
-        projectName: project.name,
-        amount: Math.round((project.yield / 100) * 2500),
-        date: futureDate,
-        type: 'yield',
-        status: i === 1 ? 'pending' : 'scheduled'
-      });
-    }
-  });
-  
-  return payments;
-};
 
 export const fetchRealTimeInvestmentData = async (userId: string | undefined) => {
   if (!userId) {
@@ -80,7 +27,7 @@ export const fetchRealTimeInvestmentData = async (userId: string | undefined) =>
     
     if (!investments || investments.length === 0) {
       console.log("No investments found for user:", userId);
-      // Try to fetch with fewer constraints to confirm data exists
+      // Check if there's data in the database at all
       const { data: allInvestments, error: allError } = await supabase
         .from('investments')
         .select('id, user_id')

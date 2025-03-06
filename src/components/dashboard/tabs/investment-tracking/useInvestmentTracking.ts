@@ -5,7 +5,6 @@ import { Project } from "@/types/project";
 import { PaymentRecord } from "./types";
 import { toast } from "sonner";
 import { 
-  generatePayments, 
   fetchRealTimeInvestmentData,
   generatePaymentsFromRealData
 } from "./utils";
@@ -15,7 +14,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
-  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>(generatePayments(userInvestments));
+  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
   const [animateRefresh, setAnimateRefresh] = useState(false);
   const [realInvestments, setRealInvestments] = useState<any[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
@@ -29,10 +28,9 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       if (!session.session) {
         console.log("No active session found for investment tracking");
         toast.error("Pas de session active", {
-          description: "Connectez-vous pour voir vos données en temps réel."
+          description: "Connectez-vous pour voir vos données."
         });
-        // Fall back to sample data for unauthenticated users
-        setPaymentRecords(generatePayments(userInvestments));
+        setPaymentRecords([]);
         return;
       }
       
@@ -54,25 +52,24 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
           description: `${realPayments.length} versements chargés avec succès.`
         });
       } else {
-        // Fall back to sample data if no real investments found
-        console.log("No real investments found, using sample data");
-        setPaymentRecords(generatePayments(userInvestments));
-        toast.info("Données d'exemple", {
-          description: "Aucun investissement réel trouvé, utilisation de données d'exemple."
+        // No real investments found
+        console.log("No real investments found");
+        setPaymentRecords([]);
+        toast.info("Aucun investissement", {
+          description: "Aucun investissement trouvé pour votre compte."
         });
       }
     } catch (error) {
       console.error("Error loading real-time investment data:", error);
       toast.error("Erreur de chargement", {
-        description: "Impossible de charger les données de rendement en temps réel."
+        description: "Impossible de charger les données de rendement."
       });
-      // Fall back to sample data on error
-      setPaymentRecords(generatePayments(userInvestments));
+      setPaymentRecords([]);
     } finally {
       setIsLoading(false);
       setAnimateRefresh(false);
     }
-  }, [userInvestments]);
+  }, []);
   
   useEffect(() => {
     loadRealTimeData();
