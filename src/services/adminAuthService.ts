@@ -29,8 +29,8 @@ export const loginAdmin = async ({ email, password }: AdminCredentials) => {
     if (error) throw error;
     if (!adminUser) return { success: false, error: "Identifiants invalides" };
 
-    // In a real implementation, you would use bcrypt to compare passwords
-    // For demo purposes, we're doing a simple comparison
+    // Direct password comparison
+    // Note: In a production environment, you should use hashed passwords
     const isValidPassword = password === adminUser.password;
 
     if (!isValidPassword) {
