@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Bell, User, LayoutDashboard, Wallet, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -7,11 +6,9 @@ import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
-
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
 }
-
 export default function NavbarActions({
   isActive
 }: NavbarActionsProps) {
@@ -70,14 +67,13 @@ export default function NavbarActions({
   // Check if user is on a dashboard page
   const isDashboardPage = location.pathname.includes('/dashboard');
 
-  // Only hide the navbar actions when user is not authenticated and not on dashboard page
-  // We always show it when authenticated, regardless of the page
-  if (!isAuthenticated && !isDashboardPage) {
+  // Hide the navbar actions when:
+  // 1. User is authenticated AND on specified pages (home, projects, how-it-works, about)
+  // 2. User is not authenticated AND not on dashboard page
+  if (isAuthenticated && isSpecifiedPage || !isAuthenticated && !isDashboardPage) {
     return null;
   }
-  
-  return (
-    <div className="flex items-center space-x-2">
+  return <div className="flex items-center space-x-2">
       <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
         <Home className="h-5 w-5 text-bgs-blue" />
       </Link>
@@ -90,30 +86,15 @@ export default function NavbarActions({
       </Link>
       
       <div className="relative dashboard-menu-dropdown">
-        <button 
-          onClick={() => {
-            setIsDashboardMenuOpen(!isDashboardMenuOpen);
-            if (isUserMenuOpen) setIsUserMenuOpen(false);
-            if (isNotificationOpen) setIsNotificationOpen(false);
-          }} 
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Dashboard menu"
-        >
-          <LayoutDashboard className="h-5 w-5 text-bgs-blue" />
-        </button>
         <DashboardMenuDropdown isOpen={isDashboardMenuOpen} isActive={isActive} />
       </div>
 
       <div className="relative notification-dropdown">
-        <button 
-          onClick={() => {
-            setIsNotificationOpen(!isNotificationOpen);
-            if (isUserMenuOpen) setIsUserMenuOpen(false);
-            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-          }} 
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" 
-          aria-label="Notifications"
-        >
+        <button onClick={() => {
+        setIsNotificationOpen(!isNotificationOpen);
+        if (isUserMenuOpen) setIsUserMenuOpen(false);
+        if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
+      }} className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
           <Bell className="h-5 w-5 text-bgs-blue" />
           <span className="absolute top-1 right-1 h-2 w-2 bg-bgs-orange rounded-full"></span>
         </button>
@@ -122,20 +103,9 @@ export default function NavbarActions({
       </div>
       
       <div className="relative user-dropdown">
-        <button 
-          onClick={() => {
-            setIsUserMenuOpen(!isUserMenuOpen);
-            if (isNotificationOpen) setIsNotificationOpen(false);
-            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-          }} 
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors" 
-          aria-label="User menu"
-        >
-          <User className="h-5 w-5 text-bgs-blue" />
-        </button>
+        
         
         <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
       </div>
-    </div>
-  );
+    </div>;
 }
