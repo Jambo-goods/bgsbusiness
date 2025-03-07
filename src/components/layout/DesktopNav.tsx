@@ -70,6 +70,17 @@ export default function DesktopNav({
           </Link>
         </>
       )}
+      
+      {/* Show dashboard button ONLY if logged in and not on dashboard */}
+      {isLoggedIn && !isOnDashboard && (
+        <Button 
+          variant="default"
+          className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+          onClick={handleDashboardClick}
+        >
+          Tableau de bord
+        </Button>
+      )}
     </nav>
   );
 }
