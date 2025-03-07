@@ -89,9 +89,17 @@ export default function WalletTab() {
     await fetchWalletBalance();
   };
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+  };
+
   return (
     <div className="space-y-6">
-      <WalletBalance balance={balance} isLoading={isLoading} />
+      <WalletBalance 
+        balance={balance} 
+        isLoading={isLoading} 
+        onTabChange={handleTabChange}
+      />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-6">

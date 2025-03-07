@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Bell, User, LayoutDashboard, Wallet, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -6,9 +7,11 @@ import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
+
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
 }
+
 export default function NavbarActions({
   isActive
 }: NavbarActionsProps) {
@@ -16,6 +19,7 @@ export default function NavbarActions({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
   const {
     walletBalance
   } = useWalletBalance();
@@ -24,10 +28,12 @@ export default function NavbarActions({
   // Check if user is authenticated
   useEffect(() => {
     const checkAuth = async () => {
+      setIsLoading(true); // Set loading to true before checking auth
       const {
         data
       } = await supabase.auth.getSession();
       setIsAuthenticated(!!data.session);
+      setIsLoading(false); // Set loading to false after auth check
     };
     checkAuth();
 
@@ -58,12 +64,24 @@ export default function NavbarActions({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
 
-  // If not authenticated or not on dashboard page, don't render the actions
+  // Check if user is on a dashboard page
   const isDashboardPage = location.pathname.includes('/dashboard');
-  const isHomePage = location.pathname === '/';
-  if (!isAuthenticated || isHomePage && !isDashboardPage) {
+
+  // Don't render anything while loading
+  if (isLoading) {
     return null;
   }
+
+  // If the user is authenticated and not on dashboard, don't show logout button at all
+  if (isAuthenticated && !isDashboardPage) {
+    return null;
+  }
+  
+  // If the user is not authenticated and not on dashboard, also don't show actions
+  if (!isAuthenticated && !isDashboardPage) {
+    return null;
+  }
+  
   return <div className="flex items-center space-x-2">
       <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
         <Home className="h-5 w-5 text-bgs-blue" />
@@ -77,8 +95,6 @@ export default function NavbarActions({
       </Link>
       
       <div className="relative dashboard-menu-dropdown">
-        
-
         <DashboardMenuDropdown isOpen={isDashboardMenuOpen} isActive={isActive} />
       </div>
 
@@ -96,14 +112,6 @@ export default function NavbarActions({
       </div>
       
       <div className="relative user-dropdown">
-        <button onClick={() => {
-        setIsUserMenuOpen(!isUserMenuOpen);
-        if (isNotificationOpen) setIsNotificationOpen(false);
-        if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-      }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="User menu">
-          <User className="h-5 w-5 text-bgs-blue" />
-        </button>
-        
         <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
       </div>
     </div>;

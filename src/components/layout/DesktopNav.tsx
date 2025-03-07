@@ -17,12 +17,15 @@ export default function DesktopNav({
 }: DesktopNavProps) {
   return (
     <nav className="hidden md:flex space-x-8 items-center">
-      <Link
-        to="/"
-        className={cn("nav-link", isActive("/") && "active")}
-      >
-        Accueil
-      </Link>
+      {/* Hide the home link when on dashboard */}
+      {!isOnDashboard && (
+        <Link
+          to="/"
+          className={cn("nav-link", isActive("/") && "active")}
+        >
+          Accueil
+        </Link>
+      )}
       
       {/* Show these links when user is NOT on dashboard, regardless of login status */}
       {!isOnDashboard && (
