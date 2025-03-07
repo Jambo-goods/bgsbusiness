@@ -1,6 +1,7 @@
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface DesktopNavProps {
   isLoggedIn: boolean;
@@ -15,6 +16,13 @@ export default function DesktopNav({
   handleLogout,
   isOnDashboard = false
 }: DesktopNavProps) {
+  const navigate = useNavigate();
+
+  const handleDashboardClick = () => {
+    // Use replace to prevent back navigation to public routes after entering dashboard
+    navigate("/dashboard", { replace: true });
+  };
+
   return (
     <nav className="hidden md:flex space-x-8 items-center">
       {/* Hide the home link when on dashboard */}
@@ -63,9 +71,13 @@ export default function DesktopNav({
         </>
       ) : !isOnDashboard ? (
         // Show dashboard button if logged in and not on dashboard
-        <Link to="/dashboard" className="btn-primary">
+        <Button 
+          variant="default"
+          className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+          onClick={handleDashboardClick}
+        >
           Tableau de bord
-        </Link>
+        </Button>
       ) : null}
     </nav>
   );
