@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { CalendarClock, TrendingUp, RefreshCw, BellRing, Home, User } from "lucide-react";
+import { CalendarClock, TrendingUp, RefreshCw, Home, User } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 interface DashboardHeaderProps {
@@ -26,14 +26,6 @@ export default function DashboardHeader({
   const handleRefresh = async () => {
     if (refreshData && !isRefreshing) {
       await refreshData();
-    }
-  };
-  
-  const navigateToNotifications = () => {
-    if (setActiveTab) {
-      setActiveTab('notifications');
-    } else {
-      navigate('/dashboard', { state: { activeTab: 'notifications' } });
     }
   };
   
@@ -85,14 +77,6 @@ export default function DashboardHeader({
               <span className="text-sm whitespace-nowrap">Actualiser</span>
             </button>
           )}
-          
-          <button 
-            onClick={navigateToNotifications}
-            className="relative bg-white/10 backdrop-blur-sm rounded-lg p-2 flex items-center transition-all hover:bg-white/20 border border-white/10"
-          >
-            <BellRing className="h-4 w-4 text-white/90" />
-            <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center font-bold">2</span>
-          </button>
         </div>
       </div>
     </header>

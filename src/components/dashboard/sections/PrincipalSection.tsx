@@ -7,8 +7,7 @@ import {
   BarChart, 
   LineChart, 
   Building2, 
-  Timer, 
-  BellRing 
+  Timer
 } from "lucide-react";
 
 interface PrincipalSectionProps {
@@ -74,15 +73,6 @@ export default function PrincipalSection({
         active={activeTab === "capital"}
         onClick={() => handleTabChange("capital")}
         expanded={expanded}
-      />
-      
-      <SidebarNavItem
-        icon={<BellRing size={18} />}
-        label="Notifications"
-        active={activeTab === "notifications"}
-        onClick={() => handleTabChange("notifications")}
-        expanded={expanded}
-        badge={2}
       />
     </div>
   );
