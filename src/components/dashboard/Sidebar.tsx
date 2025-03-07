@@ -42,7 +42,7 @@ export default function Sidebar({
   
   return (
     <div className={cn(
-      "flex flex-col h-full transition-all duration-300 bg-white border-r relative", 
+      "flex flex-col h-full transition-all duration-300 bg-white border-r relative overflow-y-auto", 
       isSidebarOpen ? "w-64" : "w-16"
     )}>
       {toggleSidebar && (
@@ -50,7 +50,8 @@ export default function Sidebar({
           onClick={toggleSidebar}
           className={cn(
             "absolute top-4 right-0 z-10 h-8 w-8 flex items-center justify-center bg-white shadow-sm rounded-l-md -mr-4 transition-all",
-            "text-bgs-blue hover:text-bgs-orange focus:outline-none"
+            "text-bgs-blue hover:text-bgs-orange focus:outline-none",
+            "md:flex hidden" // Hide on mobile, show on desktop
           )}
           aria-label={isSidebarOpen ? "Réduire le menu" : "Agrandir le menu"}
           title={isSidebarOpen ? "Réduire le menu (Ctrl+B)" : "Agrandir le menu (Ctrl+B)"}
@@ -59,7 +60,7 @@ export default function Sidebar({
         </button>
       )}
       
-      <div className="flex-1 py-6 overflow-y-auto px-3 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300">
+      <div className="flex flex-col py-4 flex-grow">
         <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
           <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
         </SidebarSection>

@@ -26,7 +26,7 @@ export default function SidebarNavItem({
         title={!expanded ? label : undefined}
         className={cn(
           "flex items-center w-full rounded-lg text-sm transition-all duration-200",
-          expanded ? "px-3 py-3" : "p-2.5 justify-center",
+          expanded ? "px-3 py-2.5" : "p-2.5 justify-center",
           variant === "default" && (
             isActive
               ? "bg-gradient-to-r from-bgs-blue to-bgs-blue-light text-white font-medium shadow-sm"
@@ -38,7 +38,7 @@ export default function SidebarNavItem({
         <Icon 
           size={expanded ? 18 : 20} 
           className={cn(
-            "transition-all duration-200",
+            "transition-all duration-200 flex-shrink-0",
             expanded ? "mr-3" : "",
             isActive 
               ? "text-white" 
@@ -49,7 +49,7 @@ export default function SidebarNavItem({
         />
         {expanded && (
           <span className={cn(
-            "truncate transition-opacity duration-200",
+            "truncate transition-opacity duration-200 text-sm",
             isActive ? "opacity-100" : "opacity-80"
           )}>
             {label}
