@@ -70,8 +70,8 @@ export default function DesktopNav({
         </Button>
       )}
       
-      {/* Show login/register buttons ONLY when NOT logged in and NOT on dashboard */}
-      {!isLoggedIn && !isOnDashboard && (
+      {/* Show login/register buttons ONLY when NOT logged in */}
+      {!isLoggedIn && (
         <div className="flex ml-auto space-x-3">
           <Button 
             variant="outline"
