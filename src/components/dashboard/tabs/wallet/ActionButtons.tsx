@@ -1,13 +1,15 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, Download } from "lucide-react";
+import { Upload, Download, Euro } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
 interface ActionButtonsProps {
   onDeposit: () => void;
   onWithdraw: () => void;
   refreshBalance?: () => Promise<void>;
 }
+
 export default function ActionButtons({
   onDeposit,
   onWithdraw,
@@ -55,6 +57,7 @@ export default function ActionButtons({
       toast.error("Une erreur s'est produite lors du dépôt des fonds");
     }
   };
+
   const handleWithdraw = async () => {
     try {
       const {
@@ -108,9 +111,28 @@ export default function ActionButtons({
       toast.error("Une erreur s'est produite lors du retrait des fonds");
     }
   };
-  return <div className="flex flex-wrap gap-4">
+
+  return (
+    <div className="flex flex-wrap gap-4">
+      <Button 
+        variant="outline" 
+        className="flex-1 bg-white hover:bg-gray-50 text-bgs-blue border-bgs-blue hover:text-bgs-blue-dark flex items-center justify-center gap-2 py-6"
+        onClick={handleDeposit}
+      >
+        <Euro className="h-5 w-5" />
+        <span className="font-medium">Ajouter des fonds</span>
+        <Upload className="h-4 w-4 ml-1" />
+      </Button>
       
-      
-      
-    </div>;
+      <Button 
+        variant="outline" 
+        className="flex-1 bg-white hover:bg-gray-50 text-bgs-orange border-bgs-orange hover:text-bgs-orange-dark flex items-center justify-center gap-2 py-6"
+        onClick={handleWithdraw}
+      >
+        <Euro className="h-5 w-5" />
+        <span className="font-medium">Retirer des fonds</span>
+        <Download className="h-4 w-4 ml-1" />
+      </Button>
+    </div>
+  );
 }
