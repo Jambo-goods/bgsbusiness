@@ -5,15 +5,18 @@ import NavbarActions from "./navbar/NavbarActions";
 
 interface NavbarHeaderProps {
   isScrolled: boolean;
+  isLoggedIn?: boolean;
   children?: React.ReactNode;
 }
 
-export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps) {
+export default function NavbarHeader({ isScrolled, isLoggedIn = false, children }: NavbarHeaderProps) {
   const location = useLocation();
 
   const isActive = (path: string) => {
     return location.pathname.includes(path);
   };
+  
+  const isDashboardPage = location.pathname.includes('/dashboard');
   
   return (
     <header
@@ -27,7 +30,8 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {children}
-          <NavbarActions isActive={isActive} />
+          {/* Only show NavbarActions when logged in and on dashboard */}
+          {isLoggedIn && isDashboardPage && <NavbarActions isActive={isActive} />}
         </div>
       </div>
     </header>

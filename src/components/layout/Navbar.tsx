@@ -80,7 +80,7 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   return (
-    <NavbarHeader isScrolled={effectiveIsScrolled}>
+    <NavbarHeader isScrolled={effectiveIsScrolled} isLoggedIn={isLoggedIn}>
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
         <NavLogo logoPath={logoPath} />
 
