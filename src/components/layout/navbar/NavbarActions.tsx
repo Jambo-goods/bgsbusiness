@@ -19,7 +19,7 @@ export default function NavbarActions({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Add loading state
+  const [isLoading, setIsLoading] = useState(true);
   const {
     walletBalance
   } = useWalletBalance();
@@ -28,12 +28,12 @@ export default function NavbarActions({
   // Check if user is authenticated
   useEffect(() => {
     const checkAuth = async () => {
-      setIsLoading(true); // Set loading to true before checking auth
+      setIsLoading(true);
       const {
         data
       } = await supabase.auth.getSession();
       setIsAuthenticated(!!data.session);
-      setIsLoading(false); // Set loading to false after auth check
+      setIsLoading(false);
     };
     checkAuth();
 
@@ -72,7 +72,7 @@ export default function NavbarActions({
     return null;
   }
 
-  // If the user is authenticated and not on dashboard, don't show logout button at all
+  // If the user is authenticated and not on dashboard, don't show any actions
   if (isAuthenticated && !isDashboardPage) {
     return null;
   }
@@ -82,51 +82,57 @@ export default function NavbarActions({
     return null;
   }
   
-  return <div className="flex items-center space-x-2">
-      <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-        <Home className="h-5 w-5 text-bgs-blue" />
-      </Link>
-      
-      <Link to="/dashboard?tab=wallet" className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1">
-        <Wallet className="h-5 w-5 text-bgs-blue" />
-        <span className="text-xs font-medium text-bgs-blue">
-          {walletBalance.toLocaleString('fr-FR')}€
-        </span>
-      </Link>
-      
-      <div className="relative dashboard-menu-dropdown">
-        <button onClick={() => {
-          setIsDashboardMenuOpen(!isDashboardMenuOpen);
-          if (isNotificationOpen) setIsNotificationOpen(false);
-          if (isUserMenuOpen) setIsUserMenuOpen(false);
-        }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="Dashboard Menu">
-          <LayoutDashboard className="h-5 w-5 text-bgs-blue" />
-        </button>
-        <DashboardMenuDropdown isOpen={isDashboardMenuOpen} isActive={isActive} />
-      </div>
-
-      <div className="relative notification-dropdown">
-        <button onClick={() => {
-        setIsNotificationOpen(!isNotificationOpen);
-        if (isUserMenuOpen) setIsUserMenuOpen(false);
-        if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-      }} className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
-          <Bell className="h-5 w-5 text-bgs-blue" />
-          <span className="absolute top-1 right-1 h-2 w-2 bg-bgs-orange rounded-full"></span>
-        </button>
+  // Only show dashboard actions when on dashboard pages
+  if (isDashboardPage) {
+    return (
+      <div className="flex items-center space-x-2">
+        <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+          <Home className="h-5 w-5 text-bgs-blue" />
+        </Link>
         
-        <NotificationDropdown isOpen={isNotificationOpen} />
+        <Link to="/dashboard?tab=wallet" className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1">
+          <Wallet className="h-5 w-5 text-bgs-blue" />
+          <span className="text-xs font-medium text-bgs-blue">
+            {walletBalance.toLocaleString('fr-FR')}€
+          </span>
+        </Link>
+        
+        <div className="relative dashboard-menu-dropdown">
+          <button onClick={() => {
+            setIsDashboardMenuOpen(!isDashboardMenuOpen);
+            if (isNotificationOpen) setIsNotificationOpen(false);
+            if (isUserMenuOpen) setIsUserMenuOpen(false);
+          }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="Dashboard Menu">
+            <LayoutDashboard className="h-5 w-5 text-bgs-blue" />
+          </button>
+          <DashboardMenuDropdown isOpen={isDashboardMenuOpen} isActive={isActive} />
+        </div>
+
+        <div className="relative notification-dropdown">
+          <button onClick={() => {
+            setIsNotificationOpen(!isNotificationOpen);
+            if (isUserMenuOpen) setIsUserMenuOpen(false);
+            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
+          }} className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
+            <Bell className="h-5 w-5 text-bgs-blue" />
+            <span className="absolute top-1 right-1 h-2 w-2 bg-bgs-orange rounded-full"></span>
+          </button>
+          
+          <NotificationDropdown isOpen={isNotificationOpen} />
+        </div>
+        
+        <div className="relative user-dropdown">
+          <button onClick={() => {
+            setIsUserMenuOpen(!isUserMenuOpen);
+            if (isNotificationOpen) setIsNotificationOpen(false);
+            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
+          }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="User Menu">
+            <User className="h-5 w-5 text-bgs-blue" />
+          </button>
+          <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
+        </div>
       </div>
-      
-      <div className="relative user-dropdown">
-        <button onClick={() => {
-          setIsUserMenuOpen(!isUserMenuOpen);
-          if (isNotificationOpen) setIsNotificationOpen(false);
-          if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-        }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="User Menu">
-          <User className="h-5 w-5 text-bgs-blue" />
-        </button>
-        <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
-      </div>
-    </div>;
-}
+    );
+  }
+  
+  return null;

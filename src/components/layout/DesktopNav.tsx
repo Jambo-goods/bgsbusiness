@@ -51,13 +51,8 @@ export default function DesktopNav({
         </>
       )}
       
-      {isLoggedIn ? (
-        !isOnDashboard && (
-          <Link to="/dashboard" className="btn-primary">
-            Tableau de bord
-          </Link>
-        )
-      ) : (
+      {!isLoggedIn ? (
+        // Show login/register buttons only if not logged in
         <>
           <Link to="/login" className="btn-secondary">
             Connexion
@@ -66,7 +61,12 @@ export default function DesktopNav({
             S'inscrire
           </Link>
         </>
-      )}
+      ) : !isOnDashboard ? (
+        // Show dashboard button if logged in and not on dashboard
+        <Link to="/dashboard" className="btn-primary">
+          Tableau de bord
+        </Link>
+      ) : null}
     </nav>
   );
 }

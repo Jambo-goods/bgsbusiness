@@ -77,13 +77,8 @@ export default function MobileMenu({
         )}
         
         <div className="pt-2 flex flex-col space-y-3">
-          {isLoggedIn ? (
-            !isOnDashboard && (
-              <Link to="/dashboard" className="btn-primary w-full text-center">
-                Tableau de bord
-              </Link>
-            )
-          ) : (
+          {!isLoggedIn ? (
+            // Show login/register buttons only if not logged in
             <>
               <Link to="/login" className="btn-secondary w-full text-center">
                 Connexion
@@ -92,7 +87,12 @@ export default function MobileMenu({
                 S'inscrire
               </Link>
             </>
-          )}
+          ) : !isOnDashboard ? (
+            // Show dashboard button if logged in and not on dashboard
+            <Link to="/dashboard" className="btn-primary w-full text-center">
+              Tableau de bord
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>
