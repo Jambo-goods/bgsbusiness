@@ -9,7 +9,6 @@ interface MobileMenuProps {
   isActive: (path: string) => boolean;
   handleLogout: () => void;
   isOnDashboard?: boolean;
-  authChecked: boolean;
 }
 
 export default function MobileMenu({ 
@@ -17,8 +16,7 @@ export default function MobileMenu({
   isLoggedIn, 
   isActive, 
   handleLogout,
-  isOnDashboard = false,
-  authChecked = false
+  isOnDashboard = false
 }: MobileMenuProps) {
   const navigate = useNavigate();
   
@@ -89,50 +87,16 @@ export default function MobileMenu({
         {/* Always render navigation links */}
         {renderNavLinks()}
         
-        {/* Show auth buttons with proper visibility based on auth state */}
-        <div className={cn("pt-2 flex flex-col space-y-3", !authChecked && "opacity-0", "transition-opacity duration-150")}>
-          {/* When not authenticated yet, show placeholder button that will be replaced once auth is checked */}
-          {!authChecked && (
-            <Button
-              variant="default"
-              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
-              disabled
-            >
-              Tableau de bord
-            </Button>
-          )}
-          
-          {/* Only show dashboard button when auth is checked and user is logged in and NOT on dashboard */}
-          {authChecked && isLoggedIn && !isOnDashboard && (
-            <Button
-              variant="default"
-              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
-              onClick={() => navigate("/dashboard")}
-            >
-              Tableau de bord
-            </Button>
-          )}
-          
-          {/* Only show login/register buttons when auth is checked and user is NOT logged in */}
-          {authChecked && !isLoggedIn && (
-            <>
-              <Button 
-                variant="outline"
-                className="border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10 w-full"
-                onClick={() => navigate("/login")}
-              >
-                Connexion
-              </Button>
-              <Button 
-                variant="default"
-                className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
-                onClick={() => navigate("/register")}
-              >
-                Inscription
-              </Button>
-            </>
-          )}
-        </div>
+        {/* Show dashboard button only when logged in and not on dashboard */}
+        {isLoggedIn && !isOnDashboard && (
+          <Button
+            variant="default"
+            className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full mt-2"
+            onClick={() => navigate("/dashboard")}
+          >
+            Tableau de bord
+          </Button>
+        )}
       </div>
     </div>
   );

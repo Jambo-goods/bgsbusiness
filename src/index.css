@@ -142,7 +142,7 @@
   }
 
   .nav-link.active {
-    @apply text-bgs-blue after:w-full;
+    @apply text-bgs-blue after:w-full font-semibold;
   }
 }
 
