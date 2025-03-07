@@ -3,6 +3,8 @@ import { lazy, Suspense } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
 import { Skeleton } from "@/components/ui/skeleton";
+import ProjectsList from "../projects/ProjectsList";
+import { projects } from "@/data/projects";
 
 // Lazy load tabs that aren't used as frequently
 const WalletTab = lazy(() => import("./tabs/WalletTab"));
@@ -59,6 +61,18 @@ export default function TabContent({
           
           {activeTab === "investments" && (
             <Investments userInvestments={userInvestments} />
+          )}
+
+          {activeTab === "projects" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-semibold text-bgs-blue">Projets d'investissement proposés</h2>
+              </div>
+              <p className="text-gray-600">
+                Découvrez tous les projets d'investissement disponibles sur la plateforme et trouvez ceux qui correspondent à vos objectifs financiers.
+              </p>
+              <ProjectsList projects={projects} />
+            </div>
           )}
           
           {activeTab === "tracking" && (
