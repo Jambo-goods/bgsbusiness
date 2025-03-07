@@ -54,6 +54,16 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
   }, [location.pathname]);
 
   useEffect(() => {
+    // Also check auth status on component mount
+    const checkAuthOnMount = async () => {
+      const { user } = await getCurrentUser();
+      setIsLoggedIn(!!user);
+    };
+    
+    checkAuthOnMount();
+  }, []);
+
+  useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
