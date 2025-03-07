@@ -22,17 +22,20 @@ export default function MobileMenu({
   return (
     <div className="md:hidden bg-white absolute top-full left-0 right-0 shadow-md animate-fade-in">
       <div className="container mx-auto px-4 py-6 flex flex-col space-y-4">
-        <Link
-          to="/"
-          className={cn(
-            "py-2 px-4 rounded-md transition-colors",
-            isActive("/") 
-              ? "bg-bgs-gray-light text-bgs-blue font-medium" 
-              : "text-bgs-blue/80 hover:bg-bgs-gray-light"
-          )}
-        >
-          Accueil
-        </Link>
+        {/* Hide the home link when on dashboard */}
+        {!isOnDashboard && (
+          <Link
+            to="/"
+            className={cn(
+              "py-2 px-4 rounded-md transition-colors",
+              isActive("/") 
+                ? "bg-bgs-gray-light text-bgs-blue font-medium" 
+                : "text-bgs-blue/80 hover:bg-bgs-gray-light"
+            )}
+          >
+            Accueil
+          </Link>
+        )}
         
         {/* Show these links when user is NOT on dashboard, regardless of login status */}
         {!isOnDashboard && (
