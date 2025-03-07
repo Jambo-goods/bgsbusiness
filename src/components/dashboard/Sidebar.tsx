@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import SidebarSection from "./SidebarSection";
 import PrincipalSection from "./sections/PrincipalSection";
 import AccountSection from "./sections/AccountSection";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight, MenuIcon } from "lucide-react";
 
 interface SidebarProps {
   activeTab: string;
@@ -42,21 +42,24 @@ export default function Sidebar({
   
   return (
     <div className={cn(
-      "flex flex-col h-full transition-all duration-300 bg-white shadow-md border-r", 
+      "flex flex-col h-full transition-all duration-300 bg-white shadow-md border-r relative", 
       isSidebarOpen ? "w-64" : "w-16"
     )}>
       {toggleSidebar && (
-        <div className="flex justify-end p-2">
-          <button 
-            onClick={toggleSidebar}
-            className="p-1 rounded-full hover:bg-gray-100 md:hidden"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-        </div>
+        <button 
+          onClick={toggleSidebar}
+          className={cn(
+            "absolute top-4 right-0 z-10 h-8 w-8 flex items-center justify-center bg-white shadow-md rounded-l-md -mr-4 transition-all",
+            "text-bgs-blue hover:text-bgs-orange focus:outline-none"
+          )}
+          aria-label={isSidebarOpen ? "Réduire le menu" : "Agrandir le menu"}
+          title={isSidebarOpen ? "Réduire le menu (Ctrl+B)" : "Agrandir le menu (Ctrl+B)"}
+        >
+          {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+        </button>
       )}
       
-      <nav className="flex-1 py-4 overflow-y-auto px-3">
+      <nav className="flex-1 py-4 overflow-y-auto px-3 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300">
         <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
           <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
         </SidebarSection>

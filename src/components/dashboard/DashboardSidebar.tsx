@@ -34,7 +34,7 @@ export default function DashboardSidebar({
           "bg-white shadow-md fixed md:sticky top-16 z-40 h-[calc(100vh-4rem)] transition-all duration-300 overflow-hidden",
           isSidebarOpen 
             ? "w-64 translate-x-0" 
-            : "-translate-x-full md:translate-x-0 md:w-16 w-0"
+            : "w-16 translate-x-0"
         )}
       >
         <Sidebar 
