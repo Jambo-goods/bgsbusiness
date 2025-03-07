@@ -1,9 +1,7 @@
 
 import { ReactNode, useState, useEffect } from "react";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
-import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-import { CircleUserRound, Menu, X, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,9 +79,6 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Navbar */}
-      <Navbar isScrolled={isScrolled} />
-      
       <div className="flex-1 flex flex-row pt-16">
         {/* Sidebar */}
         <DashboardSidebar
@@ -99,8 +94,6 @@ export default function DashboardLayout({
           "flex-1 flex flex-col min-h-[calc(100vh-4rem)] transition-all duration-300",
           effectiveIsSidebarOpen ? "md:ml-0" : "md:ml-0"
         )}>
-          {/* The top bar div has been removed from here */}
-          
           {/* Dashboard content */}
           {children}
           

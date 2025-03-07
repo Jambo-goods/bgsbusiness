@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -14,7 +14,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
-  // Fetch user ID from auth session
+  // Fetch user ID from auth session - only once at component mount
   useEffect(() => {
     const fetchUserId = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -67,15 +67,15 @@ export default function Dashboard() {
     }
   }, [realTimeStatus]);
   
-  // Handle manual data refresh
-  const refreshAllData = async () => {
+  // Handle manual data refresh with debounce protection
+  const refreshAllData = useCallback(async () => {
     toast.info("Actualisation des données...");
     await Promise.all([
       refreshProfileData(),
       refreshInvestmentsData()
     ]);
     toast.success("Données actualisées");
-  };
+  }, [refreshProfileData, refreshInvestmentsData]);
 
   return (
     <>
