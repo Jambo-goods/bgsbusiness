@@ -23,24 +23,29 @@ export default function DesktopNav({
       >
         Accueil
       </Link>
-      <Link
-        to="/projects"
-        className={cn("nav-link", isActive("/projects") && "active")}
-      >
-        Projets
-      </Link>
-      <Link
-        to="/how-it-works"
-        className={cn("nav-link", isActive("/how-it-works") && "active")}
-      >
-        Comment ça marche
-      </Link>
-      <Link
-        to="/about"
-        className={cn("nav-link", isActive("/about") && "active")}
-      >
-        À propos
-      </Link>
+      
+      {!isLoggedIn && (
+        <>
+          <Link
+            to="/projects"
+            className={cn("nav-link", isActive("/projects") && "active")}
+          >
+            Projets
+          </Link>
+          <Link
+            to="/how-it-works"
+            className={cn("nav-link", isActive("/how-it-works") && "active")}
+          >
+            Comment ça marche
+          </Link>
+          <Link
+            to="/about"
+            className={cn("nav-link", isActive("/about") && "active")}
+          >
+            À propos
+          </Link>
+        </>
+      )}
       
       {isLoggedIn ? (
         !isOnDashboard && (
