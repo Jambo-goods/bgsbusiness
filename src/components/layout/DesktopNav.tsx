@@ -7,13 +7,15 @@ interface DesktopNavProps {
   isActive: (path: string) => boolean;
   handleLogout: () => void;
   isOnDashboard?: boolean;
+  isScrolled?: boolean;
 }
 
 export default function DesktopNav({ 
   isLoggedIn, 
   isActive, 
   handleLogout,
-  isOnDashboard = false
+  isOnDashboard = false,
+  isScrolled
 }: DesktopNavProps) {
   return (
     <nav className="hidden md:flex space-x-8 items-center">

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 interface DashboardCardProps {
   title: string;
-  value: string;
+  value: string | number;
   icon?: ReactNode;
   iconBgColor?: string;
   iconColor?: string;
@@ -13,6 +13,7 @@ interface DashboardCardProps {
   changeTimeframe?: string;
   changeDirection?: "up" | "down" | "neutral";
   footer?: ReactNode;
+  description?: string;
 }
 
 export default function DashboardCard({
@@ -25,7 +26,8 @@ export default function DashboardCard({
   changeValue,
   changeTimeframe = "ce mois",
   changeDirection,
-  footer
+  footer,
+  description
 }: DashboardCardProps) {
   // Determine change direction and color
   let direction = changeDirection;
@@ -54,6 +56,12 @@ export default function DashboardCard({
       <div className="text-2xl font-bold text-bgs-blue mb-2">
         {value}
       </div>
+      
+      {description && (
+        <div className="text-sm text-gray-500 mb-2">
+          {description}
+        </div>
+      )}
       
       {changePercentage && (
         <div className="flex items-center text-xs space-x-1">
