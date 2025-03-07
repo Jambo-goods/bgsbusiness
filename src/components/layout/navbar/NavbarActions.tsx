@@ -19,6 +19,7 @@ export default function NavbarActions({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Add loading state
   const {
     walletBalance
   } = useWalletBalance();
@@ -27,10 +28,12 @@ export default function NavbarActions({
   // Check if user is authenticated
   useEffect(() => {
     const checkAuth = async () => {
+      setIsLoading(true); // Set loading to true before checking auth
       const {
         data
       } = await supabase.auth.getSession();
       setIsAuthenticated(!!data.session);
+      setIsLoading(false); // Set loading to false after auth check
     };
     checkAuth();
 
@@ -61,11 +64,13 @@ export default function NavbarActions({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
 
-  // Get current page path
-  const currentPath = location.pathname;
-
   // Check if user is on a dashboard page
   const isDashboardPage = location.pathname.includes('/dashboard');
+
+  // Don't render anything while loading
+  if (isLoading) {
+    return null;
+  }
 
   // If the user is authenticated and not on dashboard, don't show logout button at all
   if (isAuthenticated && !isDashboardPage) {
