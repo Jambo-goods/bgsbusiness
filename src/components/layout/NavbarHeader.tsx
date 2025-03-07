@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils";
-import { Bell, User, LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase, Settings, UserCircle, LogOut } from "lucide-react";
+import { Bell, User, LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase, Settings, UserCircle, LogOut, Home } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -52,6 +52,10 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
           {children}
           
           <div className="flex items-center space-x-2">
+            <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
+              <Home className="h-5 w-5 text-bgs-blue" />
+            </Link>
+            
             <div className="relative dashboard-menu-dropdown">
               <button
                 onClick={() => {
