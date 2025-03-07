@@ -25,58 +25,17 @@ export default function DesktopNav({
     navigate("/dashboard", { replace: true });
   };
 
-  // Don't render auth-dependent buttons until auth is checked
-  if (!authChecked) {
-    return (
-      <nav className="hidden md:flex space-x-8 items-center">
-        {/* Show only non-auth dependent links */}
-        {!isOnDashboard && (
-          <>
-            <Link
-              to="/"
-              className={cn("nav-link", isActive("/") && "active")}
-            >
-              Accueil
-            </Link>
-            <Link
-              to="/projects"
-              className={cn("nav-link", isActive("/projects") && "active")}
-            >
-              Projets
-            </Link>
-            <Link
-              to="/how-it-works"
-              className={cn("nav-link", isActive("/how-it-works") && "active")}
-            >
-              Comment ça marche
-            </Link>
-            <Link
-              to="/about"
-              className={cn("nav-link", isActive("/about") && "active")}
-            >
-              À propos
-            </Link>
-          </>
-        )}
-      </nav>
-    );
-  }
-
-  return (
-    <nav className="hidden md:flex space-x-8 items-center">
-      {/* Hide the home link when on dashboard */}
-      {!isOnDashboard && (
-        <Link
-          to="/"
-          className={cn("nav-link", isActive("/") && "active")}
-        >
-          Accueil
-        </Link>
-      )}
-      
-      {/* Show these links when user is NOT on dashboard, regardless of login status */}
+  // Render navigation links
+  const renderNavLinks = () => (
+    <>
       {!isOnDashboard && (
         <>
+          <Link
+            to="/"
+            className={cn("nav-link", isActive("/") && "active")}
+          >
+            Accueil
+          </Link>
           <Link
             to="/projects"
             className={cn("nav-link", isActive("/projects") && "active")}
@@ -97,37 +56,58 @@ export default function DesktopNav({
           </Link>
         </>
       )}
+    </>
+  );
+
+  return (
+    <nav className="hidden md:flex space-x-8 items-center">
+      {/* Always render navigation links */}
+      {renderNavLinks()}
       
-      {/* Show dashboard button only when logged in and NOT on dashboard */}
-      {isLoggedIn && !isOnDashboard && (
-        <Button 
-          variant="default"
-          className="bg-bgs-blue hover:bg-bgs-blue/90 text-white ml-auto"
-          onClick={handleDashboardClick}
-        >
-          Tableau de bord
-        </Button>
-      )}
-      
-      {/* Show login/register buttons ONLY when NOT logged in */}
-      {!isLoggedIn && (
-        <div className="flex ml-auto space-x-3">
-          <Button 
-            variant="outline"
-            className="border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10"
-            onClick={() => navigate("/login")}
-          >
-            Connexion
-          </Button>
+      {/* Show dashboard button immediately with correct visibility based on auth state */}
+      <div className={cn("ml-auto", !authChecked && "opacity-0", "transition-opacity duration-150")}>
+        {/* When not authenticated yet, show placeholder button that will be replaced by proper buttons */}
+        {!authChecked && (
           <Button 
             variant="default"
             className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
-            onClick={() => navigate("/register")}
+            disabled
           >
-            Inscription
+            Tableau de bord
           </Button>
-        </div>
-      )}
+        )}
+        
+        {/* Only show when auth is checked and user is logged in and not on dashboard */}
+        {authChecked && isLoggedIn && !isOnDashboard && (
+          <Button 
+            variant="default"
+            className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+            onClick={handleDashboardClick}
+          >
+            Tableau de bord
+          </Button>
+        )}
+        
+        {/* Only show login/register buttons ONLY when auth is checked and user is NOT logged in */}
+        {authChecked && !isLoggedIn && (
+          <div className="flex space-x-3">
+            <Button 
+              variant="outline"
+              className="border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10"
+              onClick={() => navigate("/login")}
+            >
+              Connexion
+            </Button>
+            <Button 
+              variant="default"
+              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+              onClick={() => navigate("/register")}
+            >
+              Inscription
+            </Button>
+          </div>
+        )}
+      </div>
     </nav>
   );
 }
