@@ -1,14 +1,29 @@
+
 import React from "react";
 import { WalletCards, Euro, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+
 interface WalletBalanceProps {
   balance: number;
   isLoading?: boolean;
 }
+
 export default function WalletBalance({
   balance,
   isLoading = false
 }: WalletBalanceProps) {
+  // Function to handle redirect to deposit tab
+  const handleDepositRedirect = () => {
+    // Get the current URL
+    const url = new URL(window.location.href);
+    
+    // Set the tab parameter to "deposit"
+    url.searchParams.set("tab", "deposit");
+    
+    // Redirect to the new URL
+    window.location.href = url.toString();
+  };
+
   return <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 mb-6 hover:shadow-lg transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
@@ -33,7 +48,9 @@ export default function WalletBalance({
           Votre solde disponible peut être utilisé pour investir dans de nouveaux projets ou être retiré sur votre compte bancaire.
         </p>
         <div className="flex justify-between items-center">
-          <button className="text-bgs-blue hover:text-bgs-blue-light text-sm font-medium transition-colors">
+          <button 
+            onClick={handleDepositRedirect}
+            className="text-bgs-blue hover:text-bgs-blue-light text-sm font-medium transition-colors">
             Ajouter des fonds
           </button>
           <button className="text-bgs-orange hover:text-bgs-orange-light text-sm font-medium transition-colors">
