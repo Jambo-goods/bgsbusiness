@@ -1,5 +1,5 @@
 
-import { ReactNode, useState } from "react";
+import { ReactNode } from "react";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
 import { CircleUserRound, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -8,10 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  isSidebarOpen?: boolean;
-  setIsSidebarOpen?: (open: boolean) => void;
-  activeTab?: string;
-  setActiveTab?: (tab: string) => void;
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (open: boolean) => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
   realTimeStatus?: 'connecting' | 'connected' | 'error';
 }
 
@@ -24,17 +24,9 @@ export default function DashboardLayout({
   realTimeStatus = 'connecting'
 }: DashboardLayoutProps) {
   const navigate = useNavigate();
-  const [internalSidebarOpen, setInternalSidebarOpen] = useState(true);
-  const [internalActiveTab, setInternalActiveTab] = useState('overview');
-  
-  // Use provided state or internal state
-  const effectiveIsSidebarOpen = isSidebarOpen !== undefined ? isSidebarOpen : internalSidebarOpen;
-  const effectiveSetIsSidebarOpen = setIsSidebarOpen || setInternalSidebarOpen;
-  const effectiveActiveTab = activeTab || internalActiveTab;
-  const effectiveSetActiveTab = setActiveTab || setInternalActiveTab;
   
   const toggleSidebar = () => {
-    effectiveSetIsSidebarOpen(!effectiveIsSidebarOpen);
+    setIsSidebarOpen(!isSidebarOpen);
   };
   
   const handleLogout = async () => {
@@ -51,18 +43,16 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
       <DashboardSidebar
-        isSidebarOpen={effectiveIsSidebarOpen}
-        activeTab={effectiveActiveTab}
-        setActiveTab={effectiveSetActiveTab}
-        toggleSidebar={toggleSidebar}
-        handleLogout={handleLogout}
+        isSidebarOpen={isSidebarOpen}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
       />
       
       <div className="flex-1 flex flex-col">
         <header className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-10">
           <div className="flex items-center">
             <button onClick={toggleSidebar} className="mr-4 text-gray-600">
-              {effectiveIsSidebarOpen ? (
+              {isSidebarOpen ? (
                 <X className="h-6 w-6" />
               ) : (
                 <Menu className="h-6 w-6" />

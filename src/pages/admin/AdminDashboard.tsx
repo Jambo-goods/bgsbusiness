@@ -1,6 +1,5 @@
 
 import { Helmet } from "react-helmet-async";
-import { useState } from "react";
 import DashboardLayout from "../../layouts/DashboardLayout";
 import { useAdminDashboard } from "@/hooks/admin/useAdminDashboard";
 import StatusIndicator from "@/components/admin/dashboard/StatusIndicator";
@@ -9,9 +8,6 @@ import AdminLogsList from "@/components/admin/dashboard/AdminLogsList";
 import QuickActions from "@/components/admin/dashboard/QuickActions";
 
 export default function AdminDashboard() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  
   const { 
     stats, 
     adminLogs, 
@@ -27,13 +23,7 @@ export default function AdminDashboard() {
         <title>Tableau de bord d'administration | BGS Invest</title>
       </Helmet>
       
-      <DashboardLayout
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        realTimeStatus={realTimeStatus}
-      >
+      <DashboardLayout>
         <div className="p-6">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
             <h1 className="text-2xl font-semibold text-bgs-blue mb-4 md:mb-0">
