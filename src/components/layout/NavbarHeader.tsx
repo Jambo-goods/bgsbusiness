@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 import { Bell, User, LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase, Settings, UserCircle, LogOut, Home } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface NavbarHeaderProps {
   isScrolled: boolean;
@@ -13,7 +15,63 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const location = useLocation();
+  
+  // Fetch wallet balance
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      try {
+        setIsLoadingBalance(true);
+        const { data: session } = await supabase.auth.getSession();
+        
+        if (!session.session) {
+          setWalletBalance(null);
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', session.session.user.id)
+          .single();
+          
+        if (error) {
+          console.error("Error fetching wallet balance:", error);
+          setWalletBalance(null);
+          return;
+        }
+        
+        setWalletBalance(data.wallet_balance || 0);
+      } catch (error) {
+        console.error("Error:", error);
+        setWalletBalance(null);
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
+    
+    fetchWalletBalance();
+    
+    // Set up real-time subscription for wallet balance updates
+    const profileChannel = supabase
+      .channel('navbar_wallet_updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `wallet_balance=is.not.null`
+      }, () => {
+        console.log('Profile updated, refreshing wallet balance...');
+        fetchWalletBalance();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(profileChannel);
+    };
+  }, []);
   
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -54,6 +112,17 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
           <div className="flex items-center space-x-2">
             <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
               <Home className="h-5 w-5 text-bgs-blue" />
+            </Link>
+            
+            <Link to="/dashboard?tab=wallet" className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1">
+              <Wallet className="h-5 w-5 text-bgs-blue" />
+              {isLoadingBalance ? (
+                <Skeleton className="h-5 w-14 rounded" />
+              ) : (
+                <span className="text-xs font-medium text-bgs-blue">
+                  {walletBalance !== null ? `${walletBalance.toLocaleString('fr-FR')} €` : '-- €'}
+                </span>
+              )}
             </Link>
             
             <div className="relative dashboard-menu-dropdown">
