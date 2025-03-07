@@ -27,54 +27,50 @@ export default function MobileMenu({
   // Fixed navigation links that should always be visible
   const renderNavLinks = () => (
     <>
-      {!isOnDashboard && (
-        <>
-          <Link
-            to="/"
-            className={cn(
-              "py-2 px-4 rounded-md transition-colors",
-              isActive("/") 
-                ? "bg-bgs-gray-light text-bgs-blue font-medium" 
-                : "text-bgs-blue/80 hover:bg-bgs-gray-light"
-            )}
-          >
-            Accueil
-          </Link>
-          <Link
-            to="/projects"
-            className={cn(
-              "py-2 px-4 rounded-md transition-colors",
-              isActive("/projects") 
-                ? "bg-bgs-gray-light text-bgs-blue font-medium" 
-                : "text-bgs-blue/80 hover:bg-bgs-gray-light"
-            )}
-          >
-            Projets
-          </Link>
-          <Link
-            to="/how-it-works"
-            className={cn(
-              "py-2 px-4 rounded-md transition-colors",
-              isActive("/how-it-works") 
-                ? "bg-bgs-gray-light text-bgs-blue font-medium" 
-                : "text-bgs-blue/80 hover:bg-bgs-gray-light"
-            )}
-          >
-            Comment ça marche
-          </Link>
-          <Link
-            to="/about"
-            className={cn(
-              "py-2 px-4 rounded-md transition-colors",
-              isActive("/about") 
-                ? "bg-bgs-gray-light text-bgs-blue font-medium" 
-                : "text-bgs-blue/80 hover:bg-bgs-gray-light"
-            )}
-          >
-            À propos
-          </Link>
-        </>
-      )}
+      <Link
+        to="/"
+        className={cn(
+          "py-2 px-4 rounded-md transition-colors",
+          isActive("/") 
+            ? "bg-bgs-gray-light text-bgs-blue font-medium" 
+            : "text-bgs-blue/80 hover:bg-bgs-gray-light"
+        )}
+      >
+        Accueil
+      </Link>
+      <Link
+        to="/projects"
+        className={cn(
+          "py-2 px-4 rounded-md transition-colors",
+          isActive("/projects") 
+            ? "bg-bgs-gray-light text-bgs-blue font-medium" 
+            : "text-bgs-blue/80 hover:bg-bgs-gray-light"
+        )}
+      >
+        Projets
+      </Link>
+      <Link
+        to="/how-it-works"
+        className={cn(
+          "py-2 px-4 rounded-md transition-colors",
+          isActive("/how-it-works") 
+            ? "bg-bgs-gray-light text-bgs-blue font-medium" 
+            : "text-bgs-blue/80 hover:bg-bgs-gray-light"
+        )}
+      >
+        Comment ça marche
+      </Link>
+      <Link
+        to="/about"
+        className={cn(
+          "py-2 px-4 rounded-md transition-colors",
+          isActive("/about") 
+            ? "bg-bgs-gray-light text-bgs-blue font-medium" 
+            : "text-bgs-blue/80 hover:bg-bgs-gray-light"
+        )}
+      >
+        À propos
+      </Link>
     </>
   );
   

@@ -28,34 +28,30 @@ export default function DesktopNav({
   // Fixed navigation links that should always be visible regardless of auth state
   const renderNavLinks = () => (
     <>
-      {!isOnDashboard && (
-        <>
-          <Link
-            to="/"
-            className={cn("nav-link", isActive("/") && "active")}
-          >
-            Accueil
-          </Link>
-          <Link
-            to="/projects"
-            className={cn("nav-link", isActive("/projects") && "active")}
-          >
-            Projets
-          </Link>
-          <Link
-            to="/how-it-works"
-            className={cn("nav-link", isActive("/how-it-works") && "active")}
-          >
-            Comment ça marche
-          </Link>
-          <Link
-            to="/about"
-            className={cn("nav-link", isActive("/about") && "active")}
-          >
-            À propos
-          </Link>
-        </>
-      )}
+      <Link
+        to="/"
+        className={cn("nav-link", isActive("/") && "active")}
+      >
+        Accueil
+      </Link>
+      <Link
+        to="/projects"
+        className={cn("nav-link", isActive("/projects") && "active")}
+      >
+        Projets
+      </Link>
+      <Link
+        to="/how-it-works"
+        className={cn("nav-link", isActive("/how-it-works") && "active")}
+      >
+        Comment ça marche
+      </Link>
+      <Link
+        to="/about"
+        className={cn("nav-link", isActive("/about") && "active")}
+      >
+        À propos
+      </Link>
     </>
   );
 
