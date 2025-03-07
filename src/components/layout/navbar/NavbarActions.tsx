@@ -64,17 +64,19 @@ export default function NavbarActions({
   // Get current page path
   const currentPath = location.pathname;
 
-  // Check if current page is one of the specified pages
+  // Check if current page is one of the specified pages where the div should be hidden when logged in
   const isSpecifiedPage = 
+    currentPath === '/' || 
     currentPath === '/projects' || 
     currentPath === '/how-it-works' || 
     currentPath === '/about';
 
-  // If not authenticated or not on dashboard page, don't render the actions
+  // Check if user is on a dashboard page
   const isDashboardPage = location.pathname.includes('/dashboard');
-  const isHomePage = location.pathname === '/';
   
-  // Hide the navbar actions when the user is authenticated AND on specified pages
+  // Hide the navbar actions when:
+  // 1. User is authenticated AND on specified pages (home, projects, how-it-works, about)
+  // 2. User is not authenticated AND not on dashboard page
   if ((isAuthenticated && isSpecifiedPage) || (!isAuthenticated && !isDashboardPage)) {
     return null;
   }
