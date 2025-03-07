@@ -76,14 +76,9 @@ export default function MobileMenu({
         <div className="pt-2 flex flex-col space-y-3">
           {isLoggedIn ? (
             !isOnDashboard && (
-              <>
-                <button onClick={handleLogout} className="btn-secondary w-full text-center">
-                  Déconnexion
-                </button>
-                <Link to="/dashboard" className="btn-primary w-full text-center">
-                  Tableau de bord
-                </Link>
-              </>
+              <Link to="/dashboard" className="btn-primary w-full text-center">
+                Tableau de bord
+              </Link>
             )
           ) : (
             <>
