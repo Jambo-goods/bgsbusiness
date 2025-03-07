@@ -36,19 +36,15 @@ export const useRealTimeSubscriptions = ({
         filter: `id=eq.${userId}`
       }, (payload) => {
         console.log('Profile data changed, refreshing dashboard...', payload);
-        if (onProfileUpdate) {
-          console.log('Calling onProfileUpdate callback...');
-          onProfileUpdate();
-          toast.info("Mise à jour du profil", {
-            description: "Vos informations ont été mises à jour."
-          });
-        }
+        if (onProfileUpdate) onProfileUpdate();
+        toast.info("Mise à jour du profil", {
+          description: "Vos informations ont été mises à jour."
+        });
       })
       .subscribe((status) => {
         console.log('Profile subscription status:', status);
         if (status === 'SUBSCRIBED') {
           setRealTimeStatus('connected');
-          console.log('Successfully subscribed to profiles table');
         } else if (status === 'CHANNEL_ERROR') {
           setRealTimeStatus('error');
           console.error('Error subscribing to profile changes');
@@ -65,13 +61,10 @@ export const useRealTimeSubscriptions = ({
         filter: `user_id=eq.${userId}`
       }, (payload) => {
         console.log('Investment data changed, refreshing dashboard...', payload);
-        if (onInvestmentUpdate) {
-          console.log('Calling onInvestmentUpdate callback...');
-          onInvestmentUpdate();
-          toast.info("Mise à jour des investissements", {
-            description: "Vos investissements ont été mis à jour."
-          });
-        }
+        if (onInvestmentUpdate) onInvestmentUpdate();
+        toast.info("Mise à jour des investissements", {
+          description: "Vos investissements ont été mis à jour."
+        });
       })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
@@ -89,13 +82,10 @@ export const useRealTimeSubscriptions = ({
         filter: `user_id=eq.${userId}`
       }, (payload) => {
         console.log('Wallet transaction detected, refreshing dashboard...', payload);
-        if (onTransactionUpdate) {
-          console.log('Calling onTransactionUpdate callback...');
-          onTransactionUpdate();
-          toast.info("Transaction détectée", {
-            description: "Votre solde a été mis à jour."
-          });
-        }
+        if (onTransactionUpdate) onTransactionUpdate();
+        toast.info("Transaction détectée", {
+          description: "Votre solde a été mis à jour."
+        });
       })
       .subscribe((status) => {
         if (status === 'CHANNEL_ERROR') {
