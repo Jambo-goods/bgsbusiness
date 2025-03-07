@@ -20,12 +20,6 @@ export default function Sidebar({
   handleLogout,
   toggleSidebar
 }: SidebarProps) {
-  const [expanded, setExpanded] = useState(true);
-  
-  const handleToggle = () => {
-    setExpanded(!expanded);
-  };
-
   // Add keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -34,11 +28,10 @@ export default function Sidebar({
         e.preventDefault(); // Prevent default browser behavior
         if (toggleSidebar) {
           toggleSidebar();
-        } else {
-          handleToggle();
         }
       }
     };
+    
     window.addEventListener('keydown', handleKeyDown);
 
     // Clean up event listener on component unmount
@@ -49,18 +42,31 @@ export default function Sidebar({
   
   return (
     <div className={cn(
-      "flex flex-col h-full transition-all duration-300 bg-white shadow-md rounded-r-xl border-r", 
-      expanded ? "w-64" : "w-20"
+      "flex flex-col h-full transition-all duration-300 bg-white shadow-md", 
+      isSidebarOpen ? "w-64" : "w-20"
     )}>
+      <div className="h-16 flex items-center justify-center border-b">
+        <div className={cn(
+          "text-bgs-blue font-bold transition-all",
+          isSidebarOpen ? "text-xl" : "text-xs"
+        )}>
+          {isSidebarOpen ? 'BGS Invest' : 'BGS'}
+        </div>
+      </div>
+      
       <nav className="flex-1 py-4 overflow-y-auto px-2">
-        <SidebarSection title="Principal" expanded={expanded}>
-          <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} />
+        <SidebarSection title="Principal" expanded={isSidebarOpen}>
+          <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
         </SidebarSection>
         
-        <SidebarSection title="Compte" expanded={expanded}>
-          <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} handleLogout={handleLogout} />
+        <SidebarSection title="Compte" expanded={isSidebarOpen}>
+          <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} handleLogout={handleLogout} />
         </SidebarSection>
       </nav>
+      
+      <div className="p-2 text-xs text-center text-bgs-gray-medium border-t">
+        {isSidebarOpen ? 'Ctrl+B pour fermer/ouvrir' : 'Ctrl+B'}
+      </div>
     </div>
   );
 }

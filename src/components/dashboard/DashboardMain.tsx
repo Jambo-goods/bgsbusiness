@@ -33,8 +33,8 @@ export default function DashboardMain({
 }: DashboardMainProps) {
   return (
     <div className={cn(
-      "transition-all duration-300 w-full",
-      isSidebarOpen ? "md:pl-0" : "md:pl-0"
+      "transition-all duration-300 w-full pt-16",
+      isSidebarOpen ? "md:ml-64" : "md:ml-20"
     )}>
       <div className="max-w-7xl mx-auto">
         <DashboardHeader userData={userData} />

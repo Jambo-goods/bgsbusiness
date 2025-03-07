@@ -69,10 +69,7 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Navbar */}
-      <Navbar isScrolled={isScrolled} />
-      
-      <div className="flex-1 flex flex-col md:flex-row">
+      <div className="flex flex-1">
         <DashboardSidebar
           isSidebarOpen={effectiveIsSidebarOpen}
           activeTab={effectiveActiveTab}
@@ -81,8 +78,8 @@ export default function DashboardLayout({
           handleLogout={handleLogout}
         />
         
-        <div className="flex-1 flex flex-col pt-16">
-          <header className="bg-white border-b py-3 px-4 flex justify-between items-center sticky top-16 z-10 transition-all">
+        <div className="flex-1 flex flex-col relative">
+          <header className="bg-white border-b py-3 px-4 flex justify-between items-center fixed top-0 right-0 left-0 z-20 transition-all md:left-20">
             <div className="flex items-center">
               <button 
                 onClick={toggleSidebar} 
@@ -118,11 +115,10 @@ export default function DashboardLayout({
             </div>
           </header>
           
-          <main className="flex-1 p-4 md:p-6 overflow-auto">
+          <main className="flex-1 overflow-auto">
             {children}
           </main>
           
-          {/* Footer */}
           <Footer />
         </div>
       </div>
