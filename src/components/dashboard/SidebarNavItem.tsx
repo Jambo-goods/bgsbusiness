@@ -25,7 +25,8 @@ export default function SidebarNavItem({
         onClick={onClick}
         title={!expanded ? label : undefined}
         className={cn(
-          "flex items-center w-full px-3 py-3.5 rounded-lg text-sm transition-all duration-200",
+          "flex items-center w-full rounded-lg text-sm transition-all duration-200",
+          expanded ? "px-3 py-3" : "p-2.5 justify-center",
           variant === "default" && (
             isActive
               ? "bg-gradient-to-r from-bgs-blue to-bgs-blue-light text-white font-medium shadow-sm"
@@ -38,8 +39,12 @@ export default function SidebarNavItem({
           size={expanded ? 18 : 20} 
           className={cn(
             "transition-all duration-200",
-            expanded ? "mr-3" : "mx-auto",
-            isActive ? "text-white" : "text-bgs-blue-light"
+            expanded ? "mr-3" : "",
+            isActive 
+              ? "text-white" 
+              : variant === "default" 
+                ? "text-bgs-blue-light" 
+                : "text-red-500"
           )} 
         />
         {expanded && (
