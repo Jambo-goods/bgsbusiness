@@ -5,10 +5,15 @@ import WalletBalance from "./wallet/WalletBalance";
 import ActionButtons from "./wallet/ActionButtons";
 import WalletHistory from "./wallet/WalletHistory";
 import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BankTransferInstructions from "./wallet/BankTransferInstructions";
+import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
 
 export default function WalletTab() {
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     fetchWalletBalance();
@@ -87,8 +92,41 @@ export default function WalletTab() {
   return (
     <div className="space-y-6">
       <WalletBalance balance={balance} isLoading={isLoading} />
-      <ActionButtons onDeposit={handleDeposit} onWithdraw={handleWithdraw} refreshBalance={fetchWalletBalance} />
-      <WalletHistory refreshBalance={fetchWalletBalance} />
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid grid-cols-3 mb-6">
+          <TabsTrigger value="overview">Aperçu</TabsTrigger>
+          <TabsTrigger value="deposit">Dépôt</TabsTrigger>
+          <TabsTrigger value="withdraw">Retrait</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview" className="space-y-6">
+          <ActionButtons onDeposit={handleDeposit} onWithdraw={handleWithdraw} refreshBalance={fetchWalletBalance} />
+          <WalletHistory refreshBalance={fetchWalletBalance} />
+        </TabsContent>
+        
+        <TabsContent value="deposit">
+          <Card>
+            <CardHeader>
+              <CardTitle>Déposer des fonds par virement bancaire</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <BankTransferInstructions />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="withdraw">
+          <Card>
+            <CardHeader>
+              <CardTitle>Retirer des fonds</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WithdrawFundsForm balance={balance} onWithdraw={handleWithdraw} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

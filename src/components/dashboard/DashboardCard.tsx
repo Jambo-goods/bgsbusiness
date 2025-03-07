@@ -13,6 +13,7 @@ interface DashboardCardProps {
   changeValue?: string;
   changeTimeframe?: string;
   description?: string;
+  footer?: ReactNode;
 }
 
 export default function DashboardCard({
@@ -25,6 +26,7 @@ export default function DashboardCard({
   changeValue,
   changeTimeframe,
   description,
+  footer,
 }: DashboardCardProps) {
   // Determine if change is positive based on the actual data
   const isPositive = changePercentage ? 
@@ -63,6 +65,11 @@ export default function DashboardCard({
       {changeValue && changeTimeframe && (
         <div className="mt-2 text-xs text-bgs-gray-medium">
           <span className={isPositive ? "text-green-500 font-medium" : "text-red-500 font-medium"}>{changeValue}</span> depuis <span className="font-medium">{changeTimeframe}</span>
+        </div>
+      )}
+      {footer && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          {footer}
         </div>
       )}
     </div>
