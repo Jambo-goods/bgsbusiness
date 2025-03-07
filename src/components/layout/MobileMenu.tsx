@@ -89,21 +89,10 @@ export default function MobileMenu({
         {/* Always render navigation links */}
         {renderNavLinks()}
         
-        {/* Show auth buttons with proper visibility based on auth state */}
-        <div className={cn("pt-2 flex flex-col space-y-3", !authChecked && "opacity-0", "transition-opacity duration-150")}>
-          {/* When not authenticated yet, show placeholder button that will be replaced once auth is checked */}
-          {!authChecked && (
-            <Button
-              variant="default"
-              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
-              disabled
-            >
-              Tableau de bord
-            </Button>
-          )}
-          
-          {/* Only show dashboard button when auth is checked and user is logged in and NOT on dashboard */}
-          {authChecked && isLoggedIn && !isOnDashboard && (
+        {/* Auth buttons section - No transition or opacity */}
+        <div className="pt-2 flex flex-col space-y-3">
+          {/* When logged in and not on dashboard, show dashboard button */}
+          {isLoggedIn && !isOnDashboard && (
             <Button
               variant="default"
               className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
@@ -113,8 +102,8 @@ export default function MobileMenu({
             </Button>
           )}
           
-          {/* Only show login/register buttons when auth is checked and user is NOT logged in */}
-          {authChecked && !isLoggedIn && (
+          {/* When not logged in, show login/register buttons */}
+          {!isLoggedIn && (
             <>
               <Button 
                 variant="outline"
