@@ -20,4 +20,6 @@ export interface Project {
   endDate?: string;
   raised?: number;
   target?: number;
+  amount?: number;
+  investmentDate?: string;
 }
