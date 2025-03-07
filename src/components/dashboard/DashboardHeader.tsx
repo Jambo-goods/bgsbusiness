@@ -1,7 +1,6 @@
 
 import { useState } from "react";
-import { CalendarClock, TrendingUp, RefreshCw, BellRing, Home, UserRound } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { CalendarClock, TrendingUp, RefreshCw, BellRing } from "lucide-react";
 
 interface DashboardHeaderProps {
   userData: {
@@ -19,8 +18,6 @@ export default function DashboardHeader({
   isRefreshing = false,
   realTimeStatus = 'connecting'
 }: DashboardHeaderProps) {
-  const navigate = useNavigate();
-  
   const handleRefresh = async () => {
     if (refreshData && !isRefreshing) {
       await refreshData();
@@ -46,24 +43,6 @@ export default function DashboardHeader({
         </div>
         
         <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-3">
-          {/* Navigation Icons */}
-          <div className="flex items-center gap-3 mr-2">
-            <button 
-              onClick={() => navigate('/dashboard')}
-              className="bg-white/10 backdrop-blur-sm rounded-full p-2 flex items-center transition-all hover:bg-white/20 border border-white/5"
-              title="Accueil"
-            >
-              <Home className="h-5 w-5 text-white" />
-            </button>
-            <button 
-              onClick={() => navigate('/dashboard/profile')}
-              className="bg-white/10 backdrop-blur-sm rounded-full p-2 flex items-center transition-all hover:bg-white/20 border border-white/5"
-              title="Profil"
-            >
-              <UserRound className="h-5 w-5 text-white" />
-            </button>
-          </div>
-          
           <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/5">
             <CalendarClock className="h-4 w-4 mr-2 text-white/80" />
             <span className="text-sm whitespace-nowrap">
