@@ -58,19 +58,10 @@ export default function NavbarActions({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
 
-  // Get current page path
-  const currentPath = location.pathname;
-
-  // Check if current page is one of the specified pages where the div should be hidden when logged in
-  const isSpecifiedPage = currentPath === '/' || currentPath === '/projects' || currentPath === '/how-it-works' || currentPath === '/about';
-
-  // Check if user is on a dashboard page
+  // If not authenticated or not on dashboard page, don't render the actions
   const isDashboardPage = location.pathname.includes('/dashboard');
-
-  // Hide the navbar actions when:
-  // 1. User is authenticated AND on specified pages (home, projects, how-it-works, about)
-  // 2. User is not authenticated AND not on dashboard page
-  if (isAuthenticated && isSpecifiedPage || !isAuthenticated && !isDashboardPage) {
+  const isHomePage = location.pathname === '/';
+  if (!isAuthenticated || isHomePage && !isDashboardPage) {
     return null;
   }
   return <div className="flex items-center space-x-2">
@@ -86,6 +77,8 @@ export default function NavbarActions({
       </Link>
       
       <div className="relative dashboard-menu-dropdown">
+        
+
         <DashboardMenuDropdown isOpen={isDashboardMenuOpen} isActive={isActive} />
       </div>
 
@@ -103,7 +96,13 @@ export default function NavbarActions({
       </div>
       
       <div className="relative user-dropdown">
-        
+        <button onClick={() => {
+        setIsUserMenuOpen(!isUserMenuOpen);
+        if (isNotificationOpen) setIsNotificationOpen(false);
+        if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
+      }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="User menu">
+          <User className="h-5 w-5 text-bgs-blue" />
+        </button>
         
         <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
       </div>

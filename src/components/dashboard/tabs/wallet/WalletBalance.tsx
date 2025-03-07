@@ -1,16 +1,13 @@
-
 import React from "react";
 import { WalletCards, Euro, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 interface WalletBalanceProps {
   balance: number;
   isLoading?: boolean;
-  onTabChange?: (tab: string) => void;
 }
 export default function WalletBalance({
   balance,
-  isLoading = false,
-  onTabChange
+  isLoading = false
 }: WalletBalanceProps) {
   return <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 mb-6 hover:shadow-lg transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
@@ -36,16 +33,10 @@ export default function WalletBalance({
           Votre solde disponible peut être utilisé pour investir dans de nouveaux projets ou être retiré sur votre compte bancaire.
         </p>
         <div className="flex justify-between items-center">
-          <button 
-            className="text-bgs-blue hover:text-bgs-blue-light text-sm font-medium transition-colors"
-            onClick={() => onTabChange && onTabChange('deposit')}
-          >
+          <button className="text-bgs-blue hover:text-bgs-blue-light text-sm font-medium transition-colors">
             Ajouter des fonds
           </button>
-          <button 
-            className="text-bgs-orange hover:text-bgs-orange-light text-sm font-medium transition-colors"
-            onClick={() => onTabChange && onTabChange('withdraw')}
-          >
+          <button className="text-bgs-orange hover:text-bgs-orange-light text-sm font-medium transition-colors">
             Effectuer un retrait
           </button>
         </div>
