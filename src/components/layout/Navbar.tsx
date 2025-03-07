@@ -12,9 +12,10 @@ import { logoutUser, getCurrentUser } from "@/services/authService";
 
 interface NavbarProps {
   isScrolled?: boolean;
+  isOnDashboard?: boolean;
 }
 
-export default function Navbar({ isScrolled }: NavbarProps) {
+export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProps) {
   const [internalIsScrolled, setInternalIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -24,8 +25,8 @@ export default function Navbar({ isScrolled }: NavbarProps) {
   
   const logoPath = "lovable-uploads/d9a3204a-06aa-470d-8255-7f3bd0852557.png";
   
-  // Check if user is on dashboard
-  const isOnDashboard = location.pathname.startsWith('/dashboard');
+  // Check if user is on dashboard - now we can use the prop or infer from path
+  const effectiveIsOnDashboard = isOnDashboard || location.pathname.startsWith('/dashboard');
 
   // Use passed isScrolled prop or internal state
   const effectiveIsScrolled = isScrolled !== undefined ? isScrolled : internalIsScrolled;
@@ -88,7 +89,7 @@ export default function Navbar({ isScrolled }: NavbarProps) {
           isLoggedIn={isLoggedIn}
           isActive={isActive}
           handleLogout={handleLogout}
-          isOnDashboard={isOnDashboard}
+          isOnDashboard={effectiveIsOnDashboard}
         />
 
         {/* Mobile Menu Button */}
@@ -104,7 +105,7 @@ export default function Navbar({ isScrolled }: NavbarProps) {
         isLoggedIn={isLoggedIn}
         isActive={isActive}
         handleLogout={handleLogout}
-        isOnDashboard={isOnDashboard}
+        isOnDashboard={effectiveIsOnDashboard}
       />
     </NavbarHeader>
   );
