@@ -7,13 +7,15 @@ interface MobileMenuProps {
   isLoggedIn: boolean;
   isActive: (path: string) => boolean;
   handleLogout: () => void;
+  isOnDashboard?: boolean;
 }
 
 export default function MobileMenu({ 
   isMenuOpen, 
   isLoggedIn, 
   isActive, 
-  handleLogout 
+  handleLogout,
+  isOnDashboard = false
 }: MobileMenuProps) {
   if (!isMenuOpen) return null;
   
@@ -66,14 +68,16 @@ export default function MobileMenu({
         </Link>
         <div className="pt-2 flex flex-col space-y-3">
           {isLoggedIn ? (
-            <>
-              <button onClick={handleLogout} className="btn-secondary w-full text-center">
-                Déconnexion
-              </button>
-              <Link to="/dashboard" className="btn-primary w-full text-center">
-                Tableau de bord
-              </Link>
-            </>
+            !isOnDashboard && (
+              <>
+                <button onClick={handleLogout} className="btn-secondary w-full text-center">
+                  Déconnexion
+                </button>
+                <Link to="/dashboard" className="btn-primary w-full text-center">
+                  Tableau de bord
+                </Link>
+              </>
+            )
           ) : (
             <>
               <Link to="/login" className="btn-secondary w-full text-center">

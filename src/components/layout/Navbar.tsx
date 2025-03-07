@@ -23,6 +23,9 @@ export default function Navbar({ isScrolled }: NavbarProps) {
   const { toast: uiToast } = useToast();
   
   const logoPath = "lovable-uploads/d9a3204a-06aa-470d-8255-7f3bd0852557.png";
+  
+  // Check if user is on dashboard
+  const isOnDashboard = location.pathname.startsWith('/dashboard');
 
   // Use passed isScrolled prop or internal state
   const effectiveIsScrolled = isScrolled !== undefined ? isScrolled : internalIsScrolled;
@@ -85,6 +88,7 @@ export default function Navbar({ isScrolled }: NavbarProps) {
           isLoggedIn={isLoggedIn}
           isActive={isActive}
           handleLogout={handleLogout}
+          isOnDashboard={isOnDashboard}
         />
 
         {/* Mobile Menu Button */}
@@ -100,6 +104,7 @@ export default function Navbar({ isScrolled }: NavbarProps) {
         isLoggedIn={isLoggedIn}
         isActive={isActive}
         handleLogout={handleLogout}
+        isOnDashboard={isOnDashboard}
       />
     </NavbarHeader>
   );
