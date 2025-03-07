@@ -2,7 +2,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import Navbar from "../components/layout/Navbar";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
-import Footer from "../components/layout/Footer";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,9 +96,6 @@ export default function DashboardLayout({
         )}>
           {/* Dashboard content */}
           {children}
-          
-          {/* Footer */}
-          <Footer />
         </main>
       </div>
     </div>
