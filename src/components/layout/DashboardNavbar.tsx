@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import NavLogo from "./NavLogo";
 import MobileMenuToggle from "./MobileMenuToggle";
 import MobileMenu from "./MobileMenu";
@@ -15,6 +15,7 @@ interface NavbarProps {
 
 export default function DashboardNavbar({ isScrolled = false }: NavbarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const location = useLocation();
 
   // Close mobile menu when route changes
   React.useEffect(() => {
@@ -28,6 +29,11 @@ export default function DashboardNavbar({ isScrolled = false }: NavbarProps) {
     { label: "À propos", href: "/about" },
   ];
 
+  const isActive = (path: string) => location.pathname === path;
+  const logoPath = "lovable-uploads/d9a3204a-06aa-470d-8255-7f3bd0852557.png";
+
+  const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+
   return (
     <header
       className={cn(
@@ -39,30 +45,38 @@ export default function DashboardNavbar({ isScrolled = false }: NavbarProps) {
     >
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <NavLogo />
+          <NavLogo logoPath={logoPath} />
           <nav className="hidden md:block">
-            <DesktopNav navItems={dashboardNavItems} />
+            <DesktopNav 
+              isLoggedIn={true} 
+              isActive={isActive} 
+              handleLogout={() => {}} 
+              isOnDashboard={true} 
+            />
           </nav>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden md:flex gap-3">
             <Button asChild variant="outline">
-              <Link to="/login">Connexion</Link>
-            </Button>
-            <Button asChild>
-              <Link to="/register">S'inscrire</Link>
+              <Link to="/dashboard">Tableau de bord</Link>
             </Button>
           </div>
 
-          <MobileMenuToggle
-            isOpen={isMobileMenuOpen}
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          <MobileMenuToggle 
+            isMenuOpen={isMobileMenuOpen} 
+            toggleMenu={toggleMenu} 
           />
         </div>
       </div>
 
-      <MobileMenu isOpen={isMobileMenuOpen} navItems={dashboardNavItems} />
+      <MobileMenu 
+        isMenuOpen={isMobileMenuOpen}
+        isLoggedIn={true}
+        isActive={isActive}
+        handleLogout={() => {}}
+        isOnDashboard={true}
+      />
     </header>
   );
 }
