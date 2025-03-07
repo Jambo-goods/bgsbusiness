@@ -18,6 +18,16 @@ export default function PrincipalSection({ activeTab, setActiveTab, expanded }: 
     { id: "projects", label: "Investissements proposés", icon: FileBarChart },
   ];
 
+  // Custom click handler for the projects button to redirect to wallet
+  const handleItemClick = (itemId: string) => {
+    // If it's the projects item, redirect to wallet instead
+    if (itemId === "projects") {
+      setActiveTab("wallet");
+    } else {
+      setActiveTab(itemId);
+    }
+  };
+
   return (
     <>
       {navItems.map((item) => (
@@ -27,7 +37,7 @@ export default function PrincipalSection({ activeTab, setActiveTab, expanded }: 
           label={item.label}
           isActive={activeTab === item.id}
           expanded={expanded}
-          onClick={() => setActiveTab(item.id)}
+          onClick={() => handleItemClick(item.id)}
         />
       ))}
     </>
