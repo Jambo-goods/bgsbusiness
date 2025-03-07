@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Bell, User, LayoutDashboard, Wallet, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -6,9 +7,11 @@ import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
+
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
 }
+
 export default function NavbarActions({
   isActive
 }: NavbarActionsProps) {
@@ -61,18 +64,19 @@ export default function NavbarActions({
   // Get current page path
   const currentPath = location.pathname;
 
-  // Check if current page is one of the specified pages where the div should be hidden when logged in
-  const isSpecifiedPage = currentPath === '/' || currentPath === '/projects' || currentPath === '/how-it-works' || currentPath === '/about';
-
   // Check if user is on a dashboard page
   const isDashboardPage = location.pathname.includes('/dashboard');
 
-  // Hide the navbar actions when:
-  // 1. User is authenticated AND on specified pages (home, projects, how-it-works, about)
-  // 2. User is not authenticated AND not on dashboard page
-  if (isAuthenticated && isSpecifiedPage || !isAuthenticated && !isDashboardPage) {
+  // If the user is authenticated and not on dashboard, don't show logout button at all
+  if (isAuthenticated && !isDashboardPage) {
     return null;
   }
+  
+  // If the user is not authenticated and not on dashboard, also don't show actions
+  if (!isAuthenticated && !isDashboardPage) {
+    return null;
+  }
+  
   return <div className="flex items-center space-x-2">
       <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
         <Home className="h-5 w-5 text-bgs-blue" />
@@ -103,8 +107,6 @@ export default function NavbarActions({
       </div>
       
       <div className="relative user-dropdown">
-        
-        
         <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
       </div>
     </div>;
