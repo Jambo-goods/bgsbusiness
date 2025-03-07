@@ -59,8 +59,8 @@ export default function DesktopNav({
         </>
       )}
       
-      {!isLoggedIn && !isOnDashboard ? (
-        // Show login/register buttons ONLY if not logged in AND not on dashboard
+      {/* Only show login/register buttons if NOT logged in AND not on dashboard */}
+      {!isLoggedIn && !isOnDashboard && (
         <>
           <Link to="/login" className="btn-secondary">
             Connexion
@@ -69,8 +69,10 @@ export default function DesktopNav({
             S'inscrire
           </Link>
         </>
-      ) : !isOnDashboard && isLoggedIn ? (
-        // Show dashboard button if logged in and not on dashboard
+      )}
+      
+      {/* Show dashboard button ONLY if logged in and not on dashboard */}
+      {isLoggedIn && !isOnDashboard && (
         <Button 
           variant="default"
           className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
@@ -78,7 +80,7 @@ export default function DesktopNav({
         >
           Tableau de bord
         </Button>
-      ) : null}
+      )}
     </nav>
   );
 }
