@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { useLocation, useNavigate } from "react-router-dom";
 import WalletBalance from "./wallet/WalletBalance";
 import ActionButtons from "./wallet/ActionButtons";
 import WalletHistory from "./wallet/WalletHistory";
@@ -14,32 +13,7 @@ import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
 export default function WalletTab() {
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
-  const location = useLocation();
-  const navigate = useNavigate();
-  
-  // Get tab from URL or default to "overview"
-  const getTabFromUrl = () => {
-    const searchParams = new URLSearchParams(location.search);
-    return searchParams.get("tab") || "overview";
-  };
-  
-  const [activeTab, setActiveTab] = useState(getTabFromUrl());
-
-  // Update URL when tab changes
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    const searchParams = new URLSearchParams(location.search);
-    searchParams.set("tab", value);
-    navigate(`${location.pathname}?${searchParams.toString()}`, { replace: true });
-  };
-  
-  // Update tab state if URL changes
-  useEffect(() => {
-    const tabFromUrl = getTabFromUrl();
-    if (tabFromUrl === "deposit" || tabFromUrl === "withdraw" || tabFromUrl === "overview") {
-      setActiveTab(tabFromUrl);
-    }
-  }, [location.search]);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     fetchWalletBalance();
@@ -119,7 +93,7 @@ export default function WalletTab() {
     <div className="space-y-6">
       <WalletBalance balance={balance} isLoading={isLoading} />
       
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-6">
           <TabsTrigger value="overview">Aperçu</TabsTrigger>
           <TabsTrigger value="deposit">Dépôt</TabsTrigger>
