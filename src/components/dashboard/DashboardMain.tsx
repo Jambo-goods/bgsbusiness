@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import DashboardHeader from "./DashboardHeader";
 import TabContent from "./TabContent";
@@ -34,7 +34,7 @@ export default function DashboardMain({
   realTimeStatus
 }: DashboardMainProps) {
   // Memoized main content to prevent unnecessary re-renders
-  const dashboardContent = React.useMemo(() => (
+  const dashboardContent = useMemo(() => (
     <TabContent 
       activeTab={activeTab} 
       userData={userData} 
@@ -47,11 +47,12 @@ export default function DashboardMain({
   return (
     <div 
       className={cn(
-        "flex-1 py-4 w-full transition-all duration-300 mt-8",
+        "flex-1 py-4 w-full transition-all duration-300",
+        "animate-fade-in",
         isSidebarOpen ? "md:ml-0" : "md:ml-0"
       )}
     >
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto space-y-6">
         <DashboardHeader 
           userData={userData} 
           refreshData={refreshData} 
@@ -59,8 +60,10 @@ export default function DashboardMain({
         />
         
         {/* Dashboard content based on active tab */}
-        <div className="bg-white rounded-xl shadow-md p-5 mb-6 animate-fade-in">
-          {dashboardContent}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-5 animate-fade-in">
+            {dashboardContent}
+          </div>
         </div>
       </div>
     </div>
