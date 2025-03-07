@@ -50,14 +50,9 @@ export default function DesktopNav({
       
       {isLoggedIn ? (
         !isOnDashboard && (
-          <>
-            <button onClick={handleLogout} className="btn-secondary">
-              Déconnexion
-            </button>
-            <Link to="/dashboard" className="btn-primary">
-              Tableau de bord
-            </Link>
-          </>
+          <Link to="/dashboard" className="btn-primary">
+            Tableau de bord
+          </Link>
         )
       ) : (
         <>
