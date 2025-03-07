@@ -88,13 +88,6 @@ export default function MobileMenu({
               </Link>
             </>
           )}
-          
-          {/* Show dashboard button ONLY if logged in and not on dashboard */}
-          {isLoggedIn && !isOnDashboard && (
-            <Link to="/dashboard" className="btn-primary w-full text-center">
-              Tableau de bord
-            </Link>
-          )}
         </div>
       </div>
     </div>

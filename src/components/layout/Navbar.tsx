@@ -8,6 +8,7 @@ import NavLogo from "./NavLogo";
 import DesktopNav from "./DesktopNav";
 import MobileMenuToggle from "./MobileMenuToggle";
 import MobileMenu from "./MobileMenu";
+import NavbarActions from "./navbar/NavbarActions";
 import { logoutUser, getCurrentUser } from "@/services/authService";
 
 interface NavbarProps {
@@ -84,19 +85,26 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
         <NavLogo logoPath={logoPath} />
 
-        {/* Desktop Navigation */}
-        <DesktopNav 
-          isLoggedIn={isLoggedIn}
-          isActive={isActive}
-          handleLogout={handleLogout}
-          isOnDashboard={effectiveIsOnDashboard}
-        />
+        <div className="flex items-center space-x-4">
+          {/* Desktop Navigation */}
+          <DesktopNav 
+            isLoggedIn={isLoggedIn}
+            isActive={isActive}
+            handleLogout={handleLogout}
+            isOnDashboard={effectiveIsOnDashboard}
+          />
+          
+          {/* NavbarActions - Show when logged in on public pages */}
+          {isLoggedIn && !effectiveIsOnDashboard && (
+            <NavbarActions isActive={isActive} />
+          )}
 
-        {/* Mobile Menu Button */}
-        <MobileMenuToggle 
-          isMenuOpen={isMenuOpen} 
-          toggleMenu={toggleMenu} 
-        />
+          {/* Mobile Menu Button */}
+          <MobileMenuToggle 
+            isMenuOpen={isMenuOpen} 
+            toggleMenu={toggleMenu} 
+          />
+        </div>
       </div>
 
       {/* Mobile Navigation */}
