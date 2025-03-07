@@ -6,7 +6,6 @@ import { useWalletBalance } from "@/hooks/useWalletBalance";
 import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
-import { supabase } from "@/integrations/supabase/client";
 
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
@@ -16,28 +15,8 @@ export default function NavbarActions({ isActive }: NavbarActionsProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { walletBalance } = useWalletBalance();
   const location = useLocation();
-  
-  useEffect(() => {
-    // Check authentication status
-    const checkAuth = async () => {
-      const { data } = await supabase.auth.getSession();
-      setIsAuthenticated(!!data.session);
-    };
-    
-    checkAuth();
-    
-    // Subscribe to auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
   
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -64,14 +43,12 @@ export default function NavbarActions({ isActive }: NavbarActionsProps) {
         <Home className="h-5 w-5 text-bgs-blue" />
       </Link>
       
-      {isAuthenticated && (
-        <Link to="/dashboard?tab=wallet" className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1">
-          <Wallet className="h-5 w-5 text-bgs-blue" />
-          <span className="text-xs font-medium text-bgs-blue">
-            {walletBalance.toLocaleString('fr-FR')}€
-          </span>
-        </Link>
-      )}
+      <Link to="/dashboard?tab=wallet" className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1">
+        <Wallet className="h-5 w-5 text-bgs-blue" />
+        <span className="text-xs font-medium text-bgs-blue">
+          {walletBalance.toLocaleString('fr-FR')}€
+        </span>
+      </Link>
       
       <div className="relative dashboard-menu-dropdown">
         <button
