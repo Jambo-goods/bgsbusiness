@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -28,6 +29,7 @@ export const registerUser = async (userData: UserRegistrationData) => {
     
     // Manually create the profile after successful registration
     if (data?.user?.id) {
+      console.log("Creating user profile with ID:", data.user.id);
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -42,7 +44,11 @@ export const registerUser = async (userData: UserRegistrationData) => {
         
       if (profileError) {
         console.error("Error creating profile:", profileError);
+        // Log the specific error for debugging
+        console.error("Profile creation error details:", JSON.stringify(profileError));
         // Continue anyway, as the auth trigger should handle this in production
+      } else {
+        console.log("User profile created successfully");
       }
     }
     

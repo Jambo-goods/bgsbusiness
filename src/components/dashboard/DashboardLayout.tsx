@@ -49,19 +49,17 @@ export default function DashboardLayout({
           toggleSidebar={toggleSidebar} 
         />
         
-        {/* Real-time status indicator (only visible in debugging mode) */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="fixed bottom-4 right-4 flex items-center bg-white p-2 rounded-lg shadow-md z-50">
-            <div className={`h-2 w-2 rounded-full mr-2 animate-pulse ${
-              realTimeStatus === 'connected' ? 'bg-green-500' : 
-              realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-            }`}></div>
-            <span className="text-xs text-gray-600">
-              {realTimeStatus === 'connected' ? 'Temps réel actif' : 
-               realTimeStatus === 'error' ? 'Erreur temps réel' : 'Connexion...'}
-            </span>
-          </div>
-        )}
+        {/* Real-time status indicator - Always visible now */}
+        <div className="fixed bottom-4 right-4 flex items-center bg-white p-2 rounded-lg shadow-md z-50">
+          <div className={`h-2 w-2 rounded-full mr-2 animate-pulse ${
+            realTimeStatus === 'connected' ? 'bg-green-500' : 
+            realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
+          }`}></div>
+          <span className="text-xs text-gray-600">
+            {realTimeStatus === 'connected' ? 'Temps réel actif' : 
+             realTimeStatus === 'error' ? 'Erreur temps réel' : 'Connexion...'}
+          </span>
+        </div>
         
         {/* Sidebar */}
         <DashboardSidebar
