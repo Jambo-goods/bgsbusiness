@@ -104,8 +104,8 @@ export default function Overview({ userData, userInvestments, setActiveTab }: Ov
       )}
       
       <DashboardCards userData={userData} />
-      {userInvestments.length > 0 && <ChartsSection setActiveTab={setActiveTab} />}
-      {userInvestments.length > 0 && <RecentProjects userInvestments={userInvestments} setActiveTab={setActiveTab} />}
+      <ChartsSection setActiveTab={setActiveTab} />
+      <RecentProjects userInvestments={userInvestments} setActiveTab={setActiveTab} />
     </div>
   );
 }
