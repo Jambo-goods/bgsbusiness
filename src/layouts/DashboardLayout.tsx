@@ -1,13 +1,10 @@
 
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState } from "react";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
-import Navbar from "../components/layout/Navbar";
-import Footer from "../components/layout/Footer";
 import { CircleUserRound, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavScroll } from "@/hooks/useNavScroll";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -29,28 +26,12 @@ export default function DashboardLayout({
   const navigate = useNavigate();
   const [internalSidebarOpen, setInternalSidebarOpen] = useState(true);
   const [internalActiveTab, setInternalActiveTab] = useState('overview');
-  const isScrolled = useNavScroll();
   
   // Use provided state or internal state
   const effectiveIsSidebarOpen = isSidebarOpen !== undefined ? isSidebarOpen : internalSidebarOpen;
   const effectiveSetIsSidebarOpen = setIsSidebarOpen || setInternalSidebarOpen;
   const effectiveActiveTab = activeTab || internalActiveTab;
   const effectiveSetActiveTab = setActiveTab || setInternalActiveTab;
-  
-  // Close sidebar on small screens by default
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768 && effectiveIsSidebarOpen) {
-        effectiveSetIsSidebarOpen(false);
-      }
-    };
-    
-    // Initial check
-    handleResize();
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [effectiveIsSidebarOpen, effectiveSetIsSidebarOpen]);
   
   const toggleSidebar = () => {
     effectiveSetIsSidebarOpen(!effectiveIsSidebarOpen);
@@ -68,63 +49,51 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Navbar */}
-      <Navbar isScrolled={isScrolled} />
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      <DashboardSidebar
+        isSidebarOpen={effectiveIsSidebarOpen}
+        activeTab={effectiveActiveTab}
+        setActiveTab={effectiveSetActiveTab}
+        toggleSidebar={toggleSidebar}
+        handleLogout={handleLogout}
+      />
       
-      <div className="flex-1 flex flex-col md:flex-row">
-        <DashboardSidebar
-          isSidebarOpen={effectiveIsSidebarOpen}
-          activeTab={effectiveActiveTab}
-          setActiveTab={effectiveSetActiveTab}
-          toggleSidebar={toggleSidebar}
-          handleLogout={handleLogout}
-        />
+      <div className="flex-1 flex flex-col">
+        <header className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-10">
+          <div className="flex items-center">
+            <button onClick={toggleSidebar} className="mr-4 text-gray-600">
+              {effectiveIsSidebarOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+            <div className="flex items-center">
+              <div className={`h-2 w-2 rounded-full mr-2 ${
+                realTimeStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
+                realTimeStatus === 'error' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500 animate-pulse'
+              }`}></div>
+              <span className="text-xs text-gray-500 mr-2">
+                {realTimeStatus === 'connected' ? 'Temps réel' : 
+                 realTimeStatus === 'error' ? 'Hors-ligne' : 'Connexion...'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="flex items-center">
+            <button 
+              onClick={handleLogout}
+              className="mr-4 text-gray-600 text-sm hover:text-bgs-blue transition-colors"
+            >
+              Déconnexion
+            </button>
+            <CircleUserRound className="h-6 w-6 text-bgs-blue" />
+          </div>
+        </header>
         
-        <div className="flex-1 flex flex-col pt-16">
-          <header className="bg-white border-b py-3 px-4 flex justify-between items-center sticky top-16 z-10 transition-all">
-            <div className="flex items-center">
-              <button 
-                onClick={toggleSidebar} 
-                className="mr-4 text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
-                aria-label={effectiveIsSidebarOpen ? "Close sidebar" : "Open sidebar"}
-              >
-                {effectiveIsSidebarOpen ? (
-                  <X className="h-5 w-5" />
-                ) : (
-                  <Menu className="h-5 w-5" />
-                )}
-              </button>
-              <div className="flex items-center">
-                <div className={`h-2 w-2 rounded-full mr-2 ${
-                  realTimeStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
-                  realTimeStatus === 'error' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500 animate-pulse'
-                }`}></div>
-                <span className="text-xs text-gray-500 mr-2">
-                  {realTimeStatus === 'connected' ? 'Temps réel' : 
-                   realTimeStatus === 'error' ? 'Hors-ligne' : 'Connexion...'}
-                </span>
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              <button 
-                onClick={handleLogout}
-                className="mr-4 text-gray-600 text-sm hover:text-bgs-blue transition-colors"
-              >
-                Déconnexion
-              </button>
-              <CircleUserRound className="h-6 w-6 text-bgs-blue" />
-            </div>
-          </header>
-          
-          <main className="flex-1 p-4 md:p-6 overflow-auto">
-            {children}
-          </main>
-          
-          {/* Footer */}
-          <Footer />
-        </div>
+        <main className="flex-1">
+          {children}
+        </main>
       </div>
     </div>
   );
