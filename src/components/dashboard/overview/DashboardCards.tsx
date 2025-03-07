@@ -21,7 +21,7 @@ export default function DashboardCards({ userData }: DashboardCardsProps) {
   } = useDashboardCardsData(userData);
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
       <WalletBalanceCard 
         walletBalance={userData.walletBalance} 
         walletChange={walletChange} 

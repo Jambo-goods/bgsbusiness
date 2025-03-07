@@ -60,7 +60,7 @@ export default function Sidebar({
         </button>
       )}
       
-      <div className="flex flex-col py-4 flex-grow">
+      <div className="flex flex-col py-6 flex-grow">
         <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
           <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
         </SidebarSection>

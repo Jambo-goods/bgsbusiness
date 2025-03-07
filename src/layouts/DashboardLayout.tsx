@@ -66,13 +66,13 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Main navigation header */}
-      <Navbar isScrolled={isScrolled} />
+      <Navbar isScrolled={isScrolled} isOnDashboard={true} />
       
       {/* Mobile menu toggle */}
       <div className="fixed top-20 left-4 z-50 md:hidden">
         <button
           onClick={effectiveToggleSidebar}
-          className="bg-white p-2 rounded-md shadow-md text-bgs-blue hover:text-bgs-orange transition-colors"
+          className="bg-white p-2 rounded-full shadow-md text-bgs-blue hover:text-bgs-orange transition-colors"
           aria-label="Toggle menu"
         >
           <Menu size={20} />
@@ -91,7 +91,7 @@ export default function DashboardLayout({
         
         {/* Main Content */}
         <main className={cn(
-          "flex-1 flex flex-col min-h-[calc(100vh-4rem)] transition-all duration-300 p-4 md:p-6",
+          "flex-1 flex flex-col min-h-[calc(100vh-4rem)] transition-all duration-300 p-4 md:p-6 max-w-7xl mx-auto",
           effectiveIsSidebarOpen ? "md:ml-0" : "md:ml-0"
         )}>
           {/* Dashboard content */}

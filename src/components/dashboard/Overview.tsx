@@ -80,9 +80,9 @@ export default function Overview({ userData, userInvestments, setActiveTab }: Ov
   }, []);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {showSuccess && (
-        <div className="bg-green-50 border border-green-200 text-green-700 p-4 rounded-lg mb-4 animate-fade-in">
+        <div className="bg-gradient-to-r from-green-50 to-green-100 border border-green-200 text-green-700 p-4 rounded-lg mb-4 animate-fade-in">
           <p className="font-medium">Nouvel investissement ajouté avec succès!</p>
           <p className="text-sm">Vous pouvez voir les détails dans la section Investissements.</p>
         </div>

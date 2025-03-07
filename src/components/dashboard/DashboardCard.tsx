@@ -32,7 +32,7 @@ export default function DashboardCard({
     false;
   
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all duration-200 hover:shadow-lg hover:translate-y-[-2px]">
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md hover:translate-y-[-2px]">
       <div className="flex items-center justify-between mb-4">
         <div className={cn("p-3 rounded-lg", iconBgColor)}>
           <div className={cn("h-5 w-5", iconColor)}>{icon}</div>

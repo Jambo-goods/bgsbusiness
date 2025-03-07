@@ -16,12 +16,12 @@ export default function HeaderSection({
   dataSource = "temps réel"
 }: HeaderSectionProps) {
   return (
-    <div>
-      <h2 className="text-lg font-medium text-bgs-blue flex items-center gap-2">
+    <div className="mb-6">
+      <h2 className="text-xl font-semibold text-bgs-blue flex items-center gap-2">
         Suivi des rendements
         <button 
           onClick={handleRefresh}
-          className="text-gray-500 hover:text-bgs-blue transition-colors"
+          className="text-gray-400 hover:text-bgs-blue transition-colors"
           title="Rafraîchir les données"
           disabled={isLoading}
         >

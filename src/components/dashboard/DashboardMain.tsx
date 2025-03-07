@@ -35,14 +35,14 @@ export default function DashboardMain({
 }: DashboardMainProps) {
   return (
     <div className={cn(
-      "flex-1 px-4 md:px-6 py-4 w-full transition-all duration-300 mt-8",
+      "flex-1 py-4 w-full transition-all duration-300 mt-8",
       isSidebarOpen ? "md:ml-0" : "md:ml-0"
     )}>
       <div className="max-w-7xl mx-auto">
         <DashboardHeader userData={userData} refreshData={refreshData} realTimeStatus={realTimeStatus} />
         
         {/* Dashboard content based on active tab */}
-        <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
+        <div className="bg-white rounded-xl shadow-md p-5 mb-6">
           <TabContent 
             activeTab={activeTab} 
             userData={userData} 
