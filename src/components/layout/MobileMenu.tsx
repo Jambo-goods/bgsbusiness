@@ -145,12 +145,12 @@ export default function MobileMenu({
         )}
         
         <div className="pt-2 flex flex-col space-y-3">
-          {/* Show dashboard button only when logged in and NOT on dashboard */}
-          {isLoggedIn && !isOnDashboard && (
+          {/* Always show dashboard button for logged in users, no condition on isOnDashboard */}
+          {isLoggedIn && (
             <Button
               variant="default"
-              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
-              onClick={() => navigate("/dashboard")}
+              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full fixed-nav-button"
+              onClick={() => navigate("/dashboard", { replace: true })}
             >
               Tableau de bord
             </Button>

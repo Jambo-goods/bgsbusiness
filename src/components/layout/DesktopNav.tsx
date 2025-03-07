@@ -98,11 +98,11 @@ export default function DesktopNav({
         </>
       )}
       
-      {/* Show dashboard button only when logged in and NOT on dashboard */}
-      {isLoggedIn && !isOnDashboard && (
+      {/* Always show dashboard button for logged in users, make it fixed in position */}
+      {isLoggedIn && (
         <Button 
           variant="default"
-          className="bg-bgs-blue hover:bg-bgs-blue/90 text-white ml-auto"
+          className="bg-bgs-blue hover:bg-bgs-blue/90 text-white ml-auto fixed-nav-button"
           onClick={handleDashboardClick}
         >
           Tableau de bord
