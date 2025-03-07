@@ -1,5 +1,5 @@
 
-import { LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase, PiggyBank } from "lucide-react";
+import { LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase, Search } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
 interface PrincipalSectionProps {
@@ -15,7 +15,7 @@ export default function PrincipalSection({ activeTab, setActiveTab, expanded }: 
     { id: "capital", label: "Capital investi", icon: TrendingUp },
     { id: "yield", label: "Rendement mensuel", icon: BarChart3 },
     { id: "investments", label: "Investissements", icon: Briefcase },
-    { id: "projects", label: "Investissements proposés", icon: PiggyBank },
+    { id: "projects", label: "Investissements proposés", icon: Search },
   ];
 
   return (
