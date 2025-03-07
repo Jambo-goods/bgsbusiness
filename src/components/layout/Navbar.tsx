@@ -20,6 +20,7 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
   const [internalIsScrolled, setInternalIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { toast: uiToast } = useToast();
@@ -45,6 +46,7 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     const checkAuth = async () => {
       const { user } = await getCurrentUser();
       setIsLoggedIn(!!user);
+      setAuthChecked(true);
       console.log("Auth check on route change:", !!user ? "Logged in" : "Not logged in");
     };
     
@@ -55,6 +57,7 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     const checkAuthOnMount = async () => {
       const { user } = await getCurrentUser();
       setIsLoggedIn(!!user);
+      setAuthChecked(true);
       console.log("Auth check on mount:", !!user ? "Logged in" : "Not logged in");
     };
     
@@ -67,6 +70,7 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
         const authenticated = !!session?.user;
         console.log("Auth state changed:", event, authenticated ? "Logged in" : "Not logged in");
         setIsLoggedIn(authenticated);
+        setAuthChecked(true);
       }
     );
     
@@ -100,6 +104,17 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
   const isActive = (path: string) => location.pathname === path;
   
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
+
+  // Don't render anything until auth check is complete
+  if (!authChecked) {
+    return (
+      <NavbarHeader isScrolled={effectiveIsScrolled} isLoggedIn={false}>
+        <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
+          <NavLogo logoPath={logoPath} />
+        </div>
+      </NavbarHeader>
+    );
+  }
 
   return (
     <NavbarHeader isScrolled={effectiveIsScrolled} isLoggedIn={isLoggedIn}>
