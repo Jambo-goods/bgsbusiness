@@ -6,6 +6,7 @@ import { useWalletBalance } from "@/hooks/useWalletBalance";
 import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
@@ -15,9 +16,31 @@ export default function NavbarActions({ isActive }: NavbarActionsProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const { walletBalance } = useWalletBalance();
   const location = useLocation();
   
+  // Check if user is authenticated
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      setIsAuthenticated(!!data.session);
+    };
+    
+    checkAuth();
+    
+    // Listen for auth state changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setIsAuthenticated(!!session);
+      }
+    );
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -36,6 +59,11 @@ export default function NavbarActions({ isActive }: NavbarActionsProps) {
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
+
+  // If not authenticated, don't render the actions
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="flex items-center space-x-2">
