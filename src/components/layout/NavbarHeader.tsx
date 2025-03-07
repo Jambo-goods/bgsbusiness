@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import { Bell, User, LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase, Settings, UserCircle, LogOut, Home } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -15,7 +14,7 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const location = useLocation();
   
@@ -27,7 +26,7 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
         const { data: session } = await supabase.auth.getSession();
         
         if (!session.session) {
-          setWalletBalance(null);
+          setWalletBalance(0);
           return;
         }
         
@@ -39,14 +38,14 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
           
         if (error) {
           console.error("Error fetching wallet balance:", error);
-          setWalletBalance(null);
+          setWalletBalance(0);
           return;
         }
         
         setWalletBalance(data.wallet_balance || 0);
       } catch (error) {
         console.error("Error:", error);
-        setWalletBalance(null);
+        setWalletBalance(0);
       } finally {
         setIsLoadingBalance(false);
       }
@@ -116,13 +115,9 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
             
             <Link to="/dashboard?tab=wallet" className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1">
               <Wallet className="h-5 w-5 text-bgs-blue" />
-              {isLoadingBalance ? (
-                <Skeleton className="h-5 w-14 rounded" />
-              ) : (
-                <span className="text-xs font-medium text-bgs-blue">
-                  {walletBalance !== null ? `${walletBalance.toLocaleString('fr-FR')} €` : '-- €'}
-                </span>
-              )}
+              <span className="text-xs font-medium text-bgs-blue">
+                {walletBalance.toLocaleString('fr-FR')} €
+              </span>
             </Link>
             
             <div className="relative dashboard-menu-dropdown">
