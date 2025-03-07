@@ -1,4 +1,3 @@
-
 import { ReactNode, useState, useEffect } from "react";
 import Navbar from "../components/layout/Navbar";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
@@ -10,6 +9,7 @@ import { useNavScroll } from "@/hooks/useNavScroll";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { cn } from "@/lib/utils";
 import { Menu } from "lucide-react";
+import PageTransition from "@/components/transitions/PageTransition";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -36,21 +36,18 @@ export default function DashboardLayout({
   const [internalActiveTab, setInternalActiveTab] = useState('overview');
   const isScrolled = useNavScroll();
   
-  // Use our custom hook for persistent sidebar state
   const { 
     isSidebarOpen: persistentSidebarOpen, 
     setIsSidebarOpen: setPersistentSidebarOpen, 
     toggleSidebar: togglePersistentSidebar 
   } = useSidebarState();
   
-  // Use provided state or persistent state
   const effectiveIsSidebarOpen = propIsSidebarOpen !== undefined ? propIsSidebarOpen : persistentSidebarOpen;
   const effectiveSetIsSidebarOpen = propSetIsSidebarOpen || setPersistentSidebarOpen;
   const effectiveToggleSidebar = propToggleSidebar || togglePersistentSidebar;
   const effectiveActiveTab = activeTab || internalActiveTab;
   const effectiveSetActiveTab = setActiveTab || setInternalActiveTab;
   
-  // Default logout handler if none provided
   const defaultHandleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -65,43 +62,39 @@ export default function DashboardLayout({
   const effectiveHandleLogout = propHandleLogout || defaultHandleLogout;
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Main navigation header */}
-      <Navbar isScrolled={isScrolled} />
-      
-      {/* Mobile menu toggle */}
-      <div className="fixed top-20 left-4 z-50 md:hidden">
-        <button
-          onClick={effectiveToggleSidebar}
-          className="bg-white p-2 rounded-md shadow-md text-bgs-blue hover:text-bgs-orange transition-colors"
-          aria-label="Toggle menu"
-        >
-          <Menu size={20} />
-        </button>
-      </div>
-      
-      <div className="flex-1 flex flex-row pt-16">
-        {/* Sidebar */}
-        <DashboardSidebar
-          isSidebarOpen={effectiveIsSidebarOpen}
-          activeTab={effectiveActiveTab}
-          setActiveTab={effectiveSetActiveTab}
-          toggleSidebar={effectiveToggleSidebar}
-          handleLogout={effectiveHandleLogout}
-        />
+    <PageTransition>
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <Navbar isScrolled={isScrolled} />
         
-        {/* Main Content */}
-        <main className={cn(
-          "flex-1 flex flex-col min-h-[calc(100vh-4rem)] transition-all duration-300 p-4 md:p-6",
-          effectiveIsSidebarOpen ? "md:ml-0" : "md:ml-0"
-        )}>
-          {/* Dashboard content */}
-          {children}
+        <div className="fixed top-20 left-4 z-50 md:hidden">
+          <button
+            onClick={effectiveToggleSidebar}
+            className="bg-white p-2 rounded-md shadow-md text-bgs-blue hover:text-bgs-orange transition-colors"
+            aria-label="Toggle menu"
+          >
+            <Menu size={20} />
+          </button>
+        </div>
+        
+        <div className="flex-1 flex flex-row pt-16">
+          <DashboardSidebar
+            isSidebarOpen={effectiveIsSidebarOpen}
+            activeTab={effectiveActiveTab}
+            setActiveTab={effectiveSetActiveTab}
+            toggleSidebar={effectiveToggleSidebar}
+            handleLogout={effectiveHandleLogout}
+          />
           
-          {/* Footer */}
-          <Footer />
-        </main>
+          <main className={cn(
+            "flex-1 flex flex-col min-h-[calc(100vh-4rem)] transition-all duration-300 p-4 md:p-6",
+            effectiveIsSidebarOpen ? "md:ml-0" : "md:ml-0"
+          )}>
+            {children}
+            
+            <Footer />
+          </main>
+        </div>
       </div>
-    </div>
+    </PageTransition>
   );
 }
