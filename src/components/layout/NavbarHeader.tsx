@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils";
-import { Bell, User, LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase } from "lucide-react";
+import { Bell, User, LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase, Settings, UserCircle, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface NavbarHeaderProps {
@@ -145,14 +145,17 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
               {isUserMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg z-50 border border-gray-100 animate-in fade-in duration-200">
                   <div className="py-2">
-                    <a href="/dashboard/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    <a href="/dashboard/profile" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <UserCircle className="h-4 w-4 mr-2 text-bgs-blue" />
                       Mon Profil
                     </a>
-                    <a href="/dashboard/settings" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                    <a href="/dashboard/settings" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Settings className="h-4 w-4 mr-2 text-bgs-blue" />
                       Paramètres
                     </a>
                     <hr className="my-1" />
-                    <a href="/logout" className="block px-4 py-2 text-sm text-red-500 hover:bg-gray-100">
+                    <a href="/logout" className="flex items-center px-4 py-2 text-sm text-red-500 hover:bg-gray-100">
+                      <LogOut className="h-4 w-4 mr-2" />
                       Déconnexion
                     </a>
                   </div>
