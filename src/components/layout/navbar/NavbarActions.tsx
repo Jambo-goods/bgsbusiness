@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Bell, User, LayoutDashboard, Wallet, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -6,9 +7,11 @@ import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
+
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
 }
+
 export default function NavbarActions({
   isActive
 }: NavbarActionsProps) {
@@ -58,10 +61,14 @@ export default function NavbarActions({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
 
-  // If not authenticated, don't render the actions
-  if (!isAuthenticated) {
+  // If not authenticated or not on dashboard page, don't render the actions
+  const isDashboardPage = location.pathname.includes('/dashboard');
+  const isHomePage = location.pathname === '/';
+  
+  if (!isAuthenticated || (isHomePage && !isDashboardPage)) {
     return null;
   }
+
   return <div className="flex items-center space-x-2">
       <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
         <Home className="h-5 w-5 text-bgs-blue" />
@@ -75,7 +82,13 @@ export default function NavbarActions({
       </Link>
       
       <div className="relative dashboard-menu-dropdown">
-        
+        <button onClick={() => {
+          setIsDashboardMenuOpen(!isDashboardMenuOpen);
+          if (isNotificationOpen) setIsNotificationOpen(false);
+          if (isUserMenuOpen) setIsUserMenuOpen(false);
+        }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="Dashboard menu">
+          <LayoutDashboard className="h-5 w-5 text-bgs-blue" />
+        </button>
 
         <DashboardMenuDropdown isOpen={isDashboardMenuOpen} isActive={isActive} />
       </div>
