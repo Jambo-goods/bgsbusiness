@@ -11,11 +11,11 @@ interface SidebarSectionProps {
 export default function SidebarSection({ title, expanded, children }: SidebarSectionProps) {
   return (
     <div className={cn(
-      "mb-4",
-      expanded ? "px-1" : "px-0"
+      "mb-2",
+      expanded ? "px-3" : "px-1"
     )}>
       {expanded && title && (
-        <p className="text-xs font-medium text-bgs-gray-medium uppercase tracking-wider px-2 mb-2 mt-2">
+        <p className="text-xs font-medium text-bgs-gray-medium uppercase tracking-wider px-2 mb-3 mt-1">
           {title}
         </p>
       )}
