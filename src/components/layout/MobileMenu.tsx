@@ -89,9 +89,21 @@ export default function MobileMenu({
         {/* Always render navigation links */}
         {renderNavLinks()}
         
-        {/* Only show dashboard button when logged in and not on dashboard */}
-        <div className="pt-2 flex flex-col space-y-3">
-          {isLoggedIn && !isOnDashboard && (
+        {/* Show auth buttons with proper visibility based on auth state */}
+        <div className={cn("pt-2 flex flex-col space-y-3", !authChecked && "opacity-0", "transition-opacity duration-150")}>
+          {/* When not authenticated yet, show placeholder button that will be replaced once auth is checked */}
+          {!authChecked && (
+            <Button
+              variant="default"
+              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
+              disabled
+            >
+              Tableau de bord
+            </Button>
+          )}
+          
+          {/* Only show dashboard button when auth is checked and user is logged in and NOT on dashboard */}
+          {authChecked && isLoggedIn && !isOnDashboard && (
             <Button
               variant="default"
               className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
@@ -99,6 +111,26 @@ export default function MobileMenu({
             >
               Tableau de bord
             </Button>
+          )}
+          
+          {/* Only show login/register buttons when auth is checked and user is NOT logged in */}
+          {authChecked && !isLoggedIn && (
+            <>
+              <Button 
+                variant="outline"
+                className="border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10 w-full"
+                onClick={() => navigate("/login")}
+              >
+                Connexion
+              </Button>
+              <Button 
+                variant="default"
+                className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
+                onClick={() => navigate("/register")}
+              >
+                Inscription
+              </Button>
+            </>
           )}
         </div>
       </div>

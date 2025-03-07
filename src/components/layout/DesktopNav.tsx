@@ -64,9 +64,21 @@ export default function DesktopNav({
       {/* Always render navigation links */}
       {renderNavLinks()}
       
-      {/* Only show dashboard button when logged in and not on dashboard */}
-      <div className="ml-auto">
-        {isLoggedIn && !isOnDashboard && (
+      {/* Show dashboard button immediately with correct visibility based on auth state */}
+      <div className={cn("ml-auto", !authChecked && "opacity-0", "transition-opacity duration-150")}>
+        {/* When not authenticated yet, show placeholder button that will be replaced by proper buttons */}
+        {!authChecked && (
+          <Button 
+            variant="default"
+            className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+            disabled
+          >
+            Tableau de bord
+          </Button>
+        )}
+        
+        {/* Only show when auth is checked and user is logged in and not on dashboard */}
+        {authChecked && isLoggedIn && !isOnDashboard && (
           <Button 
             variant="default"
             className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
@@ -74,6 +86,26 @@ export default function DesktopNav({
           >
             Tableau de bord
           </Button>
+        )}
+        
+        {/* Only show login/register buttons ONLY when auth is checked and user is NOT logged in */}
+        {authChecked && !isLoggedIn && (
+          <div className="flex space-x-3">
+            <Button 
+              variant="outline"
+              className="border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10"
+              onClick={() => navigate("/login")}
+            >
+              Connexion
+            </Button>
+            <Button 
+              variant="default"
+              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+              onClick={() => navigate("/register")}
+            >
+              Inscription
+            </Button>
+          </div>
         )}
       </div>
     </nav>
