@@ -43,24 +43,41 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     }
   }, [isScrolled]);
 
+  // Check authentication status whenever the route changes
   useEffect(() => {
-    // Check if user is logged in
     const checkAuth = async () => {
       const { user } = await getCurrentUser();
       setIsLoggedIn(!!user);
+      console.log("Auth check on route change:", !!user ? "Logged in" : "Not logged in");
     };
     
     checkAuth();
   }, [location.pathname]);
 
+  // Check authentication status when component mounts
   useEffect(() => {
-    // Also check auth status on component mount
     const checkAuthOnMount = async () => {
       const { user } = await getCurrentUser();
       setIsLoggedIn(!!user);
+      console.log("Auth check on mount:", !!user ? "Logged in" : "Not logged in");
     };
     
     checkAuthOnMount();
+  }, []);
+
+  // Subscribe to auth state changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        const authenticated = !!session?.user;
+        console.log("Auth state changed:", event, authenticated ? "Logged in" : "Not logged in");
+        setIsLoggedIn(authenticated);
+      }
+    );
+    
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {

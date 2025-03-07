@@ -95,6 +95,16 @@ export default function MobileMenu({
               Tableau de bord
             </Link>
           )}
+          
+          {/* Add logout button when logged in */}
+          {isLoggedIn && !isOnDashboard && (
+            <button 
+              onClick={handleLogout}
+              className="btn-secondary w-full text-center"
+            >
+              Déconnexion
+            </button>
+          )}
         </div>
       </div>
     </div>
