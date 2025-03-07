@@ -1,6 +1,9 @@
 
 import { UserCircle, Settings, LogOut } from "lucide-react";
 import { Link } from "react-router-dom";
+import { logoutUser } from "@/services/authService";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 interface UserMenuDropdownProps {
   isOpen: boolean;
@@ -8,7 +11,20 @@ interface UserMenuDropdownProps {
 }
 
 export default function UserMenuDropdown({ isOpen, isActive }: UserMenuDropdownProps) {
+  const navigate = useNavigate();
+  
   if (!isOpen) return null;
+  
+  const handleLogout = async () => {
+    const { success, error } = await logoutUser();
+    
+    if (success) {
+      toast.success("Déconnexion réussie");
+      navigate("/");
+    } else {
+      toast.error("Erreur lors de la déconnexion: " + error);
+    }
+  };
   
   return (
     <div className="absolute right-0 mt-2 w-56 bg-white shadow-lg rounded-lg z-50 border border-gray-100 animate-fade-in">
@@ -26,10 +42,13 @@ export default function UserMenuDropdown({ isOpen, isActive }: UserMenuDropdownP
           Paramètres
         </Link>
         <hr className="my-1" />
-        <Link to="/logout" className="flex items-center px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors">
+        <button 
+          onClick={handleLogout}
+          className="flex w-full items-center px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+        >
           <LogOut className="h-4 w-4 mr-3" />
           Déconnexion
-        </Link>
+        </button>
       </div>
     </div>
   );

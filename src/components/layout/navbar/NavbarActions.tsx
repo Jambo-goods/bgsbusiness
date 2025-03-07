@@ -95,6 +95,13 @@ export default function NavbarActions({
       </Link>
       
       <div className="relative dashboard-menu-dropdown">
+        <button onClick={() => {
+          setIsDashboardMenuOpen(!isDashboardMenuOpen);
+          if (isNotificationOpen) setIsNotificationOpen(false);
+          if (isUserMenuOpen) setIsUserMenuOpen(false);
+        }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="Dashboard Menu">
+          <LayoutDashboard className="h-5 w-5 text-bgs-blue" />
+        </button>
         <DashboardMenuDropdown isOpen={isDashboardMenuOpen} isActive={isActive} />
       </div>
 
@@ -112,6 +119,13 @@ export default function NavbarActions({
       </div>
       
       <div className="relative user-dropdown">
+        <button onClick={() => {
+          setIsUserMenuOpen(!isUserMenuOpen);
+          if (isNotificationOpen) setIsNotificationOpen(false);
+          if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
+        }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="User Menu">
+          <User className="h-5 w-5 text-bgs-blue" />
+        </button>
         <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
       </div>
     </div>;
