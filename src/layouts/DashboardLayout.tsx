@@ -1,5 +1,6 @@
+
 import { ReactNode, useState, useEffect } from "react";
-import DashboardNavbar from "../components/layout/DashboardNavbar";
+import Navbar from "../components/layout/Navbar";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
 import Footer from "../components/layout/Footer";
 import { useNavigate } from "react-router-dom";
@@ -35,18 +36,21 @@ export default function DashboardLayout({
   const [internalActiveTab, setInternalActiveTab] = useState('overview');
   const isScrolled = useNavScroll();
   
+  // Use our custom hook for persistent sidebar state
   const { 
     isSidebarOpen: persistentSidebarOpen, 
     setIsSidebarOpen: setPersistentSidebarOpen, 
     toggleSidebar: togglePersistentSidebar 
   } = useSidebarState();
   
+  // Use provided state or persistent state
   const effectiveIsSidebarOpen = propIsSidebarOpen !== undefined ? propIsSidebarOpen : persistentSidebarOpen;
   const effectiveSetIsSidebarOpen = propSetIsSidebarOpen || setPersistentSidebarOpen;
   const effectiveToggleSidebar = propToggleSidebar || togglePersistentSidebar;
   const effectiveActiveTab = activeTab || internalActiveTab;
   const effectiveSetActiveTab = setActiveTab || setInternalActiveTab;
   
+  // Default logout handler if none provided
   const defaultHandleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -62,8 +66,10 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <DashboardNavbar isScrolled={isScrolled} />
+      {/* Main navigation header */}
+      <Navbar isScrolled={isScrolled} />
       
+      {/* Mobile menu toggle */}
       <div className="fixed top-20 left-4 z-50 md:hidden">
         <button
           onClick={effectiveToggleSidebar}
@@ -75,6 +81,7 @@ export default function DashboardLayout({
       </div>
       
       <div className="flex-1 flex flex-row pt-16">
+        {/* Sidebar */}
         <DashboardSidebar
           isSidebarOpen={effectiveIsSidebarOpen}
           activeTab={effectiveActiveTab}
@@ -83,12 +90,15 @@ export default function DashboardLayout({
           handleLogout={effectiveHandleLogout}
         />
         
+        {/* Main Content */}
         <main className={cn(
           "flex-1 flex flex-col min-h-[calc(100vh-4rem)] transition-all duration-300 p-4 md:p-6",
           effectiveIsSidebarOpen ? "md:ml-0" : "md:ml-0"
         )}>
+          {/* Dashboard content */}
           {children}
           
+          {/* Footer */}
           <Footer />
         </main>
       </div>
