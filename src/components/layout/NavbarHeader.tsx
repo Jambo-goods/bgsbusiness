@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils";
-import { Bell, User, LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase } from "lucide-react";
+import { Bell, User } from "lucide-react";
 import { useState, useEffect } from "react";
 
 interface NavbarHeaderProps {
@@ -11,26 +11,22 @@ interface NavbarHeaderProps {
 export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
   
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
-      if (isNotificationOpen || isUserMenuOpen || isDashboardMenuOpen) {
+      if (isNotificationOpen || isUserMenuOpen) {
         const target = event.target as HTMLElement;
-        if (!target.closest('.notification-dropdown') && 
-            !target.closest('.user-dropdown') && 
-            !target.closest('.dashboard-menu-dropdown')) {
+        if (!target.closest('.notification-dropdown') && !target.closest('.user-dropdown')) {
           setIsNotificationOpen(false);
           setIsUserMenuOpen(false);
-          setIsDashboardMenuOpen(false);
         }
       }
     };
     
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
+  }, [isNotificationOpen, isUserMenuOpen]);
   
   return (
     <header
@@ -46,54 +42,11 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
           {children}
           
           <div className="flex items-center space-x-4">
-            <div className="relative dashboard-menu-dropdown">
-              <button
-                onClick={() => {
-                  setIsDashboardMenuOpen(!isDashboardMenuOpen);
-                  if (isNotificationOpen) setIsNotificationOpen(false);
-                  if (isUserMenuOpen) setIsUserMenuOpen(false);
-                }}
-                className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Dashboard Menu"
-              >
-                <LayoutDashboard className="h-5 w-5 text-gray-500" />
-              </button>
-
-              {isDashboardMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white shadow-lg rounded-lg z-50 border border-gray-100 animate-in fade-in duration-200">
-                  <div className="py-2">
-                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">Menu rapide</div>
-                    <a href="/dashboard" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <LayoutDashboard className="h-4 w-4 mr-2 text-bgs-blue" />
-                      Tableau de bord
-                    </a>
-                    <a href="/dashboard?tab=wallet" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <Wallet className="h-4 w-4 mr-2 text-bgs-blue" />
-                      Solde disponible
-                    </a>
-                    <a href="/dashboard?tab=capital" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <TrendingUp className="h-4 w-4 mr-2 text-bgs-blue" />
-                      Capital investi
-                    </a>
-                    <a href="/dashboard?tab=yield" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <BarChart3 className="h-4 w-4 mr-2 text-bgs-blue" />
-                      Rendement mensuel
-                    </a>
-                    <a href="/dashboard?tab=investments" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                      <Briefcase className="h-4 w-4 mr-2 text-bgs-blue" />
-                      Investissements
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-
             <div className="relative notification-dropdown">
               <button 
                 onClick={() => {
                   setIsNotificationOpen(!isNotificationOpen);
                   if (isUserMenuOpen) setIsUserMenuOpen(false);
-                  if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
                 }}
                 className="p-2 rounded-full hover:bg-gray-100 transition-colors relative"
                 aria-label="Notifications"
@@ -134,7 +87,6 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
                 onClick={() => {
                   setIsUserMenuOpen(!isUserMenuOpen);
                   if (isNotificationOpen) setIsNotificationOpen(false);
-                  if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
                 }}
                 className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                 aria-label="User menu"

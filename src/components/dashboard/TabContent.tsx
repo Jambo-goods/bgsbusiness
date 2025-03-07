@@ -25,7 +25,7 @@ export default function TabContent({
   refreshData
 }: TabContentProps) {
   return (
-    <div className="w-full mt-4">
+    <div className={cn("w-full p-4 md:p-6")}>
       {activeTab === "overview" && (
         <Overview 
           userData={userData} 

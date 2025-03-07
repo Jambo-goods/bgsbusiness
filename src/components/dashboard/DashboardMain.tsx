@@ -32,7 +32,10 @@ export default function DashboardMain({
   refreshData
 }: DashboardMainProps) {
   return (
-    <div className="flex-1 px-4 md:px-6 py-4 w-full">
+    <div className={cn(
+      "transition-all duration-300 w-full pt-16",
+      isSidebarOpen ? "md:ml-64" : "md:ml-20"
+    )}>
       <div className="max-w-7xl mx-auto">
         <DashboardHeader userData={userData} />
         
