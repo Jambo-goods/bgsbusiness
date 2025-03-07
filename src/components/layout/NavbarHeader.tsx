@@ -1,6 +1,6 @@
 
 import { cn } from "@/lib/utils";
-import { Search, Bell, User } from "lucide-react";
+import { Bell, User } from "lucide-react";
 import { useState } from "react";
 
 interface NavbarHeaderProps {
@@ -26,15 +26,6 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
           {children}
           
           <div className="flex items-center space-x-4">
-            <div className="relative hidden md:block">
-              <Search className="h-5 w-5 text-gray-500 absolute left-3 top-1/2 transform -translate-y-1/2" />
-              <input 
-                type="text" 
-                placeholder="Rechercher..." 
-                className="pl-10 pr-4 py-2 rounded-full bg-gray-100 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-bgs-blue/20 w-48 md:w-64"
-              />
-            </div>
-            
             <div className="relative">
               <button 
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
