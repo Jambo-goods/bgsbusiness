@@ -77,10 +77,12 @@ export default function MobileMenu({
         )}
         
         <div className="pt-2 flex flex-col space-y-3">
-          {/* Always show dashboard button */}
-          <Link to="/dashboard" className="btn-primary w-full text-center sticky bottom-4">
-            Tableau de bord
-          </Link>
+          {/* Show dashboard button only when NOT on dashboard */}
+          {!isOnDashboard && (
+            <Link to="/dashboard" className="btn-primary w-full text-center sticky bottom-4">
+              Tableau de bord
+            </Link>
+          )}
         </div>
       </div>
     </div>

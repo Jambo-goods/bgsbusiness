@@ -59,14 +59,16 @@ export default function DesktopNav({
         </>
       )}
       
-      {/* Always show dashboard button with conditional behavior - fixed position */}
-      <Button 
-        variant="default"
-        className="bg-bgs-blue hover:bg-bgs-blue/90 text-white ml-auto"
-        onClick={handleDashboardClick}
-      >
-        Tableau de bord
-      </Button>
+      {/* Show dashboard button only when NOT on dashboard */}
+      {!isOnDashboard && (
+        <Button 
+          variant="default"
+          className="bg-bgs-blue hover:bg-bgs-blue/90 text-white ml-auto"
+          onClick={handleDashboardClick}
+        >
+          Tableau de bord
+        </Button>
+      )}
     </nav>
   );
 }
