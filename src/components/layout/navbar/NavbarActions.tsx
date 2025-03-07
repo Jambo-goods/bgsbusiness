@@ -89,17 +89,7 @@ export default function NavbarActions({
     return null;
   }
 
-  // If the user is authenticated and not on dashboard, don't show any actions
-  if (isAuthenticated && !isDashboardPage) {
-    return null;
-  }
-  
-  // If the user is not authenticated and not on dashboard, also don't show actions
-  if (!isAuthenticated && !isDashboardPage) {
-    return null;
-  }
-  
-  // Only show dashboard actions when on dashboard pages
+  // Always show dashboard actions when on dashboard pages
   if (isDashboardPage) {
     return (
       <div className="flex items-center space-x-2">
@@ -152,5 +142,7 @@ export default function NavbarActions({
     );
   }
   
+  // Return null for NavbarActions when not on dashboard
+  // The login/register buttons will be handled by DesktopNav and MobileMenu
   return null;
 }
