@@ -8,13 +8,15 @@ interface DesktopNavProps {
   isActive: (path: string) => boolean;
   handleLogout: () => void;
   isOnDashboard?: boolean;
+  authChecked: boolean;
 }
 
 export default function DesktopNav({ 
   isLoggedIn, 
   isActive, 
   handleLogout,
-  isOnDashboard = false
+  isOnDashboard = false,
+  authChecked = false
 }: DesktopNavProps) {
   const navigate = useNavigate();
 
@@ -22,6 +24,43 @@ export default function DesktopNav({
     // Use replace to prevent back navigation to public routes after entering dashboard
     navigate("/dashboard", { replace: true });
   };
+
+  // Don't render auth-dependent buttons until auth is checked
+  if (!authChecked) {
+    return (
+      <nav className="hidden md:flex space-x-8 items-center">
+        {/* Show only non-auth dependent links */}
+        {!isOnDashboard && (
+          <>
+            <Link
+              to="/"
+              className={cn("nav-link", isActive("/") && "active")}
+            >
+              Accueil
+            </Link>
+            <Link
+              to="/projects"
+              className={cn("nav-link", isActive("/projects") && "active")}
+            >
+              Projets
+            </Link>
+            <Link
+              to="/how-it-works"
+              className={cn("nav-link", isActive("/how-it-works") && "active")}
+            >
+              Comment ça marche
+            </Link>
+            <Link
+              to="/about"
+              className={cn("nav-link", isActive("/about") && "active")}
+            >
+              À propos
+            </Link>
+          </>
+        )}
+      </nav>
+    );
+  }
 
   return (
     <nav className="hidden md:flex space-x-8 items-center">

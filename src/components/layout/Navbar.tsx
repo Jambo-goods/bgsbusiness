@@ -43,15 +43,18 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
   }, [isScrolled]);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { user } = await getCurrentUser();
-      setIsLoggedIn(!!user);
-      setAuthChecked(true);
-      console.log("Auth check on route change:", !!user ? "Logged in" : "Not logged in");
-    };
-    
-    checkAuth();
-  }, [location.pathname]);
+    // Don't reset auth state on route changes to prevent flashing
+    if (!authChecked) {
+      const checkAuth = async () => {
+        const { user } = await getCurrentUser();
+        setIsLoggedIn(!!user);
+        setAuthChecked(true);
+        console.log("Auth check on route change:", !!user ? "Logged in" : "Not logged in");
+      };
+      
+      checkAuth();
+    }
+  }, [location.pathname, authChecked]);
 
   useEffect(() => {
     const checkAuthOnMount = async () => {
@@ -105,13 +108,32 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
   
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
-  // Don't render anything until auth check is complete
+  // Show minimal navbar while auth check is in progress to prevent flashing
   if (!authChecked) {
     return (
       <NavbarHeader isScrolled={effectiveIsScrolled} isLoggedIn={false}>
         <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
           <NavLogo logoPath={logoPath} />
+          <DesktopNav 
+            isLoggedIn={false}
+            isActive={isActive}
+            handleLogout={handleLogout}
+            isOnDashboard={effectiveIsOnDashboard}
+            authChecked={false}
+          />
+          <MobileMenuToggle 
+            isMenuOpen={isMenuOpen} 
+            toggleMenu={toggleMenu} 
+          />
         </div>
+        <MobileMenu 
+          isMenuOpen={isMenuOpen}
+          isLoggedIn={false}
+          isActive={isActive}
+          handleLogout={handleLogout}
+          isOnDashboard={effectiveIsOnDashboard}
+          authChecked={false}
+        />
       </NavbarHeader>
     );
   }
@@ -126,6 +148,7 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
           isActive={isActive}
           handleLogout={handleLogout}
           isOnDashboard={effectiveIsOnDashboard}
+          authChecked={authChecked}
         />
 
         <MobileMenuToggle 
@@ -140,6 +163,7 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
         isActive={isActive}
         handleLogout={handleLogout}
         isOnDashboard={effectiveIsOnDashboard}
+        authChecked={authChecked}
       />
     </NavbarHeader>
   );
