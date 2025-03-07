@@ -82,9 +82,13 @@ export default function MobileMenu({
         <div className="pt-2 flex flex-col space-y-3">
           {/* Show dashboard button only when logged in and NOT on dashboard */}
           {isLoggedIn && !isOnDashboard && (
-            <Link to="/dashboard" className="btn-primary w-full text-center">
+            <Button
+              variant="default"
+              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
+              onClick={() => navigate("/dashboard")}
+            >
               Tableau de bord
-            </Link>
+            </Button>
           )}
           
           {/* Show login/register buttons ONLY when NOT logged in */}
