@@ -59,7 +59,7 @@ export default function Sidebar({
         </button>
       )}
       
-      <div className="flex flex-row overflow-x-auto py-4 px-3 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300">
+      <div className="flex-1 py-4 overflow-y-auto px-3 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300">
         <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
           <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
         </SidebarSection>
