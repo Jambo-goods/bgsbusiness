@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import NavbarHeader from "./NavbarHeader";
 import NavLogo from "./NavLogo";
 import DesktopNav from "./DesktopNav";
@@ -25,14 +25,11 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
   
   const logoPath = "lovable-uploads/d9a3204a-06aa-470d-8255-7f3bd0852557.png";
   
-  // Check if user is on dashboard - now we can use the prop or infer from path
   const effectiveIsOnDashboard = isOnDashboard || location.pathname.startsWith('/dashboard');
 
-  // Use passed isScrolled prop or internal state
   const effectiveIsScrolled = isScrolled !== undefined ? isScrolled : internalIsScrolled;
 
   useEffect(() => {
-    // Only track scrolling internally if no isScrolled prop is provided
     if (isScrolled === undefined) {
       const handleScroll = () => {
         setInternalIsScrolled(window.scrollY > 10);
@@ -43,7 +40,6 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     }
   }, [isScrolled]);
 
-  // Check authentication status whenever the route changes
   useEffect(() => {
     const checkAuth = async () => {
       const { user } = await getCurrentUser();
@@ -54,7 +50,6 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     checkAuth();
   }, [location.pathname]);
 
-  // Check authentication status when component mounts
   useEffect(() => {
     const checkAuthOnMount = async () => {
       const { user } = await getCurrentUser();
@@ -65,7 +60,6 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     checkAuthOnMount();
   }, []);
 
-  // Subscribe to auth state changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -111,7 +105,6 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
         <NavLogo logoPath={logoPath} />
 
-        {/* Desktop Navigation */}
         <DesktopNav 
           isLoggedIn={isLoggedIn}
           isActive={isActive}
@@ -119,14 +112,12 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
           isOnDashboard={effectiveIsOnDashboard}
         />
 
-        {/* Mobile Menu Button */}
         <MobileMenuToggle 
           isMenuOpen={isMenuOpen} 
           toggleMenu={toggleMenu} 
         />
       </div>
 
-      {/* Mobile Navigation */}
       <MobileMenu 
         isMenuOpen={isMenuOpen}
         isLoggedIn={isLoggedIn}
