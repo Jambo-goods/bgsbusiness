@@ -6,7 +6,6 @@ import HeroSection from "@/components/howItWorks/HeroSection";
 import InvestmentProcess from "@/components/howItWorks/InvestmentProcess";
 import BusinessModel from "@/components/howItWorks/BusinessModel";
 import FAQ from "@/components/howItWorks/FAQ";
-import PageTransition from "@/components/transitions/PageTransition";
 
 export default function HowItWorks() {
   useEffect(() => {
@@ -14,26 +13,24 @@ export default function HowItWorks() {
   }, []);
   
   return (
-    <PageTransition>
-      <div className="min-h-screen page-transition">
-        <Navbar />
+    <div className="min-h-screen page-transition">
+      <Navbar />
+      
+      <main className="pt-32 pb-20">
+        {/* Hero section */}
+        <HeroSection />
         
-        <main className="pt-32 pb-20">
-          {/* Hero section */}
-          <HeroSection />
-          
-          {/* Investment Process */}
-          <InvestmentProcess />
-          
-          {/* Business model explanation */}
-          <BusinessModel />
-          
-          {/* FAQ section */}
-          <FAQ />
-        </main>
+        {/* Investment Process */}
+        <InvestmentProcess />
         
-        <Footer />
-      </div>
-    </PageTransition>
+        {/* Business model explanation */}
+        <BusinessModel />
+        
+        {/* FAQ section */}
+        <FAQ />
+      </main>
+      
+      <Footer />
+    </div>
   );
 }
