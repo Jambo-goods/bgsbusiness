@@ -19,8 +19,6 @@ export default function MobileMenu({
 }: MobileMenuProps) {
   if (!isMenuOpen) return null;
   
-  const isHomePage = isActive("/");
-  
   return (
     <div className="md:hidden bg-white absolute top-full left-0 right-0 shadow-md animate-fade-in">
       <div className="container mx-auto px-4 py-6 flex flex-col space-y-4">
@@ -36,7 +34,8 @@ export default function MobileMenu({
           Accueil
         </Link>
         
-        {(!isLoggedIn || isHomePage) && (
+        {/* Show these links when user is NOT on dashboard, regardless of login status */}
+        {!isOnDashboard && (
           <>
             <Link
               to="/projects"

@@ -15,8 +15,6 @@ export default function DesktopNav({
   handleLogout,
   isOnDashboard = false
 }: DesktopNavProps) {
-  const isHomePage = isActive("/");
-  
   return (
     <nav className="hidden md:flex space-x-8 items-center">
       <Link
@@ -26,7 +24,8 @@ export default function DesktopNav({
         Accueil
       </Link>
       
-      {(!isLoggedIn || isHomePage) && (
+      {/* Show these links when user is NOT on dashboard, regardless of login status */}
+      {!isOnDashboard && (
         <>
           <Link
             to="/projects"
