@@ -1,13 +1,10 @@
 
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode, useState } from "react";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
-import Footer from "../components/layout/Footer";
+import { CircleUserRound, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavScroll } from "@/hooks/useNavScroll";
-import { useSidebarState } from "@/hooks/useSidebarState";
-import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -20,51 +17,25 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({
   children,
-  isSidebarOpen: propIsSidebarOpen,
-  setIsSidebarOpen: propSetIsSidebarOpen,
+  isSidebarOpen,
+  setIsSidebarOpen,
   activeTab,
   setActiveTab,
   realTimeStatus = 'connecting'
 }: DashboardLayoutProps) {
   const navigate = useNavigate();
+  const [internalSidebarOpen, setInternalSidebarOpen] = useState(true);
   const [internalActiveTab, setInternalActiveTab] = useState('overview');
-  const isScrolled = useNavScroll();
   
-  // Use our custom hook for persistent sidebar state
-  const { isSidebarOpen: persistentSidebarOpen, setIsSidebarOpen: setPersistentSidebarOpen, toggleSidebar: togglePersistentSidebar } = useSidebarState();
-  
-  // Use provided state or persistent state
-  const effectiveIsSidebarOpen = propIsSidebarOpen !== undefined ? propIsSidebarOpen : persistentSidebarOpen;
-  const effectiveSetIsSidebarOpen = propSetIsSidebarOpen || setPersistentSidebarOpen;
+  // Use provided state or internal state
+  const effectiveIsSidebarOpen = isSidebarOpen !== undefined ? isSidebarOpen : internalSidebarOpen;
+  const effectiveSetIsSidebarOpen = setIsSidebarOpen || setInternalSidebarOpen;
   const effectiveActiveTab = activeTab || internalActiveTab;
   const effectiveSetActiveTab = setActiveTab || setInternalActiveTab;
   
-  // Toggle function that uses the appropriate state setter
   const toggleSidebar = () => {
-    if (propSetIsSidebarOpen) {
-      propSetIsSidebarOpen(!propIsSidebarOpen);
-    } else {
-      togglePersistentSidebar();
-    }
+    effectiveSetIsSidebarOpen(!effectiveIsSidebarOpen);
   };
-  
-  // Close sidebar on small screens by default
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768 && effectiveIsSidebarOpen) {
-        effectiveSetIsSidebarOpen(false);
-      } else if (window.innerWidth >= 1280 && !effectiveIsSidebarOpen) {
-        // Auto-expand on extra large screens
-        effectiveSetIsSidebarOpen(true);
-      }
-    };
-    
-    // Initial check
-    handleResize();
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [effectiveIsSidebarOpen, effectiveSetIsSidebarOpen]);
   
   const handleLogout = async () => {
     try {
@@ -78,27 +49,50 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
-      <div className="flex-1 flex flex-row pt-16">
-        {/* Sidebar */}
-        <DashboardSidebar
-          isSidebarOpen={effectiveIsSidebarOpen}
-          activeTab={effectiveActiveTab}
-          setActiveTab={effectiveSetActiveTab}
-          toggleSidebar={toggleSidebar}
-          handleLogout={handleLogout}
-        />
-        
-        {/* Main Content */}
-        <main className={cn(
-          "flex-1 flex flex-col min-h-[calc(100vh-4rem)] transition-all duration-300",
-          effectiveIsSidebarOpen ? "md:ml-0" : "md:ml-0"
-        )}>
-          {/* Dashboard content */}
-          {children}
+    <div className="min-h-screen bg-gray-50 flex flex-col md:flex-row">
+      <DashboardSidebar
+        isSidebarOpen={effectiveIsSidebarOpen}
+        activeTab={effectiveActiveTab}
+        setActiveTab={effectiveSetActiveTab}
+        toggleSidebar={toggleSidebar}
+        handleLogout={handleLogout}
+      />
+      
+      <div className="flex-1 flex flex-col">
+        <header className="bg-white border-b p-4 flex justify-between items-center sticky top-0 z-10">
+          <div className="flex items-center">
+            <button onClick={toggleSidebar} className="mr-4 text-gray-600">
+              {effectiveIsSidebarOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+            <div className="flex items-center">
+              <div className={`h-2 w-2 rounded-full mr-2 ${
+                realTimeStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
+                realTimeStatus === 'error' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500 animate-pulse'
+              }`}></div>
+              <span className="text-xs text-gray-500 mr-2">
+                {realTimeStatus === 'connected' ? 'Temps réel' : 
+                 realTimeStatus === 'error' ? 'Hors-ligne' : 'Connexion...'}
+              </span>
+            </div>
+          </div>
           
-          {/* Footer */}
-          <Footer />
+          <div className="flex items-center">
+            <button 
+              onClick={handleLogout}
+              className="mr-4 text-gray-600 text-sm hover:text-bgs-blue transition-colors"
+            >
+              Déconnexion
+            </button>
+            <CircleUserRound className="h-6 w-6 text-bgs-blue" />
+          </div>
+        </header>
+        
+        <main className="flex-1">
+          {children}
         </main>
       </div>
     </div>

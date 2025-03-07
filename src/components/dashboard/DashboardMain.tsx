@@ -32,24 +32,22 @@ export default function DashboardMain({
   refreshData
 }: DashboardMainProps) {
   return (
-    <div className={cn(
-      "flex-1 px-4 md:px-6 py-4 w-full transition-all duration-300",
+    <main className={cn(
+      "flex-1 p-6 transition-all",
       isSidebarOpen ? "md:ml-0" : "md:ml-0"
     )}>
       <div className="max-w-7xl mx-auto">
         <DashboardHeader userData={userData} />
         
         {/* Dashboard content based on active tab */}
-        <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
-          <TabContent 
-            activeTab={activeTab} 
-            userData={userData} 
-            userInvestments={userInvestments} 
-            setActiveTab={setActiveTab} 
-            refreshData={refreshData}
-          />
-        </div>
+        <TabContent 
+          activeTab={activeTab} 
+          userData={userData} 
+          userInvestments={userInvestments} 
+          setActiveTab={setActiveTab} 
+          refreshData={refreshData}
+        />
       </div>
-    </div>
+    </main>
   );
 }

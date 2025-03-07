@@ -20,10 +20,9 @@ export default function SidebarNavItem({
   variant = "default",
 }: SidebarNavItemProps) {
   return (
-    <li className="relative">
+    <li>
       <button
         onClick={onClick}
-        title={!expanded ? label : undefined}
         className={cn(
           "flex items-center w-full px-3 py-2.5 rounded-lg text-sm transition-all duration-200",
           variant === "default" && (
