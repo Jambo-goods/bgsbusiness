@@ -1,10 +1,10 @@
 
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SidebarSection from "./SidebarSection";
 import PrincipalSection from "./sections/PrincipalSection";
 import AccountSection from "./sections/AccountSection";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface SidebarProps {
   activeTab: string;
@@ -21,12 +21,6 @@ export default function Sidebar({
   handleLogout,
   toggleSidebar
 }: SidebarProps) {
-  const [expanded, setExpanded] = useState(true);
-  
-  const handleToggle = () => {
-    setExpanded(!expanded);
-  };
-
   // Add keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -35,8 +29,6 @@ export default function Sidebar({
         e.preventDefault(); // Prevent default browser behavior
         if (toggleSidebar) {
           toggleSidebar();
-        } else {
-          handleToggle();
         }
       }
     };
@@ -50,18 +42,32 @@ export default function Sidebar({
   
   return (
     <div className={cn(
-      "flex flex-col h-full transition-all duration-300 bg-white shadow-md rounded-r-xl border-r", 
-      expanded ? "w-64" : "w-20"
+      "flex flex-col h-full transition-all duration-300 bg-white shadow-md border-r relative", 
+      isSidebarOpen ? "w-64" : "w-16"
     )}>
-      <nav className="flex-1 py-4 overflow-y-auto px-2">
-        <SidebarSection title="Principal" expanded={expanded}>
-          <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} />
+      {toggleSidebar && (
+        <button 
+          onClick={toggleSidebar}
+          className={cn(
+            "absolute top-4 right-0 z-10 h-8 w-8 flex items-center justify-center bg-white shadow-md rounded-l-md -mr-4 transition-all",
+            "text-bgs-blue hover:text-bgs-orange focus:outline-none"
+          )}
+          aria-label={isSidebarOpen ? "Réduire le menu" : "Agrandir le menu"}
+          title={isSidebarOpen ? "Réduire le menu (Ctrl+B)" : "Agrandir le menu (Ctrl+B)"}
+        >
+          {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+        </button>
+      )}
+      
+      <div className="flex-1 py-4 overflow-y-auto px-3 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300">
+        <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
+          <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
         </SidebarSection>
         
-        <SidebarSection title="Compte" expanded={expanded}>
-          <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} handleLogout={handleLogout} />
+        <SidebarSection title="COMPTE" expanded={isSidebarOpen}>
+          <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} handleLogout={handleLogout} />
         </SidebarSection>
-      </nav>
+      </div>
     </div>
   );
 }

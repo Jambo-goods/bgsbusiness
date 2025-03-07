@@ -19,7 +19,6 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   const [userBalance, setUserBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   
-  // Fetch user balance on component mount
   useEffect(() => {
     const fetchUserBalance = async () => {
       try {
@@ -46,7 +45,6 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
     
     fetchUserBalance();
     
-    // Set up realtime subscription for profile changes
     const profileChannel = supabase
       .channel('simulator_balance_updates')
       .on('postgres_changes', {
@@ -64,19 +62,14 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
     };
   }, []);
   
-  // Calculer les rendements lorsque les entrées changent
   useEffect(() => {
-    // Calculer le rendement mensuel (en euros)
     const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
-    
-    // Calculer le rendement total sur la durée complète (capital + intérêts)
     const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * duration);
     
     setTotalReturn(calculatedTotalReturn);
     setMonthlyReturn(calculatedMonthlyReturn);
   }, [investmentAmount, duration, project.yield]);
   
-  // Calculer le rendement annuel (pour l'affichage)
   const annualYieldPercentage = project.yield * 12;
   
   return (

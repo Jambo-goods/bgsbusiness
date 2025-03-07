@@ -3,7 +3,6 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
-import { useNavScroll } from "@/hooks/useNavScroll";
 import NavbarHeader from "./NavbarHeader";
 import NavLogo from "./NavLogo";
 import DesktopNav from "./DesktopNav";
@@ -11,8 +10,12 @@ import MobileMenuToggle from "./MobileMenuToggle";
 import MobileMenu from "./MobileMenu";
 import { logoutUser, getCurrentUser } from "@/services/authService";
 
-export default function Navbar() {
-  const isScrolled = useNavScroll();
+interface NavbarProps {
+  isScrolled?: boolean;
+}
+
+export default function Navbar({ isScrolled }: NavbarProps) {
+  const [internalIsScrolled, setInternalIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const location = useLocation();
@@ -20,6 +23,24 @@ export default function Navbar() {
   const { toast: uiToast } = useToast();
   
   const logoPath = "lovable-uploads/d9a3204a-06aa-470d-8255-7f3bd0852557.png";
+  
+  // Check if user is on dashboard
+  const isOnDashboard = location.pathname.startsWith('/dashboard');
+
+  // Use passed isScrolled prop or internal state
+  const effectiveIsScrolled = isScrolled !== undefined ? isScrolled : internalIsScrolled;
+
+  useEffect(() => {
+    // Only track scrolling internally if no isScrolled prop is provided
+    if (isScrolled === undefined) {
+      const handleScroll = () => {
+        setInternalIsScrolled(window.scrollY > 10);
+      };
+      
+      window.addEventListener("scroll", handleScroll);
+      return () => window.removeEventListener("scroll", handleScroll);
+    }
+  }, [isScrolled]);
 
   useEffect(() => {
     // Check if user is logged in
@@ -58,7 +79,7 @@ export default function Navbar() {
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
   return (
-    <NavbarHeader isScrolled={isScrolled}>
+    <NavbarHeader isScrolled={effectiveIsScrolled}>
       <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
         <NavLogo logoPath={logoPath} />
 
@@ -67,6 +88,7 @@ export default function Navbar() {
           isLoggedIn={isLoggedIn}
           isActive={isActive}
           handleLogout={handleLogout}
+          isOnDashboard={isOnDashboard}
         />
 
         {/* Mobile Menu Button */}
@@ -82,6 +104,7 @@ export default function Navbar() {
         isLoggedIn={isLoggedIn}
         isActive={isActive}
         handleLogout={handleLogout}
+        isOnDashboard={isOnDashboard}
       />
     </NavbarHeader>
   );

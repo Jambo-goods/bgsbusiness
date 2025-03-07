@@ -6,12 +6,14 @@ interface DesktopNavProps {
   isLoggedIn: boolean;
   isActive: (path: string) => boolean;
   handleLogout: () => void;
+  isOnDashboard?: boolean;
 }
 
 export default function DesktopNav({ 
   isLoggedIn, 
   isActive, 
-  handleLogout 
+  handleLogout,
+  isOnDashboard = false
 }: DesktopNavProps) {
   return (
     <nav className="hidden md:flex space-x-8 items-center">
@@ -41,14 +43,16 @@ export default function DesktopNav({
       </Link>
       
       {isLoggedIn ? (
-        <>
-          <button onClick={handleLogout} className="btn-secondary">
-            Déconnexion
-          </button>
-          <Link to="/dashboard" className="btn-primary">
-            Tableau de bord
-          </Link>
-        </>
+        !isOnDashboard && (
+          <>
+            <button onClick={handleLogout} className="btn-secondary">
+              Déconnexion
+            </button>
+            <Link to="/dashboard" className="btn-primary">
+              Tableau de bord
+            </Link>
+          </>
+        )
       ) : (
         <>
           <Link to="/login" className="btn-secondary">

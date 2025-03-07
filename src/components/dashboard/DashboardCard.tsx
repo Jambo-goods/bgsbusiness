@@ -31,13 +31,13 @@ export default function DashboardCard({
     false;
   
   return (
-    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md">
+    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md hover:translate-y-[-2px]">
       <div className="flex items-center justify-between mb-3">
-        <div className={`${iconBgColor} p-2 rounded-lg`}>
+        <div className={`${iconBgColor} p-2.5 rounded-lg`}>
           <div className={`h-5 w-5 ${iconColor}`}>{icon}</div>
         </div>
         {changePercentage && (
-          <span className={`${isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-xs px-2 py-0.5 rounded-full font-medium flex items-center`}>
+          <span className={`${isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-xs px-2.5 py-1 rounded-full font-medium flex items-center`}>
             {isPositive ? (
               <ArrowUpIcon className="h-3 w-3 mr-1" />
             ) : (
@@ -58,7 +58,7 @@ export default function DashboardCard({
       )}
       {changeValue && changeTimeframe && (
         <div className="mt-2 text-xs text-bgs-gray-medium">
-          <span className={isPositive ? "text-green-500" : "text-red-500"}>{changeValue}</span> depuis <span className="font-medium">{changeTimeframe}</span>
+          <span className={isPositive ? "text-green-500 font-medium" : "text-red-500 font-medium"}>{changeValue}</span> depuis <span className="font-medium">{changeTimeframe}</span>
         </div>
       )}
     </div>
