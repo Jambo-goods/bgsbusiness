@@ -8,7 +8,7 @@ interface DesktopNavProps {
   isActive: (path: string) => boolean;
   handleLogout: () => void;
   isOnDashboard?: boolean;
-  authChecked: boolean;
+  authChecked?: boolean;
 }
 
 export default function DesktopNav({ 

@@ -9,6 +9,7 @@ interface MobileMenuProps {
   isActive: (path: string) => boolean;
   handleLogout: () => void;
   isOnDashboard?: boolean;
+  authChecked?: boolean;
 }
 
 export default function MobileMenu({ 
