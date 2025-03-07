@@ -14,6 +14,7 @@ export default function WalletBalanceCard({ walletBalance = 0, walletChange }: W
   const navigate = useNavigate();
 
   const handleManageWallet = () => {
+    // Navigate to wallet tab in dashboard
     navigate('/dashboard/wallet');
   };
 
