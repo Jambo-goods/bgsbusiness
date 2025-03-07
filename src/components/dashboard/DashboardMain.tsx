@@ -36,15 +36,6 @@ export default function DashboardMain({
   refreshData,
   realTimeStatus
 }: DashboardMainProps) {
-  // Filter state for projects display
-  const [projectFilter, setProjectFilter] = useState<"all" | "active" | "upcoming" | "completed">("all");
-  
-  // Filtered projects based on selected filter
-  const filteredProjects = useMemo(() => {
-    if (projectFilter === "all") return projects;
-    return projects.filter(project => project.status === projectFilter);
-  }, [projectFilter]);
-
   // Memoized main content to prevent unnecessary re-renders
   const dashboardContent = useMemo(() => (
     <TabContent 
@@ -75,59 +66,6 @@ export default function DashboardMain({
         <div className="bg-white rounded-xl shadow-md overflow-hidden">
           <div className="p-5 animate-fade-in">
             {dashboardContent}
-          </div>
-        </div>
-        
-        {/* Available Investment Projects Section */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="p-5">
-            <h2 className="text-xl font-semibold text-bgs-blue mb-4">Projets d'investissement proposés</h2>
-            
-            <Tabs defaultValue="all" className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger 
-                  value="all" 
-                  onClick={() => setProjectFilter("all")}
-                  className="data-[state=active]:bg-bgs-blue data-[state=active]:text-white"
-                >
-                  Tous
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="active" 
-                  onClick={() => setProjectFilter("active")}
-                  className="data-[state=active]:bg-bgs-blue data-[state=active]:text-white"
-                >
-                  Actifs
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="upcoming" 
-                  onClick={() => setProjectFilter("upcoming")}
-                  className="data-[state=active]:bg-bgs-blue data-[state=active]:text-white"
-                >
-                  À venir
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="completed" 
-                  onClick={() => setProjectFilter("completed")}
-                  className="data-[state=active]:bg-bgs-blue data-[state=active]:text-white"
-                >
-                  Terminés
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="all" className="mt-0">
-                <ProjectsList projects={filteredProjects} />
-              </TabsContent>
-              <TabsContent value="active" className="mt-0">
-                <ProjectsList projects={filteredProjects} />
-              </TabsContent>
-              <TabsContent value="upcoming" className="mt-0">
-                <ProjectsList projects={filteredProjects} />
-              </TabsContent>
-              <TabsContent value="completed" className="mt-0">
-                <ProjectsList projects={filteredProjects} />
-              </TabsContent>
-            </Tabs>
           </div>
         </div>
       </div>
