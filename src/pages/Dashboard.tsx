@@ -138,6 +138,7 @@ export default function Dashboard() {
           userInvestments={userInvestments}
           setActiveTab={setActiveTab}
           refreshData={refreshAllData}
+          isRefreshing={isRefreshing}
           realTimeStatus={realTimeStatus}
         />
       </DashboardLayout>
