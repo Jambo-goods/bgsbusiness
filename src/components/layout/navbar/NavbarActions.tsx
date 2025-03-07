@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Bell, User, LayoutDashboard, Wallet, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -62,22 +61,19 @@ export default function NavbarActions({
   // Get current page path
   const currentPath = location.pathname;
 
-  // Check if current page is one of the specified pages
+  // Check if current page is one of the specified pages where the div should be hidden when logged in
   const isSpecifiedPage = currentPath === '/' || currentPath === '/projects' || currentPath === '/how-it-works' || currentPath === '/about';
 
   // Check if user is on a dashboard page
-  const isDashboardPage = currentPath.startsWith('/dashboard');
+  const isDashboardPage = location.pathname.includes('/dashboard');
 
-  // Hide the navbar actions when on specified pages and user is authenticated
-  if (isAuthenticated && isSpecifiedPage) {
+  // Hide the navbar actions when:
+  // 1. User is authenticated AND on specified pages (home, projects, how-it-works, about)
+  // 2. User is not authenticated AND not on dashboard page
+  if (isAuthenticated && isSpecifiedPage || !isAuthenticated && !isDashboardPage) {
     return null;
   }
-
-  // Only show navbar actions when:
-  // 1. User is authenticated AND on dashboard pages
-  // 2. User is not authenticated (regardless of page)
-  if (!isAuthenticated || isDashboardPage) {
-    return <div className="flex items-center space-x-2">
+  return <div className="flex items-center space-x-2">
       <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
         <Home className="h-5 w-5 text-bgs-blue" />
       </Link>
@@ -107,22 +103,9 @@ export default function NavbarActions({
       </div>
       
       <div className="relative user-dropdown">
-        <button
-          onClick={() => {
-            setIsUserMenuOpen(!isUserMenuOpen);
-            if (isNotificationOpen) setIsNotificationOpen(false);
-            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-          }}
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="User menu"
-        >
-          <User className="h-5 w-5 text-bgs-blue" />
-        </button>
+        
         
         <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
       </div>
     </div>;
-  }
-  
-  return null;
 }
