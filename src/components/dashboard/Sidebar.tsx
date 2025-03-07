@@ -59,7 +59,7 @@ export default function Sidebar({
         </button>
       )}
       
-      <div className="flex-1 py-4 overflow-y-auto px-3 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300">
+      <nav className="flex-1 py-4 overflow-y-auto px-3 scrollbar-thin scrollbar-thumb-gray-200 hover:scrollbar-thumb-gray-300">
         <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
           <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
         </SidebarSection>
@@ -67,7 +67,7 @@ export default function Sidebar({
         <SidebarSection title="COMPTE" expanded={isSidebarOpen}>
           <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} handleLogout={handleLogout} />
         </SidebarSection>
-      </div>
+      </nav>
     </div>
   );
 }
