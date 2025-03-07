@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SidebarSection from "./SidebarSection";
 import PrincipalSection from "./sections/PrincipalSection";
