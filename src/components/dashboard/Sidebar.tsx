@@ -20,12 +20,6 @@ export default function Sidebar({
   handleLogout,
   toggleSidebar
 }: SidebarProps) {
-  const [expanded, setExpanded] = useState(true);
-  
-  const handleToggle = () => {
-    setExpanded(!expanded);
-  };
-
   // Add keyboard shortcut listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -34,8 +28,6 @@ export default function Sidebar({
         e.preventDefault(); // Prevent default browser behavior
         if (toggleSidebar) {
           toggleSidebar();
-        } else {
-          handleToggle();
         }
       }
     };
@@ -49,16 +41,16 @@ export default function Sidebar({
   
   return (
     <div className={cn(
-      "flex flex-col h-full transition-all duration-300 bg-white shadow-md rounded-r-xl border-r", 
-      expanded ? "w-64" : "w-20"
+      "flex flex-col h-full transition-all duration-300 bg-white shadow-md border-r", 
+      isSidebarOpen ? "w-64" : "w-0"
     )}>
-      <nav className="flex-1 py-4 overflow-y-auto px-2">
-        <SidebarSection title="Principal" expanded={expanded}>
-          <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} />
+      <nav className="flex-1 py-4 overflow-y-auto px-3">
+        <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
+          <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
         </SidebarSection>
         
-        <SidebarSection title="Compte" expanded={expanded}>
-          <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={expanded} handleLogout={handleLogout} />
+        <SidebarSection title="COMPTE" expanded={isSidebarOpen}>
+          <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} handleLogout={handleLogout} />
         </SidebarSection>
       </nav>
     </div>
