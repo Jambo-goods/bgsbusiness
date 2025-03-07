@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
+import { useLocation } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import DashboardMain from "../components/dashboard/DashboardMain";
 import { useProfileData } from "@/hooks/dashboard/useProfileData";
@@ -11,10 +12,24 @@ import { useRealTimeSubscriptions } from "@/hooks/dashboard/useRealTimeSubscript
 import { useSidebarState } from "@/hooks/useSidebarState";
 
 export default function Dashboard() {
+  const location = useLocation();
   const [userId, setUserId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Check if we have a state with activeTab
+    if (location.state && location.state.activeTab) {
+      return location.state.activeTab;
+    }
+    return 'overview';
+  });
   const { isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useSidebarState();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Update activeTab when location state changes
+  useEffect(() => {
+    if (location.state && location.state.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+  }, [location.state]);
   
   // Fetch user ID from auth session - only once at component mount
   useEffect(() => {
