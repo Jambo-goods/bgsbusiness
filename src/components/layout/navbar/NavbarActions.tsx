@@ -64,15 +64,20 @@ export default function NavbarActions({
   // Get current page path
   const currentPath = location.pathname;
 
+  // Check if current page is one of the specified pages where the div should be hidden when logged in
+  const isSpecifiedPage = currentPath === '/' || currentPath === '/projects' || currentPath === '/how-it-works' || currentPath === '/about';
+
   // Check if user is on a dashboard page
   const isDashboardPage = location.pathname.includes('/dashboard');
 
-  // Only hide navbar actions when the user is not authenticated and not on a dashboard page
+  // Only hide the navbar actions when user is not authenticated and not on dashboard page
+  // We always show it when authenticated, regardless of the page
   if (!isAuthenticated && !isDashboardPage) {
     return null;
   }
-
-  return <div className="flex items-center space-x-2">
+  
+  return (
+    <div className="flex items-center space-x-2">
       <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
         <Home className="h-5 w-5 text-bgs-blue" />
       </Link>
@@ -88,11 +93,11 @@ export default function NavbarActions({
         <button 
           onClick={() => {
             setIsDashboardMenuOpen(!isDashboardMenuOpen);
-            if (isNotificationOpen) setIsNotificationOpen(false);
             if (isUserMenuOpen) setIsUserMenuOpen(false);
+            if (isNotificationOpen) setIsNotificationOpen(false);
           }} 
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors" 
-          aria-label="Dashboard Menu"
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          aria-label="Dashboard menu"
         >
           <LayoutDashboard className="h-5 w-5 text-bgs-blue" />
         </button>
@@ -100,11 +105,15 @@ export default function NavbarActions({
       </div>
 
       <div className="relative notification-dropdown">
-        <button onClick={() => {
-          setIsNotificationOpen(!isNotificationOpen);
-          if (isUserMenuOpen) setIsUserMenuOpen(false);
-          if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-        }} className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
+        <button 
+          onClick={() => {
+            setIsNotificationOpen(!isNotificationOpen);
+            if (isUserMenuOpen) setIsUserMenuOpen(false);
+            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
+          }} 
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" 
+          aria-label="Notifications"
+        >
           <Bell className="h-5 w-5 text-bgs-blue" />
           <span className="absolute top-1 right-1 h-2 w-2 bg-bgs-orange rounded-full"></span>
         </button>
@@ -120,12 +129,13 @@ export default function NavbarActions({
             if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
           }} 
           className="p-2 rounded-full hover:bg-gray-100 transition-colors" 
-          aria-label="User Menu"
+          aria-label="User menu"
         >
           <User className="h-5 w-5 text-bgs-blue" />
         </button>
         
         <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
       </div>
-    </div>;
+    </div>
+  );
 }
