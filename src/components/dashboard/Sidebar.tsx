@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import SidebarSection from "./SidebarSection";
 import PrincipalSection from "./sections/PrincipalSection";
 import AccountSection from "./sections/AccountSection";
+import { ChevronLeft } from "lucide-react";
 
 interface SidebarProps {
   activeTab: string;
@@ -42,8 +43,19 @@ export default function Sidebar({
   return (
     <div className={cn(
       "flex flex-col h-full transition-all duration-300 bg-white shadow-md border-r", 
-      isSidebarOpen ? "w-64" : "w-0"
+      isSidebarOpen ? "w-64" : "w-16"
     )}>
+      {toggleSidebar && (
+        <div className="flex justify-end p-2">
+          <button 
+            onClick={toggleSidebar}
+            className="p-1 rounded-full hover:bg-gray-100 md:hidden"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+      
       <nav className="flex-1 py-4 overflow-y-auto px-3">
         <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
           <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />

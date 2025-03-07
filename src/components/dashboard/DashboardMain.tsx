@@ -33,7 +33,7 @@ export default function DashboardMain({
 }: DashboardMainProps) {
   return (
     <div className={cn(
-      "flex-1 px-4 md:px-6 py-6 w-full mt-16 transition-all duration-300",
+      "flex-1 px-4 md:px-6 py-4 w-full transition-all duration-300",
       isSidebarOpen ? "md:ml-0" : "md:ml-0"
     )}>
       <div className="max-w-7xl mx-auto">
