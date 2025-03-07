@@ -1,5 +1,5 @@
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
@@ -7,6 +7,7 @@ import { CircleUserRound, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useNavScroll } from "@/hooks/useNavScroll";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -28,12 +29,28 @@ export default function DashboardLayout({
   const navigate = useNavigate();
   const [internalSidebarOpen, setInternalSidebarOpen] = useState(true);
   const [internalActiveTab, setInternalActiveTab] = useState('overview');
+  const isScrolled = useNavScroll();
   
   // Use provided state or internal state
   const effectiveIsSidebarOpen = isSidebarOpen !== undefined ? isSidebarOpen : internalSidebarOpen;
   const effectiveSetIsSidebarOpen = setIsSidebarOpen || setInternalSidebarOpen;
   const effectiveActiveTab = activeTab || internalActiveTab;
   const effectiveSetActiveTab = setActiveTab || setInternalActiveTab;
+  
+  // Close sidebar on small screens by default
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768 && effectiveIsSidebarOpen) {
+        effectiveSetIsSidebarOpen(false);
+      }
+    };
+    
+    // Initial check
+    handleResize();
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [effectiveIsSidebarOpen, effectiveSetIsSidebarOpen]);
   
   const toggleSidebar = () => {
     effectiveSetIsSidebarOpen(!effectiveIsSidebarOpen);
@@ -53,7 +70,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Navbar */}
-      <Navbar />
+      <Navbar isScrolled={isScrolled} />
       
       <div className="flex-1 flex flex-col md:flex-row">
         <DashboardSidebar
@@ -65,13 +82,17 @@ export default function DashboardLayout({
         />
         
         <div className="flex-1 flex flex-col pt-16">
-          <header className="bg-white border-b p-4 flex justify-between items-center sticky top-16 z-10">
+          <header className="bg-white border-b py-3 px-4 flex justify-between items-center sticky top-16 z-10 transition-all">
             <div className="flex items-center">
-              <button onClick={toggleSidebar} className="mr-4 text-gray-600">
+              <button 
+                onClick={toggleSidebar} 
+                className="mr-4 text-gray-600 hover:bg-gray-100 p-2 rounded-full transition-colors"
+                aria-label={effectiveIsSidebarOpen ? "Close sidebar" : "Open sidebar"}
+              >
                 {effectiveIsSidebarOpen ? (
-                  <X className="h-6 w-6" />
+                  <X className="h-5 w-5" />
                 ) : (
-                  <Menu className="h-6 w-6" />
+                  <Menu className="h-5 w-5" />
                 )}
               </button>
               <div className="flex items-center">
@@ -97,7 +118,7 @@ export default function DashboardLayout({
             </div>
           </header>
           
-          <main className="flex-1">
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
             {children}
           </main>
           
