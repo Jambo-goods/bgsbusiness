@@ -37,7 +37,6 @@ export default function SidebarNavItem({
       >
         <Icon 
           size={expanded ? 18 : 20} 
-          strokeWidth={1.75}
           className={cn(
             "transition-all duration-200 flex-shrink-0",
             expanded ? "mr-3" : "",
@@ -47,7 +46,6 @@ export default function SidebarNavItem({
                 ? "text-bgs-blue-light" 
                 : "text-red-500"
           )} 
-          aria-hidden="true"
         />
         {expanded && (
           <span className={cn(
