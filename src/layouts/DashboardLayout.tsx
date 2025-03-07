@@ -3,7 +3,7 @@ import { ReactNode, useState, useEffect } from "react";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
-import { CircleUserRound, Menu, X, Bell } from "lucide-react";
+import { CircleUserRound, Menu, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,11 +69,7 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Navbar */}
-      <Navbar isScrolled={isScrolled} />
-      
-      <div className="flex-1 flex flex-row pt-16">
-        {/* Sidebar */}
+      <div className="flex flex-1">
         <DashboardSidebar
           isSidebarOpen={effectiveIsSidebarOpen}
           activeTab={effectiveActiveTab}
@@ -82,10 +78,8 @@ export default function DashboardLayout({
           handleLogout={handleLogout}
         />
         
-        {/* Main Content */}
-        <main className="flex-1 flex flex-col min-h-[calc(100vh-4rem)]">
-          {/* Top bar with toggle and user info */}
-          <div className="bg-white border-b py-3 px-4 sticky top-16 z-10 flex justify-between items-center">
+        <div className="flex-1 flex flex-col relative">
+          <header className="bg-white border-b py-3 px-4 flex justify-between items-center fixed top-0 right-0 left-0 z-20 transition-all md:left-20">
             <div className="flex items-center">
               <button 
                 onClick={toggleSidebar} 
@@ -110,27 +104,23 @@ export default function DashboardLayout({
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
-              <button className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors relative">
-                <Bell className="h-5 w-5 text-gray-600" />
-                <span className="absolute top-0 right-0 h-2 w-2 bg-bgs-orange rounded-full"></span>
-              </button>
+            <div className="flex items-center">
               <button 
                 onClick={handleLogout}
-                className="mr-4 text-gray-600 text-sm hover:text-bgs-blue transition-colors hidden md:block"
+                className="mr-4 text-gray-600 text-sm hover:text-bgs-blue transition-colors"
               >
                 Déconnexion
               </button>
-              <CircleUserRound className="h-8 w-8 text-bgs-blue" />
+              <CircleUserRound className="h-6 w-6 text-bgs-blue" />
             </div>
-          </div>
+          </header>
           
-          {/* Dashboard content */}
-          {children}
+          <main className="flex-1 overflow-auto">
+            {children}
+          </main>
           
-          {/* Footer */}
           <Footer />
-        </main>
+        </div>
       </div>
     </div>
   );
