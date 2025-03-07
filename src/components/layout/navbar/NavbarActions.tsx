@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Bell, User, LayoutDashboard, Wallet, Home } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
@@ -24,16 +24,24 @@ export default function NavbarActions({
     walletBalance
   } = useWalletBalance();
   const location = useLocation();
+  const navigate = useNavigate();
 
-  // Check if user is authenticated
+  // Check if user is authenticated - optimized with early redirect
   useEffect(() => {
     const checkAuth = async () => {
       setIsLoading(true);
       const {
         data
       } = await supabase.auth.getSession();
-      setIsAuthenticated(!!data.session);
+      const hasSession = !!data.session;
+      setIsAuthenticated(hasSession);
       setIsLoading(false);
+      
+      // Redirect logic based on authentication state and current path
+      const isDashboardPage = location.pathname.includes('/dashboard');
+      if (hasSession && !isDashboardPage && location.pathname === '/login') {
+        navigate('/dashboard');
+      }
     };
     checkAuth();
 
@@ -41,12 +49,21 @@ export default function NavbarActions({
     const {
       data: authListener
     } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
+      const hasSession = !!session;
+      setIsAuthenticated(hasSession);
+      
+      // Handle redirect on login/logout
+      if (event === 'SIGNED_IN') {
+        navigate('/dashboard');
+      } else if (event === 'SIGNED_OUT') {
+        navigate('/');
+      }
     });
+    
     return () => {
       authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [location.pathname, navigate]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {

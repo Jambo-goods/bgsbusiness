@@ -1,9 +1,8 @@
 
 import { UserCircle, Settings, LogOut } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { logoutUser } from "@/services/authService";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 interface UserMenuDropdownProps {
   isOpen: boolean;
@@ -20,7 +19,8 @@ export default function UserMenuDropdown({ isOpen, isActive }: UserMenuDropdownP
     
     if (success) {
       toast.success("Déconnexion réussie");
-      navigate("/");
+      // Use replace instead of push to prevent back navigation to authenticated routes
+      navigate("/", { replace: true });
     } else {
       toast.error("Erreur lors de la déconnexion: " + error);
     }
