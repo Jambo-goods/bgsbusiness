@@ -27,12 +27,9 @@ export default function WalletBalance({ balance, isLoading = false }: WalletBala
       {isLoading ? (
         <Skeleton className="h-9 w-32 mb-4" />
       ) : (
-        <div className="flex items-center gap-1 mb-4">
-          <Euro className="h-7 w-7 text-bgs-blue opacity-80" />
-          <span className="text-3xl font-bold text-bgs-blue bg-gradient-to-r from-bgs-blue to-blue-500 bg-clip-text text-transparent">
-            {balance.toLocaleString('fr-FR')}
-          </span>
-          <span className="text-3xl font-bold text-bgs-blue">€</span>
+        <div className="flex items-center text-3xl font-bold text-bgs-blue mb-4">
+          <Euro className="h-6 w-6 mr-1 text-bgs-blue opacity-70" />
+          {balance.toLocaleString('fr-FR')} €
         </div>
       )}
       
