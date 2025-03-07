@@ -1,12 +1,9 @@
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import DashboardHeader from "./DashboardHeader";
 import TabContent from "./TabContent";
 import { Project } from "@/types/project";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import ProjectsList from "@/components/projects/ProjectsList";
-import { projects } from "@/data/projects";
 
 interface DashboardMainProps {
   isSidebarOpen: boolean;
@@ -59,7 +56,8 @@ export default function DashboardMain({
         <DashboardHeader 
           userData={userData} 
           refreshData={refreshData} 
-          realTimeStatus={realTimeStatus} 
+          realTimeStatus={realTimeStatus}
+          setActiveTab={setActiveTab}
         />
         
         {/* Dashboard content based on active tab */}

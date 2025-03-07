@@ -1,61 +1,61 @@
 
+import React from "react";
 import { cn } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
 
 interface SidebarNavItemProps {
-  icon: LucideIcon;
+  icon: React.ReactNode;
   label: string;
-  isActive: boolean;
-  expanded: boolean;
+  active: boolean;
   onClick: () => void;
-  variant?: "default" | "danger";
+  expanded: boolean;
+  badge?: number;
 }
 
 export default function SidebarNavItem({
-  icon: Icon,
+  icon,
   label,
-  isActive,
-  expanded,
+  active,
   onClick,
-  variant = "default",
+  expanded,
+  badge
 }: SidebarNavItemProps) {
   return (
-    <li className="relative">
-      <button
-        onClick={onClick}
-        title={!expanded ? label : undefined}
-        className={cn(
-          "flex items-center w-full rounded-lg text-sm transition-all duration-200",
-          expanded ? "px-3 py-2.5" : "p-2.5 justify-center",
-          variant === "default" && (
-            isActive
-              ? "bg-gradient-to-r from-bgs-blue to-bgs-blue-light text-white font-medium shadow-sm"
-              : "text-bgs-blue hover:bg-gray-100 hover:text-bgs-blue"
-          ),
-          variant === "danger" && "text-red-500 hover:bg-red-50"
-        )}
-      >
-        <Icon 
-          size={expanded ? 18 : 20} 
-          className={cn(
-            "transition-all duration-200 flex-shrink-0",
-            expanded ? "mr-3" : "",
-            isActive 
-              ? "text-white" 
-              : variant === "default" 
-                ? "text-bgs-blue-light" 
-                : "text-red-500"
-          )} 
-        />
-        {expanded && (
-          <span className={cn(
-            "truncate transition-opacity duration-200 text-sm",
-            isActive ? "opacity-100" : "opacity-80"
-          )}>
-            {label}
-          </span>
-        )}
-      </button>
-    </li>
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full flex items-center px-3 py-2 rounded-md transition-colors",
+        "hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200",
+        active 
+          ? "bg-bgs-blue/10 text-bgs-blue font-medium" 
+          : "text-gray-700"
+      )}
+    >
+      <div className="flex items-center justify-center">
+        <span className={cn(
+          "flex-shrink-0",
+          active ? "text-bgs-blue" : "text-gray-500"
+        )}>
+          {icon}
+        </span>
+      </div>
+      
+      {expanded && (
+        <div className="flex items-center justify-between flex-1 ml-3">
+          <span className="text-sm">{label}</span>
+          
+          {badge !== undefined && badge > 0 && (
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-medium">
+              {badge}
+            </span>
+          )}
+        </div>
+      )}
+      
+      {!expanded && badge !== undefined && badge > 0 && (
+        <span className="absolute -right-1 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-medium">
+          {badge}
+        </span>
+      )}
+    </button>
   );
 }
