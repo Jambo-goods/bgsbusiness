@@ -15,7 +15,7 @@ export default function PrincipalSection({ activeTab, setActiveTab, expanded }: 
     { id: "capital", label: "Capital investi", icon: TrendingUp },
     { id: "yield", label: "Rendement mensuel", icon: BarChart3 },
     { id: "investments", label: "Investissements", icon: Briefcase },
-    { id: "projects", label: "Projets proposés", icon: Search },
+    { id: "projects", label: "Investissements proposés", icon: Search },
   ];
 
   return (
