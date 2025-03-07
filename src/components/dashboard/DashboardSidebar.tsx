@@ -31,12 +31,11 @@ export default function DashboardSidebar({
     
       <aside 
         className={cn(
-          "bg-white shadow-md fixed md:sticky top-0 md:top-16 z-40 h-full md:h-[calc(100vh-4rem)] transition-all duration-300 overflow-hidden",
+          "bg-white shadow-md fixed md:sticky top-16 z-40 h-[calc(100vh-4rem)] transition-all duration-300 overflow-hidden",
           isSidebarOpen 
             ? "w-64 translate-x-0" 
-            : "w-16 -translate-x-full md:translate-x-0",
-          "border-r border-gray-100",
-          "md:translate-x-0" // Always show on desktop
+            : "w-16 translate-x-0",
+          "border-r border-gray-100"
         )}
       >
         <Sidebar 

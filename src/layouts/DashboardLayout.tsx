@@ -8,7 +8,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavScroll } from "@/hooks/useNavScroll";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { cn } from "@/lib/utils";
-import { Menu } from "lucide-react";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -65,17 +64,6 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      {/* Mobile menu toggle */}
-      <div className="fixed top-4 left-4 z-50 md:hidden">
-        <button
-          onClick={effectiveToggleSidebar}
-          className="bg-white p-2 rounded-md shadow-md text-bgs-blue hover:text-bgs-orange transition-colors"
-          aria-label="Toggle menu"
-        >
-          <Menu size={20} />
-        </button>
-      </div>
-      
       <div className="flex-1 flex flex-row pt-16">
         {/* Sidebar */}
         <DashboardSidebar

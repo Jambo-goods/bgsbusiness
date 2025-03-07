@@ -21,7 +21,6 @@ interface DashboardMainProps {
   userInvestments: Project[];
   setActiveTab: (tab: string) => void;
   refreshData?: () => Promise<void>;
-  realTimeStatus?: 'connecting' | 'connected' | 'error';
 }
 
 export default function DashboardMain({ 
@@ -30,8 +29,7 @@ export default function DashboardMain({
   activeTab, 
   userInvestments, 
   setActiveTab,
-  refreshData,
-  realTimeStatus
+  refreshData
 }: DashboardMainProps) {
   return (
     <div className={cn(
@@ -39,7 +37,7 @@ export default function DashboardMain({
       isSidebarOpen ? "md:ml-0" : "md:ml-0"
     )}>
       <div className="max-w-7xl mx-auto">
-        <DashboardHeader userData={userData} refreshData={refreshData} realTimeStatus={realTimeStatus} />
+        <DashboardHeader userData={userData} />
         
         {/* Dashboard content based on active tab */}
         <div className="bg-white rounded-xl shadow-sm p-5 mb-6">
