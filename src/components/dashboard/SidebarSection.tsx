@@ -9,13 +9,13 @@ interface SidebarSectionProps {
 
 export default function SidebarSection({ title, expanded, children }: SidebarSectionProps) {
   return (
-    <div className={expanded ? "mb-4" : "mb-4"}>
+    <div className={expanded ? "mr-6" : "mr-4"}>
       {expanded && title && (
         <p className="text-xs font-medium text-bgs-gray-medium uppercase tracking-wider px-3 mb-2 mt-2">
           {title}
         </p>
       )}
-      <ul className="space-y-1">
+      <ul className="flex flex-row space-x-2">
         {children}
       </ul>
     </div>

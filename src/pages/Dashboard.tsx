@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
@@ -16,7 +15,6 @@ export default function Dashboard() {
   const { isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useSidebarState();
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Fetch user ID from auth session - only once at component mount
   useEffect(() => {
     const fetchUserId = async () => {
       try {
@@ -37,21 +35,18 @@ export default function Dashboard() {
     fetchUserId();
   }, []);
   
-  // User profile data
   const { 
     userData, 
     isLoading: profileLoading, 
     refreshProfileData 
   } = useProfileData(userId);
   
-  // User investments data
   const { 
     userInvestments, 
     isLoading: investmentsLoading, 
     refreshInvestmentsData 
   } = useInvestmentsData(userId);
   
-  // Set up real-time subscriptions when user ID is available
   const { realTimeStatus } = useRealTimeSubscriptions({
     userId: userId || '',
     onProfileUpdate: refreshProfileData,
@@ -59,7 +54,6 @@ export default function Dashboard() {
     onTransactionUpdate: refreshProfileData  // Wallet balance is part of profile
   });
   
-  // Log real-time status changes
   useEffect(() => {
     console.log("Dashboard real-time status:", realTimeStatus);
     
@@ -76,7 +70,6 @@ export default function Dashboard() {
     }
   }, [realTimeStatus]);
   
-  // Handle manual data refresh with debounce protection
   const refreshAllData = useCallback(async () => {
     if (isRefreshing) return;
     
@@ -138,7 +131,6 @@ export default function Dashboard() {
           userInvestments={userInvestments}
           setActiveTab={setActiveTab}
           refreshData={refreshAllData}
-          isRefreshing={isRefreshing}
           realTimeStatus={realTimeStatus}
         />
       </DashboardLayout>
