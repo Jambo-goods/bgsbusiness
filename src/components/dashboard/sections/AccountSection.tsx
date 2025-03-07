@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Settings, LogOut, UserCircle, LineChart, BellRing } from "lucide-react";
+import { Settings, LogOut, UserCircle, BellRing } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
 interface AccountSectionProps {
@@ -25,13 +25,6 @@ export default function AccountSection({
         expanded={expanded}
         onClick={() => setActiveTab("notifications")}
         badge={2}
-      />
-      <SidebarNavItem
-        icon={<LineChart size={18} />}
-        label="Suivi des rendements"
-        active={activeTab === "tracking"}
-        expanded={expanded}
-        onClick={() => setActiveTab("tracking")}
       />
       <SidebarNavItem
         icon={<UserCircle size={18} />}
