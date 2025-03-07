@@ -2,9 +2,11 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { BarChart3, TrendingUp, DollarSign, RefreshCw } from "lucide-react";
 
 export default function YieldTab() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [monthlyYield, setMonthlyYield] = useState(0);
   const [annualYield, setAnnualYield] = useState(0);
   const [annualPercent, setAnnualPercent] = useState(0);
@@ -114,49 +116,139 @@ export default function YieldTab() {
       toast.error("Impossible de calculer vos rendements");
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
   
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchInvestmentYields();
+  };
+  
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
-      <h2 className="text-lg font-semibold text-bgs-blue mb-4">Rendement mensuel estimé</h2>
+    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-50 p-2.5 rounded-lg">
+            <BarChart3 className="h-5 w-5 text-bgs-blue" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-bgs-blue">Rendement mensuel estimé</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Basé sur vos investissements actifs</p>
+          </div>
+        </div>
+        <button 
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Actualiser
+        </button>
+      </div>
       
       {isLoading ? (
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3 mb-4"></div>
-          <div className="space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
-            <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-12 bg-gray-200 rounded w-1/3 mb-6"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3 mb-6"></div>
+          <div className="space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-full"></div>
+            <div className="h-8 bg-gray-200 rounded w-full"></div>
+            <div className="h-8 bg-gray-200 rounded w-full"></div>
           </div>
         </div>
       ) : (
         <>
-          <div className="text-3xl font-bold text-green-600 mb-4">{monthlyYield} € par mois</div>
-          <p className="text-sm text-bgs-gray-medium mb-4">
-            Basé sur un rendement mensuel moyen de {(annualPercent / 12).toFixed(2)}% ({annualPercent}% annualisé par an) sur votre capital investi.
-          </p>
-          
-          <div className="space-y-4">
-            {investments.length > 0 ? (
-              investments.map((investment, index) => (
-                <div key={index}>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span className="text-bgs-gray-medium">
-                      {investment.projectName} ({investment.monthlyRate}% par mois)
-                    </span>
-                    <span className="font-medium text-green-600">
-                      {Math.round(investment.monthlyReturn)} €/mois
-                    </span>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-gradient-to-r from-bgs-blue to-bgs-blue-light p-5 rounded-lg text-white">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-white/80">Rendement mensuel</span>
+                <div className="bg-white/10 p-1.5 rounded-full">
+                  <TrendingUp className="h-4 w-4 text-white" />
                 </div>
-              ))
-            ) : (
-              <div className="text-sm text-bgs-gray-medium">
-                Vous n'avez pas encore d'investissements actifs.
               </div>
-            )}
+              <div className="text-2xl font-bold mb-1 flex items-center">
+                {monthlyYield} €
+              </div>
+              <div className="text-xs text-white/70">
+                {(annualPercent / 12).toFixed(2)}% par mois
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-500">Rendement annuel</span>
+                <div className="bg-gray-200 p-1.5 rounded-full">
+                  <BarChart3 className="h-4 w-4 text-gray-600" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-bgs-blue mb-1">
+                {annualYield} €
+              </div>
+              <div className="text-xs text-gray-500">
+                {annualPercent.toFixed(2)}% par an
+              </div>
+            </div>
+            
+            <div className="bg-green-50 p-5 rounded-lg border border-green-100">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-green-700">Performance</span>
+                <div className="bg-green-100 p-1.5 rounded-full">
+                  <DollarSign className="h-4 w-4 text-green-600" />
+                </div>
+              </div>
+              <div className="text-2xl font-bold text-green-700 mb-1">
+                +{annualPercent.toFixed(2)}%
+              </div>
+              <div className="text-xs text-green-600">
+                Sur l'investissement total
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-100 pt-5 mt-4">
+            <h3 className="text-sm font-semibold text-bgs-blue mb-4">Détail par projet</h3>
+            
+            <div className="overflow-hidden border border-gray-100 rounded-lg">
+              <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projet</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant investi</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taux mensuel</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rendement</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {investments.length > 0 ? (
+                    investments.map((investment, index) => (
+                      <tr key={index} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-bgs-blue">
+                          {investment.projectName}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                          {investment.amount.toLocaleString()} €
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {investment.monthlyRate}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                          {Math.round(investment.monthlyReturn)} €/mois
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500">
+                        Vous n'avez pas encore d'investissements actifs.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}

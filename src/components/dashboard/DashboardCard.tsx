@@ -1,6 +1,7 @@
 
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
 import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 interface DashboardCardProps {
   title: string;
@@ -31,13 +32,16 @@ export default function DashboardCard({
     false;
   
   return (
-    <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md hover:translate-y-[-2px]">
-      <div className="flex items-center justify-between mb-3">
-        <div className={`${iconBgColor} p-2.5 rounded-lg`}>
-          <div className={`h-5 w-5 ${iconColor}`}>{icon}</div>
+    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all duration-200 hover:shadow-lg hover:translate-y-[-2px]">
+      <div className="flex items-center justify-between mb-4">
+        <div className={cn("p-3 rounded-lg", iconBgColor)}>
+          <div className={cn("h-5 w-5", iconColor)}>{icon}</div>
         </div>
         {changePercentage && (
-          <span className={`${isPositive ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'} text-xs px-2.5 py-1 rounded-full font-medium flex items-center`}>
+          <span className={cn(
+            "text-xs px-2.5 py-1 rounded-full font-medium flex items-center",
+            isPositive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
+          )}>
             {isPositive ? (
               <ArrowUpIcon className="h-3 w-3 mr-1" />
             ) : (
@@ -47,10 +51,10 @@ export default function DashboardCard({
           </span>
         )}
       </div>
-      <h3 className="text-xs font-medium text-bgs-gray-medium mb-1">
+      <h3 className="text-sm font-medium text-bgs-gray-medium mb-2">
         {title}
       </h3>
-      <p className="text-xl font-bold text-bgs-blue">
+      <p className="text-2xl font-bold text-bgs-blue mb-1">
         {value}
       </p>
       {description && (

@@ -23,7 +23,7 @@ export default function DashboardSidebar({
       {/* Mobile overlay when sidebar is open */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/20 z-30 md:hidden"
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 md:hidden"
           onClick={toggleSidebar}
           aria-hidden="true"
         />
@@ -34,7 +34,8 @@ export default function DashboardSidebar({
           "bg-white shadow-md fixed md:sticky top-16 z-40 h-[calc(100vh-4rem)] transition-all duration-300 overflow-hidden",
           isSidebarOpen 
             ? "w-64 translate-x-0" 
-            : "w-16 translate-x-0"
+            : "w-16 translate-x-0",
+          "border-r border-gray-100"
         )}
       >
         <Sidebar 

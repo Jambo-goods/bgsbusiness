@@ -13,60 +13,43 @@ interface DashboardLayoutProps {
   children: ReactNode;
   isSidebarOpen?: boolean;
   setIsSidebarOpen?: (open: boolean) => void;
+  toggleSidebar?: () => void;
   activeTab?: string;
   setActiveTab?: (tab: string) => void;
   realTimeStatus?: 'connecting' | 'connected' | 'error';
+  handleLogout?: () => void;
 }
 
 export default function DashboardLayout({
   children,
   isSidebarOpen: propIsSidebarOpen,
   setIsSidebarOpen: propSetIsSidebarOpen,
+  toggleSidebar: propToggleSidebar,
   activeTab,
   setActiveTab,
-  realTimeStatus = 'connecting'
+  realTimeStatus = 'connecting',
+  handleLogout: propHandleLogout
 }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const [internalActiveTab, setInternalActiveTab] = useState('overview');
   const isScrolled = useNavScroll();
   
   // Use our custom hook for persistent sidebar state
-  const { isSidebarOpen: persistentSidebarOpen, setIsSidebarOpen: setPersistentSidebarOpen, toggleSidebar: togglePersistentSidebar } = useSidebarState();
+  const { 
+    isSidebarOpen: persistentSidebarOpen, 
+    setIsSidebarOpen: setPersistentSidebarOpen, 
+    toggleSidebar: togglePersistentSidebar 
+  } = useSidebarState();
   
   // Use provided state or persistent state
   const effectiveIsSidebarOpen = propIsSidebarOpen !== undefined ? propIsSidebarOpen : persistentSidebarOpen;
   const effectiveSetIsSidebarOpen = propSetIsSidebarOpen || setPersistentSidebarOpen;
+  const effectiveToggleSidebar = propToggleSidebar || togglePersistentSidebar;
   const effectiveActiveTab = activeTab || internalActiveTab;
   const effectiveSetActiveTab = setActiveTab || setInternalActiveTab;
   
-  // Toggle function that uses the appropriate state setter
-  const toggleSidebar = () => {
-    if (propSetIsSidebarOpen) {
-      propSetIsSidebarOpen(!propIsSidebarOpen);
-    } else {
-      togglePersistentSidebar();
-    }
-  };
-  
-  // Close sidebar on small screens by default
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768 && effectiveIsSidebarOpen) {
-        effectiveSetIsSidebarOpen(false);
-      } else if (window.innerWidth >= 1280 && !effectiveIsSidebarOpen) {
-        // Auto-expand on extra large screens
-        effectiveSetIsSidebarOpen(true);
-      }
-    };
-    
-    // Initial check
-    handleResize();
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [effectiveIsSidebarOpen, effectiveSetIsSidebarOpen]);
-  
-  const handleLogout = async () => {
+  // Default logout handler if none provided
+  const defaultHandleLogout = async () => {
     try {
       await supabase.auth.signOut();
       toast.success("Déconnexion réussie");
@@ -76,6 +59,8 @@ export default function DashboardLayout({
       toast.error("Erreur lors de la déconnexion");
     }
   };
+  
+  const effectiveHandleLogout = propHandleLogout || defaultHandleLogout;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -85,13 +70,13 @@ export default function DashboardLayout({
           isSidebarOpen={effectiveIsSidebarOpen}
           activeTab={effectiveActiveTab}
           setActiveTab={effectiveSetActiveTab}
-          toggleSidebar={toggleSidebar}
-          handleLogout={handleLogout}
+          toggleSidebar={effectiveToggleSidebar}
+          handleLogout={effectiveHandleLogout}
         />
         
         {/* Main Content */}
         <main className={cn(
-          "flex-1 flex flex-col min-h-[calc(100vh-4rem)] transition-all duration-300",
+          "flex-1 flex flex-col min-h-[calc(100vh-4rem)] transition-all duration-300 p-4 md:p-6",
           effectiveIsSidebarOpen ? "md:ml-0" : "md:ml-0"
         )}>
           {/* Dashboard content */}
