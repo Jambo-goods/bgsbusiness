@@ -32,7 +32,7 @@ export default function DashboardMain({
   refreshData
 }: DashboardMainProps) {
   return (
-    <div className="flex-1 px-4 md:px-6 py-4 w-full">
+    <div className="flex-1 px-4 md:px-6 py-4 w-full mt-16">
       <div className="max-w-7xl mx-auto">
         <DashboardHeader userData={userData} />
         
