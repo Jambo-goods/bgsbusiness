@@ -4,13 +4,11 @@ import { Menu, X } from "lucide-react";
 interface MobileMenuToggleProps {
   isMenuOpen: boolean;
   toggleMenu: () => void;
-  isScrolled?: boolean;
 }
 
 export default function MobileMenuToggle({ 
   isMenuOpen, 
-  toggleMenu,
-  isScrolled
+  toggleMenu 
 }: MobileMenuToggleProps) {
   return (
     <button

@@ -26,11 +26,6 @@ export default function Navbar({ isScrolled, isOnDashboard }: NavbarProps) {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
   
-  // Mock functions for this component (in a real app, these would be implemented)
-  const isLoggedIn = false; // This would be from a hook or context
-  const isActive = (path: string) => location.pathname === path;
-  const handleLogout = () => console.log("Logout");
-  
   return (
     <nav 
       className={cn(
@@ -42,29 +37,17 @@ export default function Navbar({ isScrolled, isOnDashboard }: NavbarProps) {
         <div className="flex items-center justify-between h-16">
           <NavbarHeader isScrolled={shouldShowBackground} />
           
-          <DesktopNav 
-            isLoggedIn={isLoggedIn} 
-            isActive={isActive} 
-            handleLogout={handleLogout} 
-            isOnDashboard={isOnDashboard}
-            isScrolled={shouldShowBackground}
-          />
+          <DesktopNav isScrolled={shouldShowBackground} isOnDashboard={isOnDashboard} />
           
           <MobileMenuToggle 
-            isMenuOpen={isMobileMenuOpen} 
-            toggleMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            isOpen={isMobileMenuOpen} 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             isScrolled={shouldShowBackground}
           />
         </div>
       </div>
       
-      <MobileMenu 
-        isMenuOpen={isMobileMenuOpen} 
-        isLoggedIn={isLoggedIn} 
-        isActive={isActive} 
-        handleLogout={handleLogout}
-        isOnDashboard={isOnDashboard}
-      />
+      <MobileMenu isOpen={isMobileMenuOpen} isOnDashboard={isOnDashboard} />
     </nav>
   );
 }

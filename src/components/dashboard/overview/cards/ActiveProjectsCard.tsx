@@ -15,7 +15,7 @@ export default function ActiveProjectsCard({
   return (
     <DashboardCard
       title="Projets actifs"
-      value={projectsCount.toString()}
+      value={projectsCount}
       icon={<BarChart3Icon />}
       iconBgColor="bg-orange-100"
       iconColor="text-bgs-orange"
