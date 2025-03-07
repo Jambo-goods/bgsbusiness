@@ -1,6 +1,7 @@
 
 import { useState } from "react";
-import { CalendarClock, TrendingUp, RefreshCw, BellRing } from "lucide-react";
+import { CalendarClock, TrendingUp, RefreshCw, BellRing, Home, User } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface DashboardHeaderProps {
   userData: {
@@ -43,6 +44,14 @@ export default function DashboardHeader({
         </div>
         
         <div className="mt-4 md:mt-0 flex flex-wrap items-center gap-3">
+          <Link to="/" className="bg-white/10 backdrop-blur-sm rounded-lg p-2 flex items-center transition-all hover:bg-white/20 border border-white/5">
+            <Home className="h-4 w-4 text-white/80" />
+          </Link>
+          
+          <Link to="/dashboard?tab=profile" className="bg-white/10 backdrop-blur-sm rounded-lg p-2 flex items-center transition-all hover:bg-white/20 border border-white/5">
+            <User className="h-4 w-4 text-white/80" />
+          </Link>
+          
           <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/5">
             <CalendarClock className="h-4 w-4 mr-2 text-white/80" />
             <span className="text-sm whitespace-nowrap">

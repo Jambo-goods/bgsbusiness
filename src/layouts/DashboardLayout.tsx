@@ -1,5 +1,6 @@
 
 import { ReactNode, useState, useEffect } from "react";
+import Navbar from "../components/layout/Navbar";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
 import Footer from "../components/layout/Footer";
 import { useNavigate } from "react-router-dom";
@@ -65,8 +66,11 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Main navigation header */}
+      <Navbar isScrolled={isScrolled} />
+      
       {/* Mobile menu toggle */}
-      <div className="fixed top-4 left-4 z-50 md:hidden">
+      <div className="fixed top-20 left-4 z-50 md:hidden">
         <button
           onClick={effectiveToggleSidebar}
           className="bg-white p-2 rounded-md shadow-md text-bgs-blue hover:text-bgs-orange transition-colors"
