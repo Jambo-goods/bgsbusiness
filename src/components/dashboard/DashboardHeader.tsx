@@ -63,11 +63,6 @@ export default function DashboardHeader({
             </span>
           </div>
           
-          <div className="bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg px-3 py-2 flex items-center border border-white/20 shadow-md animate-pulse">
-            <TrendingUp className="h-4 w-4 mr-2 text-white" />
-            <span className="text-sm text-white font-bold whitespace-nowrap">MARCHÉ SUPRÊME EN HAUSSE</span>
-          </div>
-
           {refreshData && (
             <button
               onClick={handleRefresh}
