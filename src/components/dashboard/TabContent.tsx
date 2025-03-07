@@ -8,7 +8,6 @@ import { projects } from "@/data/projects";
 
 // Lazy load tabs that aren't used as frequently
 const WalletTab = lazy(() => import("./tabs/WalletTab"));
-const CapitalTab = lazy(() => import("./tabs/CapitalTab"));
 const YieldTab = lazy(() => import("./tabs/YieldTab"));
 const Investments = lazy(() => import("./Investments"));
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
@@ -53,10 +52,6 @@ export default function TabContent({
       {activeTab !== "overview" && (
         <Suspense fallback={<TabLoading />}>
           {activeTab === "wallet" && <WalletTab />}
-          
-          {activeTab === "capital" && (
-            <CapitalTab investmentTotal={userData.investmentTotal || 0} />
-          )}
           
           {activeTab === "yield" && <YieldTab />}
           

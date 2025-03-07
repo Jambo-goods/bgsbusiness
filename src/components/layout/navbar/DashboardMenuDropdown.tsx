@@ -1,5 +1,5 @@
 
-import { LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase } from "lucide-react";
+import { LayoutDashboard, Wallet, TrendingUp, Briefcase } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 interface DashboardMenuDropdownProps {
@@ -23,12 +23,8 @@ export default function DashboardMenuDropdown({ isOpen, isActive }: DashboardMen
         <Wallet className="h-4 w-4 mr-3 text-bgs-blue" />
         Solde disponible
       </Link>
-      <Link to="/dashboard?tab=capital" className={`flex items-center px-4 py-2.5 text-sm ${isActive('tab=capital') ? 'bg-gray-50 text-bgs-blue font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
-        <TrendingUp className="h-4 w-4 mr-3 text-bgs-blue" />
-        Capital investi
-      </Link>
       <Link to="/dashboard?tab=yield" className={`flex items-center px-4 py-2.5 text-sm ${isActive('tab=yield') ? 'bg-gray-50 text-bgs-blue font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
-        <BarChart3 className="h-4 w-4 mr-3 text-bgs-blue" />
+        <TrendingUp className="h-4 w-4 mr-3 text-bgs-blue" />
         Rendement mensuel
       </Link>
       <Link to="/dashboard?tab=investments" className={`flex items-center px-4 py-2.5 text-sm ${isActive('tab=investments') ? 'bg-gray-50 text-bgs-blue font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>

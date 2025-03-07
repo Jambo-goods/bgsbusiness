@@ -4,7 +4,6 @@ import SidebarNavItem from "../SidebarNavItem";
 import { 
   LayoutDashboard, 
   Wallet, 
-  BarChart, 
   LineChart, 
   Building2, 
   Timer
@@ -64,14 +63,6 @@ export default function PrincipalSection({
         label="Rendements"
         active={activeTab === "yield"}
         onClick={() => handleTabChange("yield")}
-        expanded={expanded}
-      />
-      
-      <SidebarNavItem
-        icon={<BarChart size={18} />}
-        label="Capital"
-        active={activeTab === "capital"}
-        onClick={() => handleTabChange("capital")}
         expanded={expanded}
       />
     </div>

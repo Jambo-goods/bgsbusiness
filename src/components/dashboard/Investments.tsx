@@ -28,7 +28,7 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
 
   // Calculate total investment amount
   const investmentTotal = userInvestments.reduce((total, investment) => 
-    total + (investment.investedAmount || 0), 0);
+    total + (investment.amount || 0), 0);
 
   return (
     <div className="space-y-4">
