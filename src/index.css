@@ -144,10 +144,6 @@
   .nav-link.active {
     @apply text-bgs-blue after:w-full;
   }
-  
-  .fixed-nav-button {
-    @apply transition-none; /* Prevent any transitions that might cause visual glitches */
-  }
 }
 
 .smooth-scroll {
