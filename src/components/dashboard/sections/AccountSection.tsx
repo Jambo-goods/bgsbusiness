@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Settings, LogOut, UserCircle, LineChart } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
@@ -18,33 +19,32 @@ export default function AccountSection({
   return (
     <>
       <SidebarNavItem
-        icon={LineChart}
+        icon={<LineChart size={18} />}
         label="Suivi des rendements"
-        isActive={activeTab === "tracking"}
+        active={activeTab === "tracking"}
         expanded={expanded}
         onClick={() => setActiveTab("tracking")}
       />
       <SidebarNavItem
-        icon={UserCircle}
+        icon={<UserCircle size={18} />}
         label="Profil"
-        isActive={activeTab === "profile"}
+        active={activeTab === "profile"}
         expanded={expanded}
         onClick={() => setActiveTab("profile")}
       />
       <SidebarNavItem
-        icon={Settings}
+        icon={<Settings size={18} />}
         label="Paramètres"
-        isActive={activeTab === "settings"}
+        active={activeTab === "settings"}
         expanded={expanded}
         onClick={() => setActiveTab("settings")}
       />
       <SidebarNavItem
-        icon={LogOut}
+        icon={<LogOut size={18} />}
         label="Déconnexion"
-        isActive={false}
+        active={false}
         expanded={expanded}
         onClick={handleLogout}
-        variant="danger"
       />
     </>
   );
