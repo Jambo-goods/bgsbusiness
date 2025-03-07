@@ -1,166 +1,141 @@
 
 import { PaymentRecord } from "./types";
-import { supabase } from "@/integrations/supabase/client";
+import { format, addMonths, differenceInMonths } from "date-fns";
 
-export const fetchRealTimeInvestmentData = async (userId: string | undefined) => {
-  if (!userId) {
-    console.log("No user ID provided, cannot fetch real-time investment data");
-    return [];
-  }
+export const calculateCumulativeReturns = (payments: PaymentRecord[]) => {
+  // Sort payments by date
+  const sortedPayments = [...payments].sort((a, b) => a.date.getTime() - b.date.getTime());
   
-  try {
-    console.log("Fetching real-time investment data for user:", userId);
-    const { data: investments, error } = await supabase
-      .from('investments')
-      .select(`
-        *,
-        projects(*)
-      `)
-      .eq('user_id', userId);
-      
-    if (error) {
-      console.error("Error fetching real-time investment data:", error);
-      throw error;
-    }
-    
-    console.log(`Fetched ${investments?.length || 0} investments for real-time tracking`);
-    
-    if (!investments || investments.length === 0) {
-      console.log("No investments found for user:", userId);
-    }
-    
-    return investments || [];
-  } catch (error) {
-    console.error("Error in fetchRealTimeInvestmentData:", error);
-    return [];
-  }
-};
-
-export const calculateCumulativeReturns = (paymentRecords: PaymentRecord[]) => {
-  const sortedPayments = [...paymentRecords]
-    .filter(payment => payment.status === 'paid')
-    .sort((a, b) => a.date.getTime() - b.date.getTime());
-  
+  // Calculate cumulative returns over time (for charts)
   let cumulative = 0;
   return sortedPayments.map(payment => {
-    cumulative += payment.amount;
+    if (payment.status === 'paid') {
+      cumulative += payment.amount;
+    }
     return {
-      ...payment,
-      cumulativeReturn: cumulative
+      date: format(payment.date, 'MMM yyyy'),
+      amount: payment.amount,
+      cumulative
     };
   });
 };
 
 export const filterAndSortPayments = (
-  paymentRecords: PaymentRecord[],
+  payments: PaymentRecord[],
   filterStatus: string,
   sortColumn: string,
   sortDirection: "asc" | "desc"
 ) => {
-  return [...paymentRecords]
-    .filter(payment => filterStatus === 'all' || payment.status === filterStatus)
+  return [...payments]
+    .filter(payment => {
+      if (filterStatus === 'all') return true;
+      return payment.status === filterStatus;
+    })
     .sort((a, b) => {
-      if (sortColumn === 'date') {
-        return sortDirection === 'asc' 
-          ? a.date.getTime() - b.date.getTime() 
-          : b.date.getTime() - a.date.getTime();
-      } else if (sortColumn === 'amount') {
-        return sortDirection === 'asc' 
-          ? a.amount - b.amount 
-          : b.amount - a.amount;
-      } else if (sortColumn === 'projectName') {
-        return sortDirection === 'asc'
-          ? a.projectName.localeCompare(b.projectName)
-          : b.projectName.localeCompare(a.projectName);
+      // Sort by the specified column
+      let comparison = 0;
+      
+      switch (sortColumn) {
+        case 'date':
+          comparison = a.date.getTime() - b.date.getTime();
+          break;
+        case 'project':
+          comparison = a.projectName.localeCompare(b.projectName);
+          break;
+        case 'amount':
+          comparison = a.amount - b.amount;
+          break;
+        case 'type':
+          comparison = a.type.localeCompare(b.type);
+          break;
+        case 'status':
+          comparison = a.status.localeCompare(b.status);
+          break;
+        default:
+          comparison = a.date.getTime() - b.date.getTime();
       }
-      return 0;
+      
+      // Apply sort direction
+      return sortDirection === 'asc' ? comparison : -comparison;
     });
 };
 
-export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[] => {
-  if (!investments || investments.length === 0) {
-    console.log("No investments provided to generate payment records");
-    return [];
-  }
+// Generate investment payment records from real data
+export const generatePaymentsFromRealData = (investments: any[]) => {
+  const payments: PaymentRecord[] = [];
   
-  console.log(`Generating payment records from ${investments.length} real investments`);
-  
-  let payments: PaymentRecord[] = [];
-  const now = new Date();
-  
-  investments.forEach((investment, index) => {
-    if (!investment.projects) {
-      console.log(`Investment at index ${index} missing projects data:`, investment);
-      return;
-    }
+  investments.forEach(investment => {
+    // Calculate number of months since investment started
+    const startDate = new Date(investment.date);
+    const currentDate = new Date();
+    const monthsSinceStart = differenceInMonths(currentDate, startDate);
     
-    // Calculate payments based on actual investment data
-    const startDate = investment.date ? new Date(investment.date) : new Date();
-    const amount = investment.amount || 0;
-    const yield_rate = investment.yield_rate || investment.projects.yield || 0;
-    const monthlyReturn = Math.round((yield_rate / 100) * amount);
-    
-    console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}`);
-    
-    // Generate past payments based on actual investment date
-    const monthsSinceInvestment = Math.max(
-      0,
-      (now.getFullYear() - startDate.getFullYear()) * 12 + 
-      now.getMonth() - startDate.getMonth()
-    );
-    
-    console.log(`Investment ${index}: months since start=${monthsSinceInvestment}`);
-    
-    // Past and current payments (paid)
-    for (let i = 0; i <= monthsSinceInvestment; i++) {
-      const paymentDate = new Date(startDate);
-      paymentDate.setMonth(startDate.getMonth() + i);
+    // Generate monthly yield payments for each past month
+    for (let i = 1; i <= monthsSinceStart; i++) {
+      const paymentDate = addMonths(startDate, i);
+      const isPaid = paymentDate <= currentDate;
       
-      // Only add if payment date is not in the future
-      if (paymentDate <= now) {
-        payments.push({
-          id: `payment-${investment.id}-${i}`,
-          projectId: investment.project_id,
-          projectName: investment.projects.name,
-          amount: monthlyReturn,
-          date: paymentDate,
-          type: 'yield',
-          status: 'paid'
-        });
-      }
-    }
-    
-    // Pending payment (next month)
-    const pendingDate = new Date(now);
-    pendingDate.setMonth(now.getMonth() + 1);
-    
-    payments.push({
-      id: `payment-${investment.id}-pending`,
-      projectId: investment.project_id,
-      projectName: investment.projects.name,
-      amount: monthlyReturn,
-      date: pendingDate,
-      type: 'yield',
-      status: 'pending'
-    });
-    
-    // Future scheduled payments
-    for (let i = 2; i <= 3; i++) {
-      const futureDate = new Date(now);
-      futureDate.setMonth(now.getMonth() + i);
+      // Monthly yield payment (based on investment amount and yield rate)
+      const monthlyYield = Math.round(investment.amount * (investment.yield_rate / 100));
       
       payments.push({
-        id: `payment-${investment.id}-future-${i}`,
+        id: `${investment.id}-yield-${i}`,
         projectId: investment.project_id,
-        projectName: investment.projects.name,
-        amount: monthlyReturn,
-        date: futureDate,
+        projectName: investment.project?.name || 'Projet inconnu',
+        amount: monthlyYield,
+        date: paymentDate,
         type: 'yield',
-        status: 'scheduled'
+        status: isPaid ? 'paid' : 'scheduled'
+      });
+    }
+    
+    // If investment has an end date, add capital return payment
+    if (investment.end_date) {
+      const endDate = new Date(investment.end_date);
+      
+      payments.push({
+        id: `${investment.id}-capital`,
+        projectId: investment.project_id,
+        projectName: investment.project?.name || 'Projet inconnu',
+        amount: investment.amount,
+        date: endDate,
+        type: 'capital',
+        status: endDate <= currentDate ? 'paid' : 'scheduled'
       });
     }
   });
   
-  console.log(`Generated ${payments.length} payment records from real investment data`);
-  return payments;
+  // Sort payments by date
+  return payments.sort((a, b) => a.date.getTime() - b.date.getTime());
+};
+
+// Fetch real-time investment data including projects
+export const fetchRealTimeInvestmentData = async (userId: string) => {
+  const { supabase } = await import('@/integrations/supabase/client');
+  
+  try {
+    const { data, error } = await supabase
+      .from('investments')
+      .select(`
+        *,
+        project:project_id(
+          id, 
+          name,
+          description,
+          duration,
+          yield
+        )
+      `)
+      .eq('user_id', userId);
+      
+    if (error) {
+      console.error("Error fetching investments data:", error);
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error("Error in fetchRealTimeInvestmentData:", error);
+    return [];
+  }
 };

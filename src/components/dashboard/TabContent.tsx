@@ -12,6 +12,7 @@ const Investments = lazy(() => import("./Investments"));
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
 const InvestmentTrackingTab = lazy(() => import("./tabs/InvestmentTrackingTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
+const AvailableInvestmentsTab = lazy(() => import("./tabs/AvailableInvestmentsTab"));
 
 interface TabContentProps {
   activeTab: string;
@@ -63,6 +64,10 @@ export default function TabContent({
           
           {activeTab === "tracking" && (
             <InvestmentTrackingTab userInvestments={userInvestments} />
+          )}
+          
+          {activeTab === "available" && (
+            <AvailableInvestmentsTab />
           )}
           
           {activeTab === "profile" && (
