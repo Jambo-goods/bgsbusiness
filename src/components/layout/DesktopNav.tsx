@@ -59,8 +59,8 @@ export default function DesktopNav({
         </>
       )}
       
-      {/* Show dashboard button only when NOT on dashboard */}
-      {!isOnDashboard && (
+      {/* Show dashboard button only when logged in and NOT on dashboard */}
+      {isLoggedIn && !isOnDashboard && (
         <Button 
           variant="default"
           className="bg-bgs-blue hover:bg-bgs-blue/90 text-white ml-auto"
@@ -68,6 +68,26 @@ export default function DesktopNav({
         >
           Tableau de bord
         </Button>
+      )}
+      
+      {/* Show login/register buttons when NOT logged in */}
+      {!isLoggedIn && !isOnDashboard && (
+        <div className="flex ml-auto space-x-3">
+          <Button 
+            variant="outline"
+            className="border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10"
+            onClick={() => navigate("/login")}
+          >
+            Connexion
+          </Button>
+          <Button 
+            variant="default"
+            className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+            onClick={() => navigate("/register")}
+          >
+            Inscription
+          </Button>
+        </div>
       )}
     </nav>
   );

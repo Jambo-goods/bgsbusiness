@@ -1,6 +1,7 @@
 
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 interface MobileMenuProps {
   isMenuOpen: boolean;
@@ -17,6 +18,8 @@ export default function MobileMenu({
   handleLogout,
   isOnDashboard = false
 }: MobileMenuProps) {
+  const navigate = useNavigate();
+  
   if (!isMenuOpen) return null;
   
   return (
@@ -77,11 +80,31 @@ export default function MobileMenu({
         )}
         
         <div className="pt-2 flex flex-col space-y-3">
-          {/* Show dashboard button only when NOT on dashboard */}
-          {!isOnDashboard && (
-            <Link to="/dashboard" className="btn-primary w-full text-center sticky bottom-4">
+          {/* Show dashboard button only when logged in and NOT on dashboard */}
+          {isLoggedIn && !isOnDashboard && (
+            <Link to="/dashboard" className="btn-primary w-full text-center">
               Tableau de bord
             </Link>
+          )}
+          
+          {/* Show login/register buttons when NOT logged in */}
+          {!isLoggedIn && !isOnDashboard && (
+            <>
+              <Button 
+                variant="outline"
+                className="border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10 w-full"
+                onClick={() => navigate("/login")}
+              >
+                Connexion
+              </Button>
+              <Button 
+                variant="default"
+                className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
+                onClick={() => navigate("/register")}
+              >
+                Inscription
+              </Button>
+            </>
           )}
         </div>
       </div>
