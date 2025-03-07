@@ -87,7 +87,7 @@ export default function MobileMenu({
             </Link>
           )}
           
-          {/* Show login/register buttons when NOT logged in */}
+          {/* Show login/register buttons ONLY when NOT logged in and NOT on dashboard */}
           {!isLoggedIn && !isOnDashboard && (
             <>
               <Button 
