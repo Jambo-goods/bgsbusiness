@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logAdminAction } from '@/services/adminAuthService';
-import { useAdminRealTimeSubscriptions } from '@/hooks/useAdminRealTimeSubscriptions';
 import { 
   Search, Plus, ArrowUp, ArrowDown, Euro,
   Loader2, MoreHorizontal, Pencil, Wallet, UserPlus
@@ -27,7 +26,7 @@ export default function UserManagement() {
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
   const [sortField, setSortField] = useState('created_at');
-  const [sortDirection, setSortDirection<'asc' | 'desc'>>('desc');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [hasError, setHasError] = useState(false);
   const [newUser, setNewUser] = useState({
     first_name: '',
@@ -36,14 +35,6 @@ export default function UserManagement() {
     wallet_balance: '0'
   });
   const [realTimeStatus, setRealTimeStatus] = useState('connecting');
-
-  // Set up real-time subscriptions
-  const { realTimeStatus } = useAdminRealTimeSubscriptions({
-    onProfileUpdate: () => {
-      console.log("Real-time update detected, refreshing users list");
-      fetchUsers();
-    }
-  });
 
   useEffect(() => {
     fetchUsers();
