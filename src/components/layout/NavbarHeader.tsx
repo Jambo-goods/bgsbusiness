@@ -1,7 +1,8 @@
 
 import { cn } from "@/lib/utils";
-import { Bell, User } from "lucide-react";
+import { Bell, User, LayoutDashboard, Wallet, TrendingUp, BarChart3, Briefcase } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 interface NavbarHeaderProps {
   isScrolled: boolean;
@@ -11,6 +12,7 @@ interface NavbarHeaderProps {
 export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps) {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const location = useLocation();
   
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -27,6 +29,11 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isNotificationOpen, isUserMenuOpen]);
+
+  // Check if path is active
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
   
   return (
     <header
@@ -42,6 +49,24 @@ export default function NavbarHeader({ isScrolled, children }: NavbarHeaderProps
           {children}
           
           <div className="flex items-center space-x-4">
+            <div className="py-2 flex items-center space-x-3 mr-4">
+              <Link to="/dashboard" className={cn("p-2 rounded-full transition-colors", isActive("/dashboard") && !isActive("/dashboard/wallet") && !isActive("/dashboard/yield") && !isActive("/dashboard/capital") && !isActive("/dashboard/investments") ? "bg-bgs-blue text-white" : "text-gray-600 hover:bg-gray-100")}>
+                <LayoutDashboard size={20} />
+              </Link>
+              <Link to="/dashboard/wallet" className={cn("p-2 rounded-full transition-colors", isActive("/dashboard/wallet") ? "bg-bgs-blue text-white" : "text-gray-600 hover:bg-gray-100")}>
+                <Wallet size={20} />
+              </Link>
+              <Link to="/dashboard/yield" className={cn("p-2 rounded-full transition-colors", isActive("/dashboard/yield") ? "bg-bgs-blue text-white" : "text-gray-600 hover:bg-gray-100")}>
+                <TrendingUp size={20} />
+              </Link>
+              <Link to="/dashboard/capital" className={cn("p-2 rounded-full transition-colors", isActive("/dashboard/capital") ? "bg-bgs-blue text-white" : "text-gray-600 hover:bg-gray-100")}>
+                <BarChart3 size={20} />
+              </Link>
+              <Link to="/dashboard/investments" className={cn("p-2 rounded-full transition-colors", isActive("/dashboard/investments") ? "bg-bgs-blue text-white" : "text-gray-600 hover:bg-gray-100")}>
+                <Briefcase size={20} />
+              </Link>
+            </div>
+            
             <div className="relative notification-dropdown">
               <button 
                 onClick={() => {
