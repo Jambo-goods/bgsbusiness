@@ -10,9 +10,8 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, Search, UserX } from 'lucide-react';
+import { Search, UserX } from 'lucide-react';
 import { toast } from 'sonner';
-import StatusIndicator from '@/components/admin/dashboard/StatusIndicator';
 import { Badge } from '@/components/ui/badge';
 
 type Profile = {
@@ -30,8 +29,6 @@ export default function InactiveUsersPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [realTimeStatus, setRealTimeStatus] = useState<'connected' | 'connecting' | 'error'>('connected');
   const [totalInactiveProfiles, setTotalInactiveProfiles] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
@@ -62,14 +59,12 @@ export default function InactiveUsersPage() {
         
         setOnlineUsers(onlineUserIds);
         
-        // Update profiles with the new online status and filter out online users
+        // Update profiles with the new online status but don't filter out online users
         setProfiles(prevProfiles => 
-          prevProfiles
-            .map(profile => ({
-              ...profile,
-              online_status: onlineUserIds.has(profile.id) ? 'online' as const : 'offline' as const
-            }))
-            .filter(profile => !onlineUserIds.has(profile.id))
+          prevProfiles.map(profile => ({
+            ...profile,
+            online_status: onlineUserIds.has(profile.id) ? 'online' as const : 'offline' as const
+          }))
         );
       })
       .subscribe((status) => {
@@ -89,9 +84,9 @@ export default function InactiveUsersPage() {
       setIsLoading(true);
       
       // Get all profiles
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact' })
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -100,30 +95,22 @@ export default function InactiveUsersPage() {
 
       console.log('Fetched profiles:', data);
       
-      // Filter out online users and add online_status property
-      const inactiveProfiles: Profile[] = data
+      // Add online_status property but don't filter out online users
+      const profilesWithStatus: Profile[] = data
         ?.map(profile => ({
           ...profile,
           online_status: onlineUsers.has(profile.id) ? 'online' as const : 'offline' as const
-        }))
-        .filter(profile => !onlineUsers.has(profile.id)) || [];
+        })) || [];
       
-      setProfiles(inactiveProfiles);
-      setTotalInactiveProfiles(inactiveProfiles.length);
-      toast.success('Utilisateurs inactifs chargés avec succès');
+      setProfiles(profilesWithStatus);
+      setTotalInactiveProfiles(profilesWithStatus.length);
+      toast.success('Utilisateurs chargés avec succès');
     } catch (error) {
       console.error('Error fetching profiles:', error);
-      toast.error('Erreur lors du chargement des utilisateurs inactifs');
-      setRealTimeStatus('error');
+      toast.error('Erreur lors du chargement des utilisateurs');
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
-  };
-
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchProfiles();
   };
 
   const calculateInactivityTime = (profile: Profile) => {
@@ -161,17 +148,11 @@ export default function InactiveUsersPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold">Utilisateurs Inactifs</h1>
+          <h1 className="text-2xl font-bold">Utilisateurs</h1>
           <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-sm">
             {totalInactiveProfiles} utilisateurs
           </span>
         </div>
-        
-        <StatusIndicator 
-          realTimeStatus={realTimeStatus} 
-          isRefreshing={isRefreshing} 
-          onRefresh={handleRefresh} 
-        />
       </div>
 
       <div className="relative">
@@ -214,7 +195,7 @@ export default function InactiveUsersPage() {
               {filteredProfiles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                    {searchTerm ? "Aucun utilisateur inactif trouvé pour cette recherche" : "Tous les utilisateurs sont actuellement en ligne"}
+                    {searchTerm ? "Aucun utilisateur trouvé pour cette recherche" : "Aucun utilisateur trouvé"}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -231,10 +212,14 @@ export default function InactiveUsersPage() {
                     <TableCell>
                       <Badge 
                         variant="secondary"
-                        className="flex items-center gap-1 bg-gray-200"
+                        className={`flex items-center gap-1 ${
+                          profile.online_status === 'online' 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-gray-200 text-gray-800'
+                        }`}
                       >
                         <UserX className="h-3 w-3" />
-                        <span>Hors ligne</span>
+                        <span>{profile.online_status === 'online' ? 'En ligne' : 'Hors ligne'}</span>
                       </Badge>
                     </TableCell>
                   </TableRow>
