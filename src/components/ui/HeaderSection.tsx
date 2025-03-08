@@ -26,12 +26,23 @@ export default function HeaderSection({
 
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-bgs-blue-light/5 to-transparent" />
-      <div className="absolute -top-[30%] -right-[10%] w-[600px] h-[600px] rounded-full bg-bgs-orange/5 blur-3xl" />
-      <div className="absolute -bottom-[20%] -left-[10%] w-[500px] h-[500px] rounded-full bg-bgs-blue/5 blur-3xl" />
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 z-0 opacity-10"
+        style={{
+          backgroundImage: "url('/lovable-uploads/361a5f6b-3c6e-4e2d-829f-76953257e41c.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      />
 
-      <div className="container px-4 md:px-6 mx-auto relative">
+      {/* Background Elements */}
+      <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-bgs-blue-light/5 to-transparent z-1" />
+      <div className="absolute -top-[30%] -right-[10%] w-[600px] h-[600px] rounded-full bg-bgs-orange/5 blur-3xl z-1" />
+      <div className="absolute -bottom-[20%] -left-[10%] w-[500px] h-[500px] rounded-full bg-bgs-blue/5 blur-3xl z-1" />
+
+      <div className="container px-4 md:px-6 mx-auto relative z-10">
         <div className="max-w-4xl mx-auto text-center">
           <span className="inline-block px-3 py-1 mb-6 text-sm font-medium rounded-full bg-bgs-orange/10 text-bgs-orange animate-fade-in">
             BGS Business Club
