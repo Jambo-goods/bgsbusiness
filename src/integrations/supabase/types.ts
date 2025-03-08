@@ -178,7 +178,6 @@ export type Database = {
           first_name: string | null
           id: string
           investment_total: number | null
-          last_active_at: string | null
           last_name: string | null
           phone: string | null
           projects_count: number | null
@@ -192,7 +191,6 @@ export type Database = {
           first_name?: string | null
           id: string
           investment_total?: number | null
-          last_active_at?: string | null
           last_name?: string | null
           phone?: string | null
           projects_count?: number | null
@@ -206,7 +204,6 @@ export type Database = {
           first_name?: string | null
           id?: string
           investment_total?: number | null
-          last_active_at?: string | null
           last_name?: string | null
           phone?: string | null
           projects_count?: number | null

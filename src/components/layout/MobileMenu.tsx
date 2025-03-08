@@ -77,18 +77,6 @@ export default function MobileMenu({
             À propos
           </Link>
           
-          <Link
-            to="/users"
-            className={cn(
-              "py-2 px-4 rounded-md transition-colors",
-              isActive("/users") 
-                ? "bg-bgs-gray-light text-bgs-blue font-medium" 
-                : "text-bgs-blue/80 hover:bg-bgs-gray-light"
-            )}
-          >
-            Utilisateurs
-          </Link>
-          
           {/* Authentication buttons */}
           {isLoggedIn ? (
             <Button

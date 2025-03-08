@@ -1,11 +1,11 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { AdminStats, AdminLog } from "./types";
+import { AdminStats, AdminLog, RealTimeStatus } from "./types";
 import { fetchAdminDashboardData } from "./useAdminDataFetching";
+import { useAdminRealTimeSubscriptions } from "./useAdminRealTimeSubscriptions";
 import { toast } from "sonner";
 
-// Use 'export type' instead of 'export' for type re-exports
-export type { AdminStats, AdminLog } from "./types";
+export { AdminStats, AdminLog } from "./types";
 
 export function useAdminDashboard() {
   const [stats, setStats] = useState<AdminStats>({
@@ -18,6 +18,7 @@ export function useAdminDashboard() {
   const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [realTimeStatus, setRealTimeStatus] = useState<RealTimeStatus>('connecting');
 
   // Fetch dashboard data
   const fetchDashboardData = useCallback(async () => {
@@ -28,12 +29,11 @@ export function useAdminDashboard() {
       
       setStats(newStats);
       setAdminLogs(logs);
+      setRealTimeStatus('connected');
       
     } catch (error) {
       console.error("Error in fetchDashboardData:", error);
-      toast.error("Erreur lors du chargement des données", {
-        description: "Impossible de charger les données du tableau de bord."
-      });
+      setRealTimeStatus('error');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -45,11 +45,15 @@ export function useAdminDashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
+  // Set up real-time subscriptions
+  useAdminRealTimeSubscriptions(fetchDashboardData);
+
   return {
     stats,
     adminLogs,
     isLoading,
     isRefreshing,
+    realTimeStatus,
     refreshData: fetchDashboardData
   };
 }
