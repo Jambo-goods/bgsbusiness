@@ -8,6 +8,7 @@ export interface AdminStats {
   totalInvestments: number;
   totalProjects: number;
   pendingWithdrawals: number;
+  ongoingProjects: number; // Added for ongoing projects
 }
 
 export interface AdminLog {
@@ -27,7 +28,8 @@ export function useAdminDashboard() {
     userCount: 0,
     totalInvestments: 0,
     totalProjects: 0,
-    pendingWithdrawals: 0
+    pendingWithdrawals: 0,
+    ongoingProjects: 0 // Added for ongoing projects
   });
   const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -63,6 +65,14 @@ export function useAdminDashboard() {
       
       if (projectsError) throw projectsError;
       
+      // Get ongoing projects (with status 'active' or 'in_progress')
+      const { count: ongoingProjects, error: ongoingProjectsError } = await supabase
+        .from('projects')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['active', 'in_progress']);
+      
+      if (ongoingProjectsError) throw ongoingProjectsError;
+      
       // Get pending withdrawals
       const { count: pendingWithdrawals, error: withdrawalsError } = await supabase
         .from('withdrawal_requests')
@@ -88,7 +98,8 @@ export function useAdminDashboard() {
         userCount: userCount || 0,
         totalInvestments,
         totalProjects: totalProjects || 0,
-        pendingWithdrawals: pendingWithdrawals || 0
+        pendingWithdrawals: pendingWithdrawals || 0,
+        ongoingProjects: ongoingProjects || 0 // Added for ongoing projects
       });
       
       setAdminLogs(logsData || []);
@@ -98,6 +109,7 @@ export function useAdminDashboard() {
         totalInvestments,
         totalProjects,
         pendingWithdrawals,
+        ongoingProjects,
         logs: logsData?.length || 0
       });
       

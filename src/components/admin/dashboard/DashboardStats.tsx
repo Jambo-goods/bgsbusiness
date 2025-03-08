@@ -8,6 +8,7 @@ type StatsProps = {
     totalInvestments: number;
     totalProjects: number;
     pendingWithdrawals: number;
+    ongoingProjects?: number; // Added for ongoing projects
   };
   isLoading: boolean;
 };
@@ -36,6 +37,7 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
           <h3 className="text-lg text-gray-700">Utilisateurs</h3>
         </div>
         <p className="text-3xl font-bold text-bgs-blue">{stats.userCount}</p>
+        <p className="text-sm text-gray-500 mt-1">Comptes totaux</p>
       </div>
       
       <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -46,6 +48,7 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
           <h3 className="text-lg text-gray-700">Investissements</h3>
         </div>
         <p className="text-3xl font-bold text-green-600">{stats.totalInvestments.toLocaleString()} €</p>
+        <p className="text-sm text-gray-500 mt-1">Total de tous les comptes</p>
       </div>
       
       <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -56,6 +59,18 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
           <h3 className="text-lg text-gray-700">Projets</h3>
         </div>
         <p className="text-3xl font-bold text-purple-600">{stats.totalProjects}</p>
+        <p className="text-sm text-gray-500 mt-1">Projets totaux</p>
+      </div>
+      
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-3 bg-amber-100 rounded-full">
+            <Database className="h-6 w-6 text-amber-600" />
+          </div>
+          <h3 className="text-lg text-gray-700">Projets en cours</h3>
+        </div>
+        <p className="text-3xl font-bold text-amber-600">{stats.ongoingProjects || 0}</p>
+        <p className="text-sm text-gray-500 mt-1">Actifs actuellement</p>
       </div>
     </div>
   );
