@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 // Component imports
 import { UserManagementHeader } from '@/components/admin/user-management/UserManagementHeader';
