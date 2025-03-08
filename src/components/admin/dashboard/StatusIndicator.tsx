@@ -1,15 +1,16 @@
+
 import React from 'react';
-import { RefreshCcw, WifiOff, Wifi } from 'lucide-react';
+import { RefreshCcw } from 'lucide-react';
 import { useOfflineUsersCount } from '@/hooks/admin/useOfflineUsersCount';
+
 export interface StatusIndicatorProps {
   systemStatus?: 'operational' | 'degraded' | 'maintenance';
-  realTimeStatus?: 'connected' | 'connecting' | 'error';
   isRefreshing: boolean;
   onRefresh: () => void;
 }
+
 export default function StatusIndicator({
   systemStatus = 'operational',
-  realTimeStatus,
   isRefreshing,
   onRefresh
 }: StatusIndicatorProps) {
@@ -33,37 +34,13 @@ export default function StatusIndicator({
     }
   };
 
-  // Get the appropriate status color based on real-time status
-  const getRealTimeStatusColor = () => {
-    switch (realTimeStatus) {
-      case 'connected':
-        return 'bg-green-500';
-      case 'connecting':
-        return 'bg-yellow-500';
-      case 'error':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
   return <div className="flex items-center space-x-4">
-      {/* System Status Indicator */}
-      
-      
       {/* User Status Summary */}
-      <div className="flex items-center border-l border-gray-200 pl-4 ml-2">
+      <div className="flex items-center">
         {isLoading ? <span className="text-sm text-gray-500">Chargement des utilisateurs...</span> : <span className="text-sm text-gray-700">
             {offlineUsers} / {totalUsers} déconnectés
           </span>}
       </div>
-      
-      {/* Real-time Status Indicator - Only show if realTimeStatus is provided */}
-      {realTimeStatus && <div className="flex items-center border-l border-gray-200 pl-4 ml-2">
-          {realTimeStatus === 'connected' ? <Wifi className="h-4 w-4 text-green-500 mr-1" /> : realTimeStatus === 'connecting' ? <Wifi className="h-4 w-4 text-yellow-500 mr-1" /> : <WifiOff className="h-4 w-4 text-red-500 mr-1" />}
-          <span className="text-sm text-gray-700">
-            {realTimeStatus === 'connected' ? 'Temps réel actif' : realTimeStatus === 'connecting' ? 'Connexion en cours...' : 'Déconnecté'}
-          </span>
-        </div>}
       
       {/* Refresh Button */}
       <button onClick={onRefresh} disabled={isRefreshing} className={`flex items-center text-sm text-gray-700 ${isRefreshing ? 'opacity-50 cursor-not-allowed' : 'hover:text-bgs-blue'}`}>
