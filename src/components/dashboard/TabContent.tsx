@@ -58,6 +58,8 @@ export default function TabContent({
   setActiveTab,
   refreshData
 }: TabContentProps) {
+  console.log("Current active tab:", activeTab); // Add logging to debug
+  
   return (
     <div className="w-full mt-4">
       {activeTab === "overview" && (
@@ -80,9 +82,7 @@ export default function TabContent({
 
           {activeTab === "projects" && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-semibold text-bgs-blue">Projets d'investissement proposés</h2>
-              </div>
+              <h2 className="text-2xl font-semibold text-bgs-blue">Projets d'investissement proposés</h2>
               <p className="text-gray-600">
                 Découvrez tous les projets d'investissement disponibles sur la plateforme et trouvez ceux qui correspondent à vos objectifs financiers.
               </p>

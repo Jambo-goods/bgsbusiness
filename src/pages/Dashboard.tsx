@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import DashboardMain from "../components/dashboard/DashboardMain";
 import { useProfileData } from "@/hooks/dashboard/useProfileData";
@@ -13,20 +13,42 @@ import { useSidebarState } from "@/hooks/useSidebarState";
 
 export default function Dashboard() {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(() => {
-    // Check if we have a state with activeTab
+    // First check URL search params
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      console.log(`Setting initial tab from URL param: ${tabParam}`);
+      return tabParam;
+    }
+    
+    // Then check location state
     if (location.state && location.state.activeTab) {
+      console.log(`Setting initial tab from location state: ${location.state.activeTab}`);
       return location.state.activeTab;
     }
+    
+    // Default to overview
     return 'overview';
   });
+  
   const { isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useSidebarState();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Update activeTab when URL params change
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      console.log(`Updating tab from URL param change: ${tabParam}`);
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
   
   // Update activeTab when location state changes
   useEffect(() => {
     if (location.state && location.state.activeTab) {
+      console.log(`Updating tab from location state change: ${location.state.activeTab}`);
       setActiveTab(location.state.activeTab);
     }
   }, [location.state]);
@@ -38,6 +60,7 @@ export default function Dashboard() {
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData?.session?.user) {
           setUserId(sessionData.session.user.id);
+          console.log("User ID set:", sessionData.session.user.id);
         } else {
           console.log("No session or user ID found");
         }
@@ -122,6 +145,9 @@ export default function Dashboard() {
       toast.error("Erreur lors de la déconnexion");
     }
   };
+
+  // Debug what tab is active
+  console.log("Current active tab (Dashboard.tsx):", activeTab);
 
   return (
     <>

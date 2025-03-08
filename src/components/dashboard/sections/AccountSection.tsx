@@ -16,6 +16,12 @@ export default function AccountSection({
   expanded,
   handleLogout 
 }: AccountSectionProps) {
+  // Function to handle tab changes with console logging for debugging
+  const handleTabChange = (tab: string) => {
+    console.log(`Changing tab to: ${tab}`);
+    setActiveTab(tab);
+  };
+
   return (
     <>
       <SidebarNavItem
@@ -23,7 +29,7 @@ export default function AccountSection({
         label="Notifications"
         active={activeTab === "notifications"}
         expanded={expanded}
-        onClick={() => setActiveTab("notifications")}
+        onClick={() => handleTabChange("notifications")}
         badge={2}
       />
       <SidebarNavItem
@@ -31,14 +37,14 @@ export default function AccountSection({
         label="Profil"
         active={activeTab === "profile"}
         expanded={expanded}
-        onClick={() => setActiveTab("profile")}
+        onClick={() => handleTabChange("profile")}
       />
       <SidebarNavItem
         icon={<Settings size={18} />}
         label="Paramètres"
         active={activeTab === "settings"}
         expanded={expanded}
-        onClick={() => setActiveTab("settings")}
+        onClick={() => handleTabChange("settings")}
       />
       <SidebarNavItem
         icon={<LogOut size={18} />}
