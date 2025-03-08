@@ -103,6 +103,15 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
     });
   };
 
+  // Fonction pour obtenir le libellé de la transaction
+  const getTransactionLabel = (transaction: Transaction) => {
+    if (transaction.description && transaction.description.includes("Investissement dans")) {
+      return "Investissement effectué";
+    }
+    
+    return transaction.type === 'deposit' ? 'Dépôt' : 'Retrait';
+  };
+
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm mt-6">
       <div className="flex items-center gap-2 mb-4">
@@ -132,7 +141,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                 </div>
                 <div>
                   <p className="font-medium text-bgs-blue">
-                    {transaction.type === 'deposit' ? 'Dépôt' : 'Retrait'}
+                    {getTransactionLabel(transaction)}
                   </p>
                   <p className="text-sm text-bgs-gray-medium">
                     {formatRelativeTime(transaction.created_at)}
