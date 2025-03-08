@@ -11,16 +11,18 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, UserPlus, RefreshCw } from 'lucide-react';
+import { Search, UserPlus, RefreshCw, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 export default function UserRegistrations() {
   const [registrations, setRegistrations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
     fetchRegistrations();
@@ -37,7 +39,7 @@ export default function UserRegistrations() {
         }
       )
       .subscribe((status) => {
-        console.log('Realtime status:', status);
+        console.log('Realtime subscription status:', status);
         setIsRealtimeConnected(status === 'SUBSCRIBED');
       });
 
@@ -49,26 +51,41 @@ export default function UserRegistrations() {
   const fetchRegistrations = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
+      setFetchError(null);
+      
+      console.log('Fetching all user registrations...');
+      
+      // Make sure we're fetching ALL profiles without any filters
+      const { data, error, count } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (error) {
+        console.error('Error fetching registrations:', error);
+        setFetchError(error.message);
+        toast.error("Erreur lors du chargement des inscriptions", {
+          description: error.message
+        });
         throw error;
       }
 
-      console.log('Fetched registrations:', data);
-      setRegistrations(data || []);
+      console.log('Fetched registrations count:', count);
+      console.log('Fetched registrations data:', data);
       
-      if (data?.length === 0) {
+      // Check if we got data but it's empty
+      if (data && data.length === 0) {
+        console.log('No registrations found in the database');
         toast.info("Aucun utilisateur trouvé dans la base de données");
-      } else {
-        toast.success(`${data?.length || 0} utilisateurs trouvés`);
+      } else if (data) {
+        console.log(`Successfully fetched ${data.length} user registrations`);
+        toast.success(`${data.length} utilisateurs trouvés`);
       }
+      
+      setRegistrations(data || []);
     } catch (error) {
-      console.error('Error fetching registrations:', error);
-      toast.error("Erreur lors du chargement des inscriptions");
+      console.error('Error in fetchRegistrations:', error);
+      setFetchError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -87,18 +104,22 @@ export default function UserRegistrations() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Inscriptions Utilisateurs ({registrations.length})</h1>
-        <div className="flex items-center">
-          <div className={`flex items-center mr-4 ${isRealtimeConnected ? 'text-green-500' : 'text-gray-400'}`}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Inscriptions Utilisateurs ({registrations.length})</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Gestion des comptes utilisateur de la plateforme
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <div className={`flex items-center ${isRealtimeConnected ? 'text-green-500' : 'text-gray-400'}`}>
             <span className={`w-2 h-2 mr-1 rounded-full ${isRealtimeConnected ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-            <span className="text-xs">Données en temps réel</span>
+            <span className="text-xs whitespace-nowrap">Données en temps réel</span>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={fetchRegistrations}
-            className="ml-2"
             disabled={isLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
@@ -106,6 +127,19 @@ export default function UserRegistrations() {
           </Button>
         </div>
       </div>
+
+      {fetchError && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-start">
+          <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-medium text-red-800">Erreur de chargement</h3>
+            <p className="text-sm text-red-700 mt-1">{fetchError}</p>
+            <p className="text-sm text-red-700 mt-1">
+              Vérifiez la console pour plus de détails et assurez-vous que votre connexion à Supabase est correcte.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -120,7 +154,12 @@ export default function UserRegistrations() {
 
       <Card>
         <CardHeader className="pb-0">
-          <CardTitle className="text-xl">Liste des utilisateurs ({filteredRegistrations.length})</CardTitle>
+          <CardTitle className="text-xl flex items-center justify-between">
+            <span>Liste des utilisateurs ({filteredRegistrations.length})</span>
+            <Badge variant={isLoading ? "outline" : "default"} className="ml-2">
+              {isLoading ? "Chargement..." : `${filteredRegistrations.length} sur ${registrations.length}`}
+            </Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
