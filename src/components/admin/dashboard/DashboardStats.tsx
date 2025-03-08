@@ -57,16 +57,6 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
         </div>
         <p className="text-3xl font-bold text-purple-600">{stats.totalProjects}</p>
       </div>
-      
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-red-100 rounded-full">
-            <ArrowLeftRight className="h-6 w-6 text-red-600" />
-          </div>
-          <h3 className="text-lg text-gray-700">Retraits en attente</h3>
-        </div>
-        <p className="text-3xl font-bold text-red-600">{stats.pendingWithdrawals}</p>
-      </div>
     </div>
   );
 }
