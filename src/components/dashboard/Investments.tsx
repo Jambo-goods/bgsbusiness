@@ -5,7 +5,6 @@ import SearchAndFilterControls from "./investments/SearchAndFilterControls";
 import InvestmentItem from "./investments/InvestmentItem";
 import InvestmentListStatus from "./investments/InvestmentListStatus";
 import { useInvestmentsData } from "./investments/useInvestmentsData";
-import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 
 interface InvestmentsProps {
@@ -91,21 +90,6 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
 
   return (
     <div className="space-y-4">
-      {/* Capital Investment Summary Card */}
-      <Card className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-        <h2 className="text-lg font-semibold text-bgs-blue mb-2">Capital investi</h2>
-        <div className="flex items-center">
-          <p className="text-3xl font-bold text-bgs-blue mb-2">{investmentTotal.toLocaleString()} €</p>
-          {isUpdating && (
-            <span className="ml-2 h-2 w-2 rounded-full bg-bgs-orange animate-pulse"></span>
-          )}
-        </div>
-        <p className="text-sm text-bgs-gray-medium mb-2">Montant total investi dans les projets actifs.</p>
-        {userInvestments.length === 0 && (
-          <p className="text-sm text-bgs-gray-medium mt-3">Aucun investissement actif.</p>
-        )}
-      </Card>
-
       {/* Main Investments List */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
