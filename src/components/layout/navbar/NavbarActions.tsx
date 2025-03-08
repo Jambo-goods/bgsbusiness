@@ -1,5 +1,6 @@
+
 import { useState, useEffect } from "react";
-import { Bell, User, LayoutDashboard, Wallet, Home } from "lucide-react";
+import { Bell, Wallet, Home } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import UserMenuDropdown from "./UserMenuDropdown";
@@ -94,17 +95,6 @@ export default function NavbarActions({
             {walletBalance.toLocaleString('fr-FR')}€
           </span>
         </Link>
-        
-        <div className="relative dashboard-menu-dropdown">
-          <button onClick={() => {
-            setIsDashboardMenuOpen(!isDashboardMenuOpen);
-            if (isNotificationOpen) setIsNotificationOpen(false);
-            if (isUserMenuOpen) setIsUserMenuOpen(false);
-          }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="Dashboard Menu">
-            <LayoutDashboard className="h-5 w-5 text-bgs-blue" />
-          </button>
-          <DashboardMenuDropdown isOpen={isDashboardMenuOpen} isActive={isActive} />
-        </div>
 
         <div className="relative notification-dropdown">
           <button onClick={() => {
