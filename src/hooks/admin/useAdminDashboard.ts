@@ -2,9 +2,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { AdminStats, AdminLog, RealTimeStatus } from "./types";
 import { fetchAdminDashboardData } from "./useAdminDataFetching";
+import { useAdminRealTimeSubscriptions } from "./useAdminRealTimeSubscriptions";
 import { toast } from "sonner";
 
-export type { AdminStats, AdminLog } from "./types";
+export { AdminStats, AdminLog } from "./types";
 
 export function useAdminDashboard() {
   const [stats, setStats] = useState<AdminStats>({
@@ -44,7 +45,8 @@ export function useAdminDashboard() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // No real-time subscriptions are set up anymore
+  // Set up real-time subscriptions
+  useAdminRealTimeSubscriptions(fetchDashboardData);
 
   return {
     stats,
