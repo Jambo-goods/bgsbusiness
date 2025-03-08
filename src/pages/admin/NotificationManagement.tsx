@@ -36,19 +36,27 @@ import { Bell, Plus, Trash, RefreshCw, Pencil } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
+interface NotificationWithUserId extends Notification {
+  user_id: string;
+}
+
 export default function NotificationManagement() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<NotificationWithUserId[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [openCreateDialog, setOpenCreateDialog] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [editingNotification, setEditingNotification] = useState<Notification | null>(null);
+  const [editingNotification, setEditingNotification] = useState<NotificationWithUserId | null>(null);
   
   // Form states
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<NotificationType>("marketing");
-  const [category, setCategory] = useState<NotificationCategory>("info");
+  const [type, setType] = useState<string>("marketing");
+  const [useCustomType, setUseCustomType] = useState(false);
+  const [customType, setCustomType] = useState("");
+  const [category, setCategory] = useState<string>("info");
+  const [useCustomCategory, setUseCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState("");
   const [userId, setUserId] = useState("");
   const [users, setUsers] = useState<{id: string, email: string, name: string}[]>([]);
   
@@ -117,8 +125,17 @@ export default function NotificationManagement() {
   
   const createNotification = async () => {
     try {
-      if (!title || !description || !type || !userId) {
+      if (!title || !description || !userId) {
         toast.error("Veuillez remplir tous les champs obligatoires");
+        return;
+      }
+      
+      // Determine which type and category to use
+      const finalType = useCustomType ? customType : type;
+      const finalCategory = useCustomCategory ? customCategory : category;
+      
+      if (!finalType || !finalCategory) {
+        toast.error("Veuillez spécifier un type et une catégorie valides");
         return;
       }
       
@@ -128,8 +145,8 @@ export default function NotificationManagement() {
           user_id: userId,
           title,
           description,
-          type,
-          category,
+          type: finalType,
+          category: finalCategory,
           read: false,
         });
       
@@ -142,7 +159,7 @@ export default function NotificationManagement() {
       
       // Log admin action
       await supabase.from('admin_logs').insert({
-        action_type: 'create_notification',
+        action_type: "user_management",
         description: `Notification créée: ${title}`,
         target_user_id: userId
       });
@@ -155,8 +172,17 @@ export default function NotificationManagement() {
   
   const updateNotification = async () => {
     try {
-      if (!editingNotification || !title || !description || !type) {
+      if (!editingNotification || !title || !description) {
         toast.error("Veuillez remplir tous les champs obligatoires");
+        return;
+      }
+      
+      // Determine which type and category to use
+      const finalType = useCustomType ? customType : type;
+      const finalCategory = useCustomCategory ? customCategory : category;
+      
+      if (!finalType || !finalCategory) {
+        toast.error("Veuillez spécifier un type et une catégorie valides");
         return;
       }
       
@@ -165,8 +191,8 @@ export default function NotificationManagement() {
         .update({
           title,
           description,
-          type,
-          category,
+          type: finalType,
+          category: finalCategory,
           updated_at: new Date().toISOString()
         })
         .eq('id', editingNotification.id);
@@ -180,7 +206,7 @@ export default function NotificationManagement() {
       
       // Log admin action
       await supabase.from('admin_logs').insert({
-        action_type: 'update_notification',
+        action_type: "user_management",
         description: `Notification mise à jour: ${title}`,
         target_user_id: editingNotification.user_id
       });
@@ -205,7 +231,7 @@ export default function NotificationManagement() {
       
       // Log admin action
       await supabase.from('admin_logs').insert({
-        action_type: 'delete_notification',
+        action_type: "user_management",
         description: `Notification supprimée`,
         target_user_id: userId
       });
@@ -216,12 +242,33 @@ export default function NotificationManagement() {
     }
   };
   
-  const handleEditClick = (notification: Notification) => {
+  const handleEditClick = (notification: NotificationWithUserId) => {
     setEditingNotification(notification);
     setTitle(notification.title);
     setDescription(notification.description);
-    setType(notification.type);
-    setCategory(notification.category || "info");
+    
+    // Check if the type is in predefined list or custom
+    if (notificationTypes.includes(notification.type as NotificationType)) {
+      setType(notification.type);
+      setUseCustomType(false);
+      setCustomType("");
+    } else {
+      setUseCustomType(true);
+      setCustomType(notification.type);
+      setType("marketing"); // default value for dropdown
+    }
+    
+    // Check if the category is in predefined list or custom
+    if (notificationCategories.includes(notification.category as NotificationCategory)) {
+      setCategory(notification.category);
+      setUseCustomCategory(false);
+      setCustomCategory("");
+    } else {
+      setUseCustomCategory(true);
+      setCustomCategory(notification.category);
+      setCategory("info"); // default value for dropdown
+    }
+    
     setUserId(notification.user_id || "");
     setOpenEditDialog(true);
   };
@@ -230,7 +277,11 @@ export default function NotificationManagement() {
     setTitle("");
     setDescription("");
     setType("marketing");
+    setCustomType("");
+    setUseCustomType(false);
     setCategory("info");
+    setCustomCategory("");
+    setUseCustomCategory(false);
     setUserId("");
     setEditingNotification(null);
   };
@@ -327,10 +378,29 @@ export default function NotificationManagement() {
                     rows={3}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="type">Type</Label>
-                    <Select value={type} onValueChange={(value: NotificationType) => setType(value)}>
+                <div className="grid gap-2">
+                  <Label htmlFor="type">Type</Label>
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="checkbox" 
+                      id="useCustomType" 
+                      checked={useCustomType} 
+                      onChange={(e) => setUseCustomType(e.target.checked)}
+                      className="mr-1 h-4 w-4"
+                    />
+                    <Label htmlFor="useCustomType" className="text-sm font-normal">
+                      Type personnalisé
+                    </Label>
+                  </div>
+                  {useCustomType ? (
+                    <Input 
+                      id="customType" 
+                      value={customType} 
+                      onChange={(e) => setCustomType(e.target.value)} 
+                      placeholder="Saisir un type personnalisé"
+                    />
+                  ) : (
+                    <Select value={type} onValueChange={(value: string) => setType(value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Type de notification" />
                       </SelectTrigger>
@@ -342,10 +412,31 @@ export default function NotificationManagement() {
                         ))}
                       </SelectContent>
                     </Select>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="category">Catégorie</Label>
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="checkbox" 
+                      id="useCustomCategory" 
+                      checked={useCustomCategory} 
+                      onChange={(e) => setUseCustomCategory(e.target.checked)}
+                      className="mr-1 h-4 w-4"
+                    />
+                    <Label htmlFor="useCustomCategory" className="text-sm font-normal">
+                      Catégorie personnalisée
+                    </Label>
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="category">Catégorie</Label>
-                    <Select value={category} onValueChange={(value: NotificationCategory) => setCategory(value)}>
+                  {useCustomCategory ? (
+                    <Input 
+                      id="customCategory" 
+                      value={customCategory} 
+                      onChange={(e) => setCustomCategory(e.target.value)} 
+                      placeholder="Saisir une catégorie personnalisée"
+                    />
+                  ) : (
+                    <Select value={category} onValueChange={(value: string) => setCategory(value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Catégorie" />
                       </SelectTrigger>
@@ -357,7 +448,7 @@ export default function NotificationManagement() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  )}
                 </div>
               </div>
               <DialogFooter>
@@ -392,10 +483,29 @@ export default function NotificationManagement() {
                     rows={3}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="type">Type</Label>
-                    <Select value={type} onValueChange={(value: NotificationType) => setType(value)}>
+                <div className="grid gap-2">
+                  <Label htmlFor="type">Type</Label>
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="checkbox" 
+                      id="useCustomTypeEdit" 
+                      checked={useCustomType} 
+                      onChange={(e) => setUseCustomType(e.target.checked)}
+                      className="mr-1 h-4 w-4"
+                    />
+                    <Label htmlFor="useCustomTypeEdit" className="text-sm font-normal">
+                      Type personnalisé
+                    </Label>
+                  </div>
+                  {useCustomType ? (
+                    <Input 
+                      id="customType" 
+                      value={customType} 
+                      onChange={(e) => setCustomType(e.target.value)} 
+                      placeholder="Saisir un type personnalisé"
+                    />
+                  ) : (
+                    <Select value={type} onValueChange={(value: string) => setType(value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Type de notification" />
                       </SelectTrigger>
@@ -407,10 +517,31 @@ export default function NotificationManagement() {
                         ))}
                       </SelectContent>
                     </Select>
+                  )}
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="category">Catégorie</Label>
+                  <div className="flex gap-2 items-center">
+                    <input 
+                      type="checkbox" 
+                      id="useCustomCategoryEdit" 
+                      checked={useCustomCategory} 
+                      onChange={(e) => setUseCustomCategory(e.target.checked)}
+                      className="mr-1 h-4 w-4"
+                    />
+                    <Label htmlFor="useCustomCategoryEdit" className="text-sm font-normal">
+                      Catégorie personnalisée
+                    </Label>
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="category">Catégorie</Label>
-                    <Select value={category} onValueChange={(value: NotificationCategory) => setCategory(value)}>
+                  {useCustomCategory ? (
+                    <Input 
+                      id="customCategory" 
+                      value={customCategory} 
+                      onChange={(e) => setCustomCategory(e.target.value)} 
+                      placeholder="Saisir une catégorie personnalisée"
+                    />
+                  ) : (
+                    <Select value={category} onValueChange={(value: string) => setCategory(value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Catégorie" />
                       </SelectTrigger>
@@ -422,7 +553,7 @@ export default function NotificationManagement() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  )}
                 </div>
               </div>
               <DialogFooter>
@@ -472,9 +603,9 @@ export default function NotificationManagement() {
                         {notification.description}
                       </div>
                     </TableCell>
-                    <TableCell>{getUserName(notification.user_id || "")}</TableCell>
+                    <TableCell>{getUserName(notification.user_id)}</TableCell>
                     <TableCell>{notification.type}</TableCell>
-                    <TableCell>{getCategoryBadge(notification.category || "info")}</TableCell>
+                    <TableCell>{getCategoryBadge(notification.category as NotificationCategory)}</TableCell>
                     <TableCell>
                       {notification.read ? (
                         <Badge variant="outline" className="text-gray-500">Lu</Badge>
@@ -496,7 +627,7 @@ export default function NotificationManagement() {
                           variant="ghost" 
                           size="sm" 
                           className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => deleteNotification(notification.id, notification.user_id || "")}
+                          onClick={() => deleteNotification(notification.id, notification.user_id)}
                         >
                           <Trash className="h-4 w-4" />
                         </Button>
