@@ -11,31 +11,24 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import UserStatusBadge from './UserStatusBadge';
 import { calculateInactivityTime } from '@/utils/inactivityCalculator';
-
-type Profile = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone: string | null;
-  created_at: string | null;
-  last_active_at?: string | null;
-  wallet_balance?: number | null;
-  account_status?: 'active' | 'inactive' | 'suspended';
-};
+import { UserProfile } from '@/hooks/admin/types';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 
 interface ProfilesTableProps {
-  profiles: Profile[];
-  filteredProfiles: Profile[];
+  profiles: UserProfile[];
+  filteredProfiles: UserProfile[];
   isLoading: boolean;
   searchTerm: string;
+  onAddFunds?: (userId: string) => void;
 }
 
 export default function ProfilesTable({ 
   profiles,
   filteredProfiles, 
   isLoading, 
-  searchTerm 
+  searchTerm,
+  onAddFunds
 }: ProfilesTableProps) {
   if (isLoading) {
     return (
@@ -63,13 +56,15 @@ export default function ProfilesTable({
           <TableHead>Date d'inscription</TableHead>
           <TableHead>Durée d'inactivité</TableHead>
           <TableHead>Solde portefeuille</TableHead>
-          <TableHead>Statut</TableHead>
+          <TableHead>Compte</TableHead>
+          <TableHead>Connexion</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {filteredProfiles.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+            <TableCell colSpan={10} className="text-center py-8 text-gray-500">
               {searchTerm ? "Aucun utilisateur trouvé pour cette recherche" : "Aucun utilisateur dans la base de données"}
             </TableCell>
           </TableRow>
@@ -89,10 +84,26 @@ export default function ProfilesTable({
               <TableCell>
                 {profile.wallet_balance !== undefined && profile.wallet_balance !== null 
                   ? `${profile.wallet_balance.toLocaleString()} €` 
-                  : '-'}
+                  : '0 €'}
               </TableCell>
               <TableCell>
                 <UserStatusBadge status={profile.account_status || 'inactive'} />
+              </TableCell>
+              <TableCell>
+                <UserStatusBadge status={profile.online_status || 'offline'} />
+              </TableCell>
+              <TableCell>
+                {onAddFunds && (
+                  <Button 
+                    size="sm"
+                    variant="outline"
+                    className="flex items-center gap-1"
+                    onClick={() => onAddFunds(profile.id)}
+                  >
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    <span>Fonds</span>
+                  </Button>
+                )}
               </TableCell>
             </TableRow>
           ))
