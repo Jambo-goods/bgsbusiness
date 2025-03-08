@@ -19,6 +19,11 @@ export default function HeaderSection({
   secondaryCtaText = "Comment ça marche",
   secondaryCtaLink = "/how-it-works",
 }: HeaderSectionProps) {
+  // Splitting the title into two parts for display on separate lines
+  const titleWords = title.split(' ');
+  const firstLine = titleWords.slice(0, Math.ceil(titleWords.length / 2)).join(' ');
+  const secondLine = titleWords.slice(Math.ceil(titleWords.length / 2)).join(' ');
+
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
       {/* Background Elements */}
@@ -34,10 +39,10 @@ export default function HeaderSection({
           
           <h1 className="mb-6 animate-fade-up" style={{ animationDelay: "0.1s" }}>
             <span className="block font-bold text-bgs-blue">
-              {title.split(' ').slice(0, -1).join(' ')}{' '}
+              {firstLine}
             </span>
             <span className="block font-bold text-gradient">
-              {title.split(' ').slice(-1)[0]}
+              {secondLine}
             </span>
           </h1>
           
