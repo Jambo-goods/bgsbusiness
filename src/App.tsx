@@ -1,64 +1,82 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { HelmetProvider } from 'react-helmet-async';
-import Index from './pages/Index';
-import About from './pages/About';
-import HowItWorks from './pages/HowItWorks';
-import Projects from './pages/Projects';
-import ProjectDetail from './pages/ProjectDetail';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import Dashboard from './pages/Dashboard';
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import UserRegistrations from './pages/admin/UserRegistrations';
-import ProfileManagement from './pages/admin/ProfileManagement';
-import ProjectManagement from './pages/admin/ProjectManagement';
-import WalletManagement from './pages/admin/WalletManagement';
-import WithdrawalManagement from './pages/admin/WithdrawalManagement';
-import NotificationManagement from './pages/admin/NotificationManagement';
-import NotFound from './pages/NotFound';
-import AdminLayout from './components/admin/AdminLayout';
-import { Toaster } from '@/components/ui/sonner';
-import FinanceDashboard from './pages/admin/FinanceDashboard';
 
-function App() {
-  return (
-    <BrowserRouter>
-      <HelmetProvider>
-        <Routes>
-          {/* Pages publiques */}
-          <Route path="/" element={<Index />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/projects/:id" element={<ProjectDetail />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          
-          {/* Tableau de bord utilisateur */}
-          <Route path="/dashboard" element={<Dashboard />} />
-          
-          {/* Pages admin */}
-          <Route path="/admin/login" element={<AdminLogin />} />
-          <Route path="/admin/dashboard" element={<AdminLayout><AdminDashboard /></AdminLayout>} />
-          <Route path="/admin/users" element={<AdminLayout><UserRegistrations /></AdminLayout>} />
-          <Route path="/admin/profiles" element={<AdminLayout><ProfileManagement /></AdminLayout>} />
-          <Route path="/admin/finance" element={<AdminLayout><FinanceDashboard /></AdminLayout>} />
-          <Route path="/admin/projects" element={<AdminLayout><ProjectManagement /></AdminLayout>} />
-          <Route path="/admin/wallet" element={<AdminLayout><WalletManagement /></AdminLayout>} />
-          <Route path="/admin/withdrawals" element={<AdminLayout><WithdrawalManagement /></AdminLayout>} />
-          <Route path="/admin/notifications" element={<AdminLayout><NotificationManagement /></AdminLayout>} />
-          
-          {/* Page non trouvée */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-      </HelmetProvider>
-    </BrowserRouter>
-  );
-}
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
+import Index from "./pages/Index";
+import Opportunite from "./pages/Projects";
+import ProjectDetail from "./pages/ProjectDetail";
+import HowItWorks from "./pages/HowItWorks";
+import About from "./pages/About";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import Dashboard from "./pages/Dashboard";
+import NotFound from "./pages/NotFound";
+import { AdminProvider } from "./contexts/AdminContext";
+
+// Admin pages
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import ProjectManagement from "./pages/admin/ProjectManagement";
+import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
+import WalletManagement from "./pages/admin/WalletManagement";
+import NotificationManagement from "./pages/admin/NotificationManagement";
+import ProfileManagement from "./pages/admin/ProfileManagement";
+
+// Create a client with optimized settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // 1 minute
+      refetchOnWindowFocus: false,
+      retry: 1
+    }
+  }
+});
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <HelmetProvider>
+      <TooltipProvider>
+        <AdminProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/projects" element={<Opportunite />} />
+              <Route path="/project/:id" element={<ProjectDetail />} />
+              <Route path="/how-it-works" element={<HowItWorks />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/dashboard/*" element={<Dashboard />} />
+              
+              {/* Admin Routes */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="projects" element={<ProjectManagement />} />
+                <Route path="withdrawals" element={<WithdrawalManagement />} />
+                <Route path="wallets" element={<WalletManagement />} />
+                <Route path="profiles" element={<ProfileManagement />} />
+                <Route path="notifications" element={<NotificationManagement />} />
+              </Route>
+              
+              {/* Catch-all route for 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </AdminProvider>
+      </TooltipProvider>
+    </HelmetProvider>
+  </QueryClientProvider>
+);
 
 export default App;
