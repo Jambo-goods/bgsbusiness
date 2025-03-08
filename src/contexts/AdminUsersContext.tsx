@@ -100,9 +100,9 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (walletError) throw walletError;
 
-      // Log admin action
+      // Log admin action - FIX: Use "wallet_management" instead of "deposit"
       await supabase.from('admin_logs').insert({
-        action_type: 'deposit',
+        action_type: 'wallet_management',
         description: `Dépôt de ${amount}€ sur le compte utilisateur`,
         target_user_id: userId,
         amount: amount
@@ -152,9 +152,9 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (walletError) throw walletError;
 
-      // Log admin action
+      // Log admin action - FIX: Use "wallet_management" instead of "withdrawal"
       await supabase.from('admin_logs').insert({
-        action_type: 'withdrawal',
+        action_type: 'wallet_management',
         description: `Retrait de ${amount}€ du compte utilisateur`,
         target_user_id: userId,
         amount: amount
