@@ -53,8 +53,8 @@ export default function DesktopNav({
             À propos
           </Link>
           
-          {/* Tableau de bord button - immediately visible when logged in */}
-          {isLoggedIn && (
+          {/* Authentication buttons */}
+          {isLoggedIn ? (
             <Button 
               variant="default"
               className="bg-bgs-blue hover:bg-bgs-blue/90 text-white will-change-transform"
@@ -62,6 +62,23 @@ export default function DesktopNav({
             >
               Tableau de bord
             </Button>
+          ) : (
+            <div className="flex items-center space-x-4">
+              <Button 
+                variant="outline"
+                className="border-bgs-blue text-bgs-blue hover:bg-bgs-gray-light"
+                onClick={() => navigate("/login")}
+              >
+                Connexion
+              </Button>
+              <Button 
+                variant="default"
+                className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+                onClick={() => navigate("/register")}
+              >
+                Inscription
+              </Button>
+            </div>
           )}
         </div>
       )}

@@ -77,8 +77,8 @@ export default function MobileMenu({
             À propos
           </Link>
           
-          {/* Tableau de bord button - immediately visible when logged in */}
-          {isLoggedIn && (
+          {/* Authentication buttons */}
+          {isLoggedIn ? (
             <Button
               variant="default"
               className="bg-bgs-blue hover:bg-bgs-blue/90 text-white mt-2 will-change-transform"
@@ -86,6 +86,23 @@ export default function MobileMenu({
             >
               Tableau de bord
             </Button>
+          ) : (
+            <div className="flex flex-col space-y-2 mt-2">
+              <Button 
+                variant="outline"
+                className="border-bgs-blue text-bgs-blue hover:bg-bgs-gray-light w-full"
+                onClick={() => navigate("/login")}
+              >
+                Connexion
+              </Button>
+              <Button 
+                variant="default"
+                className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full"
+                onClick={() => navigate("/register")}
+              >
+                Inscription
+              </Button>
+            </div>
           )}
         </>
       )}
