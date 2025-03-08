@@ -14,4 +14,3 @@ export type {
   NotificationCategory, 
 } from "./notifications";
 export { NotificationCategories } from "./notifications";
-
