@@ -25,10 +25,33 @@ export function useUserManagement() {
         table: 'profiles'
       }, (payload) => {
         console.log('Profiles data changed, refreshing users...', payload);
-        fetchUsers();
-        toast.info("Mise à jour détectée", {
-          description: "Les données utilisateurs ont été mises à jour."
-        });
+        
+        // Au lieu de déclencher un nouveau fetchUsers complet qui remplace tous les utilisateurs,
+        // on va mettre à jour la liste en fonction de l'événement
+        if (payload.eventType === 'INSERT') {
+          // Pour une insertion, on ajoute simplement le nouvel utilisateur à la liste existante
+          console.log('New user detected:', payload.new);
+          setUsers(prevUsers => {
+            // Vérifier si l'utilisateur existe déjà pour éviter les doublons
+            const exists = prevUsers.some(user => user.id === payload.new.id);
+            if (exists) return prevUsers;
+            
+            // Ajouter le nouvel utilisateur et trier selon le critère actuel
+            const updatedUsers = [...prevUsers, payload.new];
+            return sortUsers(updatedUsers, sortField, sortDirection);
+          });
+          
+          toast.info("Nouvel utilisateur détecté", {
+            description: "Un nouvel utilisateur a été ajouté à la liste."
+          });
+        } else {
+          // Pour les autres types de changements (UPDATE, DELETE),
+          // on fait un fetchUsers complet pour être sûr d'avoir des données cohérentes
+          fetchUsers();
+          toast.info("Mise à jour détectée", {
+            description: "Les données utilisateurs ont été mises à jour."
+          });
+        }
       })
       .subscribe((status) => {
         console.log('Realtime subscription status:', status);
@@ -50,6 +73,28 @@ export function useUserManagement() {
       supabase.removeChannel(profilesChannel);
     };
   }, []);
+  
+  // Fonction utilitaire pour trier les utilisateurs
+  const sortUsers = (usersToSort: any[], field: string, direction: 'asc' | 'desc') => {
+    return [...usersToSort].sort((a, b) => {
+      const aValue = a[field];
+      const bValue = b[field];
+      
+      // Gestion des valeurs nulles ou undefined
+      if (aValue === null || aValue === undefined) return direction === 'asc' ? -1 : 1;
+      if (bValue === null || bValue === undefined) return direction === 'asc' ? 1 : -1;
+      
+      // Tri en fonction du type de données
+      if (typeof aValue === 'string') {
+        return direction === 'asc' 
+          ? aValue.localeCompare(bValue) 
+          : bValue.localeCompare(aValue);
+      }
+      
+      // Pour les nombres, dates, etc.
+      return direction === 'asc' ? aValue - bValue : bValue - aValue;
+    });
+  };
   
   // Separate effect for sorting changes to avoid duplicate fetching
   useEffect(() => {
