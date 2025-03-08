@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -91,7 +90,7 @@ export default function NotificationManagement() {
         read: notification.read,
         type: notification.type as NotificationType,
         category: notification.category as NotificationCategory,
-        metadata: notification.metadata || {},
+        metadata: notification.metadata ? (typeof notification.metadata === 'object' ? notification.metadata : {}) : {},
         user_id: notification.user_id
       }));
       
