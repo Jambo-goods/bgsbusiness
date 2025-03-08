@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logAdminAction } from '@/services/adminAuthService';
 import { 
   Search, Plus, ArrowUp, ArrowDown, Euro,
-  Loader2, MoreHorizontal, Pencil, Wallet, UserPlus
+  Loader2, MoreHorizontal, Pencil, Wallet, UserPlus, RefreshCcw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
@@ -35,6 +36,7 @@ export default function UserManagement() {
     wallet_balance: '0'
   });
   const [realTimeStatus, setRealTimeStatus] = useState('connecting');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -86,6 +88,7 @@ export default function UserManagement() {
     try {
       setIsLoading(true);
       setHasError(false);
+      setIsRefreshing(true);
       
       console.log("Fetching users with sort field:", sortField, "direction:", sortDirection);
       
@@ -120,6 +123,7 @@ export default function UserManagement() {
       toast.error("Erreur lors du chargement des utilisateurs");
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -255,6 +259,10 @@ export default function UserManagement() {
     return fullName.includes(searchLower) || email.includes(searchLower);
   });
 
+  const handleRefresh = () => {
+    fetchUsers();
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-semibold text-bgs-blue mb-6">Gestion des Utilisateurs</h1>
@@ -281,9 +289,11 @@ export default function UserManagement() {
           </Button>
           
           <Button
-            onClick={() => fetchUsers()}
+            onClick={handleRefresh}
             className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
+            disabled={isRefreshing}
           >
+            <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             Actualiser
           </Button>
         </div>
