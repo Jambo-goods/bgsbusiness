@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { notificationService } from "@/services/NotificationService";
 
 interface WithdrawFundsFormProps {
   balance: number;
@@ -71,6 +72,9 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
         });
         
       if (error) throw error;
+      
+      // Create notification
+      await notificationService.withdrawalValidated(parseInt(amount));
       
       toast.success("Demande de retrait soumise avec succès");
       setAmount("");

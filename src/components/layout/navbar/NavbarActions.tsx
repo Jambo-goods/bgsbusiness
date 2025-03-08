@@ -7,6 +7,7 @@ import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
+import { notificationService } from "@/services/NotificationService";
 
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
@@ -20,6 +21,7 @@ export default function NavbarActions({
   const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const {
     walletBalance
   } = useWalletBalance();
@@ -60,6 +62,33 @@ export default function NavbarActions({
       authListener.subscription.unsubscribe();
     };
   }, [location.pathname, navigate]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchUnreadCount();
+      
+      // Set up subscription for notifications table
+      const channel = supabase
+        .channel('notifications_changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        }, () => {
+          fetchUnreadCount();
+        })
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [isAuthenticated]);
+
+  const fetchUnreadCount = async () => {
+    const count = await notificationService.getUnreadCount();
+    setUnreadNotificationCount(count);
+  };
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -103,7 +132,9 @@ export default function NavbarActions({
             if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
           }} className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
             <Bell className="h-5 w-5 text-bgs-blue" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-bgs-orange rounded-full"></span>
+            {unreadNotificationCount > 0 && (
+              <span className="absolute top-1 right-1 h-2 w-2 bg-bgs-orange rounded-full"></span>
+            )}
           </button>
           
           <NotificationDropdown isOpen={isNotificationOpen} />

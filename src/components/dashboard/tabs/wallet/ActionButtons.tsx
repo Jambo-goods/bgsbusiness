@@ -1,13 +1,17 @@
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Upload, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { notificationService } from "@/services/NotificationService";
+
 interface ActionButtonsProps {
   onDeposit: () => void;
   onWithdraw: () => void;
   refreshBalance?: () => Promise<void>;
 }
+
 export default function ActionButtons({
   onDeposit,
   onWithdraw,
@@ -45,8 +49,10 @@ export default function ActionButtons({
         increment_amount: depositAmount
       });
       if (walletError) throw walletError;
-      toast.success(`${depositAmount}€ ont été ajoutés à votre portefeuille`);
-
+      
+      // Create notification for deposit success
+      await notificationService.depositSuccess(depositAmount);
+      
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();
       onDeposit();
@@ -55,6 +61,7 @@ export default function ActionButtons({
       toast.error("Une erreur s'est produite lors du dépôt des fonds");
     }
   };
+  
   const handleWithdraw = async () => {
     try {
       const {
@@ -76,6 +83,7 @@ export default function ActionButtons({
       // Vérification que le solde est suffisant
       if (profileData.wallet_balance < withdrawalAmount) {
         toast.error("Vous n'avez pas assez de fonds pour effectuer ce retrait");
+        await notificationService.insufficientFunds();
         return;
       }
 
@@ -98,8 +106,10 @@ export default function ActionButtons({
         increment_amount: -withdrawalAmount
       });
       if (walletError) throw walletError;
-      toast.success(`${withdrawalAmount}€ ont été retirés de votre portefeuille`);
-
+      
+      // Create notification for withdrawal
+      await notificationService.withdrawalValidated(withdrawalAmount);
+      
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();
       onWithdraw();
@@ -108,9 +118,25 @@ export default function ActionButtons({
       toast.error("Une erreur s'est produite lors du retrait des fonds");
     }
   };
-  return <div className="flex flex-wrap gap-4">
+  
+  return (
+    <div className="flex flex-wrap gap-4">
+      <Button 
+        className="flex items-center gap-2 bg-bgs-blue hover:bg-bgs-blue-light" 
+        onClick={handleDeposit}
+      >
+        <Upload className="h-4 w-4" /> 
+        Déposer des fonds
+      </Button>
       
-      
-      
-    </div>;
+      <Button 
+        variant="outline" 
+        className="flex items-center gap-2 border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10" 
+        onClick={handleWithdraw}
+      >
+        <Download className="h-4 w-4" /> 
+        Retirer des fonds
+      </Button>
+    </div>
+  );
 }

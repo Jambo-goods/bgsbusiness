@@ -1,66 +1,42 @@
 
-import { useState } from "react";
-import { Bell, Settings, Trash2, CheckCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Bell, Settings, Trash2, CheckCircle, AlertTriangle, RefreshCw, Wallet, Briefcase, Shield, Megaphone, Info, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-interface Notification {
-  id: string;
-  title: string;
-  description: string;
-  date: Date;
-  read: boolean;
-  type: 'info' | 'success' | 'warning' | 'error';
-}
-
-// Mock notifications for demo purposes
-const mockNotifications: Notification[] = [
-  {
-    id: '1',
-    title: 'Nouvel investissement disponible',
-    description: 'Un nouveau projet d\'investissement est disponible sur la plateforme.',
-    date: new Date(Date.now() - 20 * 60 * 1000), // 20 minutes ago
-    read: false,
-    type: 'info'
-  },
-  {
-    id: '2',
-    title: 'Rendement mis à jour',
-    description: 'Le rendement de votre investissement dans "Projet Immobilier Paris" a été mis à jour.',
-    date: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    read: false,
-    type: 'success'
-  },
-  {
-    id: '3',
-    title: 'Paiement reçu',
-    description: 'Vous avez reçu un paiement de 250€ sur votre portefeuille.',
-    date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    read: true,
-    type: 'success'
-  },
-  {
-    id: '4',
-    title: 'Rappel de versement',
-    description: 'N\'oubliez pas d\'effectuer votre versement mensuel pour le projet "Expansion Commerciale Lyon".',
-    date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
-    read: true,
-    type: 'warning'
-  },
-  {
-    id: '5',
-    title: 'Mise à jour des conditions',
-    description: 'Les conditions générales d\'utilisation ont été mises à jour. Veuillez les consulter.',
-    date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
-    read: true,
-    type: 'info'
-  }
-];
+import { notificationService, Notification, NotificationType } from "@/services/NotificationService";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function NotificationsTab() {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Set up subscription for real-time updates
+    const channel = supabase
+      .channel('notifications_tab_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications'
+      }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchNotifications = async () => {
+    const data = await notificationService.getNotifications(50);
+    setNotifications(data);
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
   
@@ -68,62 +44,80 @@ export default function NotificationsTab() {
     ? notifications 
     : notifications.filter(n => !n.read);
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
+    await notificationService.markAllAsRead();
     setNotifications(prev => 
       prev.map(notification => ({ ...notification, read: true }))
     );
   };
 
-  const handleMarkAsRead = (id: string) => {
+  const handleMarkAsRead = async (id: string) => {
+    await notificationService.markAsRead(id);
     setNotifications(prev => 
       prev.map(notification => 
-        notification.id === id 
-          ? { ...notification, read: true } 
-          : notification
+        notification.id === id ? { ...notification, read: true } : notification
       )
     );
   };
 
-  const handleDeleteNotification = (id: string) => {
-    setNotifications(prev => 
-      prev.filter(notification => notification.id !== id)
-    );
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      setNotifications(prev => 
+        prev.filter(notification => notification.id !== id)
+      );
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Simulate a refresh delay
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1000);
+    await fetchNotifications();
+    setIsRefreshing(false);
   };
 
-  const getNotificationIcon = (type: Notification['type']) => {
+  const getNotificationTypeIcon = (type: NotificationType) => {
     switch (type) {
-      case 'success':
-        return <CheckCircle className="h-5 w-5 text-green-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
-      case 'error':
-        return <AlertTriangle className="h-5 w-5 text-red-500" />;
+      case 'deposit':
+      case 'withdrawal':
+        return <Wallet className="h-5 w-5 text-blue-500" />;
+      case 'investment':
+        return <Briefcase className="h-5 w-5 text-green-500" />;
+      case 'security':
+        return <Shield className="h-5 w-5 text-purple-500" />;
+      case 'marketing':
+        return <Megaphone className="h-5 w-5 text-orange-500" />;
       default:
         return <Bell className="h-5 w-5 text-blue-500" />;
     }
   };
 
-  const formatNotificationDate = (date: Date) => {
-    const now = new Date();
-    const diffMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffMinutes < 60) {
-      return `Il y a ${diffMinutes} minute${diffMinutes > 1 ? 's' : ''}`;
-    } else if (diffHours < 24) {
-      return `Il y a ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
-    } else {
-      return `Il y a ${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+  const getNotificationCategoryIcon = (category?: string) => {
+    switch (category) {
+      case 'success':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'warning':
+        return <AlertTriangle className="h-5 w-5 text-amber-500" />;
+      case 'error':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+      case 'info':
+      default:
+        return <Info className="h-5 w-5 text-blue-500" />;
     }
+  };
+
+  const formatNotificationDate = (date: Date) => {
+    return formatDistanceToNow(date, {
+      addSuffix: true,
+      locale: fr
+    });
   };
 
   return (
@@ -157,7 +151,23 @@ export default function NotificationsTab() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setNotifications([])}
+            onClick={async () => {
+              try {
+                const { data: session } = await supabase.auth.getSession();
+                if (!session.session) return;
+                
+                const { error } = await supabase
+                  .from('notifications')
+                  .delete()
+                  .eq('user_id', session.session.user.id);
+                
+                if (error) throw error;
+                
+                setNotifications([]);
+              } catch (error) {
+                console.error("Error deleting all notifications:", error);
+              }
+            }}
             disabled={notifications.length === 0}
           >
             <Trash2 className="h-4 w-4 mr-2" />
@@ -216,7 +226,7 @@ export default function NotificationsTab() {
           >
             <div className="flex items-start gap-4">
               <div className="mt-1">
-                {getNotificationIcon(notification.type)}
+                {getNotificationTypeIcon(notification.type)}
               </div>
               <div className="flex-1">
                 <div className="flex justify-between">
