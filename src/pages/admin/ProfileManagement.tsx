@@ -46,7 +46,11 @@ export default function ProfileManagement() {
 
   useEffect(() => {
     fetchProfiles();
-    subscribeToPresence();
+    const unsubscribe = subscribeToPresence();
+    
+    return () => {
+      unsubscribe();
+    };
   }, []);
 
   const fetchProfiles = async () => {
@@ -66,7 +70,7 @@ export default function ProfileManagement() {
       console.log('Fetched profiles:', data);
       
       // Combine the profiles with online status
-      const profilesWithStatus = data?.map(profile => ({
+      const profilesWithStatus: Profile[] = data?.map(profile => ({
         ...profile,
         online_status: onlineUsers.has(profile.id) ? 'online' as const : 'offline' as const
       })) || [];
