@@ -1,9 +1,9 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Search } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import UserStatusBadge from '@/components/admin/users/UserStatusBadge';
 import { calculateInactivityTime } from '@/utils/inactivityCalculator';
+import { useProfilesRealTimeSubscription } from '@/hooks/useProfilesRealTimeSubscription';
+import { Badge } from '@/components/ui/badge';
 
 type Profile = {
   id: string;
@@ -29,8 +31,9 @@ export default function Users() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchProfiles = async () => {
+  const fetchProfiles = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     
@@ -58,12 +61,25 @@ export default function Users() {
       });
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  };
+  }, []);
 
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    fetchProfiles();
+  }, [fetchProfiles]);
+
+  // Initial data fetching
   useEffect(() => {
     fetchProfiles();
-  }, []);
+  }, [fetchProfiles]);
+
+  // Set up real-time subscriptions
+  const { realTimeStatus } = useProfilesRealTimeSubscription(
+    profiles,
+    handleRefresh
+  );
 
   // Filter profiles based on search term
   const filteredProfiles = profiles.filter(profile => {
@@ -101,26 +117,55 @@ export default function Users() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          {/* Search and refresh controls */}
+          {/* Search and refresh controls with real-time status */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-              <Input
-                type="text"
-                placeholder="Rechercher un utilisateur..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center w-full">
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Input
+                  type="text"
+                  placeholder="Rechercher un utilisateur..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              <Badge 
+                variant={realTimeStatus === 'connected' ? 'success' : realTimeStatus === 'connecting' ? 'outline' : 'destructive'}
+                className="hidden md:flex"
+              >
+                {realTimeStatus === 'connected' 
+                  ? 'Synchronisation en temps réel active' 
+                  : realTimeStatus === 'connecting' 
+                    ? 'Connexion en cours...' 
+                    : 'Erreur de connexion'}
+              </Badge>
             </div>
             
             <Button 
               variant="outline" 
-              onClick={fetchProfiles}
-              disabled={isLoading}
+              onClick={handleRefresh}
+              disabled={isLoading || isRefreshing}
+              className="flex items-center gap-2"
             >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
               Actualiser
             </Button>
+          </div>
+
+          {/* Mobile real-time status */}
+          <div className="md:hidden mb-4">
+            <Badge 
+              variant={realTimeStatus === 'connected' ? 'success' : realTimeStatus === 'connecting' ? 'outline' : 'destructive'}
+              className="w-full justify-center py-1"
+            >
+              {realTimeStatus === 'connected' 
+                ? 'Synchronisation en temps réel active' 
+                : realTimeStatus === 'connecting' 
+                  ? 'Connexion en cours...' 
+                  : 'Erreur de connexion'}
+            </Badge>
           </div>
 
           {/* Users list */}
