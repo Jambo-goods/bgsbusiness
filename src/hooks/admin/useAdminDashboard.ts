@@ -5,7 +5,8 @@ import { fetchAdminDashboardData } from "./useAdminDataFetching";
 import { useAdminRealTimeSubscriptions } from "./useAdminRealTimeSubscriptions";
 import { toast } from "sonner";
 
-export { AdminStats, AdminLog } from "./types";
+// Use 'export type' instead of 'export' for type re-exports
+export type { AdminStats, AdminLog } from "./types";
 
 export function useAdminDashboard() {
   const [stats, setStats] = useState<AdminStats>({
