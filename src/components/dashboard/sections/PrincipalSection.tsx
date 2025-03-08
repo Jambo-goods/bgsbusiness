@@ -70,7 +70,7 @@ export default function PrincipalSection({
         active={activeTab === "opportunities"}
         expanded={expanded}
         onClick={() => setActiveTab("opportunities")}
-        badge="New"
+        badge={undefined}
       />
     </>
   );

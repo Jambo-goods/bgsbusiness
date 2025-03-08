@@ -8,7 +8,7 @@ interface SidebarNavItemProps {
   active: boolean;
   onClick: () => void;
   expanded: boolean;
-  badge?: number;
+  badge?: string | number | undefined;
 }
 
 export default function SidebarNavItem({
@@ -43,7 +43,7 @@ export default function SidebarNavItem({
         <div className="flex items-center justify-between flex-1 ml-3">
           <span className="text-sm">{label}</span>
           
-          {badge !== undefined && badge > 0 && (
+          {badge !== undefined && (
             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-medium">
               {badge}
             </span>
@@ -51,7 +51,7 @@ export default function SidebarNavItem({
         </div>
       )}
       
-      {!expanded && badge !== undefined && badge > 0 && (
+      {!expanded && badge !== undefined && (
         <span className="absolute -right-1 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-medium">
           {badge}
         </span>
