@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { createProjectInDatabase } from "@/utils/projectUtils";
-import { notificationService } from "@/services/notifications";
 
 export const useInvestment = (project: Project, investorCount: number) => {
   const [investmentAmount, setInvestmentAmount] = useState(project.minInvestment || 500);
@@ -193,16 +191,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
       };
       
       localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
-      
-      // Créer la notification d'investissement confirmé
-      try {
-        console.log("Création de la notification d'investissement confirmé");
-        await notificationService.investmentConfirmed(investmentAmount, project.name, projectId);
-        console.log("Notification d'investissement confirmé créée avec succès");
-      } catch (notifError) {
-        console.error("Erreur lors de la création de la notification d'investissement:", notifError);
-        // Continue execution even if notification creation fails
-      }
       
       toast({
         title: "Investissement réussi !",
