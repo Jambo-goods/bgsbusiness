@@ -1,5 +1,12 @@
 
-import { BarChart, LineChart, Briefcase, CircleDollarSign, Eye, LayoutDashboard, PercentSquare, Users } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Wallet, 
+  TrendingUp, 
+  Briefcase,
+  BarChart3, 
+  Award
+} from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
 interface PrincipalSectionProps {
@@ -8,70 +15,56 @@ interface PrincipalSectionProps {
   expanded: boolean;
 }
 
-export default function PrincipalSection({ 
-  activeTab, 
-  setActiveTab, 
-  expanded 
+export default function PrincipalSection({
+  activeTab,
+  setActiveTab,
+  expanded
 }: PrincipalSectionProps) {
   return (
-    <>
+    <div className="space-y-1 px-2">
       <SidebarNavItem
-        icon={<LayoutDashboard size={18} />}
-        label="Vue générale"
+        icon={<LayoutDashboard className="h-5 w-5" />}
+        label="Vue d'ensemble"
         active={activeTab === "overview"}
-        expanded={expanded}
         onClick={() => setActiveTab("overview")}
+        expanded={expanded}
       />
       <SidebarNavItem
-        icon={<CircleDollarSign size={18} />}
-        label="Mon portefeuille"
+        icon={<Wallet className="h-5 w-5" />}
+        label="Portefeuille"
         active={activeTab === "wallet"}
-        expanded={expanded}
         onClick={() => setActiveTab("wallet")}
-      />
-      <SidebarNavItem
-        icon={<PercentSquare size={18} />}
-        label="Rendements"
-        active={activeTab === "yield"}
         expanded={expanded}
-        onClick={() => setActiveTab("yield")}
       />
       <SidebarNavItem
-        icon={<Briefcase size={18} />}
+        icon={<TrendingUp className="h-5 w-5" />}
+        label="Rendement"
+        active={activeTab === "yield"}
+        onClick={() => setActiveTab("yield")}
+        expanded={expanded}
+      />
+      <SidebarNavItem
+        icon={<Briefcase className="h-5 w-5" />}
         label="Mes investissements"
         active={activeTab === "investments"}
-        expanded={expanded}
         onClick={() => setActiveTab("investments")}
-      />
-      <SidebarNavItem
-        icon={<Users size={18} />}
-        label="Utilisateurs"
-        active={activeTab === "users"}
         expanded={expanded}
-        onClick={() => setActiveTab("users")}
       />
       <SidebarNavItem
-        icon={<LineChart size={18} />}
-        label="Suivi des retours"
-        active={activeTab === "tracking"}
-        expanded={expanded}
-        onClick={() => setActiveTab("tracking")}
-      />
-      <SidebarNavItem
-        icon={<Eye size={18} />}
-        label="Projets disponibles"
-        active={activeTab === "projects"}
-        expanded={expanded}
-        onClick={() => setActiveTab("projects")}
-      />
-      <SidebarNavItem
-        icon={<BarChart size={18} />}
+        icon={<Award className="h-5 w-5" />}
         label="Opportunités"
         active={activeTab === "opportunities"}
-        expanded={expanded}
         onClick={() => setActiveTab("opportunities")}
-        badge="New"
+        expanded={expanded}
+        badge={3}
       />
-    </>
+      <SidebarNavItem
+        icon={<BarChart3 className="h-5 w-5" />}
+        label="Suivi"
+        active={activeTab === "tracking"}
+        onClick={() => setActiveTab("tracking")}
+        expanded={expanded}
+      />
+    </div>
   );
 }
