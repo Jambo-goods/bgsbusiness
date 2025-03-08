@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { RefreshCcw, WifiOff, Wifi } from 'lucide-react';
+import { useOfflineUsersCount } from '@/hooks/admin/useOfflineUsersCount';
 
 export interface StatusIndicatorProps {
   systemStatus?: 'operational' | 'degraded' | 'maintenance';
@@ -15,6 +16,8 @@ export default function StatusIndicator({
   isRefreshing,
   onRefresh 
 }: StatusIndicatorProps) {
+  const { totalUsers, offlineUsers, isLoading } = useOfflineUsersCount();
+  
   // Get the appropriate status color based on system status
   const getSystemStatusColor = () => {
     switch (systemStatus) {
@@ -54,6 +57,15 @@ export default function StatusIndicator({
            systemStatus === 'maintenance' ? 'Maintenance en cours' : 'État inconnu'}
         </span>
       </div>
+      
+      {/* User Status Summary - New addition */}
+      {!isLoading && (
+        <div className="flex items-center border-l border-gray-200 pl-4 ml-2">
+          <span className="text-sm text-gray-700">
+            {offlineUsers} / {totalUsers} déconnectés
+          </span>
+        </div>
+      )}
       
       {/* Real-time Status Indicator - Only show if realTimeStatus is provided */}
       {realTimeStatus && (

@@ -8,16 +8,19 @@ type StatsProps = {
     totalInvestments: number;
     totalProjects: number;
     pendingWithdrawals: number;
-    ongoingProjects?: number; // Added for ongoing projects
+    ongoingProjects?: number;
   };
   isLoading: boolean;
 };
 
 export default function DashboardStats({ stats, isLoading }: StatsProps) {
-  // Use our new hook to get accurate offline users count
-  const { offlineUsers } = useOfflineUsersCount();
+  // Use our hook to get accurate offline users count
+  const { offlineUsers, totalUsers, isLoading: isLoadingUsers } = useOfflineUsersCount();
   
-  if (isLoading) {
+  // Show total users from our direct database query instead of the stats
+  const displayedUserCount = !isLoadingUsers ? totalUsers : stats.userCount;
+  
+  if (isLoading || isLoadingUsers) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {[...Array(5)].map((_, i) => (
@@ -39,7 +42,7 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
           </div>
           <h3 className="text-lg text-gray-700">Utilisateurs</h3>
         </div>
-        <p className="text-3xl font-bold text-bgs-blue">{stats.userCount}</p>
+        <p className="text-3xl font-bold text-bgs-blue">{displayedUserCount}</p>
         <p className="text-sm text-gray-500 mt-1">Comptes totaux</p>
       </div>
       
@@ -51,7 +54,9 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
           <h3 className="text-lg text-gray-700">Déconnectés</h3>
         </div>
         <p className="text-3xl font-bold text-red-600">{offlineUsers}</p>
-        <p className="text-sm text-gray-500 mt-1">Utilisateurs hors ligne</p>
+        <p className="text-sm text-gray-500 mt-1">
+          {offlineUsers === 1 ? 'Utilisateur hors ligne' : 'Utilisateurs hors ligne'}
+        </p>
       </div>
       
       <div className="bg-white p-6 rounded-lg shadow-sm">
