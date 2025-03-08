@@ -27,7 +27,7 @@ export default function DesktopNav({
   const renderNavLinks = () => (
     <>
       {!isOnDashboard && (
-        <div className="nav-items-container space-x-8">
+        <div className="nav-items-container flex items-center space-x-8">
           <Link
             to="/"
             className={cn("nav-link", isActive("/") && "active")}
@@ -52,26 +52,26 @@ export default function DesktopNav({
           >
             À propos
           </Link>
+          
+          {/* Toujours afficher le bouton de tableau de bord quand l'utilisateur est connecté */}
+          {isLoggedIn && (
+            <Button 
+              variant="default"
+              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+              onClick={handleDashboardClick}
+            >
+              Tableau de bord
+            </Button>
+          )}
         </div>
       )}
     </>
   );
 
   return (
-    <nav className="hidden md:flex space-x-8 items-center">
+    <nav className="hidden md:flex items-center">
       {/* Always render navigation links */}
       {renderNavLinks()}
-      
-      {/* Show dashboard button when user is logged in and not on dashboard */}
-      {isLoggedIn && !isOnDashboard && (
-        <Button 
-          variant="default"
-          className="bg-bgs-blue hover:bg-bgs-blue/90 text-white ml-auto"
-          onClick={handleDashboardClick}
-        >
-          Tableau de bord
-        </Button>
-      )}
     </nav>
   );
 }

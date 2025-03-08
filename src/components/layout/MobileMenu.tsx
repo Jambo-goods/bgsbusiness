@@ -28,22 +28,19 @@ export default function MobileMenu({
     <div className="nav-items-container flex flex-col space-y-4">
       {/* Hide the home link when on dashboard */}
       {!isOnDashboard && (
-        <Link
-          to="/"
-          className={cn(
-            "py-2 px-4 rounded-md transition-colors",
-            isActive("/") 
-              ? "bg-bgs-gray-light text-bgs-blue font-medium" 
-              : "text-bgs-blue/80 hover:bg-bgs-gray-light"
-          )}
-        >
-          Accueil
-        </Link>
-      )}
-      
-      {/* Show these links when user is NOT on dashboard */}
-      {!isOnDashboard && (
         <>
+          <Link
+            to="/"
+            className={cn(
+              "py-2 px-4 rounded-md transition-colors",
+              isActive("/") 
+                ? "bg-bgs-gray-light text-bgs-blue font-medium" 
+                : "text-bgs-blue/80 hover:bg-bgs-gray-light"
+            )}
+          >
+            Accueil
+          </Link>
+          
           <Link
             to="/projects"
             className={cn(
@@ -55,6 +52,7 @@ export default function MobileMenu({
           >
             Projets
           </Link>
+          
           <Link
             to="/how-it-works"
             className={cn(
@@ -66,6 +64,7 @@ export default function MobileMenu({
           >
             Comment ça marche
           </Link>
+          
           <Link
             to="/about"
             className={cn(
@@ -77,6 +76,17 @@ export default function MobileMenu({
           >
             À propos
           </Link>
+          
+          {/* Toujours afficher le bouton de tableau de bord quand l'utilisateur est connecté */}
+          {isLoggedIn && (
+            <Button
+              variant="default"
+              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white mt-2"
+              onClick={() => navigate("/dashboard")}
+            >
+              Tableau de bord
+            </Button>
+          )}
         </>
       )}
     </div>
@@ -87,17 +97,6 @@ export default function MobileMenu({
       <div className="container mx-auto px-4 py-6 flex flex-col space-y-4">
         {/* Always render navigation links */}
         {renderNavLinks()}
-        
-        {/* Show dashboard button only when logged in and not on dashboard */}
-        {isLoggedIn && !isOnDashboard && (
-          <Button
-            variant="default"
-            className="bg-bgs-blue hover:bg-bgs-blue/90 text-white w-full mt-2"
-            onClick={() => navigate("/dashboard")}
-          >
-            Tableau de bord
-          </Button>
-        )}
       </div>
     </div>
   );
