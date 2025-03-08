@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Plus, Trash, RefreshCw, Pencil } from "lucide-react";
+import { Bell, Plus, Trash, RefreshCw, Pencil, Users } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 
@@ -58,6 +59,7 @@ export default function NotificationManagement() {
   const [customCategory, setCustomCategory] = useState("");
   const [userId, setUserId] = useState("");
   const [users, setUsers] = useState<{id: string, email: string, name: string}[]>([]);
+  const [isBroadcast, setIsBroadcast] = useState(false);
   
   const notificationTypes: NotificationType[] = [
     "deposit", "withdrawal", "investment", "security", "marketing"
@@ -122,8 +124,66 @@ export default function NotificationManagement() {
     }
   };
   
+  const createNotificationForAllUsers = async () => {
+    try {
+      if (!title || !description) {
+        toast.error("Veuillez remplir tous les champs obligatoires");
+        return;
+      }
+      
+      // Determine which type and category to use
+      const finalType = useCustomType ? customType : type;
+      const finalCategory = useCustomCategory ? customCategory : category;
+      
+      if (!finalType || !finalCategory) {
+        toast.error("Veuillez spécifier un type et une catégorie valides");
+        return;
+      }
+      
+      if (users.length === 0) {
+        toast.error("Aucun utilisateur trouvé pour envoyer la notification");
+        return;
+      }
+      
+      // Create a notification for each user
+      const notifications = users.map(user => ({
+        user_id: user.id,
+        title,
+        description,
+        type: finalType,
+        category: finalCategory,
+        read: false,
+      }));
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert(notifications);
+      
+      if (error) throw error;
+      
+      toast.success(`Notification créée pour ${users.length} utilisateurs`);
+      setOpenCreateDialog(false);
+      resetForm();
+      fetchNotifications();
+      
+      // Log admin action
+      await supabase.from('admin_logs').insert({
+        action_type: "user_management",
+        description: `Notification créée pour tous les utilisateurs: ${title}`,
+      });
+      
+    } catch (error) {
+      console.error("Error creating notification for all users:", error);
+      toast.error("Erreur lors de la création des notifications");
+    }
+  };
+  
   const createNotification = async () => {
     try {
+      if (isBroadcast) {
+        return createNotificationForAllUsers();
+      }
+      
       if (!title || !description || !userId) {
         toast.error("Veuillez remplir tous les champs obligatoires");
         return;
@@ -282,6 +342,7 @@ export default function NotificationManagement() {
     setCustomCategory("");
     setUseCustomCategory(false);
     setUserId("");
+    setIsBroadcast(false);
     setEditingNotification(null);
   };
   
@@ -344,19 +405,43 @@ export default function NotificationManagement() {
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="user">Destinataire</Label>
-                  <Select value={userId} onValueChange={setUserId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionner un utilisateur" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map(user => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2 mb-2">
+                    <input 
+                      type="checkbox" 
+                      id="isBroadcast" 
+                      checked={isBroadcast} 
+                      onChange={(e) => setIsBroadcast(e.target.checked)}
+                      className="h-4 w-4"
+                    />
+                    <Label htmlFor="isBroadcast" className="font-semibold cursor-pointer">
+                      Envoyer à tous les utilisateurs
+                    </Label>
+                  </div>
+                
+                  {!isBroadcast && (
+                    <>
+                      <Label htmlFor="user">Destinataire</Label>
+                      <Select value={userId} onValueChange={setUserId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Sélectionner un utilisateur" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users.map(user => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  )}
+                  
+                  {isBroadcast && (
+                    <div className="flex items-center text-sm text-blue-600 gap-1 mb-2">
+                      <Users size={16} />
+                      <span>Cette notification sera envoyée à tous les utilisateurs ({users.length})</span>
+                    </div>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="title">Titre</Label>
