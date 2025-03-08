@@ -6,10 +6,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProjectsList from "../projects/ProjectsList";
 import { projects } from "@/data/projects";
 
+// Prefetch critical paths
+const preloadWalletTab = () => import("./tabs/WalletTab");
+const preloadInvestments = () => import("./Investments");
+
 // Lazy load tabs that aren't used as frequently
-const WalletTab = lazy(() => import("./tabs/WalletTab"));
+const WalletTab = lazy(() => {
+  // Trigger preload on import
+  return preloadWalletTab();
+});
 const YieldTab = lazy(() => import("./tabs/YieldTab"));
-const Investments = lazy(() => import("./Investments"));
+const Investments = lazy(() => {
+  // Trigger preload on import
+  return preloadInvestments();
+});
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
 const InvestmentTrackingTab = lazy(() => import("./tabs/InvestmentTrackingTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
@@ -23,14 +33,22 @@ interface TabContentProps {
   refreshData?: () => Promise<void>;
 }
 
-// Loading fallback component
+// Optimized loading fallback component
 const TabLoading = () => (
-  <div className="w-full space-y-4 p-4">
-    <Skeleton className="h-12 w-full" />
-    <Skeleton className="h-32 w-full" />
-    <Skeleton className="h-12 w-3/4" />
+  <div className="w-full space-y-3 p-3">
+    <Skeleton className="h-8 w-full" />
+    <Skeleton className="h-24 w-full" />
+    <Skeleton className="h-8 w-3/4" />
   </div>
 );
+
+// Prefetch critical paths on page load
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    preloadWalletTab();
+    preloadInvestments();
+  }, 2000); // Delay to prioritize initial render
+}
 
 export default function TabContent({
   activeTab,

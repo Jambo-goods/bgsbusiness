@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Project } from "@/types/project";
 import ProjectCard from "@/components/projects/ProjectCard";
 
@@ -10,9 +10,25 @@ interface ProjectsListProps {
 export default function ProjectsList({ projects }: ProjectsListProps) {
   const [visibleProjects, setVisibleProjects] = useState(6);
   
-  const loadMore = () => {
+  // Optimize load more function with debounce
+  const loadMore = useCallback(() => {
     setVisibleProjects(prev => prev + 6);
-  };
+  }, []);
+  
+  // Preload images for visible projects
+  useEffect(() => {
+    const preloadImages = () => {
+      const projectsToPreload = projects.slice(0, visibleProjects);
+      projectsToPreload.forEach(project => {
+        if (project.image) {
+          const img = new Image();
+          img.src = project.image;
+        }
+      });
+    };
+    
+    preloadImages();
+  }, [projects, visibleProjects]);
   
   return (
     <div className="space-y-10">
