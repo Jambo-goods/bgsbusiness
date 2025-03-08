@@ -5,7 +5,16 @@ import { WithdrawalNotificationService } from "./WithdrawalNotificationService";
 import { InvestmentNotificationService } from "./InvestmentNotificationService";
 import { SecurityNotificationService } from "./SecurityNotificationService";
 import { MarketingNotificationService } from "./MarketingNotificationService";
-import { Notification, NotificationCategory, NotificationType, NotificationCategories } from "./types";
+import { NotificationCategories } from "./types";
+
+// Re-export types
+export type { 
+  Notification, 
+  NotificationCategory, 
+  NotificationType 
+} from "./types";
+
+export { NotificationCategories };
 
 // Create a composite notification service that combines all specialized services
 class NotificationService extends BaseNotificationService {
@@ -96,11 +105,3 @@ class NotificationService extends BaseNotificationService {
 
 // Export the singleton instance
 export const notificationService = new NotificationService();
-
-// Re-export types
-export { 
-  Notification, 
-  NotificationCategory, 
-  NotificationType, 
-  NotificationCategories 
-};
