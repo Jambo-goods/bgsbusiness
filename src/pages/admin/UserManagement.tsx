@@ -34,6 +34,7 @@ export default function UserManagement() {
       
       console.log("Fetching users with sort:", sortField, sortDirection);
       
+      // Modifié pour retirer toute limite et vérifier que tous les utilisateurs sont récupérés
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -45,6 +46,8 @@ export default function UserManagement() {
         throw error;
       }
       
+      // Ajout de journalisation détaillée pour diagnostiquer le problème
+      console.log("Nombre d'utilisateurs récupérés:", data?.length);
       console.log("Utilisateurs récupérés:", data);
       
       if (data) {
@@ -82,9 +85,13 @@ export default function UserManagement() {
           description: "Les données utilisateurs ont été mises à jour."
         });
       })
-      .subscribe();
+      .subscribe((status) => {
+        // Ajout de journalisation pour vérifier l'état de l'abonnement
+        console.log("Admin profiles subscription status:", status);
+      });
     
     return () => {
+      console.log("Cleaning up admin dashboard real-time subscriptions");
       supabase.removeChannel(profilesChannel);
     };
   }, []);
@@ -169,6 +176,13 @@ export default function UserManagement() {
         onClose={() => setShowAddFundsModal(false)}
         onSuccess={fetchUsers}
       />
+
+      {/* Affichage de debug pour voir les données brutes */}
+      <div className="mt-10 p-4 border border-gray-200 rounded-md bg-gray-50">
+        <h3 className="text-sm font-medium mb-2">Informations de débogage :</h3>
+        <p className="text-xs">Nombre d'utilisateurs chargés : {users.length}</p>
+        <p className="text-xs">Nombre d'utilisateurs filtrés : {filteredUsers.length}</p>
+      </div>
     </div>
   );
 }
