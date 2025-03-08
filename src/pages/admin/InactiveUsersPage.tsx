@@ -29,7 +29,7 @@ export default function InactiveUsersPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [totalInactiveProfiles, setTotalInactiveProfiles] = useState(0);
+  const [totalProfiles, setTotalProfiles] = useState(0);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function InactiveUsersPage() {
         
         setOnlineUsers(onlineUserIds);
         
-        // Update profiles with the new online status but don't filter out online users
+        // Update profiles with the new online status
         setProfiles(prevProfiles => 
           prevProfiles.map(profile => ({
             ...profile,
@@ -83,7 +83,7 @@ export default function InactiveUsersPage() {
     try {
       setIsLoading(true);
       
-      // Get all profiles
+      // Get all profiles - do not filter by online status
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -93,17 +93,14 @@ export default function InactiveUsersPage() {
         throw error;
       }
 
-      console.log('Fetched profiles:', data);
-      
-      // Add online_status property but don't filter out online users
-      const profilesWithStatus: Profile[] = data
-        ?.map(profile => ({
-          ...profile,
-          online_status: onlineUsers.has(profile.id) ? 'online' as const : 'offline' as const
-        })) || [];
+      // Add online_status property to all profiles
+      const profilesWithStatus: Profile[] = data?.map(profile => ({
+        ...profile,
+        online_status: onlineUsers.has(profile.id) ? 'online' as const : 'offline' as const
+      })) || [];
       
       setProfiles(profilesWithStatus);
-      setTotalInactiveProfiles(profilesWithStatus.length);
+      setTotalProfiles(profilesWithStatus.length);
       toast.success('Utilisateurs chargés avec succès');
     } catch (error) {
       console.error('Error fetching profiles:', error);
@@ -150,7 +147,7 @@ export default function InactiveUsersPage() {
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold">Utilisateurs</h1>
           <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-sm">
-            {totalInactiveProfiles} utilisateurs
+            {totalProfiles} utilisateurs
           </span>
         </div>
       </div>
@@ -195,7 +192,7 @@ export default function InactiveUsersPage() {
               {filteredProfiles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                    {searchTerm ? "Aucun utilisateur trouvé pour cette recherche" : "Aucun utilisateur trouvé"}
+                    {searchTerm ? "Aucun utilisateur trouvé pour cette recherche" : "Aucun utilisateur dans la base de données"}
                   </TableCell>
                 </TableRow>
               ) : (
