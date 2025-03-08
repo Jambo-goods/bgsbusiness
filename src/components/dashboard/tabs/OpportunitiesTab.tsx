@@ -1,49 +1,13 @@
 
-import React, { useState, useEffect } from "react";
-import { Award, Search } from "lucide-react";
+import React, { useState } from "react";
+import { Award, Search, Filter } from "lucide-react";
 import ProjectsList from "@/components/projects/ProjectsList";
 import { projects } from "@/data/projects";
 import { Input } from "@/components/ui/input";
-import { notificationService } from "@/services/notifications";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 
 export default function OpportunitiesTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredProjects, setFilteredProjects] = useState(projects);
-
-  useEffect(() => {
-    // Démonstration: créer une notification quand l'utilisateur accède à l'onglet des opportunités
-    const demoNotification = async () => {
-      try {
-        const { data: session } = await supabase.auth.getSession();
-        
-        if (session.session) {
-          // Ne créez cette notification que si l'utilisateur est connecté
-          const featuredProject = projects.find(p => p.featured);
-          
-          if (featuredProject) {
-            await notificationService.newOpportunityAlert(
-              featuredProject.name,
-              featuredProject.id,
-              `${featuredProject.yield}%`
-            );
-            
-            toast.info("Nouvelle opportunité", {
-              description: `Découvrez notre projet ${featuredProject.name}!`
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Erreur lors de la création de la notification:", error);
-      }
-    };
-    
-    // Appeler la fonction pour la démonstration
-    // Note: En production, vous voudriez probablement supprimer cette partie
-    // et déclencher les notifications uniquement lorsque de nouvelles opportunités sont ajoutées
-    demoNotification();
-  }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value.toLowerCase();

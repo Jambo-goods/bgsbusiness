@@ -51,14 +51,4 @@ export class InvestmentNotificationService extends BaseNotificationService {
       metadata: { projectName, projectId }
     });
   }
-  
-  newOpportunityAlert(projectName: string, projectId: string, expectedYield: string): Promise<void> {
-    return this.createNotification({
-      title: "Nouvelle opportunité à saisir !",
-      description: `Découvrez notre nouveau projet d'investissement ${projectName} avec un rendement attendu de ${expectedYield}. Ne manquez pas cette opportunité !`,
-      type: 'investment',
-      category: 'info',
-      metadata: { projectName, projectId, expectedYield }
-    });
-  }
 }
