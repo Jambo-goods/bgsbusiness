@@ -47,6 +47,10 @@ export default function AdminDashboard() {
 
   return (
     <div className="p-6">
+      <Helmet>
+        <title>Tableau de bord administrateur | BGS Business Club</title>
+      </Helmet>
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-2xl font-semibold text-bgs-blue mb-4 md:mb-0">
           Tableau de bord d'administration
