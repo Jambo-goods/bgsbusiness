@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logoutAdmin } from '@/services/adminAuthService';
 import { 
-  Users, Database, Wallet, ArrowLeftRight, 
+  Database, Wallet, ArrowLeftRight, 
   LayoutDashboard, LogOut, Menu, X, Bell
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -31,11 +30,6 @@ export default function AdminLayout() {
       label: 'Tableau de bord', 
       icon: <LayoutDashboard className="w-5 h-5" />, 
       path: '/admin/dashboard' 
-    },
-    { 
-      label: 'Utilisateurs', 
-      icon: <Users className="w-5 h-5" />, 
-      path: '/admin/users' 
     },
     { 
       label: 'Projets', 
