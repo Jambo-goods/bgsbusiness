@@ -52,6 +52,7 @@ export default function ActionButtons({
       
       // Create notification for deposit success
       await notificationService.depositSuccess(depositAmount);
+      console.log("Notification de dépôt créée:", depositAmount);
       
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();
@@ -109,6 +110,7 @@ export default function ActionButtons({
       
       // Create notification for withdrawal
       await notificationService.withdrawalValidated(withdrawalAmount);
+      console.log("Notification de retrait créée:", withdrawalAmount);
       
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();
