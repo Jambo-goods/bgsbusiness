@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext } from 'react';
-import { useAdminUsers } from '@/hooks/admin/useAdminUsers';
+import { useAdminUsers as useAdminUsersData } from '@/hooks/admin/useAdminUsers';
 import { addFundsToUser, withdrawFundsFromUser } from '@/utils/admin/walletOperations';
 import { Profile } from '@/types/profile';
 
@@ -29,7 +29,7 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     filteredProfiles,
     refreshProfiles,
     totalWalletBalance
-  } = useAdminUsers();
+  } = useAdminUsersData();
 
   // Wrapper functions to maintain API compatibility
   const handleAddFundsToUser = async (userId: string, amount: number) => {
