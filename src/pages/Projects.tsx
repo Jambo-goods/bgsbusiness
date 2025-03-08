@@ -10,7 +10,7 @@ import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { useToast } from "@/hooks/use-toast";
 
-export default function Projects() {
+export default function Opportunite() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [projects, setProjects] = useState<Project[]>(localProjects);
   const [isLoading, setIsLoading] = useState(true);

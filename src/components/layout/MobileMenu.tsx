@@ -50,7 +50,7 @@ export default function MobileMenu({
                 : "text-bgs-blue/80 hover:bg-bgs-gray-light"
             )}
           >
-            Projets
+            Opportunité
           </Link>
           
           <Link

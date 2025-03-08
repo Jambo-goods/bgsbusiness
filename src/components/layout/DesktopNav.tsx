@@ -38,7 +38,7 @@ export default function DesktopNav({
             to="/projects"
             className={cn("nav-link", isActive("/projects") && "active")}
           >
-            Projets
+            Opportunité
           </Link>
           <Link
             to="/how-it-works"
