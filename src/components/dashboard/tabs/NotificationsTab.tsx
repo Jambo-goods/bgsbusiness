@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Bell, Settings, Trash2, CheckCircle, AlertTriangle, RefreshCw, Wallet, Briefcase, Shield, Megaphone, Info, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { notificationService, Notification, NotificationType } from "@/services/NotificationService";
+import { notificationService, Notification, NotificationType } from "@/services/notifications";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";

@@ -13,7 +13,7 @@ import {
   Info, 
   XCircle
 } from "lucide-react";
-import { notificationService, Notification, NotificationType } from "@/services/NotificationService";
+import { notificationService, Notification, NotificationType } from "@/services/notifications";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";

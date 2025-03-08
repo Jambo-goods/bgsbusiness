@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { notificationService } from "@/services/NotificationService";
+import { notificationService } from "@/services/notifications";
 
 interface WithdrawFundsFormProps {
   balance: number;
@@ -23,7 +22,6 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow only numbers
     const value = e.target.value.replace(/[^0-9]/g, "");
     setAmount(value);
   };
@@ -57,7 +55,6 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
         return;
       }
       
-      // Create withdrawal request
       const { error } = await supabase
         .from('withdrawal_requests')
         .insert({
@@ -73,7 +70,6 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
         
       if (error) throw error;
       
-      // Create notification
       await notificationService.withdrawalValidated(parseInt(amount));
       
       toast.success("Demande de retrait soumise avec succès");
@@ -82,7 +78,6 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
       setBic("");
       setAccountHolder("");
       
-      // Refresh balance
       await onWithdraw();
       
     } catch (error) {
