@@ -24,6 +24,7 @@ export default function UserManagement() {
   
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string>('initializing');
 
   // Fetch all users from Supabase
   const fetchUsers = async () => {
@@ -34,7 +35,9 @@ export default function UserManagement() {
       
       console.log("Fetching users with sort:", sortField, sortDirection);
       
-      // Modifié pour retirer toute limite et vérifier que tous les utilisateurs sont récupérés
+      // Explicitly log the SQL query we're about to execute
+      console.log(`SELECT * FROM profiles ORDER BY ${sortField} ${sortDirection.toUpperCase()}`);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -46,13 +49,22 @@ export default function UserManagement() {
         throw error;
       }
       
-      // Ajout de journalisation détaillée pour diagnostiquer le problème
+      // Detailed logging for troubleshooting
       console.log("Nombre d'utilisateurs récupérés:", data?.length);
       console.log("Utilisateurs récupérés:", data);
       
       if (data) {
-        setUsers(data);
+        // Add additional validation to ensure data is an array
+        if (Array.isArray(data)) {
+          setUsers(data);
+          console.log("Données utilisateurs définies avec succès:", data.length, "utilisateurs");
+        } else {
+          console.error("Les données reçues ne sont pas un tableau:", data);
+          setUsers([]);
+          setError("Format de données inattendu");
+        }
       } else {
+        console.log("Aucune donnée reçue");
         setUsers([]);
       }
     } catch (error) {
@@ -69,6 +81,7 @@ export default function UserManagement() {
 
   // Initial fetch and setup real-time subscription
   useEffect(() => {
+    console.log("Initializing user management page");
     fetchUsers();
     
     // Set up real-time subscription for profiles table
@@ -86,8 +99,17 @@ export default function UserManagement() {
         });
       })
       .subscribe((status) => {
-        // Ajout de journalisation pour vérifier l'état de l'abonnement
         console.log("Admin profiles subscription status:", status);
+        setSubscriptionStatus(status);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log("Successfully subscribed to profiles table");
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error("Error subscribing to profiles table");
+          toast.error("Erreur d'abonnement", {
+            description: "Impossible de surveiller les changements en temps réel"
+          });
+        }
       });
     
     return () => {
@@ -99,6 +121,7 @@ export default function UserManagement() {
   // Re-fetch when sort criteria changes
   useEffect(() => {
     if (!isLoading) {
+      console.log("Sort criteria changed, refetching users");
       fetchUsers();
     }
   }, [sortField, sortDirection]);
@@ -106,8 +129,11 @@ export default function UserManagement() {
   // Handle sorting
   const handleSort = (field: string) => {
     if (field === sortField) {
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+      const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+      console.log(`Changing sort direction to ${newDirection} for field ${field}`);
+      setSortDirection(newDirection);
     } else {
+      console.log(`Changing sort field from ${sortField} to ${field}`);
       setSortField(field);
       setSortDirection('desc');
     }
@@ -117,6 +143,12 @@ export default function UserManagement() {
   const handleOpenAddFundsModal = (user: any) => {
     setSelectedUser(user);
     setShowAddFundsModal(true);
+  };
+
+  // Force refresh users
+  const handleForceRefresh = () => {
+    console.log("Force refreshing user data");
+    fetchUsers();
   };
 
   // Filter users based on search term
@@ -156,6 +188,9 @@ export default function UserManagement() {
         ) : filteredUsers.length === 0 ? (
           <div className="text-center py-10 text-gray-500">
             Aucun compte utilisateur trouvé.
+            <Button variant="link" onClick={handleForceRefresh} className="ml-2">
+              Actualiser manuellement
+            </Button>
           </div>
         ) : (
           <UserTable 
@@ -177,11 +212,23 @@ export default function UserManagement() {
         onSuccess={fetchUsers}
       />
 
-      {/* Affichage de debug pour voir les données brutes */}
+      {/* Debug information panel */}
       <div className="mt-10 p-4 border border-gray-200 rounded-md bg-gray-50">
         <h3 className="text-sm font-medium mb-2">Informations de débogage :</h3>
         <p className="text-xs">Nombre d'utilisateurs chargés : {users.length}</p>
         <p className="text-xs">Nombre d'utilisateurs filtrés : {filteredUsers.length}</p>
+        <p className="text-xs">Statut d'abonnement : {subscriptionStatus}</p>
+        <p className="text-xs">Critère de tri : {sortField} ({sortDirection})</p>
+        <div className="mt-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleForceRefresh}
+            className="text-xs"
+          >
+            Forcer l'actualisation
+          </Button>
+        </div>
       </div>
     </div>
   );
