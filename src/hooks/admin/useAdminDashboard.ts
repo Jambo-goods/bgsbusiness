@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -42,12 +41,23 @@ export function useAdminDashboard() {
       setIsRefreshing(true);
       console.log("Fetching admin dashboard data...");
       
-      // Get user count
+      // Get user count - Ensure we're getting all profiles with no filters
       const { count: userCount, error: userError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
       
       if (userError) throw userError;
+      
+      console.log("User count from database:", userCount);
+      
+      // Log all profiles to verify data
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
+      
+      if (profilesError) throw profilesError;
+      
+      console.log("All profiles from database:", profilesData);
       
       // Get total investments
       const { data: investmentsData, error: investmentsError } = await supabase
@@ -110,7 +120,8 @@ export function useAdminDashboard() {
         totalProjects,
         pendingWithdrawals,
         ongoingProjects,
-        logs: logsData?.length || 0
+        logs: logsData?.length || 0,
+        profiles: profilesData?.length || 0
       });
       
       setRealTimeStatus('connected');

@@ -11,9 +11,10 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, UserPlus } from 'lucide-react';
+import { Search, UserPlus, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 export default function UserRegistrations() {
   const [registrations, setRegistrations] = useState([]);
@@ -59,8 +60,15 @@ export default function UserRegistrations() {
 
       console.log('Fetched registrations:', data);
       setRegistrations(data || []);
+      
+      if (data?.length === 0) {
+        toast.info("Aucun utilisateur trouvé dans la base de données");
+      } else {
+        toast.success(`${data?.length || 0} utilisateurs trouvés`);
+      }
     } catch (error) {
       console.error('Error fetching registrations:', error);
+      toast.error("Erreur lors du chargement des inscriptions");
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +88,7 @@ export default function UserRegistrations() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Inscriptions Utilisateurs</h1>
+        <h1 className="text-2xl font-bold">Inscriptions Utilisateurs ({registrations.length})</h1>
         <div className="flex items-center">
           <div className={`flex items-center mr-4 ${isRealtimeConnected ? 'text-green-500' : 'text-gray-400'}`}>
             <span className={`w-2 h-2 mr-1 rounded-full ${isRealtimeConnected ? 'bg-green-500' : 'bg-gray-400'}`}></span>
@@ -91,7 +99,9 @@ export default function UserRegistrations() {
             size="sm"
             onClick={fetchRegistrations}
             className="ml-2"
+            disabled={isLoading}
           >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
             Rafraîchir
           </Button>
         </div>
