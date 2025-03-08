@@ -170,6 +170,7 @@ export default function UserManagement() {
         onCreateUser={() => setIsCreateUserModalOpen(true)}
         onRefresh={handleRefresh}
         isRefreshing={isRefreshing}
+        userCount={filteredUsers.length}
       />
       
       <RealtimeStatus status={realTimeStatus} />

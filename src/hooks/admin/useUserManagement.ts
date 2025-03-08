@@ -67,6 +67,7 @@ export function useUserManagement() {
       
       console.log("Fetching users with sort field:", sortField, "direction:", sortDirection);
       
+      // Modifié pour récupérer TOUS les utilisateurs sans limite
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -88,6 +89,8 @@ export function useUserManagement() {
           toast.info("Base de données vide", {
             description: "Aucun utilisateur trouvé dans la base de données. Vous pouvez créer un utilisateur test."
           });
+        } else {
+          console.log(`Nombre d'utilisateurs trouvés: ${data.length}`);
         }
       } else {
         setUsers([]);
@@ -114,6 +117,8 @@ export function useUserManagement() {
   };
 
   const filteredUsers = users.filter(user => {
+    if (!searchTerm.trim()) return true; // Si la recherche est vide, retourne tous les utilisateurs
+    
     const searchLower = searchTerm.toLowerCase();
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
     const email = (user.email || '').toLowerCase();

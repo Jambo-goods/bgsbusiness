@@ -26,6 +26,7 @@ export default function UsersTable({
   onSort, 
   onAddFunds 
 }: UsersTableProps) {
+  // Si aucun utilisateur n'est trouvé après le filtrage
   if (users.length === 0) {
     return (
       <div className="text-center p-8 text-gray-500">

@@ -10,6 +10,7 @@ interface UserSearchBarProps {
   onCreateUser: () => void;
   onRefresh: () => void;
   isRefreshing: boolean;
+  userCount?: number; // Ajout du nombre d'utilisateurs optionnel
 }
 
 export default function UserSearchBar({
@@ -17,7 +18,8 @@ export default function UserSearchBar({
   setSearchTerm,
   onCreateUser,
   onRefresh,
-  isRefreshing
+  isRefreshing,
+  userCount = 0
 }: UserSearchBarProps) {
   return (
     <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
@@ -30,6 +32,11 @@ export default function UserSearchBar({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
+        {userCount > 0 && (
+          <span className="text-xs text-gray-500 absolute left-3 -bottom-5">
+            {userCount} utilisateur{userCount > 1 ? 's' : ''} trouvé{userCount > 1 ? 's' : ''}
+          </span>
+        )}
       </div>
       
       <div className="flex gap-2">
