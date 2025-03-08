@@ -25,6 +25,7 @@ const InvestmentTrackingTab = lazy(() => import("./tabs/InvestmentTrackingTab"))
 const OpportunitiesTab = lazy(() => import("./tabs/OpportunitiesTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
 const NotificationsTab = lazy(() => import("./tabs/NotificationsTab"));
+const UserListTab = lazy(() => import("./tabs/UserListTab"));
 
 interface TabContentProps {
   activeTab: string;
@@ -103,6 +104,8 @@ export default function TabContent({
           {activeTab === "settings" && <SettingsTab />}
           
           {activeTab === "notifications" && <NotificationsTab />}
+          
+          {activeTab === "users" && <UserListTab />}
         </Suspense>
       )}
     </div>
