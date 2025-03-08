@@ -1,13 +1,13 @@
 
-import React from "react";
-import SidebarNavItem from "../SidebarNavItem";
 import { 
   LayoutDashboard, 
   Wallet, 
-  LineChart, 
-  Building2, 
-  Timer
+  TrendingUp, 
+  Briefcase,
+  BarChart3, 
+  Package
 } from "lucide-react";
+import SidebarNavItem from "../SidebarNavItem";
 
 interface PrincipalSectionProps {
   activeTab: string;
@@ -20,49 +20,49 @@ export default function PrincipalSection({
   setActiveTab,
   expanded
 }: PrincipalSectionProps) {
-  const handleTabChange = (tab: string) => {
-    setActiveTab(tab);
-  };
-
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 px-2">
       <SidebarNavItem
-        icon={<LayoutDashboard size={18} />}
+        icon={<LayoutDashboard className="h-5 w-5" />}
         label="Vue d'ensemble"
         active={activeTab === "overview"}
-        onClick={() => handleTabChange("overview")}
+        onClick={() => setActiveTab("overview")}
         expanded={expanded}
       />
-      
       <SidebarNavItem
-        icon={<Wallet size={18} />}
+        icon={<Wallet className="h-5 w-5" />}
         label="Portefeuille"
         active={activeTab === "wallet"}
-        onClick={() => handleTabChange("wallet")}
+        onClick={() => setActiveTab("wallet")}
         expanded={expanded}
       />
-      
       <SidebarNavItem
-        icon={<Building2 size={18} />}
-        label="Investissements"
-        active={activeTab === "investments"}
-        onClick={() => handleTabChange("investments")}
-        expanded={expanded}
-      />
-      
-      <SidebarNavItem
-        icon={<Timer size={18} />}
-        label="Suivi des rendements"
-        active={activeTab === "tracking"}
-        onClick={() => handleTabChange("tracking")}
-        expanded={expanded}
-      />
-      
-      <SidebarNavItem
-        icon={<LineChart size={18} />}
-        label="Rendements"
+        icon={<TrendingUp className="h-5 w-5" />}
+        label="Rendement"
         active={activeTab === "yield"}
-        onClick={() => handleTabChange("yield")}
+        onClick={() => setActiveTab("yield")}
+        expanded={expanded}
+      />
+      <SidebarNavItem
+        icon={<Briefcase className="h-5 w-5" />}
+        label="Mes investissements"
+        active={activeTab === "investments"}
+        onClick={() => setActiveTab("investments")}
+        expanded={expanded}
+      />
+      <SidebarNavItem
+        icon={<Package className="h-5 w-5" />}
+        label="Opportunités"
+        active={activeTab === "opportunities"}
+        onClick={() => setActiveTab("opportunities")}
+        expanded={expanded}
+        badge={3}
+      />
+      <SidebarNavItem
+        icon={<BarChart3 className="h-5 w-5" />}
+        label="Suivi"
+        active={activeTab === "tracking"}
+        onClick={() => setActiveTab("tracking")}
         expanded={expanded}
       />
     </div>
