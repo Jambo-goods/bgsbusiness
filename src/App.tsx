@@ -26,7 +26,6 @@ import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
 import WalletManagement from "./pages/admin/WalletManagement";
 import NotificationManagement from "./pages/admin/NotificationManagement";
 import ProfileManagement from "./pages/admin/ProfileManagement";
-import UserRegistrations from "./pages/admin/UserRegistrations";
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -67,7 +66,6 @@ const App = () => (
                 <Route path="withdrawals" element={<WithdrawalManagement />} />
                 <Route path="wallets" element={<WalletManagement />} />
                 <Route path="profiles" element={<ProfileManagement />} />
-                <Route path="registrations" element={<UserRegistrations />} />
                 <Route path="notifications" element={<NotificationManagement />} />
               </Route>
               
