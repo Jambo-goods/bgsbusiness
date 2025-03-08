@@ -19,7 +19,11 @@ interface NavbarProps {
 export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProps) {
   const [internalIsScrolled, setInternalIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // Initialize with value from localStorage (if available) for immediate rendering
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    const savedAuthState = localStorage.getItem('isLoggedIn');
+    return savedAuthState === 'true';
+  });
   const [authChecked, setAuthChecked] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -42,37 +46,38 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     }
   }, [isScrolled]);
 
+  // Fast auth check using local storage + async validation
   useEffect(() => {
-    // Don't reset auth state on route changes to prevent flashing
-    if (!authChecked) {
-      const checkAuth = async () => {
+    const checkAuth = async () => {
+      try {
         const { user } = await getCurrentUser();
-        setIsLoggedIn(!!user);
+        const authenticated = !!user;
+        setIsLoggedIn(authenticated);
+        
+        // Save to localStorage for faster future loads
+        localStorage.setItem('isLoggedIn', authenticated ? 'true' : 'false');
+        
         setAuthChecked(true);
-        console.log("Auth check on route change:", !!user ? "Logged in" : "Not logged in");
-      };
-      
-      checkAuth();
-    }
-  }, [location.pathname, authChecked]);
-
-  useEffect(() => {
-    const checkAuthOnMount = async () => {
-      const { user } = await getCurrentUser();
-      setIsLoggedIn(!!user);
-      setAuthChecked(true);
-      console.log("Auth check on mount:", !!user ? "Logged in" : "Not logged in");
+        console.log("Auth check completed:", authenticated ? "Logged in" : "Not logged in");
+      } catch (error) {
+        console.error("Auth check error:", error);
+        setIsLoggedIn(false);
+        localStorage.setItem('isLoggedIn', 'false');
+        setAuthChecked(true);
+      }
     };
     
-    checkAuthOnMount();
+    checkAuth();
   }, []);
 
+  // Subscribe to auth state changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         const authenticated = !!session?.user;
         console.log("Auth state changed:", event, authenticated ? "Logged in" : "Not logged in");
         setIsLoggedIn(authenticated);
+        localStorage.setItem('isLoggedIn', authenticated ? 'true' : 'false');
         setAuthChecked(true);
       }
     );
@@ -91,6 +96,7 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     
     if (success) {
       setIsLoggedIn(false);
+      localStorage.setItem('isLoggedIn', 'false');
       toast.success("Déconnexion réussie");
       
       uiToast({
@@ -108,39 +114,9 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
   
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
-  // Show minimal navbar while auth check is in progress to prevent flashing
-  if (!authChecked) {
-    return (
-      <NavbarHeader isScrolled={effectiveIsScrolled} isLoggedIn={false}>
-        <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
-          <NavLogo logoPath={logoPath} />
-          <DesktopNav 
-            isLoggedIn={false}
-            isActive={isActive}
-            handleLogout={handleLogout}
-            isOnDashboard={effectiveIsOnDashboard}
-            authChecked={false}
-          />
-          <MobileMenuToggle 
-            isMenuOpen={isMenuOpen} 
-            toggleMenu={toggleMenu} 
-          />
-        </div>
-        <MobileMenu 
-          isMenuOpen={isMenuOpen}
-          isLoggedIn={false}
-          isActive={isActive}
-          handleLogout={handleLogout}
-          isOnDashboard={effectiveIsOnDashboard}
-          authChecked={false}
-        />
-      </NavbarHeader>
-    );
-  }
-
   return (
     <NavbarHeader isScrolled={effectiveIsScrolled} isLoggedIn={isLoggedIn}>
-      <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
+      <div className="container mx-auto px-4 md:px-6 flex items-center justify-between contain-layout">
         <NavLogo logoPath={logoPath} />
 
         <DesktopNav 

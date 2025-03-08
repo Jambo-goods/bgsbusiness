@@ -53,11 +53,11 @@ export default function DesktopNav({
             À propos
           </Link>
           
-          {/* Toujours afficher le bouton de tableau de bord quand l'utilisateur est connecté */}
+          {/* Tableau de bord button - immediately visible when logged in */}
           {isLoggedIn && (
             <Button 
               variant="default"
-              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white"
+              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white will-change-transform"
               onClick={handleDashboardClick}
             >
               Tableau de bord
@@ -69,7 +69,7 @@ export default function DesktopNav({
   );
 
   return (
-    <nav className="hidden md:flex items-center">
+    <nav className="hidden md:flex items-center contain-paint">
       {/* Always render navigation links */}
       {renderNavLinks()}
     </nav>

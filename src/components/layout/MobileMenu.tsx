@@ -77,11 +77,11 @@ export default function MobileMenu({
             À propos
           </Link>
           
-          {/* Toujours afficher le bouton de tableau de bord quand l'utilisateur est connecté */}
+          {/* Tableau de bord button - immediately visible when logged in */}
           {isLoggedIn && (
             <Button
               variant="default"
-              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white mt-2"
+              className="bg-bgs-blue hover:bg-bgs-blue/90 text-white mt-2 will-change-transform"
               onClick={() => navigate("/dashboard")}
             >
               Tableau de bord
@@ -93,9 +93,8 @@ export default function MobileMenu({
   );
   
   return (
-    <div className="md:hidden bg-white absolute top-full left-0 right-0 shadow-md animate-fade-in">
+    <div className="md:hidden bg-white absolute top-full left-0 right-0 shadow-md animate-fade-in contain-paint">
       <div className="container mx-auto px-4 py-6 flex flex-col space-y-4">
-        {/* Always render navigation links */}
         {renderNavLinks()}
       </div>
     </div>
