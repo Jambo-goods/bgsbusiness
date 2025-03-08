@@ -26,11 +26,11 @@ export default function HeaderSection({
 
   return (
     <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden">
-      {/* Background Image */}
+      {/* Background Image - Updated with the correct image path */}
       <div 
-        className="absolute inset-0 z-0 opacity-40"
+        className="absolute inset-0 z-0 opacity-60"
         style={{
-          backgroundImage: `url('/lovable-uploads/0066b26d-57b3-4d25-9a87-542e23e500a3.png')`,
+          backgroundImage: `url('/lovable-uploads/57d247ea-a3b9-4faa-8ef7-96755645a44e.png')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
