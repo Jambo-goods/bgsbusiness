@@ -1,3 +1,4 @@
+
 import { Project } from "@/types/project";
 import DashboardCards from "./overview/DashboardCards";
 import ChartsSection from "./overview/ChartsSection";
@@ -83,12 +84,7 @@ export default function Overview({
           <p className="text-sm">Vous pouvez voir les détails dans la section Investissements.</p>
         </div>}
       
-      {process.env.NODE_ENV === 'development' && <div className="text-right mb-2">
-          <div className="inline-flex items-center bg-white px-2 py-1 rounded text-xs">
-            <div className={`h-1.5 w-1.5 rounded-full mr-1 ${realTimeStatus === 'connected' ? 'bg-green-500' : realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'}`}></div>
-            
-          </div>
-        </div>}
+      {/* Removed the text-right div with real-time status indicator */}
       
       <DashboardCards userData={userData} />
       {userInvestments.length > 0 && <ChartsSection setActiveTab={setActiveTab} />}
