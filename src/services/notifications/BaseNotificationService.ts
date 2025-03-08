@@ -81,7 +81,7 @@ export class BaseNotificationService {
         read: notification.read,
         type: notification.type as Notification['type'],
         category: notification.category as NotificationCategory,
-        metadata: notification.metadata || {}
+        metadata: notification.metadata ? notification.metadata as Record<string, any> : {}
       }));
       
     } catch (error) {
