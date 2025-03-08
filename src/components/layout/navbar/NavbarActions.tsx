@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Bell, User, LayoutDashboard, Wallet, Home } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -26,7 +25,6 @@ export default function NavbarActions({
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Check if user is authenticated - optimized with early redirect
   useEffect(() => {
     const checkAuth = async () => {
       setIsLoading(true);
@@ -37,7 +35,6 @@ export default function NavbarActions({
       setIsAuthenticated(hasSession);
       setIsLoading(false);
       
-      // Redirect logic based on authentication state and current path
       const isDashboardPage = location.pathname.includes('/dashboard');
       if (hasSession && !isDashboardPage && location.pathname === '/login') {
         navigate('/dashboard');
@@ -45,14 +42,12 @@ export default function NavbarActions({
     };
     checkAuth();
 
-    // Listen for auth state changes
     const {
       data: authListener
     } = supabase.auth.onAuthStateChange((event, session) => {
       const hasSession = !!session;
       setIsAuthenticated(hasSession);
       
-      // Handle redirect on login/logout
       if (event === 'SIGNED_IN') {
         navigate('/dashboard');
       } else if (event === 'SIGNED_OUT') {
@@ -65,7 +60,6 @@ export default function NavbarActions({
     };
   }, [location.pathname, navigate]);
 
-  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (isNotificationOpen || isUserMenuOpen || isDashboardMenuOpen) {
@@ -81,15 +75,12 @@ export default function NavbarActions({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
 
-  // Check if user is on a dashboard page
   const isDashboardPage = location.pathname.includes('/dashboard');
 
-  // Don't render anything while loading
   if (isLoading) {
     return null;
   }
 
-  // Always show dashboard actions when on dashboard pages
   if (isDashboardPage) {
     return (
       <div className="flex items-center space-x-2">
@@ -127,22 +118,9 @@ export default function NavbarActions({
           
           <NotificationDropdown isOpen={isNotificationOpen} />
         </div>
-        
-        <div className="relative user-dropdown">
-          <button onClick={() => {
-            setIsUserMenuOpen(!isUserMenuOpen);
-            if (isNotificationOpen) setIsNotificationOpen(false);
-            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-          }} className="p-2 rounded-full hover:bg-gray-100 transition-colors" aria-label="User Menu">
-            <User className="h-5 w-5 text-bgs-blue" />
-          </button>
-          <UserMenuDropdown isOpen={isUserMenuOpen} isActive={isActive} />
-        </div>
       </div>
     );
   }
-  
-  // Return null for NavbarActions when not on dashboard
-  // The login/register buttons will be handled by DesktopNav and MobileMenu
+
   return null;
 }
