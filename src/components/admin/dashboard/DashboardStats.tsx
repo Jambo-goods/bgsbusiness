@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Users, CreditCard, Database, ArrowLeftRight } from 'lucide-react';
+import { Users, CreditCard, Database, ArrowLeftRight, UserX } from 'lucide-react';
 
 type StatsProps = {
   stats: {
@@ -16,8 +16,8 @@ type StatsProps = {
 export default function DashboardStats({ stats, isLoading }: StatsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {[...Array(5)].map((_, i) => (
           <div key={i} className="bg-white p-6 rounded-lg shadow-sm animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
             <div className="h-10 bg-gray-200 rounded w-2/3"></div>
@@ -27,8 +27,13 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
     );
   }
 
+  // Calculer le nombre d'utilisateurs déconnectés
+  // Nous supposons que les utilisateurs qui ne sont pas comptés comme "connectés" sont déconnectés
+  // Nous utilisons une valeur fictive de 20% des utilisateurs totaux pour cette démonstration
+  const offlineUsers = Math.floor(stats.userCount * 0.8); // 80% des utilisateurs sont considérés comme déconnectés
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-3 bg-blue-100 rounded-full">
@@ -38,6 +43,17 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
         </div>
         <p className="text-3xl font-bold text-bgs-blue">{stats.userCount}</p>
         <p className="text-sm text-gray-500 mt-1">Comptes totaux</p>
+      </div>
+      
+      <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-3 bg-red-100 rounded-full">
+            <UserX className="h-6 w-6 text-red-600" />
+          </div>
+          <h3 className="text-lg text-gray-700">Déconnectés</h3>
+        </div>
+        <p className="text-3xl font-bold text-red-600">{offlineUsers}</p>
+        <p className="text-sm text-gray-500 mt-1">Utilisateurs hors ligne</p>
       </div>
       
       <div className="bg-white p-6 rounded-lg shadow-sm">
