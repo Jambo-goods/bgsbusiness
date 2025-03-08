@@ -25,6 +25,7 @@ import ProjectManagement from "./pages/admin/ProjectManagement";
 import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
 import WalletManagement from "./pages/admin/WalletManagement";
 import NotificationManagement from "./pages/admin/NotificationManagement";
+import ProfileManagement from "./pages/admin/ProfileManagement";
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -61,10 +62,10 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
-                {/* Route users supprimée */}
                 <Route path="projects" element={<ProjectManagement />} />
                 <Route path="withdrawals" element={<WithdrawalManagement />} />
                 <Route path="wallets" element={<WalletManagement />} />
+                <Route path="profiles" element={<ProfileManagement />} />
                 <Route path="notifications" element={<NotificationManagement />} />
               </Route>
               

@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logoutAdmin } from '@/services/adminAuthService';
 import { 
   Database, Wallet, ArrowLeftRight, 
-  LayoutDashboard, LogOut, Menu, X, Bell
+  LayoutDashboard, LogOut, Menu, X, Bell, Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -45,6 +46,11 @@ export default function AdminLayout() {
       label: 'Demandes de retrait', 
       icon: <ArrowLeftRight className="w-5 h-5" />, 
       path: '/admin/withdrawals' 
+    },
+    { 
+      label: 'Profils', 
+      icon: <Users className="w-5 h-5" />, 
+      path: '/admin/profiles' 
     },
     { 
       label: 'Notifications', 
