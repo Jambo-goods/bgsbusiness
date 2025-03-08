@@ -5,7 +5,7 @@ import { useAdmin } from '@/contexts/AdminContext';
 import { logoutAdmin } from '@/services/adminAuthService';
 import { 
   Database, Wallet, ArrowLeftRight, 
-  LayoutDashboard, LogOut, Menu, X, Bell, Users
+  LayoutDashboard, LogOut, Menu, X, Bell, Users, UserPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -51,6 +51,11 @@ export default function AdminLayout() {
       label: 'Profils', 
       icon: <Users className="w-5 h-5" />, 
       path: '/admin/profiles' 
+    },
+    { 
+      label: 'Inscriptions', 
+      icon: <UserPlus className="w-5 h-5" />, 
+      path: '/admin/registrations' 
     },
     { 
       label: 'Notifications', 
