@@ -5,7 +5,7 @@ import {
   TrendingUp, 
   Briefcase,
   BarChart3, 
-  Package
+  Award
 } from "lucide-react";
 import SidebarNavItem from "../SidebarNavItem";
 
@@ -51,7 +51,7 @@ export default function PrincipalSection({
         expanded={expanded}
       />
       <SidebarNavItem
-        icon={<Package className="h-5 w-5" />}
+        icon={<Award className="h-5 w-5" />}
         label="Opportunités"
         active={activeTab === "opportunities"}
         onClick={() => setActiveTab("opportunities")}

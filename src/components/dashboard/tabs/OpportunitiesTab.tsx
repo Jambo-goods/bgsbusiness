@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Briefcase, Search, Filter } from "lucide-react";
+import { Award, Search, Filter } from "lucide-react";
 import ProjectsList from "@/components/projects/ProjectsList";
 import { projects } from "@/data/projects";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,7 @@ export default function OpportunitiesTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Briefcase className="h-5 w-5 text-bgs-blue" />
+          <Award className="h-5 w-5 text-bgs-blue" />
           <h2 className="text-2xl font-semibold text-bgs-blue">Opportunités d'investissement</h2>
         </div>
       </div>

@@ -1,5 +1,5 @@
 
-import { LayoutDashboard, Wallet, TrendingUp, Briefcase, Package } from "lucide-react";
+import { LayoutDashboard, Wallet, TrendingUp, Briefcase, Award } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 interface DashboardMenuDropdownProps {
@@ -32,7 +32,7 @@ export default function DashboardMenuDropdown({ isOpen, isActive }: DashboardMen
         Investissements
       </Link>
       <Link to="/dashboard?tab=opportunities" className={`flex items-center px-4 py-2.5 text-sm ${isActive('tab=opportunities') ? 'bg-gray-50 text-bgs-blue font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
-        <Package className="h-4 w-4 mr-3 text-bgs-blue" />
+        <Award className="h-4 w-4 mr-3 text-bgs-blue" />
         Opportunités
       </Link>
     </div>
