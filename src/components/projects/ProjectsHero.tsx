@@ -1,14 +1,11 @@
-
 import React from "react";
 import { HandCoins, TrendingUp, Clock, Globe } from "lucide-react";
-
 export default function ProjectsHero() {
-  return (
-    <section className="container px-4 md:px-6 mx-auto mb-16">
+  return <section className="container px-4 md:px-6 mx-auto mb-16">
       <div className="text-center max-w-4xl mx-auto mb-12 animate-fade-up">
         <h1 className="mb-4">
           <span className="text-bgs-blue">Nos</span>{" "}
-          <span className="text-gradient">projets</span>
+          <span className="text-gradient">opportunités</span>
         </h1>
         <p className="text-xl text-bgs-blue/80 max-w-3xl mx-auto">
           Diversifiez votre portefeuille avec des investissements dans des actifs 
@@ -16,7 +13,9 @@ export default function ProjectsHero() {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-up" style={{ animationDelay: "0.2s" }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-up" style={{
+      animationDelay: "0.2s"
+    }}>
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-50 hover:shadow-md transition-all">
           <div className="bg-blue-100 p-3 rounded-lg w-fit mb-4">
             <HandCoins className="h-6 w-6 text-blue-600" />
@@ -65,6 +64,5 @@ export default function ProjectsHero() {
           </p>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 }
