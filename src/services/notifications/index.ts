@@ -75,6 +75,10 @@ class NotificationService extends BaseNotificationService {
   projectCompleted(projectName: string, projectId: string): Promise<void> {
     return this.investmentService.projectCompleted(projectName, projectId);
   }
+  
+  newOpportunityAlert(projectName: string, projectId: string, expectedYield: string): Promise<void> {
+    return this.investmentService.newOpportunityAlert(projectName, projectId, expectedYield);
+  }
 
   // Security Notifications
   loginSuccess(device: string): Promise<void> {
