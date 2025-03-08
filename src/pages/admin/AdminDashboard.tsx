@@ -16,9 +16,11 @@ export default function AdminDashboard() {
     adminLogs, 
     isLoading, 
     isRefreshing, 
-    realTimeStatus, 
     refreshData 
   } = useAdminDashboard();
+
+  // Système toujours opérationnel par défaut, à adapter selon les besoins
+  const systemStatus = 'operational';
 
   return (
     <div className="p-6">
@@ -28,7 +30,7 @@ export default function AdminDashboard() {
         </h1>
         
         <StatusIndicator 
-          realTimeStatus={realTimeStatus}
+          systemStatus={systemStatus as 'operational' | 'degraded' | 'maintenance'}
           isRefreshing={isRefreshing}
           onRefresh={refreshData}
         />

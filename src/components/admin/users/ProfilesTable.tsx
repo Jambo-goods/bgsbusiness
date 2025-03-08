@@ -20,7 +20,8 @@ type Profile = {
   phone: string | null;
   created_at: string | null;
   last_active_at?: string | null;
-  online_status: 'online' | 'offline';
+  wallet_balance?: number | null;
+  account_status?: 'active' | 'inactive' | 'suspended';
 };
 
 interface ProfilesTableProps {
@@ -61,13 +62,14 @@ export default function ProfilesTable({
           <TableHead>Téléphone</TableHead>
           <TableHead>Date d'inscription</TableHead>
           <TableHead>Durée d'inactivité</TableHead>
+          <TableHead>Solde portefeuille</TableHead>
           <TableHead>Statut</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {filteredProfiles.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+            <TableCell colSpan={8} className="text-center py-8 text-gray-500">
               {searchTerm ? "Aucun utilisateur trouvé pour cette recherche" : "Aucun utilisateur dans la base de données"}
             </TableCell>
           </TableRow>
@@ -85,7 +87,12 @@ export default function ProfilesTable({
                 {calculateInactivityTime(profile.last_active_at, profile.created_at)}
               </TableCell>
               <TableCell>
-                <UserStatusBadge status={profile.online_status} />
+                {profile.wallet_balance !== undefined && profile.wallet_balance !== null 
+                  ? `${profile.wallet_balance.toLocaleString()} €` 
+                  : '-'}
+              </TableCell>
+              <TableCell>
+                <UserStatusBadge status={profile.account_status || 'inactive'} />
               </TableCell>
             </TableRow>
           ))

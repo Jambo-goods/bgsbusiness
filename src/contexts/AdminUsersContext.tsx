@@ -11,7 +11,8 @@ type Profile = {
   phone: string | null;
   created_at: string | null;
   last_active_at?: string | null;
-  online_status: 'online' | 'offline';
+  wallet_balance?: number | null;
+  account_status?: 'active' | 'inactive' | 'suspended';
 };
 
 interface AdminUsersContextType {
@@ -31,60 +32,16 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [totalProfiles, setTotalProfiles] = useState(0);
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchProfiles();
-    const unsubscribe = subscribeToPresence();
-    
-    return () => {
-      unsubscribe();
-    };
   }, []);
-
-  const subscribeToPresence = () => {
-    // Subscribe to presence channel to track online users
-    const channel = supabase.channel('online-users')
-      .on('presence', { event: 'sync' }, () => {
-        const newState = channel.presenceState();
-        const onlineUserIds = new Set<string>();
-        
-        // Extract user IDs from presence state
-        Object.values(newState).forEach((presences: any) => {
-          presences.forEach((presence: any) => {
-            if (presence.user_id) {
-              onlineUserIds.add(presence.user_id);
-            }
-          });
-        });
-        
-        setOnlineUsers(onlineUserIds);
-        
-        // Update profiles with the new online status
-        setProfiles(prevProfiles => 
-          prevProfiles.map(profile => ({
-            ...profile,
-            online_status: onlineUserIds.has(profile.id) ? 'online' as const : 'offline' as const
-          }))
-        );
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Subscribed to presence channel');
-        }
-      });
-
-    // Clean up subscription
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
 
   const fetchProfiles = async () => {
     try {
       setIsLoading(true);
       
-      // Get all profiles - do not filter by online status
+      // Get all profiles
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -94,14 +51,29 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         throw error;
       }
 
-      // Add online_status property to all profiles
-      const profilesWithStatus: Profile[] = data?.map(profile => ({
-        ...profile,
-        online_status: onlineUsers.has(profile.id) ? 'online' as const : 'offline' as const
-      })) || [];
+      // Process profiles and determine account status
+      const processedProfiles: Profile[] = data?.map(profile => {
+        // Determine account status based on last activity
+        let account_status: 'active' | 'inactive' | 'suspended' = 'inactive';
+        
+        if (profile.last_active_at) {
+          const lastActive = new Date(profile.last_active_at);
+          const now = new Date();
+          const diffDays = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays < 30) {
+            account_status = 'active';
+          }
+        }
+        
+        return {
+          ...profile,
+          account_status
+        };
+      }) || [];
       
-      setProfiles(profilesWithStatus);
-      setTotalProfiles(profilesWithStatus.length);
+      setProfiles(processedProfiles);
+      setTotalProfiles(processedProfiles.length);
       toast.success('Utilisateurs chargés avec succès');
     } catch (error) {
       console.error('Error fetching profiles:', error);

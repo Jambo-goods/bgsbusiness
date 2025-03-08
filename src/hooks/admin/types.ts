@@ -19,5 +19,3 @@ export interface AdminLog {
     last_name: string | null;
   };
 }
-
-export type RealTimeStatus = 'connecting' | 'connected' | 'error';
