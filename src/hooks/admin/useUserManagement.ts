@@ -110,10 +110,9 @@ export function useUserManagement() {
       setHasError(false);
       setIsRefreshing(true);
       
-      console.log("Fetching users with sort field:", sortField, "direction:", sortDirection);
+      console.log("Fetching ALL users with sort field:", sortField, "direction:", sortDirection);
       
-      // Récupérer TOUS les utilisateurs sans limite et sans filtres
-      // Assurez-vous que toutes les colonnes sont sélectionnées
+      // Récupérer TOUS les utilisateurs de la table profiles sans AUCUN filtre
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -128,7 +127,7 @@ export function useUserManagement() {
       console.log("Number of users fetched:", data ? data.length : 0);
       
       if (data) {
-        // Make sure we have data
+        // Afficher clairement tous les utilisateurs récupérés
         setUsers(data);
         
         if (data.length === 0) {
@@ -138,13 +137,14 @@ export function useUserManagement() {
           });
         } else {
           console.log(`Nombre d'utilisateurs trouvés: ${data.length}`);
-          // Log each user to see what we're getting
+          // Afficher chaque utilisateur pour le débogage
           data.forEach((user, index) => {
             console.log(`User ${index + 1}:`, user.id, user.first_name, user.last_name, user.email);
           });
         }
       } else {
         setUsers([]);
+        console.log("No data returned from the query");
       }
     } catch (error) {
       console.error('Error fetching users:', error);
