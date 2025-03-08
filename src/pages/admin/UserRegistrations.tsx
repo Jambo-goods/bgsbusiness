@@ -12,6 +12,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, UserPlus } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export default function UserRegistrations() {
   const [registrations, setRegistrations] = useState([]);
@@ -84,6 +86,14 @@ export default function UserRegistrations() {
             <span className={`w-2 h-2 mr-1 rounded-full ${isRealtimeConnected ? 'bg-green-500' : 'bg-gray-400'}`}></span>
             <span className="text-xs">Données en temps réel</span>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchRegistrations}
+            className="ml-2"
+          >
+            Rafraîchir
+          </Button>
         </div>
       </div>
 
@@ -98,53 +108,64 @@ export default function UserRegistrations() {
         />
       </div>
 
-      <div className="bg-white rounded-md shadow">
-        {isLoading ? (
-          <div className="p-4 space-y-4">
-            {[...Array(5)].map((_, index) => (
-              <div key={index} className="flex space-x-4">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-6 w-40" />
-                <Skeleton className="h-6 w-24" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Prénom</TableHead>
-                <TableHead>Nom</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Téléphone</TableHead>
-                <TableHead>Date d'inscription</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRegistrations.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-gray-500">
-                    {searchTerm ? "Aucune inscription trouvée pour cette recherche" : "Aucune inscription disponible"}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredRegistrations.map((registration) => (
-                  <TableRow key={registration.id}>
-                    <TableCell>{registration.first_name || '-'}</TableCell>
-                    <TableCell>{registration.last_name || '-'}</TableCell>
-                    <TableCell>{registration.email || '-'}</TableCell>
-                    <TableCell>{registration.phone || '-'}</TableCell>
-                    <TableCell>
-                      {registration.created_at ? new Date(registration.created_at).toLocaleDateString('fr-FR') : '-'}
-                    </TableCell>
+      <Card>
+        <CardHeader className="pb-0">
+          <CardTitle className="text-xl">Liste des utilisateurs ({filteredRegistrations.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="p-4 space-y-4">
+              {[...Array(5)].map((_, index) => (
+                <div key={index} className="flex space-x-4">
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-6 w-32" />
+                  <Skeleton className="h-6 w-40" />
+                  <Skeleton className="h-6 w-24" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Prénom</TableHead>
+                    <TableHead>Nom</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Téléphone</TableHead>
+                    <TableHead>Date d'inscription</TableHead>
+                    <TableHead>Solde</TableHead>
+                    <TableHead>Nb. projets</TableHead>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredRegistrations.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-8 text-gray-500">
+                        {searchTerm ? "Aucune inscription trouvée pour cette recherche" : "Aucune inscription disponible"}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredRegistrations.map((registration) => (
+                      <TableRow key={registration.id}>
+                        <TableCell>{registration.first_name || '-'}</TableCell>
+                        <TableCell>{registration.last_name || '-'}</TableCell>
+                        <TableCell>{registration.email || '-'}</TableCell>
+                        <TableCell>{registration.phone || '-'}</TableCell>
+                        <TableCell>
+                          {registration.created_at ? new Date(registration.created_at).toLocaleDateString('fr-FR') : '-'}
+                        </TableCell>
+                        <TableCell>{registration.wallet_balance ? `${registration.wallet_balance} €` : '0 €'}</TableCell>
+                        <TableCell>{registration.projects_count || '0'}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
