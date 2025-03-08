@@ -67,7 +67,8 @@ export function useUserManagement() {
       
       console.log("Fetching users with sort field:", sortField, "direction:", sortDirection);
       
-      // Modifié pour récupérer TOUS les utilisateurs sans limite
+      // Récupérer TOUS les utilisateurs sans limite et sans filtres
+      // Assurez-vous que toutes les colonnes sont sélectionnées
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -79,6 +80,7 @@ export function useUserManagement() {
       }
       
       console.log("Fetched users:", data);
+      console.log("Number of users fetched:", data ? data.length : 0);
       
       if (data) {
         // Make sure we have data
@@ -91,6 +93,10 @@ export function useUserManagement() {
           });
         } else {
           console.log(`Nombre d'utilisateurs trouvés: ${data.length}`);
+          // Log each user to see what we're getting
+          data.forEach((user, index) => {
+            console.log(`User ${index + 1}:`, user.id, user.first_name, user.last_name, user.email);
+          });
         }
       } else {
         setUsers([]);

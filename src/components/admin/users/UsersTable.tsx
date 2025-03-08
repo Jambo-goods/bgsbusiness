@@ -91,8 +91,8 @@ export default function UsersTable({
         <TableBody>
           {users.map((user) => (
             <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.first_name} {user.last_name}</TableCell>
-              <TableCell>{user.email}</TableCell>
+              <TableCell className="font-medium">{user.first_name || 'Sans nom'} {user.last_name || ''}</TableCell>
+              <TableCell>{user.email || 'Email non disponible'}</TableCell>
               <TableCell>{user.wallet_balance?.toLocaleString() || 0} €</TableCell>
               <TableCell>{user.investment_total?.toLocaleString() || 0} €</TableCell>
               <TableCell>
@@ -114,7 +114,7 @@ export default function UsersTable({
                     onClick={() => {
                       // View user details
                       console.log("View user details:", user);
-                      toast.info(`Détails pour ${user.first_name} ${user.last_name}`, {
+                      toast.info(`Détails pour ${user.first_name || 'Utilisateur'} ${user.last_name || ''}`, {
                         description: "Cette fonctionnalité sera disponible prochainement."
                       });
                     }}
