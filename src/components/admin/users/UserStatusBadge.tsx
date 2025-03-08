@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { UserX } from 'lucide-react';
+import { UserCheck, UserX } from 'lucide-react';
 
 interface UserStatusBadgeProps {
   status: 'online' | 'offline';
@@ -17,7 +17,11 @@ export default function UserStatusBadge({ status }: UserStatusBadgeProps) {
           : 'bg-gray-200 text-gray-800'
       }`}
     >
-      <UserX className="h-3 w-3" />
+      {status === 'online' ? (
+        <UserCheck className="h-3 w-3" />
+      ) : (
+        <UserX className="h-3 w-3" />
+      )}
       <span>{status === 'online' ? 'En ligne' : 'Hors ligne'}</span>
     </Badge>
   );
