@@ -1,26 +1,13 @@
 
-import React, { useState, useEffect } from "react";
-import { Award, Search } from "lucide-react";
+import React, { useState } from "react";
+import { Award, Search, Filter } from "lucide-react";
 import ProjectsList from "@/components/projects/ProjectsList";
 import { projects } from "@/data/projects";
 import { Input } from "@/components/ui/input";
-import { notificationService } from "@/services/notifications";
 
 export default function OpportunitiesTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredProjects, setFilteredProjects] = useState(projects);
-
-  useEffect(() => {
-    // Créer une notification pour une nouvelle opportunité d'investissement
-    // Sélectionner un projet aléatoire pour la démonstration
-    if (projects.length > 0) {
-      const randomProject = projects[Math.floor(Math.random() * projects.length)];
-      notificationService.newInvestmentOpportunity(
-        randomProject.name,
-        randomProject.id
-      );
-    }
-  }, []);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value.toLowerCase();
