@@ -38,10 +38,6 @@ export const useInvestmentSubscriptions = (
             if (projectData) {
               await notificationService.projectCompleted(projectData.name, payload.new.project_id);
               console.log("Notification de projet terminé créée avec succès");
-              
-              toast.info("Projet terminé", {
-                description: `Votre investissement dans ${projectData.name} est terminé. Vérifiez vos bénéfices !`
-              });
             }
           } catch (error) {
             console.error("Erreur lors de la création de la notification de projet terminé:", error);
@@ -95,10 +91,6 @@ export const useInvestmentSubscriptions = (
                   projectData.id
                 );
                 console.log("Notification de profit reçu créée avec succès");
-                
-                toast.success("Rendement reçu", {
-                  description: `Vous avez reçu ${payload.new.amount}€ de bénéfices pour votre investissement dans ${projectName}.`
-                });
               }
             }
           } catch (error) {
