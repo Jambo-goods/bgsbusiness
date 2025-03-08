@@ -34,15 +34,17 @@ class NotificationService {
         return;
       }
       
-      const { error } = await supabase.from('notifications').insert({
-        user_id: session.session.user.id,
-        title: notification.title,
-        description: notification.description,
-        type: notification.type,
-        category: notification.category || 'info',
-        metadata: notification.metadata || {},
-        read: false
-      });
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: session.session.user.id,
+          title: notification.title,
+          description: notification.description,
+          type: notification.type,
+          category: notification.category || 'info',
+          metadata: notification.metadata || {},
+          read: false
+        });
       
       if (error) throw error;
       
@@ -98,7 +100,7 @@ class NotificationService {
         description: notification.description,
         date: new Date(notification.created_at),
         read: notification.read,
-        type: notification.type,
+        type: notification.type as NotificationType,
         category: notification.category,
         metadata: notification.metadata
       }));

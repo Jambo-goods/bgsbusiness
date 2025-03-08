@@ -156,10 +156,20 @@ export default function NotificationsTab() {
                 const { data: session } = await supabase.auth.getSession();
                 if (!session.session) return;
                 
+                // Find all notification IDs for this user
+                const { data } = await supabase
+                  .from('notifications')
+                  .select('id')
+                  .eq('user_id', session.session.user.id);
+                
+                if (!data || data.length === 0) return;
+                
+                // Delete by IDs as we can't use direct user_id filtering with delete
+                const ids = data.map(n => n.id);
                 const { error } = await supabase
                   .from('notifications')
                   .delete()
-                  .eq('user_id', session.session.user.id);
+                  .in('id', ids);
                 
                 if (error) throw error;
                 
