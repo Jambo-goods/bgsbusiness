@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { createProjectInDatabase } from "@/utils/projectUtils";
+import { notificationService } from "@/services/notifications";
 
 export const useInvestment = (project: Project, investorCount: number) => {
   const [investmentAmount, setInvestmentAmount] = useState(project.minInvestment || 500);
@@ -136,6 +137,14 @@ export const useInvestment = (project: Project, investorCount: number) => {
       if (investmentError) {
         console.error("Erreur lors de la création de l'investissement:", investmentError);
         throw investmentError;
+      }
+      
+      try {
+        console.log("Création de la notification d'investissement confirmé");
+        await notificationService.investmentConfirmed(investmentAmount, project.name, projectId);
+        console.log("Notification d'investissement créée avec succès");
+      } catch (notificationError) {
+        console.error("Erreur lors de la création de la notification:", notificationError);
       }
       
       const { data: profileData, error: profileFetchError } = await supabase
