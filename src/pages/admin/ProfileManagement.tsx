@@ -11,14 +11,17 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import StatusIndicator from '@/components/admin/dashboard/StatusIndicator';
 
 export default function ProfileManagement() {
   const [profiles, setProfiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [realTimeStatus, setRealTimeStatus] = useState('connected');
+  const [totalProfiles, setTotalProfiles] = useState(0);
 
   useEffect(() => {
     fetchProfiles();
@@ -27,9 +30,11 @@ export default function ProfileManagement() {
   const fetchProfiles = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
+      
+      // Get all profiles without real-time updates
+      const { data, error, count } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -38,10 +43,12 @@ export default function ProfileManagement() {
 
       console.log('Fetched profiles:', data);
       setProfiles(data || []);
+      setTotalProfiles(count || 0);
       toast.success('Profils chargés avec succès');
     } catch (error) {
       console.error('Error fetching profiles:', error);
       toast.error('Erreur lors du chargement des profils');
+      setRealTimeStatus('error');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -66,16 +73,19 @@ export default function ProfileManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Gestion des Profils</h1>
-        <button 
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-bgs-blue to-bgs-blue-light text-white rounded-lg hover:shadow-md transition-all duration-200"
-        >
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Actualiser
-        </button>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold">Gestion des Profils</h1>
+          <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-sm">
+            {totalProfiles} utilisateurs
+          </span>
+        </div>
+        
+        <StatusIndicator 
+          realTimeStatus={realTimeStatus} 
+          isRefreshing={isRefreshing} 
+          onRefresh={handleRefresh} 
+        />
       </div>
 
       <div className="relative">
