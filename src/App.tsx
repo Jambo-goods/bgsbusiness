@@ -15,6 +15,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import Users from "./pages/Users";
 import { AdminProvider } from "./contexts/AdminContext";
 
 // Admin pages
@@ -26,6 +27,7 @@ import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
 import WalletManagement from "./pages/admin/WalletManagement";
 import NotificationManagement from "./pages/admin/NotificationManagement";
 import ProfileManagement from "./pages/admin/ProfileManagement";
+import InactiveUsersPage from "./pages/admin/InactiveUsersPage";
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -52,6 +54,7 @@ const App = () => (
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/about" element={<About />} />
+              <Route path="/users" element={<Users />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -66,6 +69,7 @@ const App = () => (
                 <Route path="withdrawals" element={<WithdrawalManagement />} />
                 <Route path="wallets" element={<WalletManagement />} />
                 <Route path="profiles" element={<ProfileManagement />} />
+                <Route path="inactive-users" element={<InactiveUsersPage />} />
                 <Route path="notifications" element={<NotificationManagement />} />
               </Route>
               
