@@ -8,7 +8,8 @@ type StatsProps = {
     totalInvestments: number;
     totalProjects: number;
     pendingWithdrawals: number;
-    ongoingProjects?: number; // Added for ongoing projects
+    ongoingProjects?: number;
+    onlineUserCount?: number;
   };
   isLoading: boolean;
 };
@@ -43,12 +44,12 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-3 bg-green-100 rounded-full">
-            <CreditCard className="h-6 w-6 text-green-600" />
+            <Users className="h-6 w-6 text-green-600" />
           </div>
-          <h3 className="text-lg text-gray-700">Investissements</h3>
+          <h3 className="text-lg text-gray-700">Utilisateurs en ligne</h3>
         </div>
-        <p className="text-3xl font-bold text-green-600">{stats.totalInvestments.toLocaleString()} €</p>
-        <p className="text-sm text-gray-500 mt-1">Total de tous les comptes</p>
+        <p className="text-3xl font-bold text-green-600">{stats.onlineUserCount || 0}</p>
+        <p className="text-sm text-gray-500 mt-1">Connectés actuellement</p>
       </div>
       
       <div className="bg-white p-6 rounded-lg shadow-sm">

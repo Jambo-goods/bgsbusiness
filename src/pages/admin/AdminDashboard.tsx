@@ -14,8 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export default function AdminDashboard() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [isAddFundsDialogOpen, setIsAddFundsDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [amountToAdd, setAmountToAdd] = useState<string>("100");
@@ -39,9 +37,6 @@ export default function AdminDashboard() {
     onlineUserCount,
     addFundsToUser
   } = useAdminUsers();
-
-  // Système toujours opérationnel par défaut, à adapter selon les besoins
-  const systemStatus = 'operational';
 
   const handleAddFunds = (userId: string) => {
     setSelectedUserId(userId);
@@ -73,6 +68,12 @@ export default function AdminDashboard() {
   };
 
   const selectedUser = selectedUserId ? profiles.find(p => p.id === selectedUserId) : null;
+  
+  // Mettre à jour les statistiques pour inclure les utilisateurs en ligne
+  const statsWithOnlineUsers = {
+    ...stats,
+    onlineUserCount
+  };
 
   return (
     <div className="p-6">
@@ -86,34 +87,14 @@ export default function AdminDashboard() {
         </h1>
         
         <StatusIndicator 
-          systemStatus={systemStatus as 'operational' | 'degraded' | 'maintenance'}
+          systemStatus="operational"
           isRefreshing={isRefreshing}
           onRefresh={refreshData}
         />
       </div>
       
       <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-lg shadow-sm flex flex-col items-center justify-center">
-            <span className="text-sm text-gray-500">Utilisateurs totaux</span>
-            <span className="text-2xl font-bold">{stats.userCount}</span>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm flex flex-col items-center justify-center">
-            <span className="text-sm text-gray-500">Utilisateurs en ligne</span>
-            <span className="text-2xl font-bold">{onlineUserCount}</span>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm flex flex-col items-center justify-center">
-            <span className="text-sm text-gray-500">Investissements totaux</span>
-            <span className="text-2xl font-bold">{stats.totalInvestments.toLocaleString()} €</span>
-          </div>
-          
-          <div className="bg-white p-4 rounded-lg shadow-sm flex flex-col items-center justify-center">
-            <span className="text-sm text-gray-500">Retraits en attente</span>
-            <span className="text-2xl font-bold">{stats.pendingWithdrawals}</span>
-          </div>
-        </div>
+        <DashboardStats stats={statsWithOnlineUsers} isLoading={isLoading} />
         
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <div className="flex justify-between items-center mb-4">
