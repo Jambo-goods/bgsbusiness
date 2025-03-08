@@ -1,18 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Search, UserX } from 'lucide-react';
 import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
+import SearchBar from '@/components/admin/users/SearchBar';
+import ProfilesTable from '@/components/admin/users/ProfilesTable';
 
 type Profile = {
   id: string;
@@ -110,26 +101,6 @@ export default function InactiveUsersPage() {
     }
   };
 
-  const calculateInactivityTime = (profile: Profile) => {
-    // If the user has a last_active_at timestamp, use it
-    // Otherwise, use created_at as the last activity
-    const lastActive = profile.last_active_at || profile.created_at;
-    
-    if (!lastActive) return "Inconnue";
-    
-    const lastActiveDate = new Date(lastActive);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - lastActiveDate.getTime());
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor((diffTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    if (diffDays > 0) {
-      return `${diffDays} jour${diffDays > 1 ? 's' : ''} ${diffHours} heure${diffHours > 1 ? 's' : ''}`;
-    } else {
-      return `${diffHours} heure${diffHours > 1 ? 's' : ''}`;
-    }
-  };
-
   const filteredProfiles = profiles.filter((profile) => {
     if (!searchTerm) return true;
     
@@ -152,79 +123,19 @@ export default function InactiveUsersPage() {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-        <Input
-          type="text"
-          placeholder="Rechercher par nom, prénom ou email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      <SearchBar 
+        searchTerm={searchTerm} 
+        setSearchTerm={setSearchTerm} 
+        placeholder="Rechercher par nom, prénom ou email..."
+      />
 
       <div className="bg-white rounded-md shadow">
-        {isLoading ? (
-          <div className="p-4 space-y-4">
-            {[...Array(5)].map((_, index) => (
-              <div key={index} className="flex space-x-4">
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-6 w-32" />
-                <Skeleton className="h-6 w-40" />
-                <Skeleton className="h-6 w-24" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Prénom</TableHead>
-                <TableHead>Nom</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Téléphone</TableHead>
-                <TableHead>Date d'inscription</TableHead>
-                <TableHead>Durée d'inactivité</TableHead>
-                <TableHead>Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredProfiles.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                    {searchTerm ? "Aucun utilisateur trouvé pour cette recherche" : "Aucun utilisateur dans la base de données"}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProfiles.map((profile) => (
-                  <TableRow key={profile.id}>
-                    <TableCell>{profile.first_name || '-'}</TableCell>
-                    <TableCell>{profile.last_name || '-'}</TableCell>
-                    <TableCell>{profile.email || '-'}</TableCell>
-                    <TableCell>{profile.phone || '-'}</TableCell>
-                    <TableCell>
-                      {profile.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR') : '-'}
-                    </TableCell>
-                    <TableCell>{calculateInactivityTime(profile)}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant="secondary"
-                        className={`flex items-center gap-1 ${
-                          profile.online_status === 'online' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-200 text-gray-800'
-                        }`}
-                      >
-                        <UserX className="h-3 w-3" />
-                        <span>{profile.online_status === 'online' ? 'En ligne' : 'Hors ligne'}</span>
-                      </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        )}
+        <ProfilesTable
+          profiles={profiles}
+          filteredProfiles={filteredProfiles}
+          isLoading={isLoading}
+          searchTerm={searchTerm}
+        />
       </div>
     </div>
   );
