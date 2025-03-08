@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { Users, CreditCard, Database, ArrowLeftRight, UserX } from 'lucide-react';
+import { useOfflineUsersCount } from '@/hooks/admin/useOfflineUsersCount';
 
 type StatsProps = {
   stats: {
@@ -14,6 +14,9 @@ type StatsProps = {
 };
 
 export default function DashboardStats({ stats, isLoading }: StatsProps) {
+  // Use our new hook to get accurate offline users count
+  const { offlineUsers } = useOfflineUsersCount();
+  
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -26,11 +29,6 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
       </div>
     );
   }
-
-  // Calculer le nombre d'utilisateurs déconnectés
-  // Nous supposons que les utilisateurs qui ne sont pas comptés comme "connectés" sont déconnectés
-  // Nous utilisons une valeur fictive de 20% des utilisateurs totaux pour cette démonstration
-  const offlineUsers = Math.floor(stats.userCount * 0.8); // 80% des utilisateurs sont considérés comme déconnectés
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
