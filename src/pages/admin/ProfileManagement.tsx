@@ -5,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { toast } from 'sonner';
 
 interface Profile {
   id: string;
@@ -38,35 +37,12 @@ export default function ProfileManagement() {
         setProfiles(data || []);
       } catch (error) {
         console.error('Error fetching profiles:', error);
-        toast.error('Erreur lors du chargement des profils');
       } finally {
         setIsLoading(false);
       }
     }
     
     fetchProfiles();
-    
-    // Set up real-time listener for profile changes
-    const profilesChannel = supabase
-      .channel('admin_profiles_changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'profiles' 
-        }, 
-        (payload) => {
-          console.log('Profile change detected:', payload);
-          // Refresh the profiles list when any change is detected
-          fetchProfiles();
-        }
-      )
-      .subscribe();
-      
-    // Clean up the subscription when component unmounts
-    return () => {
-      supabase.removeChannel(profilesChannel);
-    };
   }, []);
   
   const filteredProfiles = profiles.filter(profile => {
@@ -81,9 +57,6 @@ export default function ProfileManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Gestion des profils utilisateurs</h1>
-        <div className="text-sm text-green-600 font-medium bg-green-50 px-3 py-1 rounded-full">
-          Données en temps réel
-        </div>
       </div>
       
       <div className="bg-white rounded-lg shadow-sm p-6">
