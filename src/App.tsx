@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +14,6 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
-import Users from "./pages/Users";
 import { AdminProvider } from "./contexts/AdminContext";
 
 // Admin pages
@@ -54,7 +52,6 @@ const App = () => (
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/how-it-works" element={<HowItWorks />} />
               <Route path="/about" element={<About />} />
-              <Route path="/users" element={<Users />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />

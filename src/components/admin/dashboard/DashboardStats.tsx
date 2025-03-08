@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { Users, CreditCard, Database, ArrowLeftRight, UserX } from 'lucide-react';
-import { useOfflineUsersCount } from '@/hooks/admin/useOfflineUsersCount';
+import { Users, CreditCard, Database, ArrowLeftRight } from 'lucide-react';
 
 type StatsProps = {
   stats: {
@@ -9,22 +8,16 @@ type StatsProps = {
     totalInvestments: number;
     totalProjects: number;
     pendingWithdrawals: number;
-    ongoingProjects?: number;
+    ongoingProjects?: number; // Added for ongoing projects
   };
   isLoading: boolean;
 };
 
 export default function DashboardStats({ stats, isLoading }: StatsProps) {
-  // Use our hook to get accurate offline users count
-  const { offlineUsers, totalUsers, isLoading: isLoadingUsers } = useOfflineUsersCount();
-  
-  // Show total users from our direct database query instead of the stats
-  const displayedUserCount = !isLoadingUsers ? totalUsers : stats.userCount;
-  
-  if (isLoading && isLoadingUsers) {
+  if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {[...Array(5)].map((_, i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[...Array(4)].map((_, i) => (
           <div key={i} className="bg-white p-6 rounded-lg shadow-sm animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
             <div className="h-10 bg-gray-200 rounded w-2/3"></div>
@@ -35,7 +28,7 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-3 bg-blue-100 rounded-full">
@@ -43,21 +36,8 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
           </div>
           <h3 className="text-lg text-gray-700">Utilisateurs</h3>
         </div>
-        <p className="text-3xl font-bold text-bgs-blue">{displayedUserCount}</p>
+        <p className="text-3xl font-bold text-bgs-blue">{stats.userCount}</p>
         <p className="text-sm text-gray-500 mt-1">Comptes totaux</p>
-      </div>
-      
-      <div className="bg-white p-6 rounded-lg shadow-sm">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-3 bg-red-100 rounded-full">
-            <UserX className="h-6 w-6 text-red-600" />
-          </div>
-          <h3 className="text-lg text-gray-700">Déconnectés</h3>
-        </div>
-        <p className="text-3xl font-bold text-red-600">{offlineUsers}</p>
-        <p className="text-sm text-gray-500 mt-1">
-          {offlineUsers === 1 ? 'Utilisateur hors ligne' : 'Utilisateurs hors ligne'}
-        </p>
       </div>
       
       <div className="bg-white p-6 rounded-lg shadow-sm">

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -15,9 +16,56 @@ export const usePortfolioData = () => {
     // Fetch initial portfolio data
     fetchPortfolioData();
     
-    console.log("Real-time subscriptions have been disabled");
+    console.log("Setting up real-time subscription for portfolio data...");
     
-    // No cleanup needed as no subscriptions are set up
+    // Get the current user
+    const getUserId = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      return session?.session?.user.id;
+    };
+    
+    getUserId().then(userId => {
+      if (!userId) {
+        console.log("No user ID available for portfolio subscriptions");
+        return;
+      }
+      
+      // Set up real-time subscription for portfolio updates
+      const portfolioChannel = supabase
+        .channel('portfolio_updates')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'investments',
+          filter: `user_id=eq.${userId}`
+        }, () => {
+          console.log('Investment data changed, refreshing portfolio chart...');
+          fetchPortfolioData();
+        })
+        .subscribe();
+        
+      // Set up real-time subscription for wallet transactions
+      const walletChannel = supabase
+        .channel('wallet_portfolio_updates')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'wallet_transactions',
+          filter: `user_id=eq.${userId}`
+        }, () => {
+          console.log('Wallet transaction detected, refreshing portfolio chart...');
+          fetchPortfolioData();
+        })
+        .subscribe();
+      
+      return () => {
+        console.log("Cleaning up portfolio data subscriptions");
+        supabase.removeChannel(portfolioChannel);
+        supabase.removeChannel(walletChannel);
+      };
+    }).catch(error => {
+      console.error("Error setting up portfolio subscriptions:", error);
+    });
   }, []);
 
   const fetchPortfolioData = async () => {

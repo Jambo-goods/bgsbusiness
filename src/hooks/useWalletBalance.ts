@@ -40,9 +40,23 @@ export function useWalletBalance() {
     
     fetchWalletBalance();
     
-    // Real-time functionality has been removed
-    console.log("Real-time wallet balance updates have been disabled");
-    
+    // Set up real-time subscription for wallet balance updates
+    const profileChannel = supabase
+      .channel('navbar_wallet_updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles',
+        filter: `wallet_balance=is.not.null`
+      }, () => {
+        console.log('Profile updated, refreshing wallet balance...');
+        fetchWalletBalance();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(profileChannel);
+    };
   }, []);
 
   return { walletBalance, isLoadingBalance };

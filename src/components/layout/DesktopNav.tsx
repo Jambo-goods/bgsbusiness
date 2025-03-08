@@ -52,12 +52,6 @@ export default function DesktopNav({
           >
             À propos
           </Link>
-          <Link
-            to="/users"
-            className={cn("nav-link", isActive("/users") && "active")}
-          >
-            Utilisateurs
-          </Link>
           
           {/* Authentication buttons */}
           {isLoggedIn ? (
