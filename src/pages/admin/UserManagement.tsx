@@ -1,131 +1,47 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logAdminAction } from '@/services/adminAuthService';
-import { 
-  Search, Plus, ArrowUp, ArrowDown, Euro,
-  Loader2, MoreHorizontal, Pencil, Wallet, UserPlus, RefreshCcw
-} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { 
-  Table, TableBody, TableCell, 
-  TableHead, TableHeader, TableRow 
-} from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUserManagement } from '@/hooks/admin/useUserManagement';
+
+// Import refactored components
+import UserSearchBar from '@/components/admin/users/UserSearchBar';
+import RealtimeStatus from '@/components/admin/users/RealtimeStatus';
+import UsersTable from '@/components/admin/users/UsersTable';
+import EmptyUserState from '@/components/admin/users/EmptyUserState';
+import AddFundsModal from '@/components/admin/users/AddFundsModal';
+import CreateUserModal from '@/components/admin/users/CreateUserModal';
 
 export default function UserManagement() {
   const { adminUser } = useAdmin();
-  const [users, setUsers] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const {
+    filteredUsers,
+    isLoading,
+    hasError,
+    searchTerm,
+    setSearchTerm,
+    sortField,
+    sortDirection,
+    handleSort,
+    fetchUsers,
+    realTimeStatus,
+    isRefreshing
+  } = useUserManagement();
+
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [isAddFundsModalOpen, setIsAddFundsModalOpen] = useState(false);
   const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
   const [fundAmount, setFundAmount] = useState('');
-  const [sortField, setSortField] = useState('created_at');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [hasError, setHasError] = useState(false);
   const [newUser, setNewUser] = useState({
     first_name: '',
     last_name: '',
     email: '',
     wallet_balance: '0'
   });
-  const [realTimeStatus, setRealTimeStatus] = useState('connecting');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  useEffect(() => {
-    fetchUsers();
-    
-    // Set up real-time subscription for profiles with better error handling
-    const profilesChannel = supabase
-      .channel('admin_profiles_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'profiles'
-      }, (payload) => {
-        console.log('Profiles data changed, refreshing users...', payload);
-        fetchUsers();
-        toast.info("Mise à jour détectée", {
-          description: "Les données utilisateurs ont été mises à jour."
-        });
-      })
-      .subscribe((status) => {
-        console.log('Realtime subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to profiles table');
-          setRealTimeStatus('connected');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to profiles table');
-          setRealTimeStatus('error');
-          toast.error("Erreur de connexion en temps réel", {
-            description: "La mise à jour automatique des utilisateurs peut ne pas fonctionner."
-          });
-        }
-      });
-      
-    // Clean up subscription on component unmount
-    return () => {
-      console.log('Cleaning up realtime subscription');
-      supabase.removeChannel(profilesChannel);
-    };
-  }, []);
-  
-  // Separate effect for sorting changes to avoid duplicate fetching
-  useEffect(() => {
-    if (!isLoading) {
-      console.log('Sort criteria changed, refreshing data');
-      fetchUsers();
-    }
-  }, [sortField, sortDirection]);
-
-  const fetchUsers = async () => {
-    try {
-      setIsLoading(true);
-      setHasError(false);
-      setIsRefreshing(true);
-      
-      console.log("Fetching users with sort field:", sortField, "direction:", sortDirection);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order(sortField, { ascending: sortDirection === 'asc' });
-        
-      if (error) {
-        console.error('Error fetching users:', error);
-        throw error;
-      }
-      
-      console.log("Fetched users:", data);
-      
-      if (data) {
-        // Make sure we have data
-        setUsers(data);
-        
-        if (data.length === 0) {
-          console.log("No users found in the profiles table");
-          toast.info("Base de données vide", {
-            description: "Aucun utilisateur trouvé dans la base de données. Vous pouvez créer un utilisateur test."
-          });
-        }
-      } else {
-        setUsers([]);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setHasError(true);
-      toast.error("Erreur lors du chargement des utilisateurs");
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
 
   const handleCreateTestUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,17 +97,6 @@ export default function UserManagement() {
     } catch (error) {
       console.error("Erreur lors de la création de l'utilisateur test:", error);
       toast.error("Une erreur s'est produite lors de la création de l'utilisateur test");
-    }
-  };
-
-  const handleSort = (field: string) => {
-    if (field === sortField) {
-      // Toggle direction if same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // New field, default to desc
-      setSortField(field);
-      setSortDirection('desc');
     }
   };
 
@@ -251,14 +156,6 @@ export default function UserManagement() {
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const searchLower = searchTerm.toLowerCase();
-    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
-    const email = (user.email || '').toLowerCase();
-    
-    return fullName.includes(searchLower) || email.includes(searchLower);
-  });
-
   const handleRefresh = () => {
     fetchUsers();
   };
@@ -267,49 +164,15 @@ export default function UserManagement() {
     <div>
       <h1 className="text-2xl font-semibold text-bgs-blue mb-6">Gestion des Utilisateurs</h1>
       
-      <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Rechercher un utilisateur..."
-            className="pl-10 w-full md:w-80"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
-            onClick={() => setIsCreateUserModalOpen(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <UserPlus className="mr-2 h-4 w-4" />
-            Créer utilisateur test
-          </Button>
-          
-          <Button
-            onClick={handleRefresh}
-            className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
-            disabled={isRefreshing}
-          >
-            <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Actualiser
-          </Button>
-        </div>
-      </div>
+      <UserSearchBar 
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        onCreateUser={() => setIsCreateUserModalOpen(true)}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+      />
       
-      {/* Realtime status indicator */}
-      <div className="mb-4 flex items-center">
-        <div className={`h-2 w-2 rounded-full mr-2 animate-pulse ${
-          realTimeStatus === 'connected' ? 'bg-green-500' : 
-          realTimeStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500'
-        }`}></div>
-        <span className="text-sm text-gray-600">
-          {realTimeStatus === 'connected' ? 'Mise à jour en temps réel active' : 
-           realTimeStatus === 'error' ? 'Erreur de connexion en temps réel' : 'Connexion en cours...'}
-        </span>
-      </div>
+      <RealtimeStatus status={realTimeStatus} />
       
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         {isLoading ? (
@@ -319,262 +182,47 @@ export default function UserManagement() {
         ) : hasError ? (
           <div className="text-center p-8 text-red-500">
             Une erreur est survenue lors du chargement des utilisateurs. 
-            <Button 
-              variant="link" 
+            <button 
               onClick={fetchUsers} 
-              className="text-bgs-blue"
+              className="text-bgs-blue ml-2 underline"
             >
               Réessayer
-            </Button>
+            </button>
           </div>
-        ) : users.length === 0 ? (
-          <div className="text-center p-8 text-gray-500">
-            Aucun utilisateur trouvé dans la base de données.
-            <div className="mt-4">
-              <Button
-                onClick={() => setIsCreateUserModalOpen(true)}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                <UserPlus className="mr-2 h-4 w-4" />
-                Créer un premier utilisateur test
-              </Button>
-            </div>
-          </div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="text-center p-8 text-gray-500">
-            Aucun utilisateur ne correspond à votre recherche
-          </div>
+        ) : filteredUsers.length === 0 && searchTerm === '' ? (
+          <EmptyUserState onCreateUser={() => setIsCreateUserModalOpen(true)} />
         ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[250px]">
-                    <button 
-                      className="flex items-center space-x-1 hover:text-bgs-blue"
-                      onClick={() => handleSort('first_name')}
-                    >
-                      <span>Nom</span>
-                      {sortField === 'first_name' && (
-                        sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-                      )}
-                    </button>
-                  </TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>
-                    <button 
-                      className="flex items-center space-x-1 hover:text-bgs-blue"
-                      onClick={() => handleSort('wallet_balance')}
-                    >
-                      <span>Solde</span>
-                      {sortField === 'wallet_balance' && (
-                        sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-                      )}
-                    </button>
-                  </TableHead>
-                  <TableHead>
-                    <button 
-                      className="flex items-center space-x-1 hover:text-bgs-blue"
-                      onClick={() => handleSort('investment_total')}
-                    >
-                      <span>Investissements</span>
-                      {sortField === 'investment_total' && (
-                        sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-                      )}
-                    </button>
-                  </TableHead>
-                  <TableHead>
-                    <button 
-                      className="flex items-center space-x-1 hover:text-bgs-blue"
-                      onClick={() => handleSort('created_at')}
-                    >
-                      <span>Date d'inscription</span>
-                      {sortField === 'created_at' && (
-                        sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />
-                      )}
-                    </button>
-                  </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.first_name} {user.last_name}</TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>{user.wallet_balance?.toLocaleString() || 0} €</TableCell>
-                    <TableCell>{user.investment_total?.toLocaleString() || 0} €</TableCell>
-                    <TableCell>
-                      {user.created_at ? new Date(user.created_at).toLocaleDateString('fr-FR') : 'N/A'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setIsAddFundsModalOpen(true);
-                          }}
-                          title="Ajouter des fonds"
-                        >
-                          <Wallet className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            // View user details
-                            console.log("View user details:", user);
-                            toast.info(`Détails pour ${user.first_name} ${user.last_name}`, {
-                              description: "Cette fonctionnalité sera disponible prochainement."
-                            });
-                          }}
-                          title="Voir les détails"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <UsersTable 
+            users={filteredUsers} 
+            sortConfig={{ field: sortField, direction: sortDirection }}
+            onSort={handleSort}
+            onAddFunds={(user) => {
+              setSelectedUser(user);
+              setIsAddFundsModalOpen(true);
+            }}
+          />
         )}
       </div>
       
-      {/* Add Funds Modal */}
-      {isAddFundsModalOpen && selectedUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-semibold text-bgs-blue mb-4">
-              Ajouter des fonds
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Vous ajoutez des fonds au compte de <strong>{selectedUser.first_name} {selectedUser.last_name}</strong>
-            </p>
-            
-            <form onSubmit={handleAddFunds}>
-              <div className="mb-4">
-                <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
-                  Montant (€)
-                </label>
-                <div className="relative">
-                  <Euro className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <Input
-                    id="amount"
-                    type="number"
-                    min="1"
-                    step="1"
-                    className="pl-10"
-                    placeholder="Montant"
-                    value={fundAmount}
-                    onChange={(e) => setFundAmount(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-2 mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setIsAddFundsModalOpen(false);
-                    setFundAmount('');
-                  }}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
-                >
-                  Confirmer
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AddFundsModal 
+        isOpen={isAddFundsModalOpen}
+        selectedUser={selectedUser}
+        fundAmount={fundAmount}
+        setFundAmount={setFundAmount}
+        onClose={() => {
+          setIsAddFundsModalOpen(false);
+          setFundAmount('');
+        }}
+        onSubmit={handleAddFunds}
+      />
       
-      {/* Create User Modal */}
-      {isCreateUserModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-semibold text-bgs-blue mb-4">
-              Créer un utilisateur test
-            </h2>
-            <p className="text-gray-600 mb-4">
-              Cet utilisateur sera créé uniquement pour les tests et n'aura pas d'accès au compte.
-            </p>
-            
-            <form onSubmit={handleCreateTestUser}>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="first_name">Prénom</Label>
-                  <Input
-                    id="first_name"
-                    value={newUser.first_name}
-                    onChange={(e) => setNewUser({...newUser, first_name: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="last_name">Nom</Label>
-                  <Input
-                    id="last_name"
-                    value={newUser.last_name}
-                    onChange={(e) => setNewUser({...newUser, last_name: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                    required
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="wallet_balance">Solde initial (€)</Label>
-                  <Input
-                    id="wallet_balance"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={newUser.wallet_balance}
-                    onChange={(e) => setNewUser({...newUser, wallet_balance: e.target.value})}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex justify-end gap-2 mt-6">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsCreateUserModalOpen(false)}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  type="submit"
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Créer l'utilisateur
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <CreateUserModal 
+        isOpen={isCreateUserModalOpen}
+        newUser={newUser}
+        setNewUser={setNewUser}
+        onClose={() => setIsCreateUserModalOpen(false)}
+        onSubmit={handleCreateTestUser}
+      />
     </div>
   );
 }
