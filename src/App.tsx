@@ -21,6 +21,7 @@ import { AdminProvider } from "./contexts/AdminContext";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import ProfileManagement from "./pages/admin/ProfileManagement";
 import ProjectManagement from "./pages/admin/ProjectManagement";
 import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
 import WalletManagement from "./pages/admin/WalletManagement";
@@ -61,7 +62,7 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<AdminDashboard />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
-                {/* Route users supprimée */}
+                <Route path="profiles" element={<ProfileManagement />} />
                 <Route path="projects" element={<ProjectManagement />} />
                 <Route path="withdrawals" element={<WithdrawalManagement />} />
                 <Route path="wallets" element={<WalletManagement />} />
