@@ -17,7 +17,7 @@ export function useOfflineUsersCount() {
       setError(null);
       
       try {
-        // Get all profiles
+        // Get all profiles without requiring authentication
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
           .select('*');

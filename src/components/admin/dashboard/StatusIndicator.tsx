@@ -58,18 +58,20 @@ export default function StatusIndicator({
         </span>
       </div>
       
-      {/* User Status Summary - New addition */}
-      {!isLoading && (
-        <div className="flex items-center border-l border-gray-200 pl-4 ml-2">
+      {/* User Status Summary */}
+      <div className="flex items-center border-l border-gray-200 pl-4 ml-2">
+        {isLoading ? (
+          <span className="text-sm text-gray-500">Chargement des utilisateurs...</span>
+        ) : (
           <span className="text-sm text-gray-700">
             {offlineUsers} / {totalUsers} déconnectés
           </span>
-        </div>
-      )}
+        )}
+      </div>
       
       {/* Real-time Status Indicator - Only show if realTimeStatus is provided */}
       {realTimeStatus && (
-        <div className="flex items-center">
+        <div className="flex items-center border-l border-gray-200 pl-4 ml-2">
           {realTimeStatus === 'connected' ? (
             <Wifi className="h-4 w-4 text-green-500 mr-1" />
           ) : realTimeStatus === 'connecting' ? (

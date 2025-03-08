@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Users, CreditCard, Database, ArrowLeftRight, UserX } from 'lucide-react';
 import { useOfflineUsersCount } from '@/hooks/admin/useOfflineUsersCount';
@@ -20,7 +21,7 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
   // Show total users from our direct database query instead of the stats
   const displayedUserCount = !isLoadingUsers ? totalUsers : stats.userCount;
   
-  if (isLoading || isLoadingUsers) {
+  if (isLoading && isLoadingUsers) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {[...Array(5)].map((_, i) => (
