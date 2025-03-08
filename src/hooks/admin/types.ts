@@ -20,4 +20,19 @@ export interface AdminLog {
   };
 }
 
-export type RealTimeStatus = 'connecting' | 'connected' | 'error';
+export interface UserProfile {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  wallet_balance: number | null;
+  projects_count: number | null;
+  investment_total: number | null;
+  address: string | null;
+  last_active_at?: string | null;
+  account_status?: 'active' | 'inactive' | 'suspended';
+  online_status?: 'online' | 'offline';
+}

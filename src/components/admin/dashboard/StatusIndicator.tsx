@@ -3,13 +3,13 @@ import React from 'react';
 import { RefreshCw } from 'lucide-react';
 
 type StatusIndicatorProps = {
-  realTimeStatus: 'connecting' | 'connected' | 'error';
+  systemStatus: 'operational' | 'degraded' | 'maintenance';
   isRefreshing: boolean;
   onRefresh: () => void;
 };
 
 export default function StatusIndicator({ 
-  realTimeStatus, 
+  systemStatus, 
   isRefreshing, 
   onRefresh 
 }: StatusIndicatorProps) {
@@ -17,12 +17,12 @@ export default function StatusIndicator({
     <div className="flex items-center gap-3">
       <div className="flex items-center">
         <div className={`h-2.5 w-2.5 rounded-full mr-2 ${
-          realTimeStatus === 'connected' ? 'bg-green-500 animate-pulse' : 
-          realTimeStatus === 'error' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500 animate-pulse'
+          systemStatus === 'operational' ? 'bg-green-500 animate-pulse' : 
+          systemStatus === 'degraded' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500 animate-pulse'
         }`}></div>
         <span className="text-sm font-medium text-gray-700 mr-3">
-          {realTimeStatus === 'connected' ? 'Temps réel actif' : 
-          realTimeStatus === 'error' ? 'Erreur de connexion' : 'Connexion...'}
+          {systemStatus === 'operational' ? 'Système opérationnel' : 
+          systemStatus === 'degraded' ? 'Performance dégradée' : 'Maintenance en cours'}
         </span>
       </div>
       <button 
