@@ -14,14 +14,20 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Search, RefreshCw, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import StatusIndicator from '@/components/admin/dashboard/StatusIndicator';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 export default function ProfileManagement() {
   const [profiles, setProfiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [realTimeStatus, setRealTimeStatus] = useState('connected');
+  const [realTimeStatus, setRealTimeStatus] = useState<'connected' | 'connecting' | 'error'>('connected');
   const [totalProfiles, setTotalProfiles] = useState(0);
+  const [isAddFundsDialogOpen, setIsAddFundsDialogOpen] = useState(false);
+  const [amountToAdd, setAmountToAdd] = useState<string>('100');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     fetchProfiles();
@@ -60,6 +66,65 @@ export default function ProfileManagement() {
     fetchProfiles();
   };
 
+  const handleAddFundsToAll = async () => {
+    try {
+      setIsProcessing(true);
+      
+      // Convert the amount to a number
+      const amount = parseInt(amountToAdd, 10);
+      
+      if (isNaN(amount) || amount <= 0) {
+        throw new Error('Le montant doit être un nombre positif');
+      }
+      
+      // Add funds to all profiles
+      const promises = profiles.map(async (profile) => {
+        // Update the wallet balance directly
+        const { error } = await supabase.rpc('increment_wallet_balance', {
+          user_id: profile.id,
+          increment_amount: amount
+        });
+        
+        if (error) {
+          console.error(`Error adding funds to profile ${profile.id}:`, error);
+          return false;
+        }
+        
+        // Create a wallet transaction record
+        await supabase.from('wallet_transactions').insert({
+          user_id: profile.id,
+          amount: amount,
+          type: 'deposit',
+          status: 'completed',
+          description: 'Ajout de fonds par administrateur (opération groupée)'
+        });
+        
+        return true;
+      });
+      
+      const results = await Promise.all(promises);
+      const successCount = results.filter(result => result).length;
+      
+      // Log the admin action
+      await supabase.from('admin_logs').insert({
+        description: `Ajout de ${amount}€ à tous les profils (${successCount}/${profiles.length} réussis)`,
+        action_type: 'wallet_management',
+        amount: amount
+      });
+      
+      toast.success(`${successCount} profils mis à jour avec succès!`);
+      setIsAddFundsDialogOpen(false);
+      
+      // Refresh the profiles to show the updated balances
+      fetchProfiles();
+    } catch (error) {
+      console.error('Error adding funds:', error);
+      toast.error(error.message || 'Erreur lors de l\'ajout des fonds');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const filteredProfiles = profiles.filter((profile) => {
     if (!searchTerm) return true;
     
@@ -81,11 +146,19 @@ export default function ProfileManagement() {
           </span>
         </div>
         
-        <StatusIndicator 
-          realTimeStatus={realTimeStatus} 
-          isRefreshing={isRefreshing} 
-          onRefresh={handleRefresh} 
-        />
+        <div className="flex gap-3">
+          <Button 
+            onClick={() => setIsAddFundsDialogOpen(true)}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            Ajouter des fonds à tous
+          </Button>
+          <StatusIndicator 
+            realTimeStatus={realTimeStatus} 
+            isRefreshing={isRefreshing} 
+            onRefresh={handleRefresh} 
+          />
+        </div>
       </div>
 
       <div className="relative">
@@ -152,6 +225,49 @@ export default function ProfileManagement() {
           </Table>
         )}
       </div>
+
+      {/* Dialog pour ajouter des fonds à tous les profils */}
+      <Dialog open={isAddFundsDialogOpen} onOpenChange={setIsAddFundsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Ajouter des fonds à tous les profils</DialogTitle>
+            <DialogDescription>
+              Cette action ajoutera le montant spécifié à tous les {totalProfiles} profils dans la base de données.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="amount" className="text-right">
+                Montant (€)
+              </Label>
+              <Input
+                id="amount"
+                type="number"
+                value={amountToAdd}
+                onChange={(e) => setAmountToAdd(e.target.value)}
+                className="col-span-3"
+                min="1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsAddFundsDialogOpen(false)}
+              disabled={isProcessing}
+            >
+              Annuler
+            </Button>
+            <Button 
+              onClick={handleAddFundsToAll} 
+              disabled={isProcessing}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isProcessing ? 'Traitement en cours...' : 'Confirmer'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
