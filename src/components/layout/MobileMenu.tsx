@@ -25,7 +25,7 @@ export default function MobileMenu({
   
   // Render navigation links
   const renderNavLinks = () => (
-    <>
+    <div className="nav-items-container flex flex-col space-y-4">
       {/* Hide the home link when on dashboard */}
       {!isOnDashboard && (
         <Link
@@ -79,7 +79,7 @@ export default function MobileMenu({
           </Link>
         </>
       )}
-    </>
+    </div>
   );
   
   return (

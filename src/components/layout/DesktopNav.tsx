@@ -27,7 +27,7 @@ export default function DesktopNav({
   const renderNavLinks = () => (
     <>
       {!isOnDashboard && (
-        <>
+        <div className="nav-items-container space-x-8">
           <Link
             to="/"
             className={cn("nav-link", isActive("/") && "active")}
@@ -52,7 +52,7 @@ export default function DesktopNav({
           >
             À propos
           </Link>
-        </>
+        </div>
       )}
     </>
   );

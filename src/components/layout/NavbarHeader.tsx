@@ -31,7 +31,9 @@ export default function NavbarHeader({ isScrolled, isLoggedIn = false, children 
         <div className="flex items-center justify-between">
           {children}
           {/* Only show NavbarActions when logged in and on dashboard */}
-          {isLoggedIn && isDashboardPage && <NavbarActions isActive={isActive} />}
+          {isLoggedIn && isDashboardPage && (
+            <NavbarActions isActive={isActive} />
+          )}
         </div>
       </div>
     </header>
