@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,6 +27,7 @@ import WalletManagement from "./pages/admin/WalletManagement";
 import NotificationManagement from "./pages/admin/NotificationManagement";
 import ProfileManagement from "./pages/admin/ProfileManagement";
 import InactiveUsersPage from "./pages/admin/InactiveUsersPage";
+import UsersListPage from "./pages/admin/UsersListPage";
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -67,6 +69,7 @@ const App = () => (
                 <Route path="wallets" element={<WalletManagement />} />
                 <Route path="profiles" element={<ProfileManagement />} />
                 <Route path="inactive-users" element={<InactiveUsersPage />} />
+                <Route path="users" element={<UsersListPage />} />
                 <Route path="notifications" element={<NotificationManagement />} />
               </Route>
               

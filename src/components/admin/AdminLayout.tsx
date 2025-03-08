@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -46,6 +45,11 @@ export default function AdminLayout() {
       label: 'Demandes de retrait', 
       icon: <ArrowLeftRight className="w-5 h-5" />, 
       path: '/admin/withdrawals' 
+    },
+    { 
+      label: 'Tous les utilisateurs', 
+      icon: <Users className="w-5 h-5" />, 
+      path: '/admin/users' 
     },
     { 
       label: 'Profils', 
