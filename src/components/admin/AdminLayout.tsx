@@ -1,162 +1,106 @@
 import React, { useState } from 'react';
-import { Outlet, Navigate, useNavigate } from 'react-router-dom';
-import { useAdmin } from '@/contexts/AdminContext';
-import { logoutAdmin } from '@/services/adminAuthService';
-import { 
-  Database, Wallet, ArrowLeftRight, 
-  LayoutDashboard, LogOut, Menu, X, Bell, Users
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
+import { LayoutDashboard, Users, UserX, Menu } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export default function AdminLayout() {
-  const { adminUser, setAdminUser } = useAdmin();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { signOut, user } = useAuth();
   const navigate = useNavigate();
 
-  // If no admin user is logged in, redirect to login
-  if (!adminUser) {
-    return <Navigate to="/admin/login" replace />;
-  }
-
-  const handleLogout = () => {
-    logoutAdmin();
-    setAdminUser(null);
-    toast.success("Vous avez été déconnecté");
-    navigate("/admin/login");
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const menuItems = [
-    { 
-      label: 'Tableau de bord', 
-      icon: <LayoutDashboard className="w-5 h-5" />, 
-      path: '/admin/dashboard' 
-    },
-    { 
-      label: 'Projets', 
-      icon: <Database className="w-5 h-5" />, 
-      path: '/admin/projects' 
-    },
-    { 
-      label: 'Portefeuilles', 
-      icon: <Wallet className="w-5 h-5" />, 
-      path: '/admin/wallets' 
-    },
-    { 
-      label: 'Demandes de retrait', 
-      icon: <ArrowLeftRight className="w-5 h-5" />, 
-      path: '/admin/withdrawals' 
-    },
-    { 
-      label: 'Profils', 
-      icon: <Users className="w-5 h-5" />, 
-      path: '/admin/profiles' 
-    },
-    { 
-      label: 'Notifications', 
-      icon: <Bell className="w-5 h-5" />, 
-      path: '/admin/notifications' 
-    },
-  ];
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Nav */}
-      <div className="bg-bgs-blue text-white shadow-md">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2"
-            >
-              {isMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-            <h1 className="text-xl font-bold">BGS Admin</h1>
-          </div>
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-white shadow-lg transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
+        {/* Sidebar Header */}
+        <div className="flex items-center justify-between bg-gray-100 border-b p-4">
+          <Link to="/admin" className="flex items-center text-xl font-bold text-gray-800">
+            Admin Dashboard
+          </Link>
+          <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden">
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
+        
+        {/* Navigation Links */}
+        <nav className="mt-8 space-y-2 px-4">
+          <Link to="/admin" className="flex items-center rounded-md px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+            <LayoutDashboard className="mr-3 h-5 w-5" />
+            <span>Dashboard</span>
+          </Link>
           
-          <div className="flex items-center gap-4">
-            <button className="relative p-2">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-bgs-orange rounded-full"></span>
-            </button>
-            
-            <div className="hidden md:flex items-center gap-2">
-              <div className="text-sm">
-                <div className="font-medium">
-                  {adminUser.first_name} {adminUser.last_name}
-                </div>
-                <div className="text-white/70 text-xs">{adminUser.email}</div>
-              </div>
-              
-              <button
-                onClick={handleLogout}
-                className="p-2 hover:bg-bgs-blue-light rounded-full"
-                title="Déconnexion"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
+          <Link to="/admin/profiles" className="flex items-center rounded-md px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+            <Users className="mr-3 h-5 w-5" />
+            <span>Profils Utilisateurs</span>
+          </Link>
+          
+          <Link to="/admin/inactive-users" className="flex items-center rounded-md px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900">
+            <UserX className="mr-3 h-5 w-5" />
+            <span>Utilisateurs Inactifs</span>
+          </Link>
+          
+          {/* Add more navigation links here */}
+        </nav>
+        
+        {/* Sidebar Footer */}
+        <div className="absolute bottom-0 w-full p-4 border-t bg-gray-100">
+          <p className="text-sm text-gray-500">
+            © {new Date().getFullYear()} InvestEase
+          </p>
         </div>
       </div>
       
-      {/* Mobile menu overlay */}
-      {isMenuOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsMenuOpen(false)}
-        ></div>
-      )}
-      
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <aside 
-          className={`
-            ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
-            md:translate-x-0 fixed md:static inset-y-0 left-0 w-64 bg-white shadow-lg 
-            transition-transform duration-300 ease-in-out z-50 pt-16 md:pt-0
-          `}
-        >
-          <nav className="p-4 space-y-1">
-            {menuItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => {
-                  navigate(item.path);
-                  setIsMenuOpen(false);
-                }}
-                className={`
-                  flex items-center gap-3 px-4 py-3 w-full rounded-lg
-                  ${
-                    location.pathname === item.path
-                      ? 'bg-bgs-blue text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }
-                `}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </button>
-            ))}
-            
-            <hr className="my-4" />
-            
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Déconnexion</span>
-            </button>
-          </nav>
-        </aside>
+      {/* Main Content */}
+      <div className="flex flex-col flex-1 transition-all duration-300 ease-in-out lg:pl-64">
+        {/* Header */}
+        <header className="flex items-center justify-between h-16 bg-white shadow-md px-4">
+          <div className="flex items-center">
+            <Button variant="ghost" size="icon" onClick={toggleSidebar} className="lg:hidden">
+              <Menu className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-semibold ml-4">Admin Panel</h1>
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={user?.user_metadata?.avatar_url as string} alt={user?.user_metadata?.full_name as string} />
+                  <AvatarFallback>{(user?.user_metadata?.full_name as string)?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" alignOffset={8} forceMount>
+              <DropdownMenuLabel>Mon Profil</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleSignOut}>Déconnexion</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </header>
         
-        {/* Main content */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
-          <Outlet />
+        {/* Page Content */}
+        <main className="flex-1 p-4">
+          {/* Your page content will go here */}
         </main>
       </div>
     </div>
