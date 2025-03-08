@@ -68,7 +68,7 @@ export default function ProfileManagement() {
       // Combine the profiles with online status
       const profilesWithStatus = data?.map(profile => ({
         ...profile,
-        online_status: onlineUsers.has(profile.id) ? 'online' : 'offline'
+        online_status: onlineUsers.has(profile.id) ? 'online' as const : 'offline' as const
       })) || [];
       
       setProfiles(profilesWithStatus);
@@ -106,7 +106,7 @@ export default function ProfileManagement() {
         setProfiles(prevProfiles => 
           prevProfiles.map(profile => ({
             ...profile,
-            online_status: onlineUserIds.has(profile.id) ? 'online' : 'offline'
+            online_status: onlineUserIds.has(profile.id) ? 'online' as const : 'offline' as const
           }))
         );
       })
