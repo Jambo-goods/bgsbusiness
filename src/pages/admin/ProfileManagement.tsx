@@ -11,36 +11,17 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function ProfileManagement() {
   const [profiles, setProfiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchProfiles();
-
-    // Set up realtime subscriptions
-    const channel = supabase
-      .channel('profiles-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'profiles' },
-        (payload) => {
-          console.log('Realtime update:', payload);
-          fetchProfiles();
-        }
-      )
-      .subscribe((status) => {
-        console.log('Realtime status:', status);
-        setIsRealtimeConnected(status === 'SUBSCRIBED');
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const fetchProfiles = async () => {
@@ -57,11 +38,19 @@ export default function ProfileManagement() {
 
       console.log('Fetched profiles:', data);
       setProfiles(data || []);
+      toast.success('Profils chargés avec succès');
     } catch (error) {
       console.error('Error fetching profiles:', error);
+      toast.error('Erreur lors du chargement des profils');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchProfiles();
   };
 
   const filteredProfiles = profiles.filter((profile) => {
@@ -79,12 +68,14 @@ export default function ProfileManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Gestion des Profils</h1>
-        <div className="flex items-center">
-          <div className={`flex items-center mr-4 ${isRealtimeConnected ? 'text-green-500' : 'text-gray-400'}`}>
-            <span className={`w-2 h-2 mr-1 rounded-full ${isRealtimeConnected ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-            <span className="text-xs">Données en temps réel</span>
-          </div>
-        </div>
+        <button 
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-bgs-blue to-bgs-blue-light text-white rounded-lg hover:shadow-md transition-all duration-200"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Actualiser
+        </button>
       </div>
 
       <div className="relative">
