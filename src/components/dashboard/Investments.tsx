@@ -1,6 +1,5 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
 import { Project } from "@/types/project";
 import SearchAndFilterControls from "./investments/SearchAndFilterControls";
 import InvestmentItem from "./investments/InvestmentItem";
@@ -71,15 +70,6 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
               <InvestmentItem key={investment.id} investment={investment} />
             ))
           )}
-        </div>
-        
-        <div className="mt-4 text-center">
-          <Link 
-            to="/projects" 
-            className="text-sm text-bgs-blue hover:text-bgs-orange px-4 py-1.5 rounded-md border border-bgs-blue hover:border-bgs-orange transition-colors inline-block"
-          >
-            Découvrir de nouveaux projets
-          </Link>
         </div>
       </div>
     </div>
