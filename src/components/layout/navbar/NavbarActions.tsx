@@ -84,7 +84,7 @@ export default function NavbarActions({
 
   if (isDashboardPage) {
     return (
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-center mx-auto space-x-2">
         <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
           <Home className="h-5 w-5 text-bgs-blue" />
         </Link>
