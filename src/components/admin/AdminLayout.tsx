@@ -52,6 +52,11 @@ export default function AdminLayout() {
       icon: <ArrowLeftRight className="w-5 h-5" />, 
       path: '/admin/withdrawals' 
     },
+    { 
+      label: 'Notifications', 
+      icon: <Bell className="w-5 h-5" />, 
+      path: '/admin/notifications' 
+    },
   ];
 
   return (
