@@ -24,7 +24,7 @@ export const useInvestmentSubscriptions = (
       }, async (payload) => {
         console.log('Investment data changed, refreshing tracking tab...', payload);
         
-        // Si le statut change à "completed", déclencher la notification de projet terminé
+        // Vérifier si le statut change à "completed" pour envoyer la notification de projet terminé
         if (payload.eventType === 'UPDATE' && payload.new.status === 'completed' && payload.old.status !== 'completed') {
           try {
             console.log("Projet terminé, création de la notification");

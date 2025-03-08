@@ -66,6 +66,9 @@ export const useInvestment = (project: Project, investorCount: number) => {
         description: `Vous n'avez pas assez de fonds disponibles. Votre solde: ${userBalance}€`,
         variant: "destructive"
       });
+      
+      // Create insufficient funds notification
+      notificationService.insufficientFunds();
       return;
     }
     
