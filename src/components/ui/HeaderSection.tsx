@@ -30,7 +30,7 @@ export default function HeaderSection({
       <div 
         className="absolute inset-0 z-0 opacity-40"
         style={{
-          backgroundImage: `url('/lovable-uploads/57d247ea-a3b9-4faa-8ef7-96755645a44e.png')`,
+          backgroundImage: `url('/lovable-uploads/0066b26d-57b3-4d25-9a87-542e23e500a3.png')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}
