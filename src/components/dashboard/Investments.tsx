@@ -29,7 +29,7 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
   const [investmentTotal, setInvestmentTotal] = useState(0);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Calculate total investment amount
+  // Calculate total investment amount when userInvestments changes
   useEffect(() => {
     const total = userInvestments.reduce((total, investment) => 
       total + (investment.amount || 0), 0);
@@ -52,9 +52,16 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
               schema: 'public',
               table: 'investments',
               filter: `user_id=eq.${userId}`
-            }, () => {
+            }, (payload) => {
               // Show updating indicator
               setIsUpdating(true);
+              
+              // Recalculate total after data change
+              // Note: In a production app, you might want to fetch the latest data
+              // instead of relying on the local state
+              const updatedTotal = userInvestments.reduce((total, investment) => 
+                total + (investment.amount || 0), 0);
+              setInvestmentTotal(updatedTotal);
               
               // Reset indicator after animation completes
               setTimeout(() => {
@@ -80,7 +87,7 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
         });
       }
     };
-  }, []);
+  }, [userInvestments]);
 
   return (
     <div className="space-y-4">
