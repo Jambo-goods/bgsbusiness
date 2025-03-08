@@ -1,6 +1,7 @@
 
 import { Project } from "@/types/project";
 import { supabase } from "@/integrations/supabase/client";
+import { notificationService } from "@/services/notifications";
 
 export const isUUID = (str: string): boolean => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -61,6 +62,16 @@ export const createProjectInDatabase = async (project: Project, toast: any) => {
       title: "Projet créé",
       description: `Le projet ${project.name} a été créé avec succès dans la base de données.`
     });
+    
+    // Déclencher la notification pour tous les utilisateurs
+    try {
+      console.log("Création de la notification pour le nouveau projet");
+      await notificationService.newInvestmentOpportunity(project.name, newProject.id);
+      console.log("Notification créée avec succès");
+    } catch (notifError) {
+      console.error("Erreur lors de la création de la notification:", notifError);
+      // Continue execution even if notification creation fails
+    }
     
     return newProject.id;
   } catch (error) {

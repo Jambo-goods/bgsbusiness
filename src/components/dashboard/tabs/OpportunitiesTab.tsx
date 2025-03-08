@@ -23,6 +23,7 @@ export default function OpportunitiesTab() {
           const featuredProject = projects.find(p => p.featured);
           
           if (featuredProject) {
+            console.log("Creating demo notification for featured project:", featuredProject.name);
             await notificationService.newOpportunityAlert(
               featuredProject.name,
               featuredProject.id,

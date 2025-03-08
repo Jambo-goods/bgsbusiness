@@ -3,6 +3,7 @@ import { BaseNotificationService } from "./BaseNotificationService";
 
 export class InvestmentNotificationService extends BaseNotificationService {
   newInvestmentOpportunity(projectName: string, projectId: string): Promise<void> {
+    console.log(`Creating new investment opportunity notification for ${projectName}`);
     return this.createNotification({
       title: "Nouvelle opportunité d'investissement",
       description: `Un nouveau projet ${projectName} est disponible ! Investissez dès maintenant.`,
