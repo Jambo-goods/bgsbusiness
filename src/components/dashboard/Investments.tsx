@@ -42,34 +42,40 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
     calculateTotal();
     
     // Set up real-time subscription for investments updates
-    const { data: user } = supabase.auth.getSession();
-    
-    user.then(userData => {
-      if (userData.session?.user) {
-        const userId = userData.session.user.id;
+    const setupRealtimeSubscription = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
         
-        // Subscribe to changes on the investments table for this user
-        const investmentsChannel = supabase
-          .channel('investments_total_updates')
-          .on('postgres_changes', {
-            event: '*',
-            schema: 'public',
-            table: 'investments',
-            filter: `user_id=eq.${userId}`
-          }, () => {
-            // When investment data changes, show updating state
-            setIsUpdating(true);
-            
-            // Fetch the latest data to recalculate total
-            fetchLatestInvestmentTotal(userId);
-          })
-          .subscribe();
+        if (sessionData?.session?.user) {
+          const userId = sessionData.session.user.id;
           
-        return () => {
-          supabase.removeChannel(investmentsChannel);
-        };
+          // Subscribe to changes on the investments table for this user
+          const investmentsChannel = supabase
+            .channel('investments_total_updates')
+            .on('postgres_changes', {
+              event: '*',
+              schema: 'public',
+              table: 'investments',
+              filter: `user_id=eq.${userId}`
+            }, () => {
+              // When investment data changes, show updating state
+              setIsUpdating(true);
+              
+              // Fetch the latest data to recalculate total
+              fetchLatestInvestmentTotal(userId);
+            })
+            .subscribe();
+            
+          return () => {
+            supabase.removeChannel(investmentsChannel);
+          };
+        }
+      } catch (error) {
+        console.error("Error setting up real-time subscription:", error);
       }
-    });
+    };
+    
+    setupRealtimeSubscription();
   }, [userInvestments]);
   
   // Function to fetch latest investment total directly from database
