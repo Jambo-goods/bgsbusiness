@@ -1,13 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logAdminAction } from '@/services/adminAuthService';
-import { Loader2, RefreshCw, Wallet, Search } from 'lucide-react';
+import { Loader2, RefreshCw, Wallet, Search, UserPlus, ArrowUpDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useUserManagement } from '@/hooks/admin/useUserManagement';
 import {
   Table,
   TableBody,
@@ -16,31 +15,121 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function UserManagement() {
   const { adminUser } = useAdmin();
-  const {
-    filteredUsers,
-    isLoading,
-    hasError,
-    searchTerm,
-    setSearchTerm,
-    sortField,
-    sortDirection,
-    handleSort,
-    fetchUsers,
-    isRefreshing
-  } = useUserManagement();
-
+  const [users, setUsers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortField, setSortField] = useState<string>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [fundAmount, setFundAmount] = useState('');
   const [showAddFundsModal, setShowAddFundsModal] = useState(false);
 
+  // Fetch all users from Supabase
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setIsRefreshing(true);
+      
+      console.log("Fetching users with sort:", sortField, sortDirection);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order(sortField, { ascending: sortDirection === 'asc' });
+      
+      if (error) {
+        console.error('Erreur lors de la récupération des utilisateurs:', error);
+        setError("Impossible de charger les utilisateurs");
+        throw error;
+      }
+      
+      console.log("Utilisateurs récupérés:", data);
+      
+      if (data) {
+        setUsers(data);
+      } else {
+        setUsers([]);
+      }
+    } catch (error) {
+      console.error('Erreur:', error);
+      setError("Une erreur est survenue lors du chargement des utilisateurs");
+      toast.error("Erreur de chargement", {
+        description: "Impossible de récupérer les utilisateurs"
+      });
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  // Initial fetch and setup real-time subscription
+  useEffect(() => {
+    fetchUsers();
+    
+    // Set up real-time subscription for profiles table
+    const profilesChannel = supabase
+      .channel('admin_profiles_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles'
+      }, (payload) => {
+        console.log('Profiles data changed:', payload);
+        fetchUsers();
+        toast.info("Mise à jour détectée", {
+          description: "Les données utilisateurs ont été mises à jour."
+        });
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(profilesChannel);
+    };
+  }, []);
+
+  // Re-fetch when sort criteria changes
+  useEffect(() => {
+    if (!isLoading) {
+      fetchUsers();
+    }
+  }, [sortField, sortDirection]);
+
+  // Handle sorting
+  const handleSort = (field: string) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+  };
+
+  // Handle refresh
   const handleRefresh = () => {
     fetchUsers();
     toast.info("Actualisation des données en cours...");
   };
 
+  // Filter users based on search term
+  const filteredUsers = users.filter(user => {
+    if (!searchTerm.trim()) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
+    const email = (user.email || '').toLowerCase();
+    
+    return fullName.includes(searchLower) || email.includes(searchLower);
+  });
+
+  // Handle adding funds
   const handleAddFunds = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -100,7 +189,7 @@ export default function UserManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-bgs-blue">Liste des comptes utilisateurs</h1>
+        <h1 className="text-2xl font-bold text-bgs-blue">Gestion des utilisateurs</h1>
         <Button onClick={handleRefresh} disabled={isRefreshing}>
           <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           Actualiser
@@ -125,12 +214,16 @@ export default function UserManagement() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-10 w-10 animate-spin text-bgs-blue" />
+          <div className="space-y-2">
+            {[...Array(5)].map((_, index) => (
+              <div key={index} className="flex items-center gap-4">
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ))}
           </div>
-        ) : hasError ? (
+        ) : error ? (
           <div className="text-center py-10 text-red-500">
-            Une erreur est survenue lors du chargement des données.
+            {error}
             <Button variant="link" onClick={fetchUsers} className="ml-2">
               Réessayer
             </Button>
@@ -151,7 +244,7 @@ export default function UserManagement() {
                     >
                       Nom
                       {sortField === 'first_name' && (
-                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        <ArrowUpDown className="ml-1 h-4 w-4" />
                       )}
                     </button>
                   </TableHead>
@@ -163,7 +256,7 @@ export default function UserManagement() {
                     >
                       Solde du compte
                       {sortField === 'wallet_balance' && (
-                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        <ArrowUpDown className="ml-1 h-4 w-4" />
                       )}
                     </button>
                   </TableHead>
@@ -174,7 +267,7 @@ export default function UserManagement() {
                     >
                       Total investi
                       {sortField === 'investment_total' && (
-                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        <ArrowUpDown className="ml-1 h-4 w-4" />
                       )}
                     </button>
                   </TableHead>
@@ -185,7 +278,7 @@ export default function UserManagement() {
                     >
                       Date d'inscription
                       {sortField === 'created_at' && (
-                        <span className="ml-1">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        <ArrowUpDown className="ml-1 h-4 w-4" />
                       )}
                     </button>
                   </TableHead>
