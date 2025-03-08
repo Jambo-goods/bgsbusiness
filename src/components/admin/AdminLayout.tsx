@@ -1,164 +1,155 @@
-import React, { useState } from 'react';
-import { Outlet, Navigate, useNavigate } from 'react-router-dom';
-import { useAdmin } from '@/contexts/AdminContext';
-import { logoutAdmin } from '@/services/adminAuthService';
+import React from 'react';
+import { NavLink } from 'react-router-dom';
 import { 
-  Database, Wallet, ArrowLeftRight, 
-  LayoutDashboard, LogOut, Menu, X, Bell, Users
+  LayoutDashboard, 
+  Users, 
+  UserCheck, 
+  DollarSign, 
+  Wallet, 
+  ArrowDownLeft, 
+  FolderKanban, 
+  Bell, 
+  Settings, 
+  User 
 } from 'lucide-react';
-import { toast } from 'sonner';
 
-export default function AdminLayout() {
-  const { adminUser, setAdminUser } = useAdmin();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const navigate = useNavigate();
-
-  // If no admin user is logged in, redirect to login
-  if (!adminUser) {
-    return <Navigate to="/admin/login" replace />;
-  }
-
-  const handleLogout = () => {
-    logoutAdmin();
-    setAdminUser(null);
-    toast.success("Vous avez été déconnecté");
-    navigate("/admin/login");
-  };
-
-  const menuItems = [
-    { 
-      label: 'Tableau de bord', 
-      icon: <LayoutDashboard className="w-5 h-5" />, 
-      path: '/admin/dashboard' 
-    },
-    { 
-      label: 'Projets', 
-      icon: <Database className="w-5 h-5" />, 
-      path: '/admin/projects' 
-    },
-    { 
-      label: 'Portefeuilles', 
-      icon: <Wallet className="w-5 h-5" />, 
-      path: '/admin/wallets' 
-    },
-    { 
-      label: 'Demandes de retrait', 
-      icon: <ArrowLeftRight className="w-5 h-5" />, 
-      path: '/admin/withdrawals' 
-    },
-    { 
-      label: 'Profils', 
-      icon: <Users className="w-5 h-5" />, 
-      path: '/admin/profiles' 
-    },
-    { 
-      label: 'Notifications', 
-      icon: <Bell className="w-5 h-5" />, 
-      path: '/admin/notifications' 
-    },
-  ];
-
+const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Nav */}
-      <div className="bg-bgs-blue text-white shadow-md">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2"
-            >
-              {isMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-            <h1 className="text-xl font-bold">BGS Admin</h1>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button className="relative p-2">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-bgs-orange rounded-full"></span>
-            </button>
-            
-            <div className="hidden md:flex items-center gap-2">
-              <div className="text-sm">
-                <div className="font-medium">
-                  {adminUser.first_name} {adminUser.last_name}
-                </div>
-                <div className="text-white/70 text-xs">{adminUser.email}</div>
-              </div>
-              
-              <button
-                onClick={handleLogout}
-                className="p-2 hover:bg-bgs-blue-light rounded-full"
-                title="Déconnexion"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
+    <div className="flex h-screen bg-gray-100">
+      {/* Sidebar */}
+      <div className="w-64 bg-white shadow-md">
+        <div className="p-6">
+          <h1 className="text-xl font-bold text-bgs-blue">Admin Panel</h1>
         </div>
-      </div>
-      
-      {/* Mobile menu overlay */}
-      {isMenuOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsMenuOpen(false)}
-        ></div>
-      )}
-      
-      <div className="flex flex-1">
-        {/* Sidebar */}
-        <aside 
-          className={`
-            ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
-            md:translate-x-0 fixed md:static inset-y-0 left-0 w-64 bg-white shadow-lg 
-            transition-transform duration-300 ease-in-out z-50 pt-16 md:pt-0
-          `}
-        >
-          <nav className="p-4 space-y-1">
-            {menuItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => {
-                  navigate(item.path);
-                  setIsMenuOpen(false);
-                }}
-                className={`
-                  flex items-center gap-3 px-4 py-3 w-full rounded-lg
-                  ${
-                    location.pathname === item.path
-                      ? 'bg-bgs-blue text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }
+        <nav className="mt-6">
+          <ul>
+            <li>
+              <NavLink 
+                to="/admin/dashboard" 
+                className={({ isActive }) => `
+                  flex items-center px-6 py-3 hover:bg-gray-100
+                  ${isActive ? 'bg-gray-100 border-l-4 border-bgs-blue' : ''}
                 `}
               >
-                {item.icon}
-                <span>{item.label}</span>
+                <LayoutDashboard className="mr-3 h-5 w-5 text-bgs-blue" />
+                <span>Tableau de bord</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/admin/users" 
+                className={({ isActive }) => `
+                  flex items-center px-6 py-3 hover:bg-gray-100
+                  ${isActive ? 'bg-gray-100 border-l-4 border-bgs-blue' : ''}
+                `}
+              >
+                <Users className="mr-3 h-5 w-5 text-bgs-blue" />
+                <span>Utilisateurs</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/admin/profiles" 
+                className={({ isActive }) => `
+                  flex items-center px-6 py-3 hover:bg-gray-100
+                  ${isActive ? 'bg-gray-100 border-l-4 border-bgs-blue' : ''}
+                `}
+              >
+                <UserCheck className="mr-3 h-5 w-5 text-bgs-blue" />
+                <span>Gestion des profils</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/admin/finance" 
+                className={({ isActive }) => `
+                  flex items-center px-6 py-3 hover:bg-gray-100
+                  ${isActive ? 'bg-gray-100 border-l-4 border-bgs-blue' : ''}
+                `}
+              >
+                <DollarSign className="mr-3 h-5 w-5 text-bgs-blue" />
+                <span>Finance</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/admin/wallet" 
+                className={({ isActive }) => `
+                  flex items-center px-6 py-3 hover:bg-gray-100
+                  ${isActive ? 'bg-gray-100 border-l-4 border-bgs-blue' : ''}
+                `}
+              >
+                <Wallet className="mr-3 h-5 w-5 text-bgs-blue" />
+                <span>Portefeuilles</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/admin/withdrawals" 
+                className={({ isActive }) => `
+                  flex items-center px-6 py-3 hover:bg-gray-100
+                  ${isActive ? 'bg-gray-100 border-l-4 border-bgs-blue' : ''}
+                `}
+              >
+                <ArrowDownLeft className="mr-3 h-5 w-5 text-bgs-blue" />
+                <span>Retraits</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/admin/projects" 
+                className={({ isActive }) => `
+                  flex items-center px-6 py-3 hover:bg-gray-100
+                  ${isActive ? 'bg-gray-100 border-l-4 border-bgs-blue' : ''}
+                `}
+              >
+                <FolderKanban className="mr-3 h-5 w-5 text-bgs-blue" />
+                <span>Projets</span>
+              </NavLink>
+            </li>
+            <li>
+              <NavLink 
+                to="/admin/notifications" 
+                className={({ isActive }) => `
+                  flex items-center px-6 py-3 hover:bg-gray-100
+                  ${isActive ? 'bg-gray-100 border-l-4 border-bgs-blue' : ''}
+                `}
+              >
+                <Bell className="mr-3 h-5 w-5 text-bgs-blue" />
+                <span>Notifications</span>
+              </NavLink>
+            </li>
+          </ul>
+        </nav>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-auto">
+        <header className="bg-white shadow-sm p-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-semibold text-gray-800">Admin Panel</h2>
+            <div className="flex items-center space-x-4">
+              <button className="p-2 rounded-full hover:bg-gray-100">
+                <Bell className="h-5 w-5 text-gray-600" />
               </button>
-            ))}
-            
-            <hr className="my-4" />
-            
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Déconnexion</span>
-            </button>
-          </nav>
-        </aside>
-        
-        {/* Main content */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
-          <Outlet />
+              <button className="p-2 rounded-full hover:bg-gray-100">
+                <Settings className="h-5 w-5 text-gray-600" />
+              </button>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white">
+                  <User className="h-5 w-5" />
+                </div>
+                <span className="text-sm font-medium">Admin</span>
+              </div>
+            </div>
+          </div>
+        </header>
+        <main className="p-6">
+          {children}
         </main>
       </div>
     </div>
   );
-}
+};
+
+export default AdminLayout;
