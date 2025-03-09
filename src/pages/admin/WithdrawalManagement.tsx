@@ -1,261 +1,300 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAdmin } from '@/contexts/AdminContext';
-import { logAdminAction } from '@/services/adminAuthService';
-import { Search, ArrowUp, ArrowDown, ArrowLeftRight, Loader2, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { toast } from 'sonner';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  AlertCircle, 
+  CheckCircle, 
+  Clock, 
+  XCircle,
+  FileText, 
+  MoreHorizontal, 
+  Filter, 
+  RefreshCw 
+} from "lucide-react";
+import { format } from 'date-fns';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
+
+interface WithdrawalRequest {
+  id: string;
+  user_id: string;
+  amount: number;
+  status: string;
+  bank_info: {
+    accountName: string;
+    bankName: string;
+    accountNumber: string;
+  };
+  requested_at: string;
+  processed_at: string | null;
+  userName?: string;
+  userEmail?: string;
+}
+
 export default function WithdrawalManagement() {
-  const {
-    adminUser
-  } = useAdmin();
-  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [sortField, setSortField] = useState('requested_at');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-  const [userData, setUserData] = useState<Record<string, any>>({});
+  const [activeTab, setActiveTab] = useState("all");
+  const [isProcessing, setIsProcessing] = useState(false);
+
   useEffect(() => {
-    fetchWithdrawals();
-  }, [sortField, sortDirection]);
-  const fetchWithdrawals = async () => {
+    fetchWithdrawalRequests();
+  }, [activeTab]);
+
+  const fetchWithdrawalRequests = async () => {
     try {
       setIsLoading(true);
-      const {
-        data,
-        error
-      } = await supabase.from('withdrawal_requests').select('*').order(sortField, {
-        ascending: sortDirection === 'asc'
-      });
-      if (error) throw error;
-      const withdrawalData = data || [];
-      setWithdrawals(withdrawalData);
-
-      // Fetch user data for each withdrawal
-      const userIds = Array.from(new Set(withdrawalData.map(w => w.user_id)));
-      if (userIds.length > 0) {
-        const {
-          data: users,
-          error: userError
-        } = await supabase.from('profiles').select('id, first_name, last_name, email').in('id', userIds);
-        if (userError) throw userError;
-        const userMap: Record<string, any> = {};
-        users?.forEach(user => {
-          userMap[user.id] = user;
-        });
-        setUserData(userMap);
+      
+      // Build query based on active tab
+      let query = supabase
+        .from('withdrawal_requests')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .order('requested_at', { ascending: false });
+      
+      // Apply status filter if not on "all" tab
+      if (activeTab !== "all") {
+        query = query.eq('status', activeTab);
       }
+      
+      const { data, error } = await query;
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Transform the data to include user details
+      const formattedData = data.map(request => ({
+        ...request,
+        userName: `${request.profiles.first_name} ${request.profiles.last_name}`,
+        userEmail: request.profiles.email
+      }));
+      
+      setWithdrawalRequests(formattedData);
     } catch (error) {
-      console.error('Error fetching withdrawals:', error);
-      toast.error("Erreur lors du chargement des demandes de retrait");
+      console.error("Error fetching withdrawal requests:", error);
+      toast.error("Erreur lors de la récupération des demandes de retrait");
     } finally {
       setIsLoading(false);
     }
   };
-  const handleSort = (field: string) => {
-    if (field === sortField) {
-      // Toggle direction if same field
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // New field, default to desc
-      setSortField(field);
-      setSortDirection('desc');
-    }
-  };
-  const handleApproveWithdrawal = async (withdrawal: any) => {
-    if (!adminUser || !window.confirm(`Êtes-vous sûr de vouloir approuver ce retrait de ${withdrawal.amount}€ ?`)) {
-      return;
-    }
+
+  const updateWithdrawalStatus = async (id: string, status: string, notes?: string) => {
     try {
-      // First check if user has enough balance
-      const {
-        data: userData,
-        error: userError
-      } = await supabase.from('profiles').select('wallet_balance').eq('id', withdrawal.user_id).single();
-      if (userError) throw userError;
-      if (userData.wallet_balance < withdrawal.amount) {
-        toast.error("L'utilisateur n'a pas assez de fonds pour ce retrait");
+      setIsProcessing(true);
+      
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        toast.error("Veuillez vous connecter pour effectuer cette action");
         return;
       }
-
-      // Update withdrawal status
-      const {
-        error: withdrawalError
-      } = await supabase.from('withdrawal_requests').update({
-        status: 'approved',
-        admin_id: adminUser.id,
-        processed_at: new Date().toISOString()
-      }).eq('id', withdrawal.id);
-      if (withdrawalError) throw withdrawalError;
-
-      // Create wallet transaction record
-      const {
-        error: transactionError
-      } = await supabase.from('wallet_transactions').insert({
-        user_id: withdrawal.user_id,
-        amount: withdrawal.amount,
-        type: 'withdrawal',
-        description: 'Retrait approuvé'
-      });
-      if (transactionError) throw transactionError;
-
-      // Update user wallet balance
-      const {
-        error: walletError
-      } = await supabase.rpc('increment_wallet_balance', {
-        user_id: withdrawal.user_id,
-        increment_amount: -withdrawal.amount
-      });
-      if (walletError) throw walletError;
-
-      // Log admin action
-      await logAdminAction(adminUser.id, 'withdrawal_management', `Approbation d'un retrait de ${withdrawal.amount}€`, withdrawal.user_id, undefined, withdrawal.amount);
-      toast.success(`Retrait de ${withdrawal.amount}€ approuvé`);
-
-      // Refresh withdrawal list
-      fetchWithdrawals();
+      
+      const updateData: any = {
+        status,
+        processed_at: status === 'pending' ? null : new Date().toISOString(),
+        admin_id: status === 'pending' ? null : session.session.user.id
+      };
+      
+      if (notes) {
+        updateData.notes = notes;
+      }
+      
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .update(updateData)
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      toast.success(`Statut de la demande mis à jour: ${getStatusLabel(status)}`);
+      
+      // Refresh the list
+      fetchWithdrawalRequests();
     } catch (error) {
-      console.error("Erreur lors de l'approbation du retrait:", error);
-      toast.error("Une erreur s'est produite lors de l'approbation du retrait");
+      console.error("Error updating withdrawal status:", error);
+      toast.error("Erreur lors de la mise à jour du statut");
+    } finally {
+      setIsProcessing(false);
     }
   };
-  const handleRejectWithdrawal = async (withdrawal: any) => {
-    if (!adminUser || !window.confirm(`Êtes-vous sûr de vouloir rejeter ce retrait de ${withdrawal.amount}€ ?`)) {
-      return;
-    }
-    try {
-      // Update withdrawal status
-      const {
-        error: withdrawalError
-      } = await supabase.from('withdrawal_requests').update({
-        status: 'rejected',
-        admin_id: adminUser.id,
-        processed_at: new Date().toISOString()
-      }).eq('id', withdrawal.id);
-      if (withdrawalError) throw withdrawalError;
 
-      // Log admin action
-      await logAdminAction(adminUser.id, 'withdrawal_management', `Rejet d'un retrait de ${withdrawal.amount}€`, withdrawal.user_id, undefined, withdrawal.amount);
-      toast.success(`Retrait de ${withdrawal.amount}€ rejeté`);
-
-      // Refresh withdrawal list
-      fetchWithdrawals();
-    } catch (error) {
-      console.error("Erreur lors du rejet du retrait:", error);
-      toast.error("Une erreur s'est produite lors du rejet du retrait");
-    }
-  };
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            <Clock className="h-3 w-3 mr-1" />
-            En attente
-          </span>;
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200"><Clock className="w-3 h-3 mr-1" /> En attente</Badge>;
       case 'approved':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Approuvé
-          </span>;
+        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200"><FileText className="w-3 h-3 mr-1" /> Approuvé</Badge>;
+      case 'completed':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200"><CheckCircle className="w-3 h-3 mr-1" /> Complété</Badge>;
       case 'rejected':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            <XCircle className="h-3 w-3 mr-1" />
-            Rejeté
-          </span>;
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200"><XCircle className="w-3 h-3 mr-1" /> Rejeté</Badge>;
       default:
-        return <span>{status}</span>;
+        return <Badge variant="outline" className="bg-gray-50 text-gray-700"><AlertCircle className="w-3 h-3 mr-1" /> {status}</Badge>;
     }
   };
-  const filteredWithdrawals = withdrawals.filter(withdrawal => {
-    const searchLower = searchTerm.toLowerCase();
-    const user = userData[withdrawal.user_id] || {};
-    const userName = `${user.first_name || ''} ${user.last_name || ''}`.toLowerCase();
-    const userEmail = (user.email || '').toLowerCase();
-    return userName.includes(searchLower) || userEmail.includes(searchLower);
-  });
-  return <div>
-      <h1 className="text-2xl font-semibold text-bgs-blue mb-6">Gestion des Demandes de Retrait</h1>
-      
-      <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <Input type="text" placeholder="Rechercher un utilisateur..." className="pl-10 w-full md:w-80" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-        </div>
-        
-        
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'En attente';
+      case 'approved': return 'Approuvé';
+      case 'completed': return 'Complété';
+      case 'rejected': return 'Rejeté';
+      default: return status;
+    }
+  };
+
+  return (
+    <div className="space-y-6 p-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Gestion des Retraits</h1>
+        <Button 
+          onClick={fetchWithdrawalRequests} 
+          variant="outline" 
+          size="sm"
+          disabled={isLoading}
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          Actualiser
+        </Button>
       </div>
       
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        {isLoading ? <div className="flex justify-center items-center p-12">
-            <Loader2 className="h-8 w-8 animate-spin text-bgs-blue" />
-          </div> : filteredWithdrawals.length === 0 ? <div className="text-center p-8 text-gray-500">
-            Aucune demande de retrait trouvée
-          </div> : <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Utilisateur</TableHead>
-                  <TableHead>
-                    <button className="flex items-center space-x-1 hover:text-bgs-blue" onClick={() => handleSort('amount')}>
-                      <span>Montant</span>
-                      {sortField === 'amount' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />)}
-                    </button>
-                  </TableHead>
-                  <TableHead>
-                    <button className="flex items-center space-x-1 hover:text-bgs-blue" onClick={() => handleSort('requested_at')}>
-                      <span>Date de demande</span>
-                      {sortField === 'requested_at' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />)}
-                    </button>
-                  </TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>
-                    <button className="flex items-center space-x-1 hover:text-bgs-blue" onClick={() => handleSort('processed_at')}>
-                      <span>Date de traitement</span>
-                      {sortField === 'processed_at' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />)}
-                    </button>
-                  </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredWithdrawals.map(withdrawal => {
-              const user = userData[withdrawal.user_id] || {};
-              return <TableRow key={withdrawal.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{user.first_name} {user.last_name}</div>
-                          <div className="text-sm text-gray-500">{user.email}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{withdrawal.amount?.toLocaleString()} €</TableCell>
-                      <TableCell>
-                        {withdrawal.requested_at ? new Date(withdrawal.requested_at).toLocaleString('fr-FR') : 'N/A'}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(withdrawal.status)}
-                      </TableCell>
-                      <TableCell>
-                        {withdrawal.processed_at ? new Date(withdrawal.processed_at).toLocaleString('fr-FR') : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {withdrawal.status === 'pending' ? <div className="flex justify-end items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleApproveWithdrawal(withdrawal)} className="text-green-600 hover:text-green-800 hover:bg-green-50">
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Approuver
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleRejectWithdrawal(withdrawal)} className="text-red-600 hover:text-red-800 hover:bg-red-50">
-                              <XCircle className="h-4 w-4 mr-1" />
-                              Rejeter
-                            </Button>
-                          </div> : <span className="text-gray-500 text-sm">Traité</span>}
-                      </TableCell>
-                    </TableRow>;
-            })}
-              </TableBody>
-            </Table>
-          </div>}
-      </div>
-    </div>;
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid grid-cols-4 w-full max-w-md">
+          <TabsTrigger value="all">Tous</TabsTrigger>
+          <TabsTrigger value="pending">En attente</TabsTrigger>
+          <TabsTrigger value="approved">Approuvés</TabsTrigger>
+          <TabsTrigger value="completed">Complétés</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value={activeTab} className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">
+                Demandes de retrait {activeTab !== "all" ? `- ${getStatusLabel(activeTab)}` : ""}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex justify-center items-center py-8">
+                  <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+                </div>
+              ) : withdrawalRequests.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Utilisateur</TableHead>
+                        <TableHead>Montant</TableHead>
+                        <TableHead>Banque</TableHead>
+                        <TableHead>Statut</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {withdrawalRequests.map((request) => (
+                        <TableRow key={request.id}>
+                          <TableCell>
+                            {format(new Date(request.requested_at), 'dd/MM/yyyy HH:mm')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{request.userName}</div>
+                            <div className="text-xs text-gray-500">{request.userEmail}</div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">{request.amount}€</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs">
+                              <div className="font-medium text-sm">{request.bank_info.bankName}</div>
+                              <div className="text-xs">{request.bank_info.accountName}</div>
+                              <div className="text-xs font-mono truncate">{request.bank_info.accountNumber}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(request.status)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" disabled={isProcessing}>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {request.status === 'pending' && (
+                                  <>
+                                    <DropdownMenuItem
+                                      onClick={() => updateWithdrawalStatus(request.id, 'approved')}
+                                    >
+                                      <FileText className="h-4 w-4 mr-2" />
+                                      Approuver
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={() => updateWithdrawalStatus(request.id, 'rejected')}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Rejeter
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                {request.status === 'approved' && (
+                                  <DropdownMenuItem
+                                    onClick={() => updateWithdrawalStatus(request.id, 'completed')}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Marquer comme complété
+                                  </DropdownMenuItem>
+                                )}
+                                {(request.status === 'approved' || request.status === 'completed' || request.status === 'rejected') && (
+                                  <DropdownMenuItem
+                                    onClick={() => updateWithdrawalStatus(request.id, 'pending')}
+                                  >
+                                    <Clock className="h-4 w-4 mr-2" />
+                                    Remettre en attente
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  Aucune demande de retrait {activeTab !== "all" ? `avec le statut "${getStatusLabel(activeTab)}"` : ""} pour le moment.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 }
