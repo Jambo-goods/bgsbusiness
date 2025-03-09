@@ -1,51 +1,62 @@
 
 import React from 'react';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, UserPlus, RefreshCcw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 interface UserSearchBarProps {
   searchTerm: string;
-  onSearchChange: (value: string) => void;
+  setSearchTerm: (term: string) => void;
+  onCreateUser: () => void;
   onRefresh: () => void;
-  isLoading: boolean;
-  userCount: number;
+  isRefreshing: boolean;
+  userCount?: number; // Ajout du nombre d'utilisateurs optionnel
 }
 
-export const UserSearchBar: React.FC<UserSearchBarProps> = ({
+export default function UserSearchBar({
   searchTerm,
-  onSearchChange,
+  setSearchTerm,
+  onCreateUser,
   onRefresh,
-  isLoading,
-  userCount
-}) => {
+  isRefreshing,
+  userCount = 0
+}: UserSearchBarProps) {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-      <div className="relative flex-1 w-full">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+    <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
         <Input
           type="text"
           placeholder="Rechercher un utilisateur..."
+          className="pl-10 w-full md:w-80"
           value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-10 w-full"
+          onChange={(e) => setSearchTerm(e.target.value)}
         />
+        {userCount > 0 && (
+          <span className="text-xs text-gray-500 absolute left-3 -bottom-5">
+            {userCount} utilisateur{userCount > 1 ? 's' : ''} trouvé{userCount > 1 ? 's' : ''}
+          </span>
+        )}
       </div>
-      <div className="flex items-center gap-4 w-full sm:w-auto">
-        <span className="text-sm text-gray-500">
-          {userCount} utilisateur{userCount !== 1 ? 's' : ''}
-        </span>
+      
+      <div className="flex gap-2">
         <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          disabled={isLoading}
-          className="whitespace-nowrap"
+          onClick={onCreateUser}
+          className="bg-green-600 hover:bg-green-700 text-white"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+          <UserPlus className="mr-2 h-4 w-4" />
+          Créer utilisateur test
+        </Button>
+        
+        <Button
+          onClick={onRefresh}
+          className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
+          disabled={isRefreshing}
+        >
+          <RefreshCcw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           Actualiser
         </Button>
       </div>
     </div>
   );
-};
+}

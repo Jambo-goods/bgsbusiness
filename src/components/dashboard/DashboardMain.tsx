@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import DashboardHeader from "./DashboardHeader";
 import TabContent from "./TabContent";
 import { Project } from "@/types/project";
-import { WalletDisplay } from "./wallet/WalletDisplay";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 interface DashboardMainProps {
   isSidebarOpen: boolean;
@@ -32,16 +32,27 @@ export default function DashboardMain({
   setActiveTab,
   refreshData
 }: DashboardMainProps) {
+  const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
+  
+  // Merge the walletBalance from hook with userData
+  const enhancedUserData = useMemo(() => ({
+    ...userData,
+    walletBalance: isLoadingBalance ? userData.walletBalance : walletBalance
+  }), [userData, walletBalance, isLoadingBalance]);
+  
   // Memoized main content to prevent unnecessary re-renders
   const dashboardContent = useMemo(() => (
     <TabContent 
       activeTab={activeTab} 
-      userData={userData} 
+      userData={enhancedUserData} 
       userInvestments={userInvestments} 
       setActiveTab={setActiveTab} 
-      refreshData={refreshData}
+      refreshData={async () => {
+        if (refreshData) await refreshData();
+        await refreshBalance();
+      }}
     />
-  ), [activeTab, userData, userInvestments, setActiveTab, refreshData]);
+  ), [activeTab, enhancedUserData, userInvestments, setActiveTab, refreshData, refreshBalance]);
 
   return (
     <div 
@@ -53,28 +64,19 @@ export default function DashboardMain({
     >
       <div className="max-w-7xl mx-auto space-y-6">
         <DashboardHeader 
-          userData={userData} 
-          refreshData={refreshData} 
+          userData={enhancedUserData} 
+          refreshData={async () => {
+            if (refreshData) await refreshData();
+            await refreshBalance();
+          }} 
           setActiveTab={setActiveTab}
         />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Main dashboard content based on active tab */}
-          <div className={cn(
-            "bg-white rounded-xl shadow-md overflow-hidden",
-            activeTab === "wallet" ? "md:col-span-2" : "md:col-span-3"
-          )}>
-            <div className="p-5 animate-fade-in">
-              {dashboardContent}
-            </div>
+        {/* Dashboard content based on active tab */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-5 animate-fade-in">
+            {dashboardContent}
           </div>
-          
-          {/* Show wallet display if on wallet tab */}
-          {activeTab === "wallet" && (
-            <div className="md:col-span-1">
-              <WalletDisplay />
-            </div>
-          )}
         </div>
       </div>
     </div>
