@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -87,11 +88,14 @@ export const useProfileManagement = () => {
       const results = await Promise.all(promises);
       const successCount = results.filter(result => result).length;
       
+      // Note: The admin_logs table doesn't exist yet, so this is commented out
+      /*
       await supabase.from('admin_logs').insert({
         description: `Ajout de ${amount}€ à tous les profils (${successCount}/${profiles.length} réussis)`,
         action_type: 'wallet_management',
         amount: amount
       });
+      */
       
       toast.success(`${successCount} profils mis à jour avec succès!`);
       setIsAddFundsDialogOpen(false);

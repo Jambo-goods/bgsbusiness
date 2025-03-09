@@ -1,54 +1,73 @@
 
 import { useState, useEffect } from "react";
-import { useUserSession } from "./useUserSession";
-import { useRealTimeSubscriptions } from "./useRealTimeSubscriptions";
-import { useProfileData } from "./useProfileData";
-import { useInvestmentsData } from "./useInvestmentsData";
-import { Project } from "@/types/project";
-import { UserData } from "./types";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useRealTimeSubscriptions } from "@/hooks/dashboard/useRealTimeSubscriptions";
 
-interface DashboardDataReturn {
-  userData: UserData | null;
-  userInvestments: Project[];
-  isLoading: boolean;
-  realTimeStatus: string;
-  refreshData: () => Promise<void>;
-}
+export function useDashboardData(userId: string | null) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+  const [investments, setInvestments] = useState([]);
 
-export const useDashboardData = (): DashboardDataReturn => {
-  // Get user session
-  const { userId, isLoading: isSessionLoading } = useUserSession();
-  
-  // Get profile and investments data
-  const { userData, isLoading: isProfileLoading, refreshProfileData } = useProfileData(userId);
-  const { userInvestments, isLoading: isInvestmentsLoading, refreshInvestmentsData } = useInvestmentsData(userId);
-  
-  // Setup real-time subscriptions
-  const { realTimeStatus } = useRealTimeSubscriptions({
+  // Initialize real-time subscriptions (now using polling)
+  const { pollingStatus, triggerManualUpdate } = useRealTimeSubscriptions({
     userId: userId || '',
-    onProfileUpdate: refreshProfileData,
-    onInvestmentUpdate: refreshInvestmentsData,
-    onTransactionUpdate: refreshProfileData
+    onProfileUpdate: () => fetchUserData(),
+    onInvestmentUpdate: () => fetchInvestments(),
   });
-  
-  // Combined refresh function
-  const refreshData = async () => {
-    await Promise.all([
-      refreshProfileData(),
-      refreshInvestmentsData()
-    ]);
+
+  const fetchUserData = async () => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setUserData(data);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      toast.error("Erreur lors du chargement de vos données");
+    } finally {
+      setIsLoading(false);
+    }
   };
-  
-  // Scroll to top on mount
+
+  const fetchInvestments = async () => {
+    if (!userId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('investments')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      setInvestments(data || []);
+    } catch (error) {
+      console.error("Error fetching investments:", error);
+    }
+  };
+
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+    if (userId) {
+      fetchUserData();
+      fetchInvestments();
+    }
+  }, [userId]);
 
   return {
+    isLoading,
     userData,
-    userInvestments,
-    isLoading: isSessionLoading || isProfileLoading || isInvestmentsLoading,
-    realTimeStatus,
-    refreshData
+    investments,
+    pollingStatus,
+    refreshData: () => {
+      fetchUserData();
+      fetchInvestments();
+    },
+    triggerManualUpdate
   };
-};
+}

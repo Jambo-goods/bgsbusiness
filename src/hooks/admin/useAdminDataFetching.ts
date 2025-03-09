@@ -60,6 +60,9 @@ export async function fetchAdminDashboardData(): Promise<{
     
     if (withdrawalsError) throw withdrawalsError;
     
+    // Admin logs functionality is currently disabled as the admin_logs table does not exist
+    // When the admin_logs table is created, this code can be uncommented
+    /*
     // Get recent admin logs
     const { data: logsData, error: logsError } = await supabase
       .from('admin_logs')
@@ -71,6 +74,7 @@ export async function fetchAdminDashboardData(): Promise<{
       .limit(10);
     
     if (logsError) throw logsError;
+    */
     
     const stats: AdminStats = {
       userCount: userCount || 0,
@@ -85,14 +89,15 @@ export async function fetchAdminDashboardData(): Promise<{
       totalInvestments,
       totalProjects,
       pendingWithdrawals,
-      ongoingProjects,
-      logs: logsData?.length || 0,
-      profiles: profilesData?.length || 0
+      ongoingProjects
     });
+    
+    // Return an empty array for logs since the table doesn't exist yet
+    const emptyLogs: AdminLog[] = [];
     
     return {
       stats,
-      logs: logsData || []
+      logs: emptyLogs
     };
   } catch (error) {
     console.error("Error fetching admin dashboard data:", error);

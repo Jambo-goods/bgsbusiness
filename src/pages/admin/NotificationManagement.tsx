@@ -1,82 +1,71 @@
-
-import { useState, useEffect } from "react";
-import { Helmet } from "react-helmet-async";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import { Notification, NotificationCategory, NotificationType } from "@/services/notifications";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import AdminLayout from '@/layouts/AdminLayout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
   DialogFooter,
-  DialogTrigger
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Bell, Plus, Trash, RefreshCw, Pencil, Users } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { fr } from "date-fns/locale";
+} from '@/components/ui/select';
+import { Loader2, RefreshCw, Send, Trash } from 'lucide-react';
 
-interface NotificationWithUserId extends Notification {
+interface Notification {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  category: string;
+  created_at: string;
   user_id: string;
+  read: boolean;
 }
 
 export default function NotificationManagement() {
-  const [notifications, setNotifications] = useState<NotificationWithUserId[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [openCreateDialog, setOpenCreateDialog] = useState(false);
-  const [openEditDialog, setOpenEditDialog] = useState(false);
-  const [editingNotification, setEditingNotification] = useState<NotificationWithUserId | null>(null);
-  
-  // Form states
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [type, setType] = useState<string>("marketing");
-  const [useCustomType, setUseCustomType] = useState(false);
-  const [customType, setCustomType] = useState("");
-  const [category, setCategory] = useState<string>("info");
-  const [useCustomCategory, setUseCustomCategory] = useState(false);
-  const [customCategory, setCustomCategory] = useState("");
-  const [userId, setUserId] = useState("");
-  const [users, setUsers] = useState<{id: string, email: string, name: string}[]>([]);
-  const [isBroadcast, setIsBroadcast] = useState(false);
-  
-  const notificationTypes: NotificationType[] = [
-    "deposit", "withdrawal", "investment", "security", "marketing"
-  ];
-  
-  const notificationCategories: NotificationCategory[] = [
-    "info", "success", "warning", "error"
-  ];
-  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [newNotification, setNewNotification] = useState({
+    title: '',
+    description: '',
+    type: 'info',
+    category: 'system',
+    user_id: '',
+  });
+  const [bulkNotification, setBulkNotification] = useState({
+    title: '',
+    description: '',
+    type: 'info',
+    category: 'system',
+  });
+  const [isSending, setIsSending] = useState(false);
+
   useEffect(() => {
     fetchNotifications();
-    fetchUsers();
   }, []);
-  
+
   const fetchNotifications = async () => {
     try {
-      setIsRefreshing(true);
+      setIsLoading(true);
+      
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -84,646 +73,515 @@ export default function NotificationManagement() {
       
       if (error) throw error;
       
-      const formattedNotifications = data.map(notification => ({
-        id: notification.id,
-        title: notification.title,
-        description: notification.description,
-        date: new Date(notification.created_at),
-        read: notification.read,
-        type: notification.type as NotificationType,
-        category: notification.category as NotificationCategory,
-        metadata: notification.metadata ? (typeof notification.metadata === 'object' ? notification.metadata : {}) : {},
-        user_id: notification.user_id
-      }));
-      
-      setNotifications(formattedNotifications);
+      setNotifications(data || []);
     } catch (error) {
-      console.error("Error fetching notifications:", error);
-      toast.error("Erreur lors du chargement des notifications");
+      console.error('Error fetching notifications:', error);
+      toast.error('Erreur lors du chargement des notifications');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
     }
   };
-  
-  const fetchUsers = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, first_name, last_name');
-        
-      if (error) throw error;
-      
-      setUsers(data.map(user => ({
-        id: user.id,
-        email: user.email || '',
-        name: `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || user.id
-      })));
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchNotifications();
   };
-  
-  const createNotificationForAllUsers = async () => {
+
+  const handleCreateNotification = async () => {
     try {
-      if (!title || !description) {
-        toast.error("Veuillez remplir tous les champs obligatoires");
-        return;
-      }
+      setIsSending(true);
       
-      // Determine which type and category to use
-      const finalType = useCustomType ? customType : type;
-      const finalCategory = useCustomCategory ? customCategory : category;
-      
-      if (!finalType || !finalCategory) {
-        toast.error("Veuillez spécifier un type et une catégorie valides");
-        return;
-      }
-      
-      if (users.length === 0) {
-        toast.error("Aucun utilisateur trouvé pour envoyer la notification");
-        return;
-      }
-      
-      // Create a notification for each user
-      const notifications = users.map(user => ({
-        user_id: user.id,
-        title,
-        description,
-        type: finalType,
-        category: finalCategory,
-        read: false,
-      }));
-      
-      const { error } = await supabase
-        .from('notifications')
-        .insert(notifications);
-      
-      if (error) throw error;
-      
-      toast.success(`Notification créée pour ${users.length} utilisateurs`);
-      setOpenCreateDialog(false);
-      resetForm();
-      fetchNotifications();
-      
-      // Log admin action
-      await supabase.from('admin_logs').insert({
-        action_type: "user_management",
-        description: `Notification créée pour tous les utilisateurs: ${title}`,
-      });
-      
-    } catch (error) {
-      console.error("Error creating notification for all users:", error);
-      toast.error("Erreur lors de la création des notifications");
-    }
-  };
-  
-  const createNotification = async () => {
-    try {
-      if (isBroadcast) {
-        return createNotificationForAllUsers();
-      }
-      
-      if (!title || !description || !userId) {
-        toast.error("Veuillez remplir tous les champs obligatoires");
-        return;
-      }
-      
-      // Determine which type and category to use
-      const finalType = useCustomType ? customType : type;
-      const finalCategory = useCustomCategory ? customCategory : category;
-      
-      if (!finalType || !finalCategory) {
-        toast.error("Veuillez spécifier un type et une catégorie valides");
+      if (!newNotification.title || !newNotification.description || !newNotification.user_id) {
+        toast.error('Veuillez remplir tous les champs obligatoires');
         return;
       }
       
       const { error } = await supabase
         .from('notifications')
         .insert({
-          user_id: userId,
-          title,
-          description,
-          type: finalType,
-          category: finalCategory,
-          read: false,
+          title: newNotification.title,
+          description: newNotification.description,
+          type: newNotification.type,
+          category: newNotification.category,
+          user_id: newNotification.user_id,
+          read: false
         });
       
       if (error) throw error;
       
-      toast.success("Notification créée avec succès");
-      setOpenCreateDialog(false);
-      resetForm();
-      fetchNotifications();
-      
       // Log admin action
-      await supabase.from('admin_logs').insert({
-        action_type: "user_management",
-        description: `Notification créée: ${title}`,
-        target_user_id: userId
+      // Note: This is commented out because admin_logs table doesn't exist yet
+      /*
+      await supabase
+        .from('admin_logs')
+        .insert({
+          action_type: 'notification_management',
+          description: `Notification créée pour l'utilisateur ${newNotification.user_id}`
+        });
+      */
+      
+      toast.success('Notification créée avec succès');
+      setIsCreateDialogOpen(false);
+      setNewNotification({
+        title: '',
+        description: '',
+        type: 'info',
+        category: 'system',
+        user_id: '',
       });
-      
-    } catch (error) {
-      console.error("Error creating notification:", error);
-      toast.error("Erreur lors de la création de la notification");
-    }
-  };
-  
-  const updateNotification = async () => {
-    try {
-      if (!editingNotification || !title || !description) {
-        toast.error("Veuillez remplir tous les champs obligatoires");
-        return;
-      }
-      
-      // Determine which type and category to use
-      const finalType = useCustomType ? customType : type;
-      const finalCategory = useCustomCategory ? customCategory : category;
-      
-      if (!finalType || !finalCategory) {
-        toast.error("Veuillez spécifier un type et une catégorie valides");
-        return;
-      }
-      
-      const { error } = await supabase
-        .from('notifications')
-        .update({
-          title,
-          description,
-          type: finalType,
-          category: finalCategory,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', editingNotification.id);
-      
-      if (error) throw error;
-      
-      toast.success("Notification mise à jour avec succès");
-      setOpenEditDialog(false);
-      resetForm();
       fetchNotifications();
-      
-      // Log admin action
-      await supabase.from('admin_logs').insert({
-        action_type: "user_management",
-        description: `Notification mise à jour: ${title}`,
-        target_user_id: editingNotification.user_id
-      });
-      
     } catch (error) {
-      console.error("Error updating notification:", error);
-      toast.error("Erreur lors de la mise à jour de la notification");
-    }
-  };
-  
-  const deleteNotification = async (id: string, userId: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      toast.success("Notification supprimée avec succès");
-      fetchNotifications();
-      
-      // Log admin action
-      await supabase.from('admin_logs').insert({
-        action_type: "user_management",
-        description: `Notification supprimée`,
-        target_user_id: userId
-      });
-      
-    } catch (error) {
-      console.error("Error deleting notification:", error);
-      toast.error("Erreur lors de la suppression de la notification");
-    }
-  };
-  
-  const handleEditClick = (notification: NotificationWithUserId) => {
-    setEditingNotification(notification);
-    setTitle(notification.title);
-    setDescription(notification.description);
-    
-    // Check if the type is in predefined list or custom
-    if (notificationTypes.includes(notification.type as NotificationType)) {
-      setType(notification.type);
-      setUseCustomType(false);
-      setCustomType("");
-    } else {
-      setUseCustomType(true);
-      setCustomType(notification.type);
-      setType("marketing"); // default value for dropdown
-    }
-    
-    // Check if the category is in predefined list or custom
-    if (notificationCategories.includes(notification.category as NotificationCategory)) {
-      setCategory(notification.category);
-      setUseCustomCategory(false);
-      setCustomCategory("");
-    } else {
-      setUseCustomCategory(true);
-      setCustomCategory(notification.category);
-      setCategory("info"); // default value for dropdown
-    }
-    
-    setUserId(notification.user_id || "");
-    setOpenEditDialog(true);
-  };
-  
-  const resetForm = () => {
-    setTitle("");
-    setDescription("");
-    setType("marketing");
-    setCustomType("");
-    setUseCustomType(false);
-    setCategory("info");
-    setCustomCategory("");
-    setUseCustomCategory(false);
-    setUserId("");
-    setIsBroadcast(false);
-    setEditingNotification(null);
-  };
-  
-  const formatDate = (date: Date) => {
-    return formatDistanceToNow(date, { addSuffix: true, locale: fr });
-  };
-  
-  const getUserName = (userId: string) => {
-    const user = users.find(u => u.id === userId);
-    return user ? user.name : userId;
-  };
-  
-  const getCategoryBadge = (category: NotificationCategory) => {
-    switch(category) {
-      case 'success':
-        return <Badge className="bg-green-500">{category}</Badge>;
-      case 'warning':
-        return <Badge className="bg-yellow-500">{category}</Badge>;
-      case 'error':
-        return <Badge className="bg-red-500">{category}</Badge>;
-      case 'info':
-      default:
-        return <Badge className="bg-blue-500">{category}</Badge>;
+      console.error('Error creating notification:', error);
+      toast.error('Erreur lors de la création de la notification');
+    } finally {
+      setIsSending(false);
     }
   };
 
+  const handleBulkNotification = async () => {
+    try {
+      setIsSending(true);
+      
+      if (!bulkNotification.title || !bulkNotification.description) {
+        toast.error('Veuillez remplir tous les champs obligatoires');
+        return;
+      }
+      
+      // Get all user IDs
+      const { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('id');
+      
+      if (usersError) throw usersError;
+      
+      if (!users || users.length === 0) {
+        toast.error('Aucun utilisateur trouvé');
+        return;
+      }
+      
+      // Create notifications for all users
+      const notificationsToInsert = users.map(user => ({
+        title: bulkNotification.title,
+        description: bulkNotification.description,
+        type: bulkNotification.type,
+        category: bulkNotification.category,
+        user_id: user.id,
+        read: false
+      }));
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert(notificationsToInsert);
+      
+      if (error) throw error;
+      
+      // Log admin action
+      // Note: This is commented out because admin_logs table doesn't exist yet
+      /*
+      await supabase
+        .from('admin_logs')
+        .insert({
+          action_type: 'notification_management',
+          description: `Notification en masse envoyée à ${users.length} utilisateurs`
+        });
+      */
+      
+      toast.success(`Notifications envoyées à ${users.length} utilisateurs`);
+      setIsBulkDialogOpen(false);
+      setBulkNotification({
+        title: '',
+        description: '',
+        type: 'info',
+        category: 'system',
+      });
+      fetchNotifications();
+    } catch (error) {
+      console.error('Error sending bulk notifications:', error);
+      toast.error('Erreur lors de l\'envoi des notifications en masse');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleDeleteNotification = async () => {
+    try {
+      setIsSending(true);
+      
+      if (!selectedNotification) {
+        toast.error('Aucune notification sélectionnée');
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', selectedNotification.id);
+      
+      if (error) throw error;
+      
+      // Log admin action
+      // Note: This is commented out because admin_logs table doesn't exist yet
+      /*
+      await supabase
+        .from('admin_logs')
+        .insert({
+          action_type: 'notification_management',
+          description: `Notification supprimée: ${selectedNotification.title}`
+        });
+      */
+      
+      toast.success('Notification supprimée avec succès');
+      setIsDeleteDialogOpen(false);
+      setSelectedNotification(null);
+      fetchNotifications();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      toast.error('Erreur lors de la suppression de la notification');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const filteredNotifications = notifications.filter(notification => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      notification.title.toLowerCase().includes(searchLower) ||
+      notification.description.toLowerCase().includes(searchLower) ||
+      notification.user_id.toLowerCase().includes(searchLower)
+    );
+  });
+
   return (
-    <div className="p-6">
+    <>
       <Helmet>
-        <title>Gestion des Notifications | Admin BGS</title>
+        <title>Gestion des notifications | Admin BGS Invest</title>
       </Helmet>
       
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-bgs-blue">Gestion des Notifications</h1>
-          <p className="text-gray-500">Créez et gérez les notifications destinées aux utilisateurs</p>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={fetchNotifications}
-            disabled={isRefreshing}
-          >
-            <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Actualiser
-          </Button>
-          
-          <Dialog open={openCreateDialog} onOpenChange={setOpenCreateDialog}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                Nouvelle Notification
+      <AdminLayout>
+        <div className="container mx-auto py-6">
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-2xl font-bold">Gestion des notifications</h1>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Actualiser
               </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Créer une nouvelle notification</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <div className="flex items-center gap-2 mb-2">
-                    <input 
-                      type="checkbox" 
-                      id="isBroadcast" 
-                      checked={isBroadcast} 
-                      onChange={(e) => setIsBroadcast(e.target.checked)}
-                      className="h-4 w-4"
-                    />
-                    <Label htmlFor="isBroadcast" className="font-semibold cursor-pointer">
-                      Envoyer à tous les utilisateurs
-                    </Label>
-                  </div>
-                
-                  {!isBroadcast && (
-                    <>
-                      <Label htmlFor="user">Destinataire</Label>
-                      <Select value={userId} onValueChange={setUserId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Sélectionner un utilisateur" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users.map(user => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </>
-                  )}
-                  
-                  {isBroadcast && (
-                    <div className="flex items-center text-sm text-blue-600 gap-1 mb-2">
-                      <Users size={16} />
-                      <span>Cette notification sera envoyée à tous les utilisateurs ({users.length})</span>
-                    </div>
-                  )}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="title">Titre</Label>
-                  <Input 
-                    id="title" 
-                    value={title} 
-                    onChange={(e) => setTitle(e.target.value)} 
-                    placeholder="Titre de la notification"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea 
-                    id="description" 
-                    value={description} 
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Description détaillée de la notification"
-                    rows={3}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="type">Type</Label>
-                  <div className="flex gap-2 items-center">
-                    <input 
-                      type="checkbox" 
-                      id="useCustomType" 
-                      checked={useCustomType} 
-                      onChange={(e) => setUseCustomType(e.target.checked)}
-                      className="mr-1 h-4 w-4"
-                    />
-                    <Label htmlFor="useCustomType" className="text-sm font-normal">
-                      Type personnalisé
-                    </Label>
-                  </div>
-                  {useCustomType ? (
-                    <Input 
-                      id="customType" 
-                      value={customType} 
-                      onChange={(e) => setCustomType(e.target.value)} 
-                      placeholder="Saisir un type personnalisé"
-                    />
-                  ) : (
-                    <Select value={type} onValueChange={(value: string) => setType(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Type de notification" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {notificationTypes.map(type => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="category">Catégorie</Label>
-                  <div className="flex gap-2 items-center">
-                    <input 
-                      type="checkbox" 
-                      id="useCustomCategory" 
-                      checked={useCustomCategory} 
-                      onChange={(e) => setUseCustomCategory(e.target.checked)}
-                      className="mr-1 h-4 w-4"
-                    />
-                    <Label htmlFor="useCustomCategory" className="text-sm font-normal">
-                      Catégorie personnalisée
-                    </Label>
-                  </div>
-                  {useCustomCategory ? (
-                    <Input 
-                      id="customCategory" 
-                      value={customCategory} 
-                      onChange={(e) => setCustomCategory(e.target.value)} 
-                      placeholder="Saisir une catégorie personnalisée"
-                    />
-                  ) : (
-                    <Select value={category} onValueChange={(value: string) => setCategory(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Catégorie" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {notificationCategories.map(category => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpenCreateDialog(false)}>Annuler</Button>
-                <Button onClick={createNotification}>Créer</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              
+              <Button onClick={() => setIsBulkDialogOpen(true)}>
+                <Send className="h-4 w-4 mr-2" />
+                Notification en masse
+              </Button>
+              
+              <Button onClick={() => setIsCreateDialogOpen(true)}>
+                <Send className="h-4 w-4 mr-2" />
+                Nouvelle notification
+              </Button>
+            </div>
+          </div>
           
-          <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Modifier une notification</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="title">Titre</Label>
-                  <Input 
-                    id="title" 
-                    value={title} 
-                    onChange={(e) => setTitle(e.target.value)} 
-                    placeholder="Titre de la notification"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea 
-                    id="description" 
-                    value={description} 
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Description détaillée de la notification"
-                    rows={3}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="type">Type</Label>
-                  <div className="flex gap-2 items-center">
-                    <input 
-                      type="checkbox" 
-                      id="useCustomTypeEdit" 
-                      checked={useCustomType} 
-                      onChange={(e) => setUseCustomType(e.target.checked)}
-                      className="mr-1 h-4 w-4"
-                    />
-                    <Label htmlFor="useCustomTypeEdit" className="text-sm font-normal">
-                      Type personnalisé
-                    </Label>
-                  </div>
-                  {useCustomType ? (
-                    <Input 
-                      id="customType" 
-                      value={customType} 
-                      onChange={(e) => setCustomType(e.target.value)} 
-                      placeholder="Saisir un type personnalisé"
-                    />
-                  ) : (
-                    <Select value={type} onValueChange={(value: string) => setType(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Type de notification" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {notificationTypes.map(type => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="category">Catégorie</Label>
-                  <div className="flex gap-2 items-center">
-                    <input 
-                      type="checkbox" 
-                      id="useCustomCategoryEdit" 
-                      checked={useCustomCategory} 
-                      onChange={(e) => setUseCustomCategory(e.target.checked)}
-                      className="mr-1 h-4 w-4"
-                    />
-                    <Label htmlFor="useCustomCategoryEdit" className="text-sm font-normal">
-                      Catégorie personnalisée
-                    </Label>
-                  </div>
-                  {useCustomCategory ? (
-                    <Input 
-                      id="customCategory" 
-                      value={customCategory} 
-                      onChange={(e) => setCustomCategory(e.target.value)} 
-                      placeholder="Saisir une catégorie personnalisée"
-                    />
-                  ) : (
-                    <Select value={category} onValueChange={(value: string) => setCategory(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Catégorie" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {notificationCategories.map(category => (
-                          <SelectItem key={category} value={category}>
-                            {category}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="mb-4">
+              <Input
+                placeholder="Rechercher une notification..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-md"
+              />
+            </div>
+            
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpenEditDialog(false)}>Annuler</Button>
-                <Button onClick={updateNotification}>Mettre à jour</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-      
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 flex justify-center">
-            <div className="animate-spin h-8 w-8 border-4 border-bgs-blue border-t-transparent rounded-full"></div>
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="p-8 text-center">
-            <Bell className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900">Aucune notification</h3>
-            <p className="text-gray-500 mt-1">
-              Créez une nouvelle notification en cliquant sur le bouton "Nouvelle Notification"
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Titre</TableHead>
-                  <TableHead>Destinataire</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Catégorie</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {notifications.map((notification) => (
-                  <TableRow key={notification.id}>
-                    <TableCell className="font-medium">
-                      <div className="max-w-[300px] truncate" title={notification.title}>
-                        {notification.title}
+            ) : filteredNotifications.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                Aucune notification trouvée
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredNotifications.map((notification) => (
+                  <div 
+                    key={notification.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium">{notification.title}</h3>
+                          <span className={`px-2 py-0.5 text-xs rounded-full ${
+                            notification.type === 'info' ? 'bg-blue-100 text-blue-800' :
+                            notification.type === 'success' ? 'bg-green-100 text-green-800' :
+                            notification.type === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {notification.type}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(notification.created_at).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-gray-600 mt-1">{notification.description}</p>
+                        <div className="mt-2 text-xs text-gray-500">
+                          <span>Utilisateur: {notification.user_id}</span>
+                          <span className="ml-4">Catégorie: {notification.category}</span>
+                          <span className="ml-4">
+                            Statut: {notification.read ? 'Lue' : 'Non lue'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 mt-1 max-w-[300px] truncate" title={notification.description}>
-                        {notification.description}
-                      </div>
-                    </TableCell>
-                    <TableCell>{getUserName(notification.user_id)}</TableCell>
-                    <TableCell>{notification.type}</TableCell>
-                    <TableCell>{getCategoryBadge(notification.category as NotificationCategory)}</TableCell>
-                    <TableCell>
-                      {notification.read ? (
-                        <Badge variant="outline" className="text-gray-500">Lu</Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">Non lu</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDate(notification.date)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          onClick={() => handleEditClick(notification)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => deleteNotification(notification.id, notification.user_id)}
-                        >
-                          <Trash className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedNotification(notification);
+                          setIsDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      </AdminLayout>
+      
+      {/* Create Notification Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Créer une notification</DialogTitle>
+            <DialogDescription>
+              Envoyez une notification à un utilisateur spécifique.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">ID de l'utilisateur</label>
+              <Input
+                placeholder="ID de l'utilisateur"
+                value={newNotification.user_id}
+                onChange={(e) => setNewNotification({...newNotification, user_id: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Titre</label>
+              <Input
+                placeholder="Titre de la notification"
+                value={newNotification.title}
+                onChange={(e) => setNewNotification({...newNotification, title: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                placeholder="Description de la notification"
+                value={newNotification.description}
+                onChange={(e) => setNewNotification({...newNotification, description: e.target.value})}
+                rows={3}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Type</label>
+                <Select
+                  value={newNotification.type}
+                  onValueChange={(value) => setNewNotification({...newNotification, type: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="info">Information</SelectItem>
+                    <SelectItem value="success">Succès</SelectItem>
+                    <SelectItem value="warning">Avertissement</SelectItem>
+                    <SelectItem value="error">Erreur</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Catégorie</label>
+                <Select
+                  value={newNotification.category}
+                  onValueChange={(value) => setNewNotification({...newNotification, category: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="system">Système</SelectItem>
+                    <SelectItem value="account">Compte</SelectItem>
+                    <SelectItem value="investment">Investissement</SelectItem>
+                    <SelectItem value="transaction">Transaction</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleCreateNotification} disabled={isSending}>
+              {isSending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Envoi...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Envoyer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Bulk Notification Dialog */}
+      <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Notification en masse</DialogTitle>
+            <DialogDescription>
+              Envoyez une notification à tous les utilisateurs.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Titre</label>
+              <Input
+                placeholder="Titre de la notification"
+                value={bulkNotification.title}
+                onChange={(e) => setBulkNotification({...bulkNotification, title: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Description</label>
+              <Textarea
+                placeholder="Description de la notification"
+                value={bulkNotification.description}
+                onChange={(e) => setBulkNotification({...bulkNotification, description: e.target.value})}
+                rows={3}
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Type</label>
+                <Select
+                  value={bulkNotification.type}
+                  onValueChange={(value) => setBulkNotification({...bulkNotification, type: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="info">Information</SelectItem>
+                    <SelectItem value="success">Succès</SelectItem>
+                    <SelectItem value="warning">Avertissement</SelectItem>
+                    <SelectItem value="error">Erreur</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Catégorie</label>
+                <Select
+                  value={bulkNotification.category}
+                  onValueChange={(value) => setBulkNotification({...bulkNotification, category: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Catégorie" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="system">Système</SelectItem>
+                    <SelectItem value="account">Compte</SelectItem>
+                    <SelectItem value="investment">Investissement</SelectItem>
+                    <SelectItem value="transaction">Transaction</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleBulkNotification} disabled={isSending}>
+              {isSending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Envoi...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Envoyer à tous
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la notification</DialogTitle>
+            <DialogDescription>
+              Êtes-vous sûr de vouloir supprimer cette notification ? Cette action est irréversible.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedNotification && (
+            <div className="py-4">
+              <p className="font-medium">{selectedNotification.title}</p>
+              <p className="text-sm text-gray-500 mt-1">{selectedNotification.description}</p>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteNotification} disabled={isSending}>
+              {isSending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Suppression...
+                </>
+              ) : (
+                <>
+                  <Trash className="mr-2 h-4 w-4" />
+                  Supprimer
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

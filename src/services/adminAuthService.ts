@@ -2,120 +2,163 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-export type AdminCredentials = {
+interface AdminLoginCredentials {
   email: string;
   password: string;
-};
+}
 
-export type AdminUser = {
+interface AdminUser {
   id: string;
   email: string;
-  first_name: string | null;
-  last_name: string | null;
-  created_at: string | null;
-  last_login: string | null;
-};
+  firstName?: string;
+  lastName?: string;
+  role?: string;
+}
 
-// Login admin user
-export const loginAdmin = async ({ email, password }: AdminCredentials) => {
+interface AuthResponse {
+  success: boolean;
+  user?: AdminUser | null;
+  error?: string;
+}
+
+export async function signInAdmin({ email, password }: AdminLoginCredentials): Promise<AuthResponse> {
   try {
-    console.log("Attempting login with email:", email);
-    
-    // Log the credentials being used (without the full password)
-    console.log("Login attempt with:", { 
-      email, 
-      passwordLength: password ? password.length : 0 
+    // Check if email is valid
+    if (!email || !email.includes('@')) {
+      return {
+        success: false,
+        error: "Veuillez entrer une adresse email valide"
+      };
+    }
+
+    // Check if password is provided
+    if (!password) {
+      return {
+        success: false,
+        error: "Veuillez entrer votre mot de passe"
+      };
+    }
+
+    // Attempt sign in with Supabase
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
     });
 
-    // Simplify admin login to check if the credentials match
-    // For demo purposes, use hardcoded admin credentials
-    if (email === 'admin@example.com' && password === 'admin123') {
-      // Create a mock admin user object
-      const adminUser = {
-        id: '1',
-        email: 'admin@example.com',
-        first_name: 'Admin',
-        last_name: 'User',
-        created_at: new Date().toISOString(),
-        last_login: new Date().toISOString()
-      };
+    if (error) {
+      console.error("Admin sign in error:", error);
       
-      // Store admin session in localStorage
-      localStorage.setItem('admin_user', JSON.stringify(adminUser));
+      // Handle specific errors
+      if (error.message.includes('Invalid login credentials')) {
+        return {
+          success: false,
+          error: "Identifiants incorrects. Veuillez vérifier votre email et mot de passe."
+        };
+      }
       
-      console.log("Login successful, admin session stored");
-      
-      return { 
-        success: true, 
-        admin: adminUser 
-      };
-    }
-    
-    // Default admin credentials for testing
-    if (email === 'bamboguirassy93@gmail.com' && password === 'Toshino201292@') {
-      // Create a mock admin user object
-      const adminUser = {
-        id: '2',
-        email: 'bamboguirassy93@gmail.com',
-        first_name: 'Bambo',
-        last_name: 'Guirassy',
-        created_at: new Date().toISOString(),
-        last_login: new Date().toISOString()
-      };
-      
-      // Store admin session in localStorage
-      localStorage.setItem('admin_user', JSON.stringify(adminUser));
-      
-      console.log("Login successful, admin session stored");
-      
-      return { 
-        success: true, 
-        admin: adminUser 
+      return {
+        success: false,
+        error: "Erreur lors de la connexion: " + error.message
       };
     }
 
-    // If no match found, return error
-    console.log("Invalid credentials provided");
-    return { success: false, error: "Email ou mot de passe incorrect" };
-  } catch (error: any) {
-    console.error("Admin login error:", error);
-    return { success: false, error: error.message || "Erreur lors de la connexion" };
-  }
-};
+    if (!data.user) {
+      return {
+        success: false,
+        error: "Utilisateur non trouvé"
+      };
+    }
 
-// Logout admin user
-export const logoutAdmin = () => {
-  localStorage.removeItem('admin_user');
-  return { success: true };
-};
+    // Check if user is an admin using RPC function
+    const { data: isAdminData, error: isAdminError } = await supabase.rpc('is_admin', {
+      user_email: email
+    });
 
-// Get current admin user from localStorage
-export const getCurrentAdmin = (): AdminUser | null => {
-  const adminJson = localStorage.getItem('admin_user');
-  return adminJson ? JSON.parse(adminJson) : null;
-};
+    if (isAdminError) {
+      console.error("Error checking admin status:", isAdminError);
+      
+      // Sign out the user if they're not an admin
+      await supabase.auth.signOut();
+      
+      return {
+        success: false,
+        error: "Erreur de vérification des privilèges administrateur"
+      };
+    }
 
-// Log admin action
-export const logAdminAction = async (
-  adminId: string,
-  actionType: 'user_management' | 'project_management' | 'wallet_management' | 'withdrawal_management',
-  description: string,
-  targetUserId?: string,
-  targetProjectId?: string,
-  amount?: number
-) => {
-  try {
+    if (!isAdminData) {
+      // Sign out the user if they're not an admin
+      await supabase.auth.signOut();
+      
+      return {
+        success: false,
+        error: "Vous n'avez pas les privilèges administrateur nécessaires"
+      };
+    }
+
+    // Log the successful login (note: admin_logs table doesn't exist yet)
+    /*
     await supabase
       .from('admin_logs')
       .insert({
-        admin_id: adminId,
-        action_type: actionType,
-        description,
-        target_user_id: targetUserId,
-        target_project_id: targetProjectId,
-        amount
+        admin_id: data.user.id,
+        action_type: 'login',
+        description: `Connexion administrateur depuis ${getClientInfo()}`
       });
+    */
+
+    // Return the user data
+    return {
+      success: true,
+      user: {
+        id: data.user.id,
+        email: data.user.email || '',
+        firstName: data.user.user_metadata?.first_name || '',
+        lastName: data.user.user_metadata?.last_name || ''
+      }
+    };
   } catch (error) {
-    console.error("Error logging admin action:", error);
+    console.error("Unexpected error during admin sign in:", error);
+    return {
+      success: false,
+      error: "Une erreur inattendue s'est produite"
+    };
   }
-};
+}
+
+export async function signOutAdmin(): Promise<{ success: boolean, error?: string }> {
+  try {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      throw error;
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error signing out:", error);
+    return {
+      success: false,
+      error: "Erreur lors de la déconnexion"
+    };
+  }
+}
+
+export async function getAdminSession() {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      throw error;
+    }
+    
+    return data.session;
+  } catch (error) {
+    console.error("Error getting session:", error);
+    return null;
+  }
+}
+
+function getClientInfo() {
+  return `${navigator.platform}, ${navigator.userAgent}`;
+}

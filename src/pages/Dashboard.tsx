@@ -88,8 +88,8 @@ export default function Dashboard() {
     refreshInvestmentsData 
   } = useInvestmentsData(userId);
   
-  // Get real-time status (now disabled)
-  const { realTimeStatus } = useRealTimeSubscriptions({
+  // Get polling status (replaced realtime)
+  const { pollingStatus } = useRealTimeSubscriptions({
     userId: userId || '',
     onProfileUpdate: refreshProfileData,
     onInvestmentUpdate: refreshInvestmentsData,
@@ -97,9 +97,9 @@ export default function Dashboard() {
   });
   
   useEffect(() => {
-    console.log("Dashboard real-time status:", realTimeStatus);
+    console.log("Dashboard polling status:", pollingStatus);
     
-    if (realTimeStatus === 'disabled') {
+    if (pollingStatus === 'disabled') {
       toast.info("Mode temps réel désactivé", {
         id: "realtime-disabled",
         description: "Le mode temps réel a été désactivé. Veuillez utiliser le bouton d'actualisation pour mettre à jour vos données."
@@ -114,7 +114,7 @@ export default function Dashboard() {
     return () => {
       clearInterval(dataRefreshInterval);
     };
-  }, [realTimeStatus]);
+  }, [pollingStatus]);
   
   const refreshAllData = useCallback(async () => {
     if (isRefreshing) return;
@@ -162,7 +162,7 @@ export default function Dashboard() {
         toggleSidebar={toggleSidebar}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        realTimeStatus={realTimeStatus}
+        realTimeStatus={pollingStatus}
         handleLogout={handleLogout}
       >
         <DashboardMain 
