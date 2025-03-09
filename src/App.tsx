@@ -15,18 +15,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
-import { AdminProvider } from "./contexts/AdminContext";
 import AllProfiles from "./pages/AllProfiles";
-
-// Admin pages
-import AdminLogin from "./pages/admin/AdminLogin";
-import AdminLayout from "./components/admin/AdminLayout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import ProjectManagement from "./pages/admin/ProjectManagement";
-import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
-import NotificationManagement from "./pages/admin/NotificationManagement";
-import ProfileManagement from "./pages/admin/ProfileManagement";
-import BankTransferManagement from "./pages/admin/BankTransferManagement";
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -43,39 +32,25 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <HelmetProvider>
       <TooltipProvider>
-        <AdminProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/projects" element={<Opportunite />} />
-              <Route path="/project/:id" element={<ProjectDetail />} />
-              <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/dashboard/*" element={<Dashboard />} />
-              <Route path="/all-profiles" element={<AllProfiles />} />
-              
-              {/* Admin Routes */}
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="projects" element={<ProjectManagement />} />
-                <Route path="withdrawals" element={<WithdrawalManagement />} />
-                <Route path="profiles" element={<ProfileManagement />} />
-                <Route path="notifications" element={<NotificationManagement />} />
-                <Route path="bank-transfers" element={<BankTransferManagement />} />
-              </Route>
-              
-              {/* Catch-all route for 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </AdminProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/projects" element={<Opportunite />} />
+            <Route path="/project/:id" element={<ProjectDetail />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/dashboard/*" element={<Dashboard />} />
+            <Route path="/all-profiles" element={<AllProfiles />} />
+            
+            {/* Catch-all route for 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
       </TooltipProvider>
     </HelmetProvider>
   </QueryClientProvider>
