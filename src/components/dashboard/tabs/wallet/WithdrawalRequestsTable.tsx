@@ -1,11 +1,10 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { Badge } from "@/components/ui/badge";
-import { Loader2 } from "lucide-react";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import LoadingState from "./withdrawal-table/LoadingState";
+import EmptyState from "./withdrawal-table/EmptyState";
+import WithdrawalTableRow from "./withdrawal-table/WithdrawalTableRow";
 
 interface WithdrawalRequest {
   id: string;
@@ -17,7 +16,7 @@ interface WithdrawalRequest {
     accountName: string;
     bankName: string;
     accountNumber: string;
-  } | Record<string, any>; // Permet de gérer des formats différents
+  } | Record<string, any>;
 }
 
 export default function WithdrawalRequestsTable() {
@@ -59,51 +58,12 @@ export default function WithdrawalRequestsTable() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), 'dd MMM yyyy', { locale: fr });
-  };
-
-  const maskAccountNumber = (accountNumber: string) => {
-    if (!accountNumber) return '';
-    
-    // If it's an IBAN, show only first 4 and last 4 characters
-    if (accountNumber.length > 10) {
-      return `${accountNumber.substring(0, 4)}...${accountNumber.substring(accountNumber.length - 4)}`;
-    }
-    
-    // Otherwise, show only last 4 characters
-    return `...${accountNumber.substring(accountNumber.length - 4)}`;
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">En attente</Badge>;
-      case 'approved':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Approuvé</Badge>;
-      case 'completed':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Complété</Badge>;
-      case 'rejected':
-        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Rejeté</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-8 w-8 text-bgs-blue animate-spin" />
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (withdrawalRequests.length === 0) {
-    return (
-      <div className="text-center py-8 text-gray-500">
-        Aucune demande de retrait n'a été effectuée
-      </div>
-    );
+    return <EmptyState />;
   }
 
   return (
@@ -122,13 +82,7 @@ export default function WithdrawalRequestsTable() {
           </TableHeader>
           <TableBody>
             {withdrawalRequests.map((request) => (
-              <TableRow key={request.id}>
-                <TableCell>{formatDate(request.requested_at)}</TableCell>
-                <TableCell className="font-medium">{request.amount} €</TableCell>
-                <TableCell>{request.bank_info?.bankName || "-"}</TableCell>
-                <TableCell>{maskAccountNumber(request.bank_info?.accountNumber || "")}</TableCell>
-                <TableCell>{getStatusBadge(request.status)}</TableCell>
-              </TableRow>
+              <WithdrawalTableRow key={request.id} request={request} />
             ))}
           </TableBody>
         </Table>
@@ -136,4 +90,3 @@ export default function WithdrawalRequestsTable() {
     </div>
   );
 }
-
