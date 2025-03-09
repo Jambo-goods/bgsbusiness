@@ -18,6 +18,7 @@ export const useAllUsersData = () => {
       setIsLoading(true);
       console.log("Fetching all users data...");
       
+      // We need to make sure we're fetching from the profiles table without any RLS restrictions
       const { data, error, count } = await supabase
         .from('profiles')
         .select('*', { count: 'exact' })
@@ -25,7 +26,8 @@ export const useAllUsersData = () => {
 
       if (error) {
         console.error('Error fetching users:', error);
-        throw error;
+        toast.error('Erreur lors du chargement des utilisateurs');
+        return;
       }
 
       console.log('Users fetched successfully:', data);
