@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -57,7 +56,6 @@ export default function ProfileManagement() {
     try {
       setIsLoading(true);
       
-      // Get all profiles without real-time updates
       const { data, error, count } = await supabase
         .from('profiles')
         .select('*', { count: 'exact' })
@@ -69,7 +67,6 @@ export default function ProfileManagement() {
 
       console.log('Fetched profiles:', data);
       
-      // Combine the profiles with online status
       const profilesWithStatus: Profile[] = data?.map(profile => ({
         ...profile,
         online_status: onlineUsers.has(profile.id) ? 'online' as const : 'offline' as const
@@ -89,13 +86,11 @@ export default function ProfileManagement() {
   };
 
   const subscribeToPresence = () => {
-    // Subscribe to presence channel to track online users
     const channel = supabase.channel('online-users')
       .on('presence', { event: 'sync' }, () => {
         const newState = channel.presenceState();
         const onlineUserIds = new Set<string>();
         
-        // Extract user IDs from presence state
         Object.values(newState).forEach((presences: any) => {
           presences.forEach((presence: any) => {
             if (presence.user_id) {
@@ -106,7 +101,6 @@ export default function ProfileManagement() {
         
         setOnlineUsers(onlineUserIds);
         
-        // Update profiles with the new online status
         setProfiles(prevProfiles => 
           prevProfiles.map(profile => ({
             ...profile,
@@ -120,7 +114,6 @@ export default function ProfileManagement() {
         }
       });
 
-    // Clean up subscription
     return () => {
       supabase.removeChannel(channel);
     };
@@ -135,16 +128,13 @@ export default function ProfileManagement() {
     try {
       setIsProcessing(true);
       
-      // Convert the amount to a number
       const amount = parseInt(amountToAdd, 10);
       
       if (isNaN(amount) || amount <= 0) {
         throw new Error('Le montant doit être un nombre positif');
       }
       
-      // Add funds to all profiles
       const promises = profiles.map(async (profile) => {
-        // Update the wallet balance directly
         const { error } = await supabase.rpc('increment_wallet_balance', {
           user_id: profile.id,
           increment_amount: amount
@@ -155,7 +145,6 @@ export default function ProfileManagement() {
           return false;
         }
         
-        // Create a wallet transaction record
         await supabase.from('wallet_transactions').insert({
           user_id: profile.id,
           amount: amount,
@@ -170,7 +159,6 @@ export default function ProfileManagement() {
       const results = await Promise.all(promises);
       const successCount = results.filter(result => result).length;
       
-      // Log the admin action
       await supabase.from('admin_logs').insert({
         description: `Ajout de ${amount}€ à tous les profils (${successCount}/${profiles.length} réussis)`,
         action_type: 'wallet_management',
@@ -180,7 +168,6 @@ export default function ProfileManagement() {
       toast.success(`${successCount} profils mis à jour avec succès!`);
       setIsAddFundsDialogOpen(false);
       
-      // Refresh the profiles to show the updated balances
       fetchProfiles();
     } catch (error) {
       console.error('Error adding funds:', error);
@@ -219,7 +206,7 @@ export default function ProfileManagement() {
             Ajouter des fonds à tous
           </Button>
           <StatusIndicator 
-            realTimeStatus={realTimeStatus} 
+            systemStatus="operational" 
             isRefreshing={isRefreshing} 
             onRefresh={handleRefresh} 
           />
@@ -310,7 +297,6 @@ export default function ProfileManagement() {
         )}
       </div>
 
-      {/* Dialog pour ajouter des fonds à tous les profils */}
       <Dialog open={isAddFundsDialogOpen} onOpenChange={setIsAddFundsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>

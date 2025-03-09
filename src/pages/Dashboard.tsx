@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
@@ -16,27 +15,23 @@ export default function Dashboard() {
   const [searchParams] = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(() => {
-    // First check URL search params
     const tabParam = searchParams.get('tab');
     if (tabParam) {
       console.log(`Setting initial tab from URL param: ${tabParam}`);
       return tabParam;
     }
     
-    // Then check location state
     if (location.state && location.state.activeTab) {
       console.log(`Setting initial tab from location state: ${location.state.activeTab}`);
       return location.state.activeTab;
     }
     
-    // Default to overview
     return 'overview';
   });
   
   const { isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useSidebarState();
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Update activeTab when URL params change
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam) {
@@ -45,7 +40,6 @@ export default function Dashboard() {
     }
   }, [searchParams]);
   
-  // Update activeTab when location state changes
   useEffect(() => {
     if (location.state && location.state.activeTab) {
       console.log(`Updating tab from location state change: ${location.state.activeTab}`);
@@ -53,7 +47,6 @@ export default function Dashboard() {
     }
   }, [location.state]);
   
-  // Fetch user ID from auth session - only once at component mount
   useEffect(() => {
     const fetchUserId = async () => {
       try {
@@ -75,29 +68,25 @@ export default function Dashboard() {
     fetchUserId();
   }, []);
   
-  // User profile data
   const { 
     userData, 
     isLoading: profileLoading, 
     refreshProfileData 
   } = useProfileData(userId);
   
-  // User investments data
   const { 
     userInvestments, 
     isLoading: investmentsLoading, 
     refreshInvestmentsData 
   } = useInvestmentsData(userId);
   
-  // Set up real-time subscriptions when user ID is available
   const { realTimeStatus } = useRealTimeSubscriptions({
     userId: userId || '',
     onProfileUpdate: refreshProfileData,
     onInvestmentUpdate: refreshInvestmentsData,
-    onTransactionUpdate: refreshProfileData  // Wallet balance is part of profile
+    onTransactionUpdate: refreshProfileData
   });
   
-  // Log real-time status changes
   useEffect(() => {
     console.log("Dashboard real-time status:", realTimeStatus);
     
@@ -114,7 +103,6 @@ export default function Dashboard() {
     }
   }, [realTimeStatus]);
   
-  // Handle manual data refresh with debounce protection
   const refreshAllData = useCallback(async () => {
     if (isRefreshing) return;
     
@@ -146,7 +134,6 @@ export default function Dashboard() {
     }
   };
 
-  // Debug what tab is active
   console.log("Current active tab (Dashboard.tsx):", activeTab);
 
   return (
@@ -179,7 +166,6 @@ export default function Dashboard() {
           userInvestments={userInvestments}
           setActiveTab={setActiveTab}
           refreshData={refreshAllData}
-          realTimeStatus={realTimeStatus}
         />
       </DashboardLayout>
     </>
