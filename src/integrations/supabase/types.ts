@@ -296,6 +296,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
+          receipt_confirmed: boolean | null
           status: string
           type: string
           user_id: string
@@ -305,6 +306,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          receipt_confirmed?: boolean | null
           status?: string
           type: string
           user_id: string
@@ -314,6 +316,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
+          receipt_confirmed?: boolean | null
           status?: string
           type?: string
           user_id?: string
