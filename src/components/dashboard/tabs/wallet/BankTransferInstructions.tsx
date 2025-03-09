@@ -1,12 +1,15 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon, AlertCircle, CopyIcon, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export default function BankTransferInstructions() {
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const bankDetails = {
     name: "BGS Invest",
@@ -21,6 +24,48 @@ export default function BankTransferInstructions() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  };
+
+  const handleConfirmTransfer = async () => {
+    try {
+      setIsConfirming(true);
+      
+      // Get current user session
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        toast.error("Vous devez être connecté pour confirmer un virement");
+        return;
+      }
+      
+      // Create a notification for the admin about the bank transfer
+      await supabase.from('notifications').insert({
+        user_id: sessionData.session.user.id,
+        title: "Virement bancaire confirmé",
+        description: `Un utilisateur a confirmé avoir effectué un virement bancaire avec la référence ${bankDetails.reference}`,
+        type: "deposit",
+        category: "finance",
+        metadata: {
+          reference: bankDetails.reference,
+          timestamp: new Date().toISOString()
+        }
+      });
+      
+      // Add a record to the wallet_transactions table
+      await supabase.from('wallet_transactions').insert({
+        user_id: sessionData.session.user.id,
+        amount: 0, // The actual amount will be updated by admin when they process it
+        type: "deposit",
+        status: "pending",
+        description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
+      });
+      
+      toast.success("Confirmation de virement envoyée. Nous traiterons votre virement dès réception.");
+    } catch (error) {
+      console.error("Erreur lors de la confirmation du virement:", error);
+      toast.error("Une erreur est survenue lors de la confirmation");
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   return (
@@ -105,6 +150,22 @@ export default function BankTransferInstructions() {
           Le montant minimum de dépôt est de 100€.
         </AlertDescription>
       </Alert>
+      
+      <div className="flex flex-col items-center pt-4 border-t border-gray-200">
+        <Button 
+          onClick={handleConfirmTransfer}
+          disabled={isConfirming}
+          className="w-full md:w-auto bg-gradient-to-r from-bgs-blue to-bgs-blue-light text-white"
+        >
+          {isConfirming ? 
+            "Confirmation en cours..." : 
+            "J'ai effectué le virement bancaire"
+          }
+        </Button>
+        <p className="text-sm text-gray-500 mt-2 text-center">
+          Une fois le virement effectué, cliquez sur ce bouton pour nous informer
+        </p>
+      </div>
     </div>
   );
 }
