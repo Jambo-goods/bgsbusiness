@@ -15,6 +15,7 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import UsersList from "./pages/UsersList"; // Import the new page
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/dashboard/*" element={<Dashboard />} />
+            <Route path="/users" element={<UsersList />} /> {/* Add the new route */}
             
             {/* Catch-all route for 404 */}
             <Route path="*" element={<NotFound />} />
