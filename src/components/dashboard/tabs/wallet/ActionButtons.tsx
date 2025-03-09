@@ -1,6 +1,4 @@
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { notificationService } from "@/services/notifications";
@@ -118,16 +116,6 @@ export default function ActionButtons({
     }
   };
   
-  return (
-    <>
-      <Button 
-        variant="outline" 
-        className="flex items-center gap-2 border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10" 
-        onClick={handleWithdraw}
-      >
-        <Download className="h-4 w-4" /> 
-        Retirer des fonds
-      </Button>
-    </>
-  );
+  // Return an empty fragment as we've removed the button
+  return <></>;
 }
