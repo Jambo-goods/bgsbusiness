@@ -16,6 +16,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 import { AdminProvider } from "./contexts/AdminContext";
+import AllProfiles from "./pages/AllProfiles";
 
 // Admin pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/dashboard/*" element={<Dashboard />} />
+              <Route path="/all-profiles" element={<AllProfiles />} />
               
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
