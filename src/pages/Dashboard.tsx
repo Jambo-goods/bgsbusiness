@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
@@ -68,7 +67,6 @@ export default function Dashboard() {
     
     fetchUserId();
     
-    // Set up periodic refresh
     const refreshInterval = setInterval(fetchUserId, 5 * 60 * 1000); // Check every 5 minutes
     
     return () => {
@@ -88,7 +86,6 @@ export default function Dashboard() {
     refreshInvestmentsData 
   } = useInvestmentsData(userId);
   
-  // Get polling status (replaced realtime)
   const { pollingStatus } = useRealTimeSubscriptions({
     userId: userId || '',
     onProfileUpdate: refreshProfileData,
@@ -106,7 +103,6 @@ export default function Dashboard() {
       });
     }
     
-    // Set up periodic refresh since real-time is disabled
     const dataRefreshInterval = setInterval(() => {
       refreshAllData();
     }, 10 * 60 * 1000); // Refresh every 10 minutes
@@ -149,7 +145,6 @@ export default function Dashboard() {
 
   console.log("Current active tab (Dashboard.tsx):", activeTab);
 
-  // Convert polling status to dashboard layout expected status format
   const pollingStatusMap: Record<'active' | 'disabled' | 'error', 'connected' | 'connecting' | 'error'> = {
     'active': 'connected',
     'disabled': 'connecting',
