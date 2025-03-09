@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logoutAdmin } from '@/services/adminAuthService';
 import { 
   Database, ArrowLeftRight, 
-  LayoutDashboard, LogOut, Menu, X, Bell, Users, CreditCard
+  LayoutDashboard, LogOut, Menu, X, Bell, Users
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,11 +40,6 @@ export default function AdminLayout() {
       label: 'Demandes de retrait', 
       icon: <ArrowLeftRight className="w-5 h-5" />, 
       path: '/admin/withdrawals' 
-    },
-    { 
-      label: 'Gestion financière', 
-      icon: <CreditCard className="w-5 h-5" />, 
-      path: '/admin/finance' 
     },
     { 
       label: 'Profils', 
