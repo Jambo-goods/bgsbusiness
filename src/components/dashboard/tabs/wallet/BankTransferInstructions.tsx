@@ -53,6 +53,14 @@ export default function BankTransferInstructions() {
         }
       });
       
+      // Enregistrer le virement bancaire dans la nouvelle table bank_transfers
+      await supabase.from('bank_transfers').insert({
+        user_id: userId,
+        reference: bankDetails.reference,
+        status: 'pending',
+        notes: 'Confirmation de virement par l\'utilisateur'
+      });
+      
       // Add a record to the wallet_transactions table
       await supabase.from('wallet_transactions').insert({
         user_id: userId,
