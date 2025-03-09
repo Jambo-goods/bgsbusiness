@@ -10,7 +10,7 @@ import DashboardGrid from "@/components/admin/dashboard/DashboardGrid";
 import BankTransferTable from "@/components/admin/dashboard/BankTransferTable";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { InfoCircle } from "lucide-react";
+import { Info } from "lucide-react";
 
 export default function AdminDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -82,7 +82,7 @@ export default function AdminDashboard() {
         <div className="mt-8">
           <h2 className="text-2xl font-semibold mb-4">Virements bancaires en attente</h2>
           <Alert className="mb-4">
-            <InfoCircle className="h-4 w-4" />
+            <Info className="h-4 w-4" />
             <AlertTitle>Information</AlertTitle>
             <AlertDescription>
               Confirmez les virements bancaires après avoir vérifié leur réception sur le compte bancaire de l'entreprise.
