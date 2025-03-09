@@ -33,19 +33,11 @@ export default function BankTransferInstructions() {
       // Get current user session
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
-      const userEmail = sessionData.session?.user.email;
       
-      if (!userId || !userEmail) {
+      if (!userId) {
         toast.error("Vous devez être connecté pour confirmer un virement");
         return;
       }
-      
-      // Get user profile data for name
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('first_name, last_name')
-        .eq('id', userId)
-        .single();
       
       // Create a notification for the admin about the bank transfer
       await supabase.from('notifications').insert({
@@ -68,22 +60,6 @@ export default function BankTransferInstructions() {
         status: "pending",
         description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
       });
-      
-      // Send email notification to admin
-      const userName = profileData ? `${profileData.first_name} ${profileData.last_name}` : '';
-      
-      const { error: notificationError } = await supabase.functions.invoke('notify-bank-transfer', {
-        body: {
-          userId,
-          userName,
-          userEmail,
-          reference: bankDetails.reference
-        }
-      });
-      
-      if (notificationError) {
-        console.error("Error sending notification:", notificationError);
-      }
       
       toast.success("Confirmation de virement envoyée. Nous traiterons votre virement dès réception.");
     } catch (error) {

@@ -1,6 +1,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function useWalletBalance() {
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -27,6 +28,7 @@ export function useWalletBalance() {
         
       if (error) {
         console.error("Error fetching wallet balance:", error);
+        toast.error("Erreur lors de la récupération du solde");
         setWalletBalance(0);
         return;
       }
@@ -34,6 +36,7 @@ export function useWalletBalance() {
       setWalletBalance(data.wallet_balance || 0);
     } catch (error) {
       console.error("Error:", error);
+      toast.error("Erreur lors de la récupération du solde");
       setWalletBalance(0);
     } finally {
       if (showLoading) {
@@ -59,6 +62,7 @@ export function useWalletBalance() {
   // Function to manually refresh the balance
   const refreshBalance = async () => {
     await fetchWalletBalance(true);
+    toast.success("Solde mis à jour");
   };
 
   return { walletBalance, isLoadingBalance, refreshBalance };
