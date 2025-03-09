@@ -23,7 +23,6 @@ import AdminLayout from "./components/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ProjectManagement from "./pages/admin/ProjectManagement";
 import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
-import WalletManagement from "./pages/admin/WalletManagement";
 import NotificationManagement from "./pages/admin/NotificationManagement";
 import ProfileManagement from "./pages/admin/ProfileManagement";
 
@@ -64,7 +63,6 @@ const App = () => (
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="projects" element={<ProjectManagement />} />
                 <Route path="withdrawals" element={<WithdrawalManagement />} />
-                <Route path="wallets" element={<WalletManagement />} />
                 <Route path="profiles" element={<ProfileManagement />} />
                 <Route path="notifications" element={<NotificationManagement />} />
               </Route>
