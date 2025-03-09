@@ -10,7 +10,7 @@ import { FinancialChart } from '@/components/admin/finance/FinancialChart';
 import { UsersTable } from '@/components/admin/finance/UsersTable';
 import { UserDetailsPanel } from '@/components/admin/finance/UserDetailsPanel';
 import { TransactionFilters } from '@/components/admin/finance/TransactionFilters';
-import SearchBar from '@/components/admin/users/SearchBar';
+import { SearchBar } from '@/components/admin/users/SearchBar';
 import { 
   Loader2, 
   Users as UsersIcon, 
@@ -384,8 +384,8 @@ export default function FinanceManagement() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <h2 className="text-lg font-semibold">Comptes Utilisateurs</h2>
               <SearchBar 
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
+                value={searchTerm}
+                onChange={setSearchTerm}
                 placeholder="Rechercher par nom, email, ID..."
               />
             </div>
