@@ -22,6 +22,8 @@ export const useUsersList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [totalUsers, setTotalUsers] = useState(0);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editedValues, setEditedValues] = useState<Partial<User>>({});
 
   const fetchUsers = async () => {
     try {
@@ -69,6 +71,60 @@ export const useUsersList = () => {
     fetchUsers();
   };
 
+  const handleEditUser = (userId: string) => {
+    const userToEdit = users.find(user => user.id === userId);
+    if (userToEdit) {
+      setEditingUser(userId);
+      setEditedValues({
+        first_name: userToEdit.first_name,
+        last_name: userToEdit.last_name,
+        email: userToEdit.email,
+        phone: userToEdit.phone,
+        address: userToEdit.address
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingUser(null);
+    setEditedValues({});
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingUser) return;
+
+    try {
+      setIsRefreshing(true);
+      const { error } = await supabase
+        .from('profiles')
+        .update(editedValues)
+        .eq('id', editingUser);
+
+      if (error) {
+        console.error('Error updating user:', error);
+        toast.error('Erreur lors de la mise à jour de l\'utilisateur');
+        return;
+      }
+
+      toast.success('Utilisateur mis à jour avec succès');
+      fetchUsers();
+      setEditingUser(null);
+      setEditedValues({});
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast.error('Erreur lors de la mise à jour de l\'utilisateur');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleChangeEditedValue = (field: string, value: string | number) => {
+    setEditedValues(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const filteredUsers = users.filter((user) => {
     if (!searchTerm) return true;
     
@@ -88,6 +144,12 @@ export const useUsersList = () => {
     isRefreshing,
     totalUsers,
     filteredUsers,
-    handleRefresh
+    handleRefresh,
+    editingUser,
+    editedValues,
+    handleEditUser,
+    handleCancelEdit,
+    handleSaveEdit,
+    handleChangeEditedValue
   };
 };

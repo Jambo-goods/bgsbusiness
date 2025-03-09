@@ -15,7 +15,13 @@ const UsersList: React.FC = () => {
     setSearchTerm,
     isRefreshing,
     handleRefresh,
-    totalUsers
+    totalUsers,
+    editingUser,
+    editedValues,
+    handleEditUser,
+    handleCancelEdit,
+    handleSaveEdit,
+    handleChangeEditedValue
   } = useUsersList();
 
   return (
@@ -29,7 +35,7 @@ const UsersList: React.FC = () => {
         <Navbar />
         <main className="flex-grow container mx-auto px-4 py-8">
           <div className="mx-auto max-w-7xl">
-            <h1 className="text-3xl font-bold mb-8 text-center">Liste des utilisateurs</h1>
+            <h1 className="text-3xl font-bold mb-8 text-center">Gestion des utilisateurs</h1>
             
             <div className="bg-white shadow-md rounded-lg overflow-hidden p-6">
               <UsersSearchBar
@@ -40,8 +46,17 @@ const UsersList: React.FC = () => {
                 userCount={filteredUsers.length}
               />
               
-              <div className="overflow-x-auto">
-                <UsersTable users={filteredUsers} isLoading={isLoading} />
+              <div className="overflow-x-auto mt-6">
+                <UsersTable 
+                  users={filteredUsers} 
+                  isLoading={isLoading}
+                  editingUser={editingUser}
+                  editedValues={editedValues}
+                  onEdit={handleEditUser}
+                  onCancelEdit={handleCancelEdit}
+                  onSaveEdit={handleSaveEdit}
+                  onChangeEditedValue={handleChangeEditedValue}
+                />
               </div>
             </div>
           </div>
