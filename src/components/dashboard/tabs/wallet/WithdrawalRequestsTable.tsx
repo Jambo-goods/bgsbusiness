@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,7 +17,7 @@ interface WithdrawalRequest {
     accountName: string;
     bankName: string;
     accountNumber: string;
-  };
+  } | Record<string, any>; // Permet de gérer des formats différents
 }
 
 export default function WithdrawalRequestsTable() {
@@ -44,7 +45,13 @@ export default function WithdrawalRequestsTable() {
 
       if (error) throw error;
       
-      setWithdrawalRequests(data as WithdrawalRequest[]);
+      // Transformation des données pour s'assurer que bank_info est correctement formaté
+      const formattedData = data.map(item => ({
+        ...item,
+        bank_info: typeof item.bank_info === 'object' ? item.bank_info : {}
+      }));
+      
+      setWithdrawalRequests(formattedData as WithdrawalRequest[]);
     } catch (error) {
       console.error("Erreur lors de la récupération des demandes de retrait:", error);
     } finally {
@@ -129,3 +136,4 @@ export default function WithdrawalRequestsTable() {
     </div>
   );
 }
+
