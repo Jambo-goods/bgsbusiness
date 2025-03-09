@@ -1,73 +1,126 @@
-
-import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import React from "react";
 import SidebarSection from "./SidebarSection";
-import PrincipalSection from "./sections/PrincipalSection";
-import AccountSection from "./sections/AccountSection";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import SidebarNavItem from "./SidebarNavItem";
+import { 
+  Home, 
+  User, 
+  Wallet, 
+  Bell,
+  Settings, 
+  LineChart,
+  LogOut,
+  Menu,
+  ShieldCheck
+} from "lucide-react";
+import { Button } from "../ui/button";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isSidebarOpen: boolean;
-  handleLogout: () => void;
+  handleLogout?: () => void;
   toggleSidebar?: () => void;
 }
 
-export default function Sidebar({
-  activeTab,
-  setActiveTab,
+export default function Sidebar({ 
+  activeTab, 
+  setActiveTab, 
   isSidebarOpen,
   handleLogout,
   toggleSidebar
 }: SidebarProps) {
-  // Add keyboard shortcut listener
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Ctrl/Cmd+B
-      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault(); // Prevent default browser behavior
-        if (toggleSidebar) {
-          toggleSidebar();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
+  // Function to check if user has admin rights (simplified for now)
+  const isAdmin = true; // This should be replaced with actual admin check
 
-    // Clean up event listener on component unmount
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [toggleSidebar]);
-  
   return (
-    <div className={cn(
-      "flex flex-col h-full transition-all duration-300 bg-white border-r relative overflow-y-auto", 
-      isSidebarOpen ? "w-64" : "w-16"
-    )}>
+    <div className="h-full flex flex-col p-3">
+      {/* Mobile Menu Toggle Button */}
       {toggleSidebar && (
-        <button 
-          onClick={toggleSidebar}
-          className={cn(
-            "absolute top-4 right-0 z-10 h-8 w-8 flex items-center justify-center bg-white shadow-sm rounded-l-md -mr-4 transition-all",
-            "text-bgs-blue hover:text-bgs-orange focus:outline-none",
-            "md:flex hidden" // Hide on mobile, show on desktop
-          )}
-          aria-label={isSidebarOpen ? "Réduire le menu" : "Agrandir le menu"}
-          title={isSidebarOpen ? "Réduire le menu (Ctrl+B)" : "Agrandir le menu (Ctrl+B)"}
-        >
-          {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-        </button>
+        <div className="flex justify-end md:hidden mb-4">
+          <Button variant="ghost" size="sm" onClick={toggleSidebar}>
+            <Menu className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
+
+      {/* Logo or Brand Name - only show when sidebar is open */}
+      {isSidebarOpen && (
+        <div className="flex items-center mb-4 h-12 px-3">
+          <span className="font-bold text-bgs-blue text-xl">BGS Invest</span>
+        </div>
       )}
       
-      <div className="flex flex-col py-6 flex-grow">
-        <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
-          <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
+      <SidebarSection title={isSidebarOpen ? "Navigation" : ""}>
+        <SidebarNavItem 
+          icon={<Home className="h-5 w-5" />} 
+          label="Dashboard" 
+          active={activeTab === "overview"}
+          onClick={() => setActiveTab("overview")}
+          expanded={isSidebarOpen}
+        />
+        <SidebarNavItem 
+          icon={<User className="h-5 w-5" />} 
+          label="Profil" 
+          active={activeTab === "profile"}
+          onClick={() => setActiveTab("profile")}
+          expanded={isSidebarOpen}
+        />
+        <SidebarNavItem 
+          icon={<LineChart className="h-5 w-5" />} 
+          label="Suivi des investissements" 
+          active={activeTab === "tracking"}
+          onClick={() => setActiveTab("tracking")}
+          expanded={isSidebarOpen}
+        />
+        <SidebarNavItem 
+          icon={<Wallet className="h-5 w-5" />} 
+          label="Portefeuille" 
+          active={activeTab === "wallet"}
+          onClick={() => setActiveTab("wallet")}
+          expanded={isSidebarOpen}
+        />
+        <SidebarNavItem 
+          icon={<Bell className="h-5 w-5" />} 
+          label="Notifications" 
+          active={activeTab === "notifications"}
+          onClick={() => setActiveTab("notifications")}
+          expanded={isSidebarOpen}
+        />
+      </SidebarSection>
+      
+      <SidebarSection title={isSidebarOpen ? "Préférences" : ""}>
+        <SidebarNavItem 
+          icon={<Settings className="h-5 w-5" />} 
+          label="Paramètres" 
+          active={activeTab === "settings"}
+          onClick={() => setActiveTab("settings")}
+          expanded={isSidebarOpen}
+        />
+      </SidebarSection>
+
+      {/* Admin section - only visible for admin users */}
+      {isAdmin && (
+        <SidebarSection title={isSidebarOpen ? "Administration" : ""}>
+          <SidebarNavItem 
+            icon={<ShieldCheck className="h-5 w-5" />} 
+            label="Admin Dashboard" 
+            active={activeTab === "admin"}
+            onClick={() => setActiveTab("admin")}
+            expanded={isSidebarOpen}
+          />
         </SidebarSection>
-        
-        <SidebarSection title="COMPTE" expanded={isSidebarOpen}>
-          <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} handleLogout={handleLogout} />
-        </SidebarSection>
+      )}
+      
+      <div className="mt-auto pt-6">
+        {handleLogout && (
+          <SidebarNavItem 
+            icon={<LogOut className="h-5 w-5" />} 
+            label="Déconnexion" 
+            active={false}
+            onClick={handleLogout}
+            expanded={isSidebarOpen}
+          />
+        )}
       </div>
     </div>
   );
