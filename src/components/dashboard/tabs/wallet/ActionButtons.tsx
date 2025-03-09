@@ -120,7 +120,7 @@ export default function ActionButtons({
   };
   
   return (
-    <div className="flex flex-wrap gap-4">
+    <>
       <Button 
         className="flex items-center gap-2 bg-bgs-blue hover:bg-bgs-blue-light" 
         onClick={handleDeposit}
@@ -137,6 +137,6 @@ export default function ActionButtons({
         <Download className="h-4 w-4" /> 
         Retirer des fonds
       </Button>
-    </div>
+    </>
   );
 }
