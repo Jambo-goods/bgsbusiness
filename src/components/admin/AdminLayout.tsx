@@ -1,164 +1,141 @@
-
 import React, { useState } from 'react';
-import { Outlet, Navigate, useNavigate } from 'react-router-dom';
-import { useAdmin } from '@/contexts/AdminContext';
-import { logoutAdmin } from '@/services/adminAuthService';
-import { 
-  Database, ArrowLeftRight, 
-  LayoutDashboard, LogOut, Menu, X, Bell, Users, BanknoteIcon
-} from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { logoutUser } from '@/services/authService';
 import { toast } from 'sonner';
 
-export default function AdminLayout() {
-  const { adminUser, setAdminUser } = useAdmin();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+export function AdminLayout({ children }: { children: React.ReactNode }) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
 
-  // If no admin user is logged in, redirect to login
-  if (!adminUser) {
-    return <Navigate to="/admin/login" replace />;
-  }
-
-  const handleLogout = () => {
-    logoutAdmin();
-    setAdminUser(null);
-    toast.success("Vous avez été déconnecté");
-    navigate("/admin/login");
+  const handleLogout = async () => {
+    const { success } = await logoutUser();
+    if (success) {
+      toast.success('Déconnexion réussie');
+      navigate('/login');
+    } else {
+      toast.error('Erreur lors de la déconnexion');
+    }
   };
-
-  const menuItems = [
-    { 
-      label: 'Tableau de bord', 
-      icon: <LayoutDashboard className="w-5 h-5" />, 
-      path: '/admin/dashboard' 
-    },
-    { 
-      label: 'Projets', 
-      icon: <Database className="w-5 h-5" />, 
-      path: '/admin/projects' 
-    },
-    { 
-      label: 'Virements bancaires', 
-      icon: <BanknoteIcon className="w-5 h-5" />, 
-      path: '/admin/bank-transfers' 
-    },
-    { 
-      label: 'Demandes de retrait', 
-      icon: <ArrowLeftRight className="w-5 h-5" />, 
-      path: '/admin/withdrawals' 
-    },
-    { 
-      label: 'Profils', 
-      icon: <Users className="w-5 h-5" />, 
-      path: '/admin/profiles' 
-    },
-    { 
-      label: 'Notifications', 
-      icon: <Bell className="w-5 h-5" />, 
-      path: '/admin/notifications' 
-    },
-  ];
-
+  
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Top Nav */}
-      <div className="bg-bgs-blue text-white shadow-md">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm h-16 fixed top-0 left-0 right-0 z-20">
+        <div className="flex items-center justify-between h-full px-4">
+          <div className="flex items-center">
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 rounded-md hover:bg-gray-100"
             >
-              {isMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
-            <h1 className="text-xl font-bold">BGS Admin</h1>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <button className="relative p-2">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-bgs-orange rounded-full"></span>
-            </button>
-            
-            <div className="hidden md:flex items-center gap-2">
-              <div className="text-sm">
-                <div className="font-medium">
-                  {adminUser.first_name} {adminUser.last_name}
-                </div>
-                <div className="text-white/70 text-xs">{adminUser.email}</div>
-              </div>
-              
-              <button
-                onClick={handleLogout}
-                className="p-2 hover:bg-bgs-blue-light rounded-full"
-                title="Déconnexion"
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                <LogOut className="w-5 h-5" />
-              </button>
-            </div>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
+              </svg>
+            </button>
+            <h1 className="ml-4 text-xl font-semibold">Administration</h1>
+          </div>
+          <div>
+            <Button variant="outline" onClick={handleLogout}>
+              Déconnexion
+            </Button>
           </div>
         </div>
-      </div>
+      </header>
       
-      {/* Mobile menu overlay */}
-      {isMenuOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/50 z-40"
-          onClick={() => setIsMenuOpen(false)}
-        ></div>
-      )}
-      
-      <div className="flex flex-1">
+      {/* Main Content */}
+      <div className="flex">
         {/* Sidebar */}
-        <aside 
-          className={`
-            ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
-            md:translate-x-0 fixed md:static inset-y-0 left-0 w-64 bg-white shadow-lg 
-            transition-transform duration-300 ease-in-out z-50 pt-16 md:pt-0
-          `}
-        >
-          <nav className="p-4 space-y-1">
-            {menuItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => {
-                  navigate(item.path);
-                  setIsMenuOpen(false);
-                }}
-                className={`
-                  flex items-center gap-3 px-4 py-3 w-full rounded-lg
-                  ${
-                    location.pathname === item.path
-                      ? 'bg-bgs-blue text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
+        <div className={`${isSidebarOpen ? 'w-64' : 'w-16'} bg-white h-screen fixed left-0 top-16 shadow-sm transition-all duration-300 z-10`}>
+          <div className="py-4">
+            <ul className="space-y-2 px-3">
+              <li>
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    `flex items-center p-2 rounded-lg ${
+                      isActive ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
+                    }`
                   }
-                `}
-              >
-                {item.icon}
-                <span>{item.label}</span>
-              </button>
-            ))}
-            
-            <hr className="my-4" />
-            
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Déconnexion</span>
-            </button>
-          </nav>
-        </aside>
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                  </svg>
+                  {isSidebarOpen && <span className="ml-3">Tableau de bord</span>}
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/admin/users"
+                  className={({ isActive }) =>
+                    `flex items-center p-2 rounded-lg ${
+                      isActive ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                  </svg>
+                  {isSidebarOpen && <span className="ml-3">Utilisateurs</span>}
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/admin/projects"
+                  className={({ isActive }) =>
+                    `flex items-center p-2 rounded-lg ${
+                      isActive ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                  </svg>
+                  {isSidebarOpen && <span className="ml-3">Projets</span>}
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/admin/withdrawals"
+                  className={({ isActive }) =>
+                    `flex items-center p-2 rounded-lg ${
+                      isActive ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'
+                    }`
+                  }
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                  {isSidebarOpen && <span className="ml-3">Retraits</span>}
+                </NavLink>
+              </li>
+            </ul>
+          </div>
+        </div>
         
-        {/* Main content */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
-          <Outlet />
-        </main>
+        {/* Content */}
+        <div className={`pt-16 ${isSidebarOpen ? 'ml-64' : 'ml-16'} flex-1 transition-all duration-300`}>
+          {children}
+        </div>
       </div>
     </div>
   );
