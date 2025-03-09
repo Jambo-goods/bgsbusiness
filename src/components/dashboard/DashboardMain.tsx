@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import DashboardHeader from "./DashboardHeader";
 import TabContent from "./TabContent";
 import { Project } from "@/types/project";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 interface DashboardMainProps {
   isSidebarOpen: boolean;
@@ -31,16 +32,27 @@ export default function DashboardMain({
   setActiveTab,
   refreshData
 }: DashboardMainProps) {
+  const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
+  
+  // Merge the walletBalance from hook with userData
+  const enhancedUserData = useMemo(() => ({
+    ...userData,
+    walletBalance: isLoadingBalance ? userData.walletBalance : walletBalance
+  }), [userData, walletBalance, isLoadingBalance]);
+  
   // Memoized main content to prevent unnecessary re-renders
   const dashboardContent = useMemo(() => (
     <TabContent 
       activeTab={activeTab} 
-      userData={userData} 
+      userData={enhancedUserData} 
       userInvestments={userInvestments} 
       setActiveTab={setActiveTab} 
-      refreshData={refreshData}
+      refreshData={async () => {
+        if (refreshData) await refreshData();
+        await refreshBalance();
+      }}
     />
-  ), [activeTab, userData, userInvestments, setActiveTab, refreshData]);
+  ), [activeTab, enhancedUserData, userInvestments, setActiveTab, refreshData, refreshBalance]);
 
   return (
     <div 
@@ -52,8 +64,11 @@ export default function DashboardMain({
     >
       <div className="max-w-7xl mx-auto space-y-6">
         <DashboardHeader 
-          userData={userData} 
-          refreshData={refreshData} 
+          userData={enhancedUserData} 
+          refreshData={async () => {
+            if (refreshData) await refreshData();
+            await refreshBalance();
+          }} 
           setActiveTab={setActiveTab}
         />
         
