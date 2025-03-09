@@ -1,15 +1,17 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, RefreshCw, UserCheck, UserX } from 'lucide-react';
+import { Search, RefreshCw, UserCheck, UserX, BadgePlus } from 'lucide-react';
 import { toast } from 'sonner';
 import StatusIndicator from '@/components/admin/dashboard/StatusIndicator';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+
 type Profile = {
   id: string;
   first_name: string | null;
@@ -22,6 +24,7 @@ type Profile = {
   created_at: string | null;
   online_status?: 'online' | 'offline';
 };
+
 export default function ProfileManagement() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +36,7 @@ export default function ProfileManagement() {
   const [amountToAdd, setAmountToAdd] = useState<string>('100');
   const [isProcessing, setIsProcessing] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     fetchProfiles();
     const unsubscribe = subscribeToPresence();
@@ -40,6 +44,7 @@ export default function ProfileManagement() {
       unsubscribe();
     };
   }, []);
+
   const fetchProfiles = async () => {
     try {
       setIsLoading(true);
@@ -76,6 +81,7 @@ export default function ProfileManagement() {
       setIsRefreshing(false);
     }
   };
+
   const subscribeToPresence = () => {
     // Subscribe to presence channel to track online users
     const channel = supabase.channel('online-users').on('presence', {
@@ -110,10 +116,12 @@ export default function ProfileManagement() {
       supabase.removeChannel(channel);
     };
   };
+
   const handleRefresh = () => {
     setIsRefreshing(true);
     fetchProfiles();
   };
+
   const handleAddFundsToAll = async () => {
     try {
       setIsProcessing(true);
@@ -169,11 +177,13 @@ export default function ProfileManagement() {
       setIsProcessing(false);
     }
   };
+
   const filteredProfiles = profiles.filter(profile => {
     if (!searchTerm) return true;
     const searchLower = searchTerm.toLowerCase();
     return profile.first_name && profile.first_name.toLowerCase().includes(searchLower) || profile.last_name && profile.last_name.toLowerCase().includes(searchLower) || profile.email && profile.email.toLowerCase().includes(searchLower);
   });
+
   return <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-2">
@@ -184,7 +194,14 @@ export default function ProfileManagement() {
         </div>
         
         <div className="flex gap-3">
-          
+          <Button 
+            variant="outline" 
+            onClick={() => setIsAddFundsDialogOpen(true)}
+            className="gap-2 items-center"
+          >
+            <BadgePlus className="h-4 w-4" />
+            Ajouter des fonds
+          </Button>
           <StatusIndicator realTimeStatus={realTimeStatus} isRefreshing={isRefreshing} onRefresh={handleRefresh} />
         </div>
       </div>
