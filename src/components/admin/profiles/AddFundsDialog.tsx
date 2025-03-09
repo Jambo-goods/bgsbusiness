@@ -16,66 +16,55 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AddFundsDialogProps {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  amountToAdd: string;
-  setAmountToAdd: (amount: string) => void;
-  handleAddFundsToAll?: () => Promise<void>;
-  isProcessing: boolean;
-  totalProfiles?: number;
-  userId?: string;
-  userName?: string;
-  currentBalance?: number;
-  onClose?: () => void;
-  onSuccess?: () => void;
+  userId: string;
+  userName: string;
+  currentBalance: number;
+  onClose: () => void;
+  onSuccess: () => void;
 }
 
 export default function AddFundsDialog({
-  isOpen,
-  onOpenChange,
-  amountToAdd,
-  setAmountToAdd,
-  handleAddFundsToAll,
-  isProcessing,
-  totalProfiles = 0,
   userId,
   userName,
-  currentBalance = 0,
+  currentBalance,
   onClose,
   onSuccess
 }: AddFundsDialogProps) {
+  const [amount, setAmount] = useState<number>(0);
   const [operation, setOperation] = useState<'add' | 'subtract'>('add');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [description, setDescription] = useState('');
-  const isSingleUser = !!userId;
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setAmountToAdd(value);
+    const value = parseFloat(e.target.value);
+    setAmount(isNaN(value) ? 0 : Math.abs(value));
   };
 
-  const handleSingleUserFunds = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!userId || parseFloat(amountToAdd) <= 0) {
+    if (amount <= 0) {
       toast.error("Le montant doit être supérieur à zéro");
       return;
     }
 
-    if (operation === 'subtract' && parseFloat(amountToAdd) > currentBalance) {
+    if (operation === 'subtract' && amount > currentBalance) {
       toast.error("Le montant à déduire ne peut pas être supérieur au solde actuel");
       return;
     }
 
     try {
+      setIsProcessing(true);
+      
       // Calculate the final amount (positive for adding, negative for subtracting)
-      const finalAmount = operation === 'add' ? parseFloat(amountToAdd) : -parseFloat(amountToAdd);
+      const finalAmount = operation === 'add' ? amount : -amount;
       
       // Create a transaction record
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
           user_id: userId,
-          amount: Math.abs(parseFloat(amountToAdd)),
+          amount: Math.abs(amount),
           type: operation === 'add' ? 'deposit' : 'withdrawal',
           description: description || `Ajustement manuel par administrateur (${operation === 'add' ? 'ajout' : 'retrait'})`,
           status: 'completed'
@@ -93,64 +82,51 @@ export default function AddFundsDialog({
 
       toast.success(
         `${operation === 'add' ? 'Ajout' : 'Retrait'} de fonds réussi`,
-        { description: `${amountToAdd} € ont été ${operation === 'add' ? 'ajoutés au' : 'retirés du'} compte.` }
+        { description: `${amount} € ont été ${operation === 'add' ? 'ajoutés au' : 'retirés du'} compte.` }
       );
       
-      if (onSuccess) onSuccess();
-      if (onClose) onClose();
-      onOpenChange(false);
+      onSuccess();
     } catch (error) {
       console.error("Error processing funds:", error);
       toast.error(
         `Erreur lors du ${operation === 'add' ? 'l\'ajout' : 'retrait'} de fonds`,
         { description: "Veuillez réessayer ultérieurement." }
       );
-    }
-  };
-
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSingleUser) {
-      handleSingleUserFunds(e);
-    } else if (handleAddFundsToAll) {
-      handleAddFundsToAll();
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={true} onOpenChange={() => !isProcessing && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{isSingleUser ? `Gérer les fonds de ${userName}` : "Ajouter des fonds à tous les comptes"}</DialogTitle>
+          <DialogTitle>Gérer les fonds</DialogTitle>
           <DialogDescription>
-            {isSingleUser 
-              ? `Ajoutez ou retirez des fonds du compte de ${userName}. Solde actuel: ${currentBalance} €`
-              : `Ajoutez des fonds à tous les comptes utilisateurs (${totalProfiles} comptes).`
-            }
+            Ajoutez ou retirez des fonds du compte de {userName}.
+            Solde actuel: {currentBalance} €
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
-          {isSingleUser && (
-            <div className="space-y-2">
-              <Label htmlFor="operation">Opération</Label>
-              <RadioGroup 
-                id="operation" 
-                value={operation} 
-                onValueChange={(value) => setOperation(value as 'add' | 'subtract')}
-                className="flex space-x-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="add" id="add" />
-                  <Label htmlFor="add">Ajouter des fonds</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="subtract" id="subtract" />
-                  <Label htmlFor="subtract">Retirer des fonds</Label>
-                </div>
-              </RadioGroup>
-            </div>
-          )}
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="operation">Opération</Label>
+            <RadioGroup 
+              id="operation" 
+              value={operation} 
+              onValueChange={(value) => setOperation(value as 'add' | 'subtract')}
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="add" id="add" />
+                <Label htmlFor="add">Ajouter des fonds</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="subtract" id="subtract" />
+                <Label htmlFor="subtract">Retirer des fonds</Label>
+              </div>
+            </RadioGroup>
+          </div>
           
           <div className="space-y-2">
             <Label htmlFor="amount">Montant (€)</Label>
@@ -159,38 +135,36 @@ export default function AddFundsDialog({
               type="number"
               min="0"
               step="0.01"
-              value={amountToAdd}
+              value={amount}
               onChange={handleAmountChange}
               required
             />
           </div>
           
-          {isSingleUser && (
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (optionnelle)</Label>
-              <Input
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Raison de l'ajustement"
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="description">Description (optionnelle)</Label>
+            <Input
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Raison de l'ajustement"
+            />
+          </div>
           
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
-              onClick={isSingleUser ? onClose : () => onOpenChange(false)}
+              onClick={onClose}
               disabled={isProcessing}
             >
               Annuler
             </Button>
             <Button 
               type="submit"
-              disabled={isProcessing || parseFloat(amountToAdd) <= 0}
+              disabled={isProcessing || amount <= 0}
             >
-              {isProcessing ? 'Traitement...' : isSingleUser ? 'Confirmer' : 'Ajouter à tous les comptes'}
+              {isProcessing ? 'Traitement...' : 'Confirmer'}
             </Button>
           </DialogFooter>
         </form>
