@@ -39,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
         <p><strong>Utilisateur:</strong> ${userName}</p>
         <p><strong>ID utilisateur:</strong> ${userId}</p>
         <p><strong>Email:</strong> ${userEmail}</p>
-        <p><strong>Référence du virement:</strong> ${reference}</p>
+        <p>${userName} a confirmé avoir effectué un virement bancaire avec la référence ${reference}</p>
         <p>Veuillez vérifier la réception du virement avant de créditer le compte.</p>
       `,
     });

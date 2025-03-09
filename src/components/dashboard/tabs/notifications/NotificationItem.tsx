@@ -24,6 +24,19 @@ export default function NotificationItem({
     });
   };
 
+  // Process the notification description to replace the specific text if found
+  const processDescription = (description: string) => {
+    if (description.includes("Un utilisateur a confirmé avoir effectué un virement bancaire avec la référence")) {
+      // Extract the reference number from the original description
+      const referenceMatch = description.match(/DEP-\d+/);
+      const reference = referenceMatch ? referenceMatch[0] : "DEP-826253";
+      
+      // Return the new description with the specified reference
+      return `a confirmé avoir effectué un virement bancaire avec la référence ${reference}`;
+    }
+    return description;
+  };
+
   return (
     <div 
       key={notification.id}
@@ -43,7 +56,7 @@ export default function NotificationItem({
             </span>
           </div>
           <p className={`text-sm mt-1 ${notification.read ? 'text-gray-500' : 'text-blue-700'}`}>
-            {notification.description}
+            {processDescription(notification.description)}
           </p>
         </div>
         <div className="flex items-center gap-1 shrink-0">
