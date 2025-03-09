@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import DashboardHeader from "./DashboardHeader";
 import TabContent from "./TabContent";
 import { Project } from "@/types/project";
-import { WalletDisplay } from "./wallet/WalletDisplay";
 
 interface DashboardMainProps {
   isSidebarOpen: boolean;
@@ -58,23 +57,11 @@ export default function DashboardMain({
           setActiveTab={setActiveTab}
         />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Main dashboard content based on active tab */}
-          <div className={cn(
-            "bg-white rounded-xl shadow-md overflow-hidden",
-            activeTab === "wallet" ? "md:col-span-2" : "md:col-span-3"
-          )}>
-            <div className="p-5 animate-fade-in">
-              {dashboardContent}
-            </div>
+        {/* Dashboard content based on active tab */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-5 animate-fade-in">
+            {dashboardContent}
           </div>
-          
-          {/* Show wallet display if on wallet tab */}
-          {activeTab === "wallet" && (
-            <div className="md:col-span-1">
-              <WalletDisplay />
-            </div>
-          )}
         </div>
       </div>
     </div>

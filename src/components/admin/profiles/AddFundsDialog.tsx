@@ -20,9 +20,9 @@ export interface AddFundsDialogProps {
   onOpenChange: (open: boolean) => void;
   amountToAdd: string;
   setAmountToAdd: (amount: string) => void;
-  handleAddFundsToAll?: () => Promise<void>;
+  handleAddFundsToAll: () => Promise<void>;
   isProcessing: boolean;
-  totalProfiles?: number;
+  totalProfiles: number;
   userId?: string;
   userName?: string;
   currentBalance?: number;
@@ -37,7 +37,7 @@ export default function AddFundsDialog({
   setAmountToAdd,
   handleAddFundsToAll,
   isProcessing,
-  totalProfiles = 0,
+  totalProfiles,
   userId,
   userName,
   currentBalance = 0,
@@ -108,15 +108,6 @@ export default function AddFundsDialog({
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSingleUser) {
-      handleSingleUserFunds(e);
-    } else if (handleAddFundsToAll) {
-      handleAddFundsToAll();
-    }
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -130,7 +121,7 @@ export default function AddFundsDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <form onSubmit={handleFormSubmit} className="space-y-4 py-4">
+        <form onSubmit={isSingleUser ? handleSingleUserFunds : handleAddFundsToAll} className="space-y-4 py-4">
           {isSingleUser && (
             <div className="space-y-2">
               <Label htmlFor="operation">Opération</Label>
