@@ -13,6 +13,7 @@ export default function BankTransferManagement() {
     queryKey: ["pendingBankTransfers"],
     queryFn: async () => {
       try {
+        // First, fetch the wallet transactions that are bank transfers
         const { data, error } = await supabase
           .from("wallet_transactions")
           .select(`
@@ -25,7 +26,7 @@ export default function BankTransferManagement() {
             type,
             receipt_confirmed
           `)
-          .eq("type", "bank_transfer")
+          .eq("type", "deposit")  // Changed from "bank_transfer" to "deposit" since that's what BankTransferInstructions.tsx uses
           .order("created_at", { ascending: false });
 
         if (error) {
@@ -35,10 +36,17 @@ export default function BankTransferManagement() {
         }
 
         console.log("Virements récupérés:", data);
+        
+        // Filter transactions that mention "Virement bancaire" in their description
+        const bankTransfers = data?.filter(transaction => 
+          transaction.description?.toLowerCase().includes("virement bancaire")
+        ) || [];
+        
+        console.log("Virements bancaires filtrés:", bankTransfers);
 
         // Récupérer les informations des utilisateurs séparément
         const userProfiles = await Promise.all(
-          (data || []).map(async (transfer) => {
+          bankTransfers.map(async (transfer) => {
             const { data: profileData, error: profileError } = await supabase
               .from("profiles")
               .select("first_name, last_name, email")
@@ -72,7 +80,7 @@ export default function BankTransferManagement() {
         return [];
       }
     },
-    refetchInterval: 30000 // Refresh every 30 seconds automatically
+    refetchInterval: 15000 // Refresh every 15 seconds automatically
   });
 
   const handleManualRefresh = () => {

@@ -54,7 +54,7 @@ export default function BankTransferInstructions() {
       await supabase.from('wallet_transactions').insert({
         user_id: sessionData.session.user.id,
         amount: 0, // The actual amount will be updated by admin when they process it
-        type: "deposit",
+        type: "deposit", // Changed from "bank_transfer" to "deposit"
         status: "pending",
         description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
       });
