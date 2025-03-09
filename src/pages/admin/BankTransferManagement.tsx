@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import BankTransferTable from "@/components/admin/dashboard/BankTransferTable";
 import { Helmet } from "react-helmet-async";
+import { BankTransferItem } from "@/components/admin/dashboard/types/bankTransfer";
+import { RefreshCcw } from "lucide-react";
 
 export default function BankTransferManagement() {
   const { data: pendingTransfers, isLoading, refetch } = useQuery({
@@ -12,14 +14,49 @@ export default function BankTransferManagement() {
       const { data, error } = await supabase
         .from("wallet_transactions")
         .select(`
-          *,
-          profile:profiles(first_name, last_name, email)
+          id,
+          created_at,
+          user_id,
+          amount,
+          description,
+          status,
+          type,
+          receipt_confirmed
         `)
         .eq("type", "bank_transfer")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return data || [];
+
+      // Récupérer les informations des utilisateurs séparément
+      const userProfiles = await Promise.all(
+        (data || []).map(async (transfer) => {
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("first_name, last_name, email")
+            .eq("id", transfer.user_id)
+            .single();
+
+          if (profileError) {
+            console.error("Erreur lors de la récupération du profil:", profileError);
+            return {
+              ...transfer,
+              profile: {
+                first_name: "Utilisateur",
+                last_name: "Inconnu",
+                email: null
+              }
+            };
+          }
+
+          return {
+            ...transfer,
+            profile: profileData
+          };
+        })
+      );
+
+      return userProfiles as BankTransferItem[];
     }
   });
 
@@ -36,12 +73,7 @@ export default function BankTransferManagement() {
             onClick={() => refetch()} 
             className="flex items-center gap-2 px-4 py-2 bg-bgs-blue text-white rounded-md hover:bg-bgs-blue-dark transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-              <path d="M3 3v5h5" />
-              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-              <path d="M16 21h5v-5" />
-            </svg>
+            <RefreshCcw className="w-4 h-4" />
             Actualiser
           </button>
         </div>
