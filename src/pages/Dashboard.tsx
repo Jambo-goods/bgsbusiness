@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
@@ -150,13 +149,13 @@ export default function Dashboard() {
   console.log("Current active tab (Dashboard.tsx):", activeTab);
 
   // Convert polling status to dashboard layout expected status format
-  const realTimeStatusMap = {
+  const pollingStatusMap = {
     'active': 'connected',
     'disabled': 'connecting',
     'error': 'error'
   } as const;
   
-  const mappedStatus = realTimeStatusMap[pollingStatus] || 'connecting';
+  const mappedStatus = pollingStatusMap[pollingStatus] || 'connecting';
 
   return (
     <>
