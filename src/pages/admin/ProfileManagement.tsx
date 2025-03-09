@@ -44,12 +44,10 @@ export default function ProfileManagement() {
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    console.log("ProfileManagement component mounted");
     fetchProfiles();
     const unsubscribe = subscribeToPresence();
     
     return () => {
-      console.log("ProfileManagement component unmounted");
       unsubscribe();
     };
   }, []);
@@ -57,21 +55,19 @@ export default function ProfileManagement() {
   const fetchProfiles = async () => {
     try {
       setIsLoading(true);
-      console.log("Fetching profiles from Supabase...");
       
-      // Fetch all profiles without any filtering
+      // Fetch all profiles
       const { data, error, count } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact' });
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching profiles:', error);
         throw error;
       }
 
       // Log the fetched data for debugging
-      console.log('Profiles fetched successfully:', data);
-      console.log('Total number of profiles:', count);
+      console.log('Fetched profiles data:', data);
       console.log('Number of profiles fetched:', data?.length);
       
       // Map all profiles and mark their online status
@@ -95,7 +91,6 @@ export default function ProfileManagement() {
   };
 
   const subscribeToPresence = () => {
-    console.log("Subscribing to presence channel");
     const channel = supabase.channel('online-users')
       .on('presence', { event: 'sync' }, () => {
         const newState = channel.presenceState();
@@ -112,7 +107,7 @@ export default function ProfileManagement() {
         console.log('Online users IDs:', Array.from(onlineUserIds));
         setOnlineUsers(onlineUserIds);
         
-        // Update only the online status without filtering the profiles
+        // Update only the online status without filtering
         setProfiles(prevProfiles => 
           prevProfiles.map(profile => ({
             ...profile,
@@ -121,20 +116,17 @@ export default function ProfileManagement() {
         );
       })
       .subscribe((status) => {
-        console.log('Presence channel subscription status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('Subscribed to presence channel');
         }
       });
 
     return () => {
-      console.log("Unsubscribing from presence channel");
       supabase.removeChannel(channel);
     };
   };
 
   const handleRefresh = () => {
-    console.log("Refreshing profiles...");
     setIsRefreshing(true);
     fetchProfiles();
   };
