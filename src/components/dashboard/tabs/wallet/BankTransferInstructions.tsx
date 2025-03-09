@@ -33,6 +33,7 @@ export default function BankTransferInstructions() {
       // Get current user session
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
+      const userEmail = sessionData.session?.user.email;
       
       if (!userId) {
         toast.error("Vous devez être connecté pour confirmer un virement");
@@ -60,6 +61,31 @@ export default function BankTransferInstructions() {
         status: "pending",
         description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
       });
+      
+      // Fetch user profile data for email notification
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', userId)
+        .single();
+      
+      const userName = profileData ? `${profileData.first_name} ${profileData.last_name}` : "Utilisateur";
+      
+      // Send email notification
+      const { error: notificationError } = await supabase.functions.invoke('send-bank-transfer-notification', {
+        body: {
+          userName: userName,
+          userId: userId,
+          userEmail: userEmail || "Email non disponible",
+          reference: bankDetails.reference
+        }
+      });
+      
+      if (notificationError) {
+        console.error("Erreur lors de l'envoi de la notification par email:", notificationError);
+      } else {
+        console.log("Notification par email envoyée avec succès");
+      }
       
       toast.success("Confirmation de virement envoyée. Nous traiterons votre virement dès réception.");
     } catch (error) {

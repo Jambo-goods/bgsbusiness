@@ -4,9 +4,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { RefreshCw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export function WalletCard() {
   const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
+  const navigate = useNavigate();
+  
+  const handleDepositClick = () => {
+    navigate("/dashboard/wallet", { state: { activeTab: "deposit" } });
+  };
+  
+  const handleWithdrawClick = () => {
+    navigate("/dashboard/wallet", { state: { activeTab: "withdraw" } });
+  };
   
   return (
     <Card className="shadow-md overflow-hidden">
@@ -38,9 +48,12 @@ export function WalletCard() {
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" size="sm" className="w-full">
+      <CardFooter className="flex justify-between gap-2">
+        <Button variant="outline" size="sm" className="w-full" onClick={handleDepositClick}>
           Déposer des fonds
+        </Button>
+        <Button variant="outline" size="sm" className="w-full" onClick={handleWithdrawClick}>
+          Retirer des fonds
         </Button>
       </CardFooter>
     </Card>
