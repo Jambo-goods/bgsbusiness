@@ -384,8 +384,8 @@ export default function FinanceManagement() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <h2 className="text-lg font-semibold">Comptes Utilisateurs</h2>
               <SearchBar 
-                value={searchTerm}
-                onChange={setSearchTerm}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
                 placeholder="Rechercher par nom, email, ID..."
               />
             </div>
