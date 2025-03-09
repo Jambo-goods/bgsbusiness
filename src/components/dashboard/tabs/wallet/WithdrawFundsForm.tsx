@@ -56,6 +56,17 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
         return;
       }
       
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', session.session.user.id)
+        .single();
+        
+      if (userError) {
+        console.error("Erreur lors de la récupération des données utilisateur:", userError);
+        throw new Error("Impossible de récupérer les données utilisateur");
+      }
+      
       const { error } = await supabase
         .from('withdrawal_requests')
         .insert({
@@ -70,6 +81,26 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
         });
         
       if (error) throw error;
+      
+      // Send WhatsApp notification
+      try {
+        const userName = `${userData.first_name} ${userData.last_name}`;
+        
+        await supabase.functions.invoke('send-withdrawal-notification', {
+          body: {
+            userId: session.session.user.id,
+            userName,
+            amount: parseInt(amount),
+            iban,
+            accountHolder
+          }
+        });
+        
+        console.log("WhatsApp notification sent successfully");
+      } catch (notifError) {
+        console.error("Erreur lors de l'envoi de la notification WhatsApp:", notifError);
+        // We don't want to fail the withdrawal request if the notification fails
+      }
       
       await notificationService.withdrawalValidated(parseInt(amount));
       
