@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { notificationService } from "@/services/notifications";
+import WithdrawalRequestsTable from "./WithdrawalRequestsTable";
 
 interface WithdrawFundsFormProps {
   balance: number;
@@ -212,6 +213,8 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
             Les retraits sont soumis à vérification.
           </p>
         </form>
+        
+        <WithdrawalRequestsTable />
       </Card>
     </div>
   );
