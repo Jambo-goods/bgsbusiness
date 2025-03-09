@@ -1,19 +1,16 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Share2, Download, Calendar, DollarSign, TrendingUp } from "lucide-react";
 import { Project } from "@/types/project";
-
 interface ProjectHeaderProps {
   project: Project;
 }
-
-export default function ProjectHeader({ project }: ProjectHeaderProps) {
+export default function ProjectHeader({
+  project
+}: ProjectHeaderProps) {
   // Calculate annual yield from monthly yield
   const annualYield = project.yield * 12;
-  
-  return (
-    <>
+  return <>
       {/* Navigation */}
       <div className="mb-6">
         <div className="flex items-center text-sm text-bgs-blue/60 mb-6">
@@ -32,24 +29,14 @@ export default function ProjectHeader({ project }: ProjectHeaderProps) {
       {/* Project Header */}
       <div className="bg-white rounded-xl overflow-hidden shadow-sm border border-gray-100 mb-8 animate-fade-up">
         <div className="relative h-64 md:h-96">
-          <img 
-            src={project.image} 
-            alt={project.name} 
-            className="w-full h-full object-cover"
-          />
+          <img src={project.image} alt={project.name} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
           <div className="absolute bottom-0 left-0 p-6 md:p-8">
             <div className="flex flex-wrap gap-2 mb-4">
               <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-bgs-orange text-white">
                 {project.category}
               </span>
-              <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${
-                project.status === 'active' 
-                  ? 'bg-blue-500 text-white' 
-                  : project.status === 'completed'
-                  ? 'bg-green-500 text-white'
-                  : 'bg-orange-500 text-white'
-              }`}>
+              <span className={`inline-block px-3 py-1 text-xs font-medium rounded-full ${project.status === 'active' ? 'bg-blue-500 text-white' : project.status === 'completed' ? 'bg-green-500 text-white' : 'bg-orange-500 text-white'}`}>
                 {project.status === 'active' ? 'Projet actif' : project.status === 'completed' ? 'Projet complété' : 'À venir'}
               </span>
             </div>
@@ -94,7 +81,7 @@ export default function ProjectHeader({ project }: ProjectHeaderProps) {
               <div className="hidden md:block">
                 <p className="text-sm text-bgs-gray-medium mb-1">Investissement min.</p>
                 <div className="flex items-center text-bgs-blue font-bold text-xl">
-                  <DollarSign className="h-5 w-5 mr-1 text-bgs-blue/70" />
+                  
                   {project.minInvestment}€
                 </div>
               </div>
@@ -111,6 +98,5 @@ export default function ProjectHeader({ project }: ProjectHeaderProps) {
           </div>
         </div>
       </div>
-    </>
-  );
+    </>;
 }
