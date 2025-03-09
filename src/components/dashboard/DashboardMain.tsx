@@ -21,7 +21,6 @@ interface DashboardMainProps {
   userInvestments: Project[];
   setActiveTab: (tab: string) => void;
   refreshData?: () => Promise<void>;
-  realTimeStatus?: 'connecting' | 'connected' | 'error';
 }
 
 export default function DashboardMain({ 
@@ -30,8 +29,7 @@ export default function DashboardMain({
   activeTab, 
   userInvestments, 
   setActiveTab,
-  refreshData,
-  realTimeStatus
+  refreshData
 }: DashboardMainProps) {
   // Memoized main content to prevent unnecessary re-renders
   const dashboardContent = useMemo(() => (
@@ -56,7 +54,6 @@ export default function DashboardMain({
         <DashboardHeader 
           userData={userData} 
           refreshData={refreshData} 
-          realTimeStatus={realTimeStatus}
           setActiveTab={setActiveTab}
         />
         

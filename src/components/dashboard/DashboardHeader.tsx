@@ -10,7 +10,6 @@ interface DashboardHeaderProps {
   };
   refreshData?: () => Promise<void>;
   isRefreshing?: boolean;
-  realTimeStatus?: 'connecting' | 'connected' | 'error';
   setActiveTab?: (tab: string) => void;
 }
 
@@ -18,7 +17,6 @@ export default function DashboardHeader({
   userData,
   refreshData,
   isRefreshing = false,
-  realTimeStatus = 'connecting',
   setActiveTab
 }: DashboardHeaderProps) {
   const navigate = useNavigate();
@@ -35,12 +33,6 @@ export default function DashboardHeader({
         <div>
           <h1 className="text-2xl font-bold flex items-center">
             Bonjour, {userData.firstName} {userData.lastName}
-            {realTimeStatus === 'connected' && (
-              <span className="flex items-center ml-2 text-xs bg-white/20 px-2 py-0.5 rounded-full">
-                <span className="h-1.5 w-1.5 bg-green-400 rounded-full mr-1 animate-pulse"></span>
-                Live
-              </span>
-            )}
           </h1>
           <p className="text-white/90 mt-1">
             Bienvenue sur votre espace investisseur BGS Business Club
