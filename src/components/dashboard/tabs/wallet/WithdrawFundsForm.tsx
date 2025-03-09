@@ -17,9 +17,9 @@ interface WithdrawFundsFormProps {
 
 export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFundsFormProps) {
   const [amount, setAmount] = useState("");
-  const [iban, setIban] = useState("");
-  const [bic, setBic] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,8 +32,8 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
       amount && 
       parseInt(amount) >= 100 && 
       parseInt(amount) <= balance &&
-      iban.trim().length >= 15 &&
-      bic.trim().length >= 8 &&
+      bankName.trim().length >= 2 &&
+      accountNumber.trim().length >= 8 &&
       accountHolder.trim().length >= 3
     );
   };
@@ -58,7 +58,7 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
       
       const { data: userData, error: userError } = await supabase
         .from('profiles')
-        .select('first_name, last_name')
+        .select('first_name, last_name, email')
         .eq('id', session.session.user.id)
         .single();
         
@@ -67,22 +67,22 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
         throw new Error("Impossible de récupérer les données utilisateur");
       }
       
+      // Insérer la demande de retrait dans la nouvelle table
       const { error } = await supabase
         .from('withdrawal_requests')
         .insert({
           user_id: session.session.user.id,
           amount: parseInt(amount),
-          status: 'pending',
           bank_info: {
-            iban: iban,
-            bic: bic,
-            account_holder: accountHolder
+            accountName: accountHolder,
+            bankName: bankName,
+            accountNumber: accountNumber
           }
         });
         
       if (error) throw error;
       
-      // Send WhatsApp notification
+      // Envoyer une notification par email à l'administrateur
       try {
         const userName = `${userData.first_name} ${userData.last_name}`;
         
@@ -90,24 +90,28 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
           body: {
             userId: session.session.user.id,
             userName,
+            userEmail: userData.email,
             amount: parseInt(amount),
-            iban,
-            accountHolder
+            bankDetails: {
+              accountName: accountHolder,
+              bankName: bankName,
+              accountNumber: accountNumber
+            }
           }
         });
         
-        console.log("WhatsApp notification sent successfully");
+        console.log("Notification de retrait envoyée avec succès");
       } catch (notifError) {
-        console.error("Erreur lors de l'envoi de la notification WhatsApp:", notifError);
-        // We don't want to fail the withdrawal request if the notification fails
+        console.error("Erreur lors de l'envoi de la notification de retrait:", notifError);
+        // Nous ne voulons pas faire échouer la demande de retrait si la notification échoue
       }
       
       await notificationService.withdrawalValidated(parseInt(amount));
       
       toast.success("Demande de retrait soumise avec succès");
       setAmount("");
-      setIban("");
-      setBic("");
+      setBankName("");
+      setAccountNumber("");
       setAccountHolder("");
       
       await onWithdraw();
@@ -163,25 +167,25 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
           </div>
           
           <div>
-            <Label htmlFor="iban">IBAN</Label>
+            <Label htmlFor="bankName">Nom de la banque</Label>
             <Input
-              id="iban"
+              id="bankName"
               type="text"
-              value={iban}
-              onChange={(e) => setIban(e.target.value.toUpperCase())}
-              placeholder="FR76..."
-              className="mt-1 font-mono"
+              value={bankName}
+              onChange={(e) => setBankName(e.target.value)}
+              placeholder="Nom de votre banque"
+              className="mt-1"
             />
           </div>
           
           <div>
-            <Label htmlFor="bic">BIC / SWIFT</Label>
+            <Label htmlFor="accountNumber">Numéro de compte / IBAN</Label>
             <Input
-              id="bic"
+              id="accountNumber"
               type="text"
-              value={bic}
-              onChange={(e) => setBic(e.target.value.toUpperCase())}
-              placeholder="BNPAFRPP..."
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value.toUpperCase())}
+              placeholder="FR76..."
               className="mt-1 font-mono"
             />
           </div>
