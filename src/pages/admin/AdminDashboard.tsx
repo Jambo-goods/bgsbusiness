@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { useAdminDashboard } from "@/hooks/admin/useAdminDashboard";
@@ -9,7 +10,7 @@ import DashboardGrid from "@/components/admin/dashboard/DashboardGrid";
 import BankTransferTable from "@/components/admin/dashboard/BankTransferTable";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
-import { CircleIcon } from "lucide-react";
+import { InfoCircle } from "lucide-react";
 
 export default function AdminDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -25,6 +26,7 @@ export default function AdminDashboard() {
     refreshData 
   } = useAdminDashboard();
 
+  // Fetch pending bank transfers
   const fetchPendingTransfers = async () => {
     try {
       setIsLoadingTransfers(true);
@@ -52,11 +54,13 @@ export default function AdminDashboard() {
     fetchPendingTransfers();
   }, []);
 
+  // Refresh both dashboard data and pending transfers
   const refreshAllData = () => {
     refreshData();
     fetchPendingTransfers();
   };
 
+  // Système toujours opérationnel par défaut, à adapter selon les besoins
   const systemStatus = 'operational';
 
   return (
@@ -74,10 +78,11 @@ export default function AdminDashboard() {
       <div className="space-y-6">
         <DashboardStats stats={stats} isLoading={isLoading} />
         
+        {/* Bank Transfer Confirmations Section */}
         <div className="mt-8">
           <h2 className="text-2xl font-semibold mb-4">Virements bancaires en attente</h2>
           <Alert className="mb-4">
-            <CircleIcon className="h-4 w-4" />
+            <InfoCircle className="h-4 w-4" />
             <AlertTitle>Information</AlertTitle>
             <AlertDescription>
               Confirmez les virements bancaires après avoir vérifié leur réception sur le compte bancaire de l'entreprise.
