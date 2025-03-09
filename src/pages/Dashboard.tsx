@@ -149,6 +149,15 @@ export default function Dashboard() {
 
   console.log("Current active tab (Dashboard.tsx):", activeTab);
 
+  // Convert polling status to dashboard layout expected status format
+  const realTimeStatusMap = {
+    'active': 'connected',
+    'disabled': 'connecting',
+    'error': 'error'
+  } as const;
+  
+  const mappedStatus = realTimeStatusMap[pollingStatus] || 'connecting';
+
   return (
     <>
       <Helmet>
@@ -162,7 +171,7 @@ export default function Dashboard() {
         toggleSidebar={toggleSidebar}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        realTimeStatus={pollingStatus}
+        realTimeStatus={mappedStatus}
         handleLogout={handleLogout}
       >
         <DashboardMain 
