@@ -10,7 +10,7 @@ import { FinancialChart } from '@/components/admin/finance/FinancialChart';
 import { UsersTable } from '@/components/admin/finance/UsersTable';
 import { UserDetailsPanel } from '@/components/admin/finance/UserDetailsPanel';
 import { TransactionFilters } from '@/components/admin/finance/TransactionFilters';
-import { SearchBar } from '@/components/admin/users/SearchBar';
+import SearchBar from '@/components/admin/users/SearchBar';
 import { 
   Loader2, 
   Users as UsersIcon, 
