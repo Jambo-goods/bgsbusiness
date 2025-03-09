@@ -1,13 +1,15 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckIcon, XIcon } from "lucide-react";
+import { CheckIcon, XIcon, CheckCircleIcon, ReceiptIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import StatusIndicator from "./StatusIndicator";
 import { logAdminAction } from "@/services/adminAuthService";
+import { Input } from "@/components/ui/input";
+import { notificationService } from "@/services/notifications";
 
 interface BankTransferItem {
   id: string;
@@ -16,6 +18,7 @@ interface BankTransferItem {
   amount: number;
   description: string;
   status: string;
+  receipt_confirmed?: boolean;
   profile?: {
     first_name: string | null;
     last_name: string | null;
@@ -34,7 +37,7 @@ export default function BankTransferTable({
   isLoading, 
   refreshData 
 }: BankTransferTableProps) {
-  const [processingId, setProcessingId] = React.useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   const handleConfirmDeposit = async (item: BankTransferItem, amount: number) => {
     try {
@@ -144,6 +147,39 @@ export default function BankTransferTable({
     }
   };
 
+  const handleConfirmReceipt = async (item: BankTransferItem) => {
+    try {
+      setProcessingId(item.id);
+      
+      // Get current admin information
+      const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+      
+      // Update the wallet transaction with receipt confirmation
+      await supabase
+        .from('wallet_transactions')
+        .update({ receipt_confirmed: true })
+        .eq('id', item.id);
+      
+      // Log admin action
+      if (adminUser.id) {
+        await logAdminAction(
+          adminUser.id,
+          'wallet_management',
+          `Confirmation de réception de virement - Réf: ${item.description}`,
+          item.user_id
+        );
+      }
+      
+      toast.success("Réception de virement confirmée");
+      refreshData();
+    } catch (error) {
+      console.error("Erreur lors de la confirmation de réception:", error);
+      toast.error("Une erreur est survenue lors de la confirmation de réception");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-48">
@@ -168,6 +204,7 @@ export default function BankTransferTable({
             <TableHead>Date</TableHead>
             <TableHead>Utilisateur</TableHead>
             <TableHead>Référence</TableHead>
+            <TableHead>Réception</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -204,10 +241,29 @@ export default function BankTransferTable({
                 <TableCell>
                   <div className="font-mono font-medium">{reference}</div>
                 </TableCell>
+                <TableCell>
+                  {item.receipt_confirmed ? (
+                    <div className="flex items-center text-green-600">
+                      <CheckCircleIcon className="h-4 w-4 mr-1" />
+                      <span className="text-sm">Virement reçu</span>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="bg-amber-50 hover:bg-amber-100 text-amber-600 border-amber-200"
+                      onClick={() => handleConfirmReceipt(item)}
+                      disabled={processingId === item.id}
+                    >
+                      <ReceiptIcon className="h-4 w-4 mr-1" />
+                      Confirmer réception
+                    </Button>
+                  )}
+                </TableCell>
                 <TableCell className="text-right">
                   {item.status === 'pending' && (
                     <div className="flex justify-end gap-2">
-                      <input 
+                      <Input 
                         type="number" 
                         placeholder="Montant" 
                         className="w-24 px-2 py-1 border rounded-md"
@@ -223,7 +279,7 @@ export default function BankTransferTable({
                           const amount = parseInt(inputElem.value, 10);
                           handleConfirmDeposit(item, amount);
                         }}
-                        disabled={processingId === item.id}
+                        disabled={processingId === item.id || !item.receipt_confirmed}
                       >
                         <CheckIcon className="h-4 w-4 mr-1" />
                         Confirmer
