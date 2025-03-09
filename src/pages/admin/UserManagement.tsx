@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
@@ -13,7 +12,6 @@ import { RefreshCw, Search, ArrowUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import AddFundsDialog from "@/components/admin/profiles/AddFundsDialog";
 
-// Define a type for user profiles that includes the active status
 type UserProfile = {
   id: string;
   first_name: string | null;
@@ -22,8 +20,7 @@ type UserProfile = {
   wallet_balance: number | null;
   created_at: string | null;
   updated_at: string | null;
-  active_status: boolean; // Property to track if user is active
-  // Include other profile fields
+  active_status: boolean;
   address: string | null;
   phone: string | null;
   investment_total: number | null;
@@ -42,8 +39,9 @@ export default function UserManagement() {
   const [showAddFundsDialog, setShowAddFundsDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [amountToAdd, setAmountToAdd] = useState('');
+  const [isProcessingFunds, setIsProcessingFunds] = useState(false);
   
-  // Fetch users data from Supabase
   const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -55,10 +53,9 @@ export default function UserManagement() {
         throw error;
       }
       
-      // Transform data to include the active_status field
       const formattedUsers: UserProfile[] = (data || []).map(user => ({
         ...user,
-        active_status: true // Default all users to active for now
+        active_status: true
       }));
       
       setUsers(formattedUsers);
@@ -71,11 +68,9 @@ export default function UserManagement() {
     }
   }, [searchTerm]);
   
-  // Apply filters to the users list
   const applyFilters = (usersData: UserProfile[], search: string) => {
     let filtered = [...usersData];
     
-    // Apply search filter
     if (search) {
       const searchLower = search.toLowerCase();
       filtered = filtered.filter(user => 
@@ -85,7 +80,6 @@ export default function UserManagement() {
       );
     }
     
-    // Apply sorting
     filtered.sort((a, b) => {
       const fieldA = a[sortField as keyof UserProfile] || '';
       const fieldB = b[sortField as keyof UserProfile] || '';
@@ -106,24 +100,20 @@ export default function UserManagement() {
     setFilteredUsers(filtered);
   };
   
-  // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
     applyFilters(users, value);
   };
   
-  // Handle sorting
   const handleSort = (field: string) => {
     const newDirection = field === sortField && sortDirection === 'asc' ? 'desc' : 'asc';
     setSortField(field);
     setSortDirection(newDirection);
     
-    // Re-apply filters with new sorting
     applyFilters(users, searchTerm);
   };
   
-  // Handle refreshing the data
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await fetchUsers();
@@ -131,30 +121,25 @@ export default function UserManagement() {
     toast.success("Données actualisées");
   };
   
-  // Open add funds dialog
   const handleAddFunds = (user: UserProfile) => {
     setSelectedUser(user);
+    setAmountToAdd('');
     setShowAddFundsDialog(true);
   };
   
-  // Close add funds dialog
   const handleCloseAddFundsDialog = () => {
     setShowAddFundsDialog(false);
     setSelectedUser(null);
   };
   
-  // Handle funds added successfully
   const handleFundsAdded = () => {
     fetchUsers();
     setShowAddFundsDialog(false);
     setSelectedUser(null);
   };
   
-  // Toggle user active status
   const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      // Here we update our local state for the active_status
-      // In a real implementation, you might store this in a separate table
       setUsers(prev => prev.map(user => 
         user.id === userId ? { ...user, active_status: !currentStatus } : user
       ));
@@ -169,11 +154,9 @@ export default function UserManagement() {
     }
   };
   
-  // Set up polling
   useEffect(() => {
     fetchUsers();
     
-    // Set up polling every 30 seconds
     const pollingInterval = setInterval(() => {
       fetchUsers();
     }, 30000);
@@ -294,9 +277,14 @@ export default function UserManagement() {
         
         {showAddFundsDialog && selectedUser && (
           <AddFundsDialog
+            isOpen={showAddFundsDialog}
+            onOpenChange={setShowAddFundsDialog}
             userId={selectedUser.id}
             userName={`${selectedUser.first_name || ''} ${selectedUser.last_name || ''}`}
             currentBalance={selectedUser.wallet_balance || 0}
+            amountToAdd={amountToAdd}
+            setAmountToAdd={setAmountToAdd}
+            isProcessing={isProcessingFunds}
             onClose={handleCloseAddFundsDialog}
             onSuccess={handleFundsAdded}
           />
