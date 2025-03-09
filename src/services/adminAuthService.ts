@@ -164,7 +164,7 @@ export async function logAdminAction(
     
     // In the real implementation, we would insert into an admin_logs table
     // For now, we just log to console and toast a message for visibility
-    toast.success(`Action logged: ${description}`, {
+    toast.success(`Action enregistrée: ${description}`, {
       id: `admin-action-${Date.now()}`,
       description: "Cette action a été enregistrée dans les logs"
     });

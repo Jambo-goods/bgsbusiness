@@ -58,7 +58,7 @@ export function useWalletBalance() {
 
   // Function to manually refresh the balance
   const refreshBalance = async () => {
-    await fetchWalletBalance(false);
+    await fetchWalletBalance(true);
   };
 
   return { walletBalance, isLoadingBalance, refreshBalance };
