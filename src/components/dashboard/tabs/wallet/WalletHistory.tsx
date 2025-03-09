@@ -28,23 +28,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   useEffect(() => {
     fetchTransactions();
     
-    // Set up realtime subscription
-    const channel = supabase
-      .channel('public:wallet_transactions')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'wallet_transactions'
-      }, () => {
-        // When any change happens to wallet_transactions, refetch
-        fetchTransactions();
-        if (refreshBalance) refreshBalance();
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Real-time subscription removed
   }, [refreshBalance]);
 
   const fetchTransactions = async () => {

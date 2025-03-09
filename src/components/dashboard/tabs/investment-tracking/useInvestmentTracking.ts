@@ -21,7 +21,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const loadRealTimeData = useCallback(async () => {
     setIsLoading(true);
     try {
-      console.log("Fetching investment data for real-time updates...");
+      console.log("Fetching investment data...");
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
@@ -39,26 +39,26 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       
       const investments = await fetchRealTimeInvestmentData(currentUserId);
       
-      console.log("Fetched real investments:", investments.length);
+      console.log("Fetched investments:", investments.length);
       
       if (investments && investments.length > 0) {
-        // Use real investment data to generate payment records
+        // Use investment data to generate payment records
         const realPayments = generatePaymentsFromRealData(investments);
         setPaymentRecords(realPayments);
-        console.log("Updated payment records with real-time data:", realPayments.length);
+        console.log("Updated payment records with data:", realPayments.length);
         toast.success("Données mises à jour", {
           description: `${realPayments.length} versements chargés avec succès.`
         });
       } else {
-        // No real investments found
-        console.log("No real investments found");
+        // No investments found
+        console.log("No investments found");
         setPaymentRecords([]);
         toast.info("Aucun investissement", {
           description: "Aucun investissement trouvé pour votre compte."
         });
       }
     } catch (error) {
-      console.error("Error loading real-time investment data:", error);
+      console.error("Error loading investment data:", error);
       toast.error("Erreur de chargement", {
         description: "Impossible de charger les données de rendement."
       });
@@ -71,6 +71,16 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   
   useEffect(() => {
     loadRealTimeData();
+    
+    // Set up manual refresh interval instead of real-time subscription
+    const refreshInterval = setInterval(() => {
+      console.log("Running scheduled data refresh...");
+      loadRealTimeData();
+    }, 5 * 60 * 1000); // Refresh every 5 minutes
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, [loadRealTimeData]);
   
   // Toggle sort direction when clicking on a column header

@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
@@ -66,6 +67,13 @@ export default function Dashboard() {
     };
     
     fetchUserId();
+    
+    // Set up periodic refresh
+    const refreshInterval = setInterval(fetchUserId, 5 * 60 * 1000); // Check every 5 minutes
+    
+    return () => {
+      clearInterval(refreshInterval);
+    };
   }, []);
   
   const { 
@@ -80,6 +88,7 @@ export default function Dashboard() {
     refreshInvestmentsData 
   } = useInvestmentsData(userId);
   
+  // Get real-time status (now disabled)
   const { realTimeStatus } = useRealTimeSubscriptions({
     userId: userId || '',
     onProfileUpdate: refreshProfileData,
@@ -90,17 +99,21 @@ export default function Dashboard() {
   useEffect(() => {
     console.log("Dashboard real-time status:", realTimeStatus);
     
-    if (realTimeStatus === 'connected') {
-      toast.success("Données en temps réel activées", {
-        id: "realtime-connected",
-        description: "Vos données sont maintenant synchronisées en temps réel."
-      });
-    } else if (realTimeStatus === 'error') {
-      toast.error("Erreur de connexion", {
-        id: "realtime-error",
-        description: "Impossible de se connecter au temps réel. Vos données ne seront pas automatiquement mises à jour."
+    if (realTimeStatus === 'disabled') {
+      toast.info("Mode temps réel désactivé", {
+        id: "realtime-disabled",
+        description: "Le mode temps réel a été désactivé. Veuillez utiliser le bouton d'actualisation pour mettre à jour vos données."
       });
     }
+    
+    // Set up periodic refresh since real-time is disabled
+    const dataRefreshInterval = setInterval(() => {
+      refreshAllData();
+    }, 10 * 60 * 1000); // Refresh every 10 minutes
+    
+    return () => {
+      clearInterval(dataRefreshInterval);
+    };
   }, [realTimeStatus]);
   
   const refreshAllData = useCallback(async () => {

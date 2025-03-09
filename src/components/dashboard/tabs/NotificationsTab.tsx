@@ -16,21 +16,7 @@ export default function NotificationsTab() {
   useEffect(() => {
     fetchNotifications();
     
-    // Set up subscription for real-time updates
-    const channel = supabase
-      .channel('notifications_tab_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'notifications'
-      }, () => {
-        fetchNotifications();
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Real-time subscription removed
   }, []);
 
   const fetchNotifications = async () => {

@@ -5,7 +5,6 @@ import SearchAndFilterControls from "./investments/SearchAndFilterControls";
 import InvestmentItem from "./investments/InvestmentItem";
 import InvestmentListStatus from "./investments/InvestmentListStatus";
 import { useInvestmentsData } from "./investments/useInvestmentsData";
-import { supabase } from "@/integrations/supabase/client";
 
 interface InvestmentsProps {
   userInvestments: Project[];
@@ -35,58 +34,7 @@ export default function Investments({ userInvestments }: InvestmentsProps) {
     setInvestmentTotal(total);
   }, [userInvestments]);
 
-  // Set up real-time subscription for investments
-  useEffect(() => {
-    const setupRealtimeSubscription = async () => {
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (sessionData && sessionData.session) {
-          const userId = sessionData.session.user.id;
-          
-          const channel = supabase
-            .channel('investments_total_changes')
-            .on('postgres_changes', {
-              event: '*',
-              schema: 'public',
-              table: 'investments',
-              filter: `user_id=eq.${userId}`
-            }, (payload) => {
-              // Show updating indicator
-              setIsUpdating(true);
-              
-              // Recalculate total after data change
-              // Note: In a production app, you might want to fetch the latest data
-              // instead of relying on the local state
-              const updatedTotal = userInvestments.reduce((total, investment) => 
-                total + (investment.amount || 0), 0);
-              setInvestmentTotal(updatedTotal);
-              
-              // Reset indicator after animation completes
-              setTimeout(() => {
-                setIsUpdating(false);
-              }, 2000);
-            })
-            .subscribe();
-            
-          return () => {
-            supabase.removeChannel(channel);
-          };
-        }
-      } catch (error) {
-        console.error("Error setting up real-time subscription:", error);
-      }
-    };
-    
-    const cleanup = setupRealtimeSubscription();
-    return () => {
-      if (cleanup && typeof cleanup.then === 'function') {
-        cleanup.then(cleanupFn => {
-          if (cleanupFn) cleanupFn();
-        });
-      }
-    };
-  }, [userInvestments]);
+  // Real-time subscription removed
 
   return (
     <div className="space-y-4">

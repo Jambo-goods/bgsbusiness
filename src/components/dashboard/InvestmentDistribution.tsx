@@ -16,24 +16,8 @@ export default function InvestmentDistribution({ setActiveTab }: InvestmentDistr
   const [totalInvested, setTotalInvested] = useState(0);
 
   useEffect(() => {
-    // Set up realtime subscription
-    const channel = supabase
-      .channel('public:investments')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'investments'
-      }, () => {
-        // When any change happens to investments, refetch
-        fetchUserInvestments();
-      })
-      .subscribe();
-      
+    // Real-time subscription removed
     fetchUserInvestments();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [toast]);
 
   async function fetchUserInvestments() {

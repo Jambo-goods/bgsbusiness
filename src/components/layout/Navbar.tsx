@@ -70,22 +70,21 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     checkAuth();
   }, []);
 
-  // Subscribe to auth state changes
+  // Manual auth state checking instead of real-time subscription
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        const authenticated = !!session?.user;
-        console.log("Auth state changed:", event, authenticated ? "Logged in" : "Not logged in");
+    const checkAuthInterval = setInterval(async () => {
+      const { data } = await supabase.auth.getSession();
+      const authenticated = !!data.session?.user;
+      if (authenticated !== isLoggedIn) {
         setIsLoggedIn(authenticated);
         localStorage.setItem('isLoggedIn', authenticated ? 'true' : 'false');
-        setAuthChecked(true);
       }
-    );
+    }, 60000); // Check every minute
     
     return () => {
-      subscription.unsubscribe();
+      clearInterval(checkAuthInterval);
     };
-  }, []);
+  }, [isLoggedIn]);
 
   useEffect(() => {
     setIsMenuOpen(false);

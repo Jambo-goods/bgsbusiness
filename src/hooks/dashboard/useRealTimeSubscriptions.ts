@@ -1,7 +1,5 @@
 
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useState } from "react";
 
 interface SubscriptionOptions {
   userId: string;
@@ -16,100 +14,24 @@ export const useRealTimeSubscriptions = ({
   onInvestmentUpdate,
   onTransactionUpdate
 }: SubscriptionOptions) => {
-  const [realTimeStatus, setRealTimeStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
+  const [realTimeStatus, setRealTimeStatus] = useState<'disabled' | 'connecting' | 'connected' | 'error'>('disabled');
 
-  useEffect(() => {
-    if (!userId) {
-      console.log("No user ID provided for real-time subscriptions");
-      return;
+  // Real-time functionality is now disabled
+  console.log("Real-time subscriptions are disabled");
+  
+  // If needed, we can still manually call the callbacks
+  const triggerManualUpdate = (type: 'profile' | 'investment' | 'transaction') => {
+    if (type === 'profile' && onProfileUpdate) {
+      onProfileUpdate();
+    } else if (type === 'investment' && onInvestmentUpdate) {
+      onInvestmentUpdate();
+    } else if (type === 'transaction' && onTransactionUpdate) {
+      onTransactionUpdate();
     }
-    
-    console.log("Setting up real-time subscriptions for user dashboard with ID:", userId);
-    
-    // Profile changes (wallet balance, investment total, etc.)
-    const profilesChannel = supabase
-      .channel('dashboard_profile_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'profiles',
-        filter: `id=eq.${userId}`
-      }, (payload) => {
-        console.log('Profile data changed, refreshing dashboard...', payload);
-        if (onProfileUpdate) {
-          console.log('Calling onProfileUpdate callback...');
-          onProfileUpdate();
-          toast.info("Mise à jour du profil", {
-            description: "Vos informations ont été mises à jour."
-          });
-        }
-      })
-      .subscribe((status) => {
-        console.log('Profile subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          setRealTimeStatus('connected');
-          console.log('Successfully subscribed to profiles table');
-        } else if (status === 'CHANNEL_ERROR') {
-          setRealTimeStatus('error');
-          console.error('Error subscribing to profile changes');
-        }
-      });
-    
-    // Investments changes
-    const investmentsChannel = supabase
-      .channel('dashboard_investments_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'investments',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        console.log('Investment data changed, refreshing dashboard...', payload);
-        if (onInvestmentUpdate) {
-          console.log('Calling onInvestmentUpdate callback...');
-          onInvestmentUpdate();
-          toast.info("Mise à jour des investissements", {
-            description: "Vos investissements ont été mis à jour."
-          });
-        }
-      })
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to investment changes');
-        }
-      });
-    
-    // Wallet transactions
-    const transactionsChannel = supabase
-      .channel('dashboard_transactions_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'wallet_transactions',
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        console.log('Wallet transaction detected, refreshing dashboard...', payload);
-        if (onTransactionUpdate) {
-          console.log('Calling onTransactionUpdate callback...');
-          onTransactionUpdate();
-          toast.info("Transaction détectée", {
-            description: "Votre solde a été mis à jour."
-          });
-        }
-      })
-      .subscribe((status) => {
-        if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to transaction changes');
-        }
-      });
-      
-    return () => {
-      console.log('Cleaning up dashboard real-time subscriptions');
-      supabase.removeChannel(profilesChannel);
-      supabase.removeChannel(investmentsChannel);
-      supabase.removeChannel(transactionsChannel);
-    };
-  }, [userId, onProfileUpdate, onInvestmentUpdate, onTransactionUpdate]);
+  };
 
-  return { realTimeStatus };
+  return { 
+    realTimeStatus,
+    triggerManualUpdate
+  };
 };

@@ -45,21 +45,11 @@ export default function NavbarActions({
     };
     checkAuth();
 
-    const {
-      data: authListener
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      const hasSession = !!session;
-      setIsAuthenticated(hasSession);
-      
-      if (event === 'SIGNED_IN') {
-        navigate('/dashboard');
-      } else if (event === 'SIGNED_OUT') {
-        navigate('/');
-      }
-    });
+    // Replace real-time subscription with periodic check
+    const authCheckInterval = setInterval(checkAuth, 60000); // Check every minute
     
     return () => {
-      authListener.subscription.unsubscribe();
+      clearInterval(authCheckInterval);
     };
   }, [location.pathname, navigate]);
 
@@ -67,20 +57,11 @@ export default function NavbarActions({
     if (isAuthenticated) {
       fetchUnreadCount();
       
-      // Set up subscription for notifications table
-      const channel = supabase
-        .channel('notifications_changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'notifications'
-        }, () => {
-          fetchUnreadCount();
-        })
-        .subscribe();
-        
+      // Replace real-time subscription with periodic check
+      const notificationCheckInterval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
+      
       return () => {
-        supabase.removeChannel(channel);
+        clearInterval(notificationCheckInterval);
       };
     }
   }, [isAuthenticated]);

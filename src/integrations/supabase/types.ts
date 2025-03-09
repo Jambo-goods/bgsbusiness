@@ -9,84 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      admin_logs: {
-        Row: {
-          action_type: Database["public"]["Enums"]["admin_action_type"]
-          admin_id: string | null
-          amount: number | null
-          created_at: string | null
-          description: string
-          id: string
-          target_project_id: string | null
-          target_user_id: string | null
-        }
-        Insert: {
-          action_type: Database["public"]["Enums"]["admin_action_type"]
-          admin_id?: string | null
-          amount?: number | null
-          created_at?: string | null
-          description: string
-          id?: string
-          target_project_id?: string | null
-          target_user_id?: string | null
-        }
-        Update: {
-          action_type?: Database["public"]["Enums"]["admin_action_type"]
-          admin_id?: string | null
-          amount?: number | null
-          created_at?: string | null
-          description?: string
-          id?: string
-          target_project_id?: string | null
-          target_user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "admin_logs_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "admin_users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_logs_target_project_id_fkey"
-            columns: ["target_project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      admin_users: {
-        Row: {
-          created_at: string | null
-          email: string
-          first_name: string | null
-          id: string
-          last_login: string | null
-          last_name: string | null
-          password: string
-        }
-        Insert: {
-          created_at?: string | null
-          email: string
-          first_name?: string | null
-          id?: string
-          last_login?: string | null
-          last_name?: string | null
-          password: string
-        }
-        Update: {
-          created_at?: string | null
-          email?: string
-          first_name?: string | null
-          id?: string
-          last_login?: string | null
-          last_name?: string | null
-          password?: string
-        }
-        Relationships: []
-      }
       investments: {
         Row: {
           amount: number
@@ -357,15 +279,7 @@ export type Database = {
           status?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "withdrawal_requests_admin_id_fkey"
-            columns: ["admin_id"]
-            isOneToOne: false
-            referencedRelation: "admin_users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

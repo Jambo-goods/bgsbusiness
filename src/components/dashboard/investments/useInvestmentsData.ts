@@ -52,22 +52,7 @@ export function useInvestmentsData() {
     
     fetchUserInvestments();
     
-    // Set up realtime subscription
-    const channel = supabase
-      .channel('public:investments')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'investments'
-      }, () => {
-        // When any change happens to investments, refetch
-        fetchUserInvestments();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Real-time subscription removed
   }, [toast]);
 
   // Filtered and sorted investments
