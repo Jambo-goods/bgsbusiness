@@ -26,13 +26,13 @@ export default function NotificationItem({
 
   // Process the notification description to replace the specific text if found
   const processDescription = (description: string) => {
-    if (description.includes("Un utilisateur a confirmé avoir effectué un virement bancaire avec la référence")) {
+    if (description.includes("a confirmé avoir effectué un virement bancaire avec la référence")) {
       // Extract the reference number from the original description
       const referenceMatch = description.match(/DEP-\d+/);
       const reference = referenceMatch ? referenceMatch[0] : "DEP-826253";
       
       // Return the new description with the specified reference
-      return `a confirmé avoir effectué un virement bancaire avec la référence ${reference}`;
+      return `Vous avez confirmé avoir effectué un virement bancaire avec la référence ${reference}`;
     }
     return description;
   };

@@ -44,7 +44,7 @@ export default function BankTransferInstructions() {
       await supabase.from('notifications').insert({
         user_id: userId,
         title: "Virement bancaire confirmé",
-        description: `a confirmé avoir effectué un virement bancaire avec la référence ${bankDetails.reference}`,
+        description: `Vous avez confirmé avoir effectué un virement bancaire avec la référence ${bankDetails.reference}`,
         type: "deposit",
         category: "finance",
         metadata: {
