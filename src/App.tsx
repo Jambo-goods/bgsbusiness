@@ -25,6 +25,7 @@ import ProjectManagement from "./pages/admin/ProjectManagement";
 import WithdrawalManagement from "./pages/admin/WithdrawalManagement";
 import NotificationManagement from "./pages/admin/NotificationManagement";
 import ProfileManagement from "./pages/admin/ProfileManagement";
+import FinanceManagement from "./pages/admin/FinanceManagement";
 
 // Create a client with optimized settings
 const queryClient = new QueryClient({
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="projects" element={<ProjectManagement />} />
                 <Route path="withdrawals" element={<WithdrawalManagement />} />
                 <Route path="profiles" element={<ProfileManagement />} />
+                <Route path="finance" element={<FinanceManagement />} />
                 <Route path="notifications" element={<NotificationManagement />} />
               </Route>
               
