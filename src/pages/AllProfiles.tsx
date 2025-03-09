@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, RefreshCw, UserCheck, UserX } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -27,7 +27,7 @@ type Profile = {
   projects_count: number | null;
   investment_total: number | null;
   created_at: string | null;
-  online_status?: 'online' | 'offline';
+  // Removing online_status since we're disabling real-time presence tracking
 };
 
 export default function AllProfiles() {
@@ -36,54 +36,16 @@ export default function AllProfiles() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [totalProfiles, setTotalProfiles] = useState(0);
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
+  // Removing onlineUsers state since we're disabling real-time presence tracking
 
   useEffect(() => {
     console.log("AllProfiles component mounted");
     fetchProfiles();
-    const unsubscribe = subscribeToPresence();
     
     return () => {
       console.log("AllProfiles component unmounted");
-      unsubscribe();
     };
   }, []);
-
-  const subscribeToPresence = () => {
-    const channel = supabase.channel('online-users')
-      .on('presence', { event: 'sync' }, () => {
-        const newState = channel.presenceState();
-        const onlineUserIds = new Set<string>();
-        
-        Object.values(newState).forEach((presences: any) => {
-          presences.forEach((presence: any) => {
-            if (presence.user_id) {
-              onlineUserIds.add(presence.user_id);
-            }
-          });
-        });
-        
-        console.log('Online users IDs:', Array.from(onlineUserIds));
-        setOnlineUsers(onlineUserIds);
-        
-        // Update profiles with online status
-        setProfiles(prevProfiles => 
-          prevProfiles.map(profile => ({
-            ...profile,
-            online_status: onlineUserIds.has(profile.id) ? 'online' : 'offline'
-          }))
-        );
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Subscribed to presence channel');
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
 
   const fetchProfiles = async () => {
     try {
@@ -105,13 +67,7 @@ export default function AllProfiles() {
       console.log('Total profiles count:', count);
       console.log('Number of profiles fetched:', data?.length);
       
-      // Map profiles with online status
-      const profilesWithStatus = data?.map(profile => ({
-        ...profile,
-        online_status: onlineUsers.has(profile.id) ? 'online' : 'offline'
-      })) || [];
-      
-      setProfiles(profilesWithStatus);
+      setProfiles(data || []);
       setTotalProfiles(count || 0);
       toast.success('Profils chargés avec succès');
     } catch (error) {
@@ -203,14 +159,13 @@ export default function AllProfiles() {
                   <TableHead>Portefeuille</TableHead>
                   <TableHead>Projets</TableHead>
                   <TableHead>Total investi</TableHead>
-                  <TableHead>Statut</TableHead>
                   <TableHead>Date d'inscription</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProfiles.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                       {searchTerm ? "Aucun profil trouvé pour cette recherche" : "Aucun profil disponible"}
                     </TableCell>
                   </TableRow>
@@ -224,24 +179,6 @@ export default function AllProfiles() {
                       <TableCell>{profile.wallet_balance ? `${profile.wallet_balance} €` : '0 €'}</TableCell>
                       <TableCell>{profile.projects_count || 0}</TableCell>
                       <TableCell>{profile.investment_total ? `${profile.investment_total} €` : '0 €'}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={profile.online_status === 'online' ? 'default' : 'secondary'}
-                          className="flex items-center gap-1"
-                        >
-                          {profile.online_status === 'online' ? (
-                            <>
-                              <UserCheck className="h-3 w-3" />
-                              <span>En ligne</span>
-                            </>
-                          ) : (
-                            <>
-                              <UserX className="h-3 w-3" />
-                              <span>Hors ligne</span>
-                            </>
-                          )}
-                        </Badge>
-                      </TableCell>
                       <TableCell>
                         {profile.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR') : '-'}
                       </TableCell>

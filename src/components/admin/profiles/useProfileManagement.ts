@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -13,15 +12,9 @@ export const useProfileManagement = () => {
   const [isAddFundsDialogOpen, setIsAddFundsDialogOpen] = useState(false);
   const [amountToAdd, setAmountToAdd] = useState<string>('100');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchProfiles();
-    const unsubscribe = subscribeToPresence();
-    
-    return () => {
-      unsubscribe();
-    };
   }, []);
 
   const fetchProfiles = async () => {
@@ -42,15 +35,7 @@ export const useProfileManagement = () => {
       console.log('Fetched profiles data:', data);
       console.log('Number of profiles fetched:', data?.length);
       
-      // Map all profiles and mark their online status
-      const profilesWithStatus: Profile[] = data?.map(profile => ({
-        ...profile,
-        online_status: onlineUsers.has(profile.id) ? 'online' : 'offline'
-      })) || [];
-      
-      console.log('Processed profiles with status:', profilesWithStatus);
-      
-      setProfiles(profilesWithStatus);
+      setProfiles(data || []);
       setTotalProfiles(count || 0);
       toast.success('Profils chargés avec succès');
     } catch (error) {
@@ -60,42 +45,6 @@ export const useProfileManagement = () => {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
-
-  const subscribeToPresence = () => {
-    const channel = supabase.channel('online-users')
-      .on('presence', { event: 'sync' }, () => {
-        const newState = channel.presenceState();
-        const onlineUserIds = new Set<string>();
-        
-        Object.values(newState).forEach((presences: any) => {
-          presences.forEach((presence: any) => {
-            if (presence.user_id) {
-              onlineUserIds.add(presence.user_id);
-            }
-          });
-        });
-        
-        console.log('Online users IDs:', Array.from(onlineUserIds));
-        setOnlineUsers(onlineUserIds);
-        
-        // Update only the online status without filtering
-        setProfiles(prevProfiles => 
-          prevProfiles.map(profile => ({
-            ...profile,
-            online_status: onlineUserIds.has(profile.id) ? 'online' : 'offline'
-          }))
-        );
-      })
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Subscribed to presence channel');
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   };
 
   const handleRefresh = () => {
