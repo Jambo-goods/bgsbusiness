@@ -36,13 +36,11 @@ export default function InvestmentItem({ investment }: InvestmentItemProps) {
             {investment.projects?.description}
           </p>
           
-          <div className="mb-3">
-            <div className="flex justify-between text-xs mb-1">
-              <span className="text-bgs-gray-medium">Progression</span>
-              <span className="font-medium text-bgs-blue">{investment.projects?.fundingProgress}%</span>
-            </div>
-            <Progress value={investment.projects?.fundingProgress} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-bgs-gray-medium">Progression</span>
+            <span className="font-medium text-bgs-blue">{investment.projects?.fundingProgress}%</span>
           </div>
+          <Progress value={investment.projects?.fundingProgress} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
           
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
