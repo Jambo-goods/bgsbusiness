@@ -37,7 +37,6 @@ export default function InvestmentItem({ investment }: InvestmentItemProps) {
           </p>
           
           <div className="flex justify-between text-xs mb-1">
-            <span className="font-medium text-bgs-blue">{investment.projects?.fundingProgress}%</span>
           </div>
           <Progress value={investment.projects?.fundingProgress} className="h-1 bg-gray-100" indicatorClassName="bg-bgs-orange" />
           
