@@ -67,7 +67,7 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
         throw new Error("Impossible de récupérer les données utilisateur");
       }
       
-      // Insérer la demande de retrait dans la nouvelle table
+      // Insérer la demande de retrait avec toutes les informations bancaires
       const { error } = await supabase
         .from('withdrawal_requests')
         .insert({
@@ -77,7 +77,9 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
             accountName: accountHolder,
             bankName: bankName,
             accountNumber: accountNumber
-          }
+          },
+          status: 'pending',
+          requested_at: new Date().toISOString()
         });
         
       if (error) throw error;
