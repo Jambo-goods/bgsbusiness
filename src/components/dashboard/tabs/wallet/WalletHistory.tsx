@@ -1,10 +1,11 @@
 
 import React, { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { History, ArrowUpRight, ArrowDownLeft, Loader2 } from "lucide-react";
+import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
 
 // Type pour les transactions
 interface Transaction {
@@ -24,21 +25,34 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Fetch transactions on component mount and when refreshBalance is called
   useEffect(() => {
     fetchTransactions();
     
-    // Real-time subscription removed
+    // Setup polling for transactions every 60 seconds
+    const pollingInterval = setInterval(() => {
+      fetchTransactions(false); // silent refresh (don't show loading state)
+    }, 60000);
+    
+    return () => {
+      clearInterval(pollingInterval);
+    };
   }, [refreshBalance]);
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+      
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
         setError("Veuillez vous connecter pour voir votre historique");
-        setIsLoading(false);
         return;
       }
 
@@ -59,27 +73,30 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       setError("Erreur lors du chargement de l'historique des transactions");
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   };
 
-  // Fonction pour formater le montant avec un signe + ou -
+  // Manual refresh function
+  const handleRefresh = () => {
+    fetchTransactions(false);
+  };
+
+  // Formatting functions
   const formatAmount = (amount: number, type: string) => {
     return type === 'deposit' ? `+${amount} €` : `-${amount} €`;
   };
 
-  // Fonction pour obtenir la classe CSS en fonction du type de transaction
   const getAmountClass = (type: string) => {
     return type === 'deposit' ? 'text-green-600' : 'text-red-600';
   };
 
-  // Fonction pour obtenir l'icône en fonction du type de transaction
   const getTransactionIcon = (type: string) => {
     return type === 'deposit' 
       ? <ArrowDownLeft className="h-4 w-4 text-green-600" /> 
       : <ArrowUpRight className="h-4 w-4 text-red-600" />;
   };
 
-  // Fonction pour formater la date relative
   const formatRelativeTime = (dateString: string) => {
     return formatDistanceToNow(new Date(dateString), {
       addSuffix: true,
@@ -87,7 +104,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
     });
   };
 
-  // Fonction pour obtenir le libellé de la transaction
   const getTransactionLabel = (transaction: Transaction) => {
     if (transaction.description && transaction.description.includes("Investissement dans")) {
       return "Investissement effectué";
@@ -98,9 +114,22 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm mt-6">
-      <div className="flex items-center gap-2 mb-4">
-        <History className="h-5 w-5 text-bgs-blue" />
-        <h2 className="text-lg font-semibold text-bgs-blue">Historique des transactions</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <History className="h-5 w-5 text-bgs-blue" />
+          <h2 className="text-lg font-semibold text-bgs-blue">Historique des transactions</h2>
+        </div>
+        
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleRefresh} 
+          disabled={isRefreshing}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Actualiser
+        </Button>
       </div>
       
       <Separator className="my-4" />
