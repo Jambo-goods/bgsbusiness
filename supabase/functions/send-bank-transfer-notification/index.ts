@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-const adminEmail = Deno.env.get("ADMIN_EMAIL");
+const adminEmail = "jambogoodsafrica@gmail.com"; // Hardcoded admin email address
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,14 +24,11 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    if (!adminEmail) {
-      throw new Error("Admin email not configured");
-    }
-
     console.log("Received bank transfer notification request");
     const { userName, userId, userEmail, reference }: BankTransferNotificationRequest = await req.json();
     
     console.log(`Preparing to send notification for user: ${userName} (${userId}), reference: ${reference}`);
+    console.log(`Sending email to: ${adminEmail}`);
 
     const emailResponse = await resend.emails.send({
       from: "BGS Invest <notifications@bgsinvest.fr>",
