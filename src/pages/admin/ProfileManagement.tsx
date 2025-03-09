@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -36,7 +37,6 @@ export default function ProfileManagement() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [realTimeStatus, setRealTimeStatus] = useState<'connected' | 'connecting' | 'error'>('connected');
   const [totalProfiles, setTotalProfiles] = useState(0);
   const [isAddFundsDialogOpen, setIsAddFundsDialogOpen] = useState(false);
   const [amountToAdd, setAmountToAdd] = useState<string>('100');
@@ -67,6 +67,7 @@ export default function ProfileManagement() {
 
       console.log('Fetched profiles:', data);
       
+      // Tous les utilisateurs sont affichés, qu'ils soient en ligne ou non
       const profilesWithStatus: Profile[] = data?.map(profile => ({
         ...profile,
         online_status: onlineUsers.has(profile.id) ? 'online' as const : 'offline' as const
@@ -78,7 +79,6 @@ export default function ProfileManagement() {
     } catch (error) {
       console.error('Error fetching profiles:', error);
       toast.error('Erreur lors du chargement des profils');
-      setRealTimeStatus('error');
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -101,6 +101,7 @@ export default function ProfileManagement() {
         
         setOnlineUsers(onlineUserIds);
         
+        // Mettre à jour uniquement le statut en ligne/hors ligne sans filtrer les utilisateurs
         setProfiles(prevProfiles => 
           prevProfiles.map(profile => ({
             ...profile,
