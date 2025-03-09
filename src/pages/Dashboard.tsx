@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
@@ -59,9 +60,7 @@ export default function Dashboard() {
         }
       } catch (error) {
         console.error("Error fetching user session:", error);
-        toast.error("Erreur de connexion", {
-          description: "Impossible de récupérer vos informations utilisateur."
-        });
+        // Removed toast notification for error
       }
     };
     
@@ -96,12 +95,7 @@ export default function Dashboard() {
   useEffect(() => {
     console.log("Dashboard polling status:", pollingStatus);
     
-    if (pollingStatus === 'disabled') {
-      toast.info("Mode temps réel désactivé", {
-        id: "realtime-disabled",
-        description: "Le mode temps réel a été désactivé. Veuillez utiliser le bouton d'actualisation pour mettre à jour vos données."
-      });
-    }
+    // Removed toast notification for disabled polling status
     
     const dataRefreshInterval = setInterval(() => {
       refreshAllData();

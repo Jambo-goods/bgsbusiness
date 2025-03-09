@@ -28,7 +28,7 @@ export function useWalletBalance() {
         
       if (error) {
         console.error("Error fetching wallet balance:", error);
-        toast.error("Erreur lors de la récupération du solde");
+        // Suppression de la notification d'erreur
         setWalletBalance(0);
         return;
       }
@@ -36,7 +36,7 @@ export function useWalletBalance() {
       setWalletBalance(data.wallet_balance || 0);
     } catch (error) {
       console.error("Error:", error);
-      toast.error("Erreur lors de la récupération du solde");
+      // Suppression de la notification d'erreur
       setWalletBalance(0);
     } finally {
       if (showLoading) {
