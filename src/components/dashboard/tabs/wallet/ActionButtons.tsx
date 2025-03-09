@@ -1,7 +1,6 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { notificationService } from "@/services/notifications";
@@ -121,14 +120,6 @@ export default function ActionButtons({
   
   return (
     <>
-      <Button 
-        className="flex items-center gap-2 bg-bgs-blue hover:bg-bgs-blue-light" 
-        onClick={handleDeposit}
-      >
-        <Upload className="h-4 w-4" /> 
-        Déposer des fonds
-      </Button>
-      
       <Button 
         variant="outline" 
         className="flex items-center gap-2 border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10" 
