@@ -32,14 +32,16 @@ export default function BankTransferInstructions() {
       
       // Get current user session
       const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const userId = sessionData.session?.user.id;
+      
+      if (!userId) {
         toast.error("Vous devez être connecté pour confirmer un virement");
         return;
       }
       
       // Create a notification for the admin about the bank transfer
       await supabase.from('notifications').insert({
-        user_id: sessionData.session.user.id,
+        user_id: userId,
         title: "Virement bancaire confirmé",
         description: `Un utilisateur a confirmé avoir effectué un virement bancaire avec la référence ${bankDetails.reference}`,
         type: "deposit",
@@ -52,9 +54,9 @@ export default function BankTransferInstructions() {
       
       // Add a record to the wallet_transactions table
       await supabase.from('wallet_transactions').insert({
-        user_id: sessionData.session.user.id,
+        user_id: userId,
         amount: 0, // The actual amount will be updated by admin when they process it
-        type: "deposit", // Changed from "bank_transfer" to "deposit"
+        type: "deposit",
         status: "pending",
         description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
       });
