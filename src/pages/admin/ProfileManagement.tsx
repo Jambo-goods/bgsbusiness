@@ -56,6 +56,7 @@ export default function ProfileManagement() {
     try {
       setIsLoading(true);
       
+      // Fetch all profiles
       const { data, error, count } = await supabase
         .from('profiles')
         .select('*', { count: 'exact' })
@@ -65,13 +66,17 @@ export default function ProfileManagement() {
         throw error;
       }
 
-      console.log('Fetched profiles:', data);
+      // Log the fetched data for debugging
+      console.log('Fetched profiles data:', data);
+      console.log('Number of profiles fetched:', data?.length);
       
-      // Tous les utilisateurs sont affichés, qu'ils soient en ligne ou non
+      // Map all profiles and mark their online status
       const profilesWithStatus: Profile[] = data?.map(profile => ({
         ...profile,
-        online_status: onlineUsers.has(profile.id) ? 'online' as const : 'offline' as const
+        online_status: onlineUsers.has(profile.id) ? 'online' : 'offline'
       })) || [];
+      
+      console.log('Processed profiles with status:', profilesWithStatus);
       
       setProfiles(profilesWithStatus);
       setTotalProfiles(count || 0);
@@ -99,13 +104,14 @@ export default function ProfileManagement() {
           });
         });
         
+        console.log('Online users IDs:', Array.from(onlineUserIds));
         setOnlineUsers(onlineUserIds);
         
-        // Mettre à jour uniquement le statut en ligne/hors ligne sans filtrer les utilisateurs
+        // Update only the online status without filtering
         setProfiles(prevProfiles => 
           prevProfiles.map(profile => ({
             ...profile,
-            online_status: onlineUserIds.has(profile.id) ? 'online' as const : 'offline' as const
+            online_status: onlineUserIds.has(profile.id) ? 'online' : 'offline'
           }))
         );
       })
