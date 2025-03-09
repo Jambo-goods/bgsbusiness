@@ -1,155 +1,123 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-
-export type User = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone: string | null;
-  wallet_balance: number | null;
-  projects_count: number | null;
-  investment_total: number | null;
-  created_at: string | null;
-  address: string | null;
-};
+import { useToast } from '@/hooks/use-toast';
 
 export const useUsersList = () => {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [editingUser, setEditingUser] = useState<string | null>(null);
-  const [editedValues, setEditedValues] = useState<Partial<User>>({});
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Record<string, any>>({});
+  const { toast } = useToast();
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      console.log("Fetching all users...");
-      
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact' })
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching users:', error);
-        toast.error('Erreur lors du chargement des utilisateurs');
-        return;
-      }
-
-      console.log('Users fetched successfully:', data);
+      if (error) throw error;
       setUsers(data || []);
-      setTotalUsers(count || 0);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Erreur lors du chargement des utilisateurs');
+      console.error("Error fetching users:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch users. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchUsers();
     
-    // Set up polling every 30 seconds
-    const interval = setInterval(() => {
-      fetchUsers();
-    }, 30000);
-    
+    // Set up real-time subscription
+    const usersSubscription = supabase
+      .channel('profiles-changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles' 
+      }, () => {
+        // Refresh the data when changes occur
+        fetchUsers();
+      })
+      .subscribe();
+      
     return () => {
-      clearInterval(interval);
+      supabase.removeChannel(usersSubscription);
     };
-  }, []);
+  }, [fetchUsers]);
 
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    fetchUsers();
-  };
-
-  const handleEditUser = (userId: string) => {
-    const userToEdit = users.find(user => user.id === userId);
-    if (userToEdit) {
-      setEditingUser(userId);
-      setEditedValues({
-        first_name: userToEdit.first_name,
-        last_name: userToEdit.last_name,
-        email: userToEdit.email,
-        phone: userToEdit.phone,
-        address: userToEdit.address
+  const handleSaveEdit = async (userId: string, field: string, value: string) => {
+    try {
+      let updates: Record<string, any> = {};
+      
+      // Handle special case for name (first_name + last_name)
+      if (field === 'name') {
+        updates = {
+          first_name: editValues.first_name,
+          last_name: editValues.last_name
+        };
+      } else {
+        // For other fields, simply update the single field
+        updates[field] = field === 'wallet_balance' ? parseInt(value) : value;
+      }
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', userId);
+        
+      if (error) throw error;
+      
+      // Clear editing state
+      setEditingUserId(null);
+      setEditValues({});
+      
+      // Refresh users to show updated data
+      await fetchUsers();
+      
+      toast({
+        title: "Success",
+        description: "User information updated successfully",
+      });
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update user information",
+        variant: "destructive",
       });
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingUser(null);
-    setEditedValues({});
-  };
-
-  const handleSaveEdit = async () => {
-    if (!editingUser) return;
-
-    try {
-      setIsRefreshing(true);
-      const { error } = await supabase
-        .from('profiles')
-        .update(editedValues)
-        .eq('id', editingUser);
-
-      if (error) {
-        console.error('Error updating user:', error);
-        toast.error('Erreur lors de la mise à jour de l\'utilisateur');
-        return;
-      }
-
-      toast.success('Utilisateur mis à jour avec succès');
-      fetchUsers();
-      setEditingUser(null);
-      setEditedValues({});
-    } catch (error) {
-      console.error('Error updating user:', error);
-      toast.error('Erreur lors de la mise à jour de l\'utilisateur');
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-
-  const handleChangeEditedValue = (field: string, value: string | number) => {
-    setEditedValues(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const filteredUsers = users.filter((user) => {
+  const filteredUsers = users.filter(user => {
     if (!searchTerm) return true;
     
     const searchLower = searchTerm.toLowerCase();
     return (
-      (user.first_name && user.first_name.toLowerCase().includes(searchLower)) ||
-      (user.last_name && user.last_name.toLowerCase().includes(searchLower)) ||
-      (user.email && user.email.toLowerCase().includes(searchLower))
+      (user.first_name?.toLowerCase().includes(searchLower) || false) ||
+      (user.last_name?.toLowerCase().includes(searchLower) || false) ||
+      (user.email?.toLowerCase().includes(searchLower) || false)
     );
   });
 
   return {
-    users,
+    users: filteredUsers,
     isLoading,
     searchTerm,
     setSearchTerm,
-    isRefreshing,
-    totalUsers,
-    filteredUsers,
-    handleRefresh,
-    editingUser,
-    editedValues,
-    handleEditUser,
-    handleCancelEdit,
-    handleSaveEdit,
-    handleChangeEditedValue
+    fetchUsers,
+    editingUserId,
+    setEditingUserId,
+    editValues,
+    setEditValues,
+    handleSaveEdit
   };
 };

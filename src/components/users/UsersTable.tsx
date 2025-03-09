@@ -1,178 +1,262 @@
 
-import React from 'react';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { User } from '@/hooks/useUsersList';
-import { Button } from '@/components/ui/button';
-import { Pencil, Save, X } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import React, { useState } from "react";
+import { MoreHorizontal, User, Wallet, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { AddInvestmentModal } from "./AddInvestmentModal";
 
 interface UsersTableProps {
-  users: User[];
+  users: any[];
   isLoading: boolean;
-  editingUser: string | null;
-  editedValues: Partial<User>;
-  onEdit: (userId: string) => void;
-  onCancelEdit: () => void;
-  onSaveEdit: () => Promise<void>;
-  onChangeEditedValue: (field: string, value: string | number) => void;
+  onRefresh: () => void;
+  editingUserId: string | null;
+  setEditingUserId: (id: string | null) => void;
+  handleSaveEdit: (userId: string, field: string, value: string) => Promise<void>;
+  editValues: Record<string, any>;
+  setEditValues: React.Dispatch<React.SetStateAction<Record<string, any>>>;
 }
 
-const UsersTable: React.FC<UsersTableProps> = ({ 
-  users, 
-  isLoading, 
-  editingUser,
-  editedValues,
-  onEdit,
-  onCancelEdit,
-  onSaveEdit,
-  onChangeEditedValue
-}) => {
-  if (isLoading) {
-    return (
-      <div className="p-4 space-y-4">
-        {[...Array(5)].map((_, index) => (
-          <div key={index} className="flex space-x-4">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-6 w-24" />
-          </div>
-        ))}
-      </div>
-    );
-  }
+export function UsersTable({
+  users,
+  isLoading,
+  onRefresh,
+  editingUserId,
+  setEditingUserId,
+  handleSaveEdit,
+  editValues,
+  setEditValues,
+}: UsersTableProps) {
+  const [investmentModalOpen, setInvestmentModalOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const handleEditClick = (userId: string, field: string, currentValue: string) => {
+    setEditingUserId(userId);
+    setEditValues({
+      ...editValues,
+      [field]: currentValue,
+    });
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setEditValues({
+      ...editValues,
+      [field]: value,
+    });
+  };
+
+  const handleAddInvestment = (userId: string) => {
+    setSelectedUserId(userId);
+    setInvestmentModalOpen(true);
+  };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Prénom</TableHead>
-          <TableHead>Nom</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>Téléphone</TableHead>
-          <TableHead>Adresse</TableHead>
-          <TableHead>Portefeuille</TableHead>
-          <TableHead>Projets</TableHead>
-          <TableHead>Total investi</TableHead>
-          <TableHead>Date d'inscription</TableHead>
-          <TableHead>Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.length === 0 ? (
-          <TableRow>
-            <TableCell colSpan={10} className="text-center py-8 text-gray-500">
-              Aucun utilisateur disponible
-            </TableCell>
-          </TableRow>
-        ) : (
-          users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell>
-                {editingUser === user.id ? (
-                  <Input
-                    value={editedValues.first_name ?? user.first_name ?? ''}
-                    onChange={(e) => onChangeEditedValue('first_name', e.target.value)}
-                    className="w-full"
-                  />
-                ) : (
-                  user.first_name || '-'
-                )}
-              </TableCell>
-              <TableCell>
-                {editingUser === user.id ? (
-                  <Input
-                    value={editedValues.last_name ?? user.last_name ?? ''}
-                    onChange={(e) => onChangeEditedValue('last_name', e.target.value)}
-                    className="w-full"
-                  />
-                ) : (
-                  user.last_name || '-'
-                )}
-              </TableCell>
-              <TableCell>
-                {editingUser === user.id ? (
-                  <Input
-                    value={editedValues.email ?? user.email ?? ''}
-                    onChange={(e) => onChangeEditedValue('email', e.target.value)}
-                    className="w-full"
-                  />
-                ) : (
-                  user.email || '-'
-                )}
-              </TableCell>
-              <TableCell>
-                {editingUser === user.id ? (
-                  <Input
-                    value={editedValues.phone ?? user.phone ?? ''}
-                    onChange={(e) => onChangeEditedValue('phone', e.target.value)}
-                    className="w-full"
-                  />
-                ) : (
-                  user.phone || '-'
-                )}
-              </TableCell>
-              <TableCell>
-                {editingUser === user.id ? (
-                  <Input
-                    value={editedValues.address ?? user.address ?? ''}
-                    onChange={(e) => onChangeEditedValue('address', e.target.value)}
-                    className="w-full"
-                  />
-                ) : (
-                  user.address || '-'
-                )}
-              </TableCell>
-              <TableCell>{user.wallet_balance ? `${user.wallet_balance} €` : '0 €'}</TableCell>
-              <TableCell>{user.projects_count || 0}</TableCell>
-              <TableCell>{user.investment_total ? `${user.investment_total} €` : '0 €'}</TableCell>
-              <TableCell>
-                {user.created_at ? format(new Date(user.created_at), 'dd MMMM yyyy', { locale: fr }) : '-'}
-              </TableCell>
-              <TableCell>
-                {editingUser === user.id ? (
-                  <div className="flex space-x-2">
-                    <Button 
-                      onClick={onSaveEdit} 
-                      size="sm" 
-                      className="bg-green-500 hover:bg-green-600"
+    <div className="border rounded-md">
+      <div className="relative w-full overflow-auto">
+        <table className="w-full caption-bottom text-sm">
+          <thead className="[&_tr]:border-b">
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+              <th className="h-12 px-4 text-left align-middle font-medium">User</th>
+              <th className="h-12 px-4 text-left align-middle font-medium">Email</th>
+              <th className="h-12 px-4 text-left align-middle font-medium">Phone</th>
+              <th className="h-12 px-4 text-left align-middle font-medium">Balance</th>
+              <th className="h-12 px-4 text-left align-middle font-medium">Investments</th>
+              <th className="h-12 px-4 text-right align-middle font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="[&_tr:last-child]:border-0">
+            {users.map((user) => (
+              <tr
+                key={user.id}
+                className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+              >
+                <td className="p-4 align-middle">
+                  {editingUserId === user.id && editValues.hasOwnProperty("first_name") ? (
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={editValues.first_name || ""}
+                        onChange={(e) => handleInputChange("first_name", e.target.value)}
+                        className="border rounded p-1 text-sm w-20"
+                      />
+                      <input
+                        type="text"
+                        value={editValues.last_name || ""}
+                        onChange={(e) => handleInputChange("last_name", e.target.value)}
+                        className="border rounded p-1 text-sm w-20"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSaveEdit(user.id, "name", "")}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center cursor-pointer"
+                      onClick={() =>
+                        handleEditClick(
+                          user.id,
+                          "first_name",
+                          user.first_name
+                        )
+                      }
                     >
-                      <Save className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      onClick={onCancelEdit} 
-                      size="sm"
-                      variant="destructive"
+                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="font-medium">
+                        {user.first_name} {user.last_name}
+                      </span>
+                    </div>
+                  )}
+                </td>
+                <td className="p-4 align-middle">
+                  {editingUserId === user.id && editValues.hasOwnProperty("email") ? (
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={editValues.email || ""}
+                        onChange={(e) => handleInputChange("email", e.target.value)}
+                        className="border rounded p-1 text-sm w-40"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSaveEdit(user.id, "email", editValues.email)}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="cursor-pointer"
+                      onClick={() =>
+                        handleEditClick(user.id, "email", user.email)
+                      }
                     >
-                      <X className="h-4 w-4" />
-                    </Button>
+                      {user.email}
+                    </div>
+                  )}
+                </td>
+                <td className="p-4 align-middle">
+                  {editingUserId === user.id && editValues.hasOwnProperty("phone") ? (
+                    <div className="flex space-x-2">
+                      <input
+                        type="text"
+                        value={editValues.phone || ""}
+                        onChange={(e) => handleInputChange("phone", e.target.value)}
+                        className="border rounded p-1 text-sm w-32"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSaveEdit(user.id, "phone", editValues.phone)}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="cursor-pointer"
+                      onClick={() =>
+                        handleEditClick(user.id, "phone", user.phone || "")
+                      }
+                    >
+                      {user.phone || "No phone"}
+                    </div>
+                  )}
+                </td>
+                <td className="p-4 align-middle">
+                  {editingUserId === user.id && editValues.hasOwnProperty("wallet_balance") ? (
+                    <div className="flex space-x-2">
+                      <input
+                        type="number"
+                        value={editValues.wallet_balance || 0}
+                        onChange={(e) => handleInputChange("wallet_balance", e.target.value)}
+                        className="border rounded p-1 text-sm w-24"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSaveEdit(user.id, "wallet_balance", editValues.wallet_balance)}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  ) : (
+                    <div
+                      className="flex items-center cursor-pointer"
+                      onClick={() =>
+                        handleEditClick(
+                          user.id,
+                          "wallet_balance",
+                          user.wallet_balance?.toString() || "0"
+                        )
+                      }
+                    >
+                      <Wallet className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{user.wallet_balance || 0}€</span>
+                    </div>
+                  )}
+                </td>
+                <td className="p-4 align-middle">
+                  <div className="flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span>{user.projects_count || 0} projects</span>
                   </div>
-                ) : (
-                  <Button
-                    onClick={() => onEdit(user.id)}
-                    size="sm"
-                    className="bg-bgs-blue hover:bg-bgs-blue-light"
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                )}
-              </TableCell>
-            </TableRow>
-          ))
-        )}
-      </TableBody>
-    </Table>
+                </td>
+                <td className="p-4 align-middle text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="h-8 w-8 p-0">
+                        <span className="sr-only">Open menu</span>
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => handleAddInvestment(user.id)}>
+                        Add Investment
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
+              </tr>
+            ))}
+            {users.length === 0 && !isLoading && (
+              <tr>
+                <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                  No users found
+                </td>
+              </tr>
+            )}
+            {isLoading && (
+              <tr>
+                <td colSpan={6} className="p-4 text-center">
+                  <div className="flex justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                  </div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+      {selectedUserId && (
+        <AddInvestmentModal 
+          userId={selectedUserId}
+          isOpen={investmentModalOpen}
+          onOpenChange={setInvestmentModalOpen}
+          onInvestmentAdded={onRefresh}
+        />
+      )}
+    </div>
   );
-};
-
-export default UsersTable;
+}
