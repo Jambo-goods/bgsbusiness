@@ -49,16 +49,19 @@ export default function PaymentsTable({
   // Combine scheduled payments with filtered payments
   const allPayments = [
     ...filteredAndSortedPayments,
-    ...scheduledPayments.map(sp => ({
-      id: sp.id,
-      projectId: sp.project_id,
-      projectName: sp.projects?.name || "Projet inconnu",
-      amount: sp.total_scheduled_amount,
-      date: new Date(sp.payment_date),
-      type: 'yield' as const,
-      status: sp.status as 'paid' | 'pending' | 'scheduled',
-      percentage: sp.percentage  // Include percentage from scheduled payment
-    }))
+    ...scheduledPayments.map(sp => {
+      // The amount is now calculated from the percentage in useReturnsStatistics
+      return {
+        id: sp.id,
+        projectId: sp.project_id,
+        projectName: sp.projects?.name || "Projet inconnu",
+        amount: sp.total_scheduled_amount,
+        date: new Date(sp.payment_date),
+        type: 'yield' as const,
+        status: sp.status as 'paid' | 'pending' | 'scheduled',
+        percentage: sp.percentage
+      };
+    })
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
   
   return (
@@ -131,7 +134,7 @@ export default function PaymentsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-green-600 font-medium">{payment.amount} €</span>
+                  <span className="text-green-600 font-medium">{Math.round(payment.amount)} €</span>
                 </TableCell>
                 <TableCell>
                   {payment.percentage ? (
