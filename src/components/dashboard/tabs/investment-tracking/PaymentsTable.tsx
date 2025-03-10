@@ -1,3 +1,4 @@
+
 import React from "react";
 import { format } from "date-fns";
 import { 
@@ -44,6 +45,7 @@ export default function PaymentsTable({
 
   console.log("Scheduled payments in PaymentsTable:", scheduledPayments);
   console.log("User investments:", userInvestments);
+  console.log("Cumulative returns data:", cumulativeReturns);
 
   const totalInvestedAmount = userInvestments.reduce((sum, project) => {
     const amount = project.investedAmount || 0;
@@ -53,6 +55,10 @@ export default function PaymentsTable({
 
   console.log("Total invested amount:", totalInvestedAmount);
 
+  // Calculate running cumulative total for all payments, regardless of source
+  let runningCumulative = 0;
+  
+  // First process and sort all payments by date
   const allPayments = [
     ...filteredAndSortedPayments,
     ...scheduledPayments.map(sp => {
@@ -72,6 +78,19 @@ export default function PaymentsTable({
       };
     })
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
+  
+  // Calculate cumulative totals for all paid payments
+  const allPaymentsWithCumulative = allPayments.map(payment => {
+    // Only add to cumulative if paid
+    if (payment.status === 'paid') {
+      runningCumulative += payment.amount;
+    }
+    
+    return {
+      ...payment,
+      calculatedCumulative: payment.status === 'paid' ? runningCumulative : null
+    };
+  });
   
   return (
     <div className="overflow-x-auto">
@@ -114,10 +133,16 @@ export default function PaymentsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {allPayments.map((payment) => {
+          {allPaymentsWithCumulative.map((payment) => {
+            // Find the matching cumulative record from the provided data
             const cumulativeRecord = payment.status === 'paid' 
               ? cumulativeReturns.find(record => record.id === payment.id)
               : null;
+            
+            // Use calculated cumulative or record from props
+            const cumulativeValue = payment.calculatedCumulative !== null
+              ? Math.round(payment.calculatedCumulative)
+              : (cumulativeRecord ? cumulativeRecord.cumulativeReturn : null);
             
             const projectImage = userInvestments.find(p => p.id === payment.projectId)?.image || 
               "https://via.placeholder.com/40";
@@ -153,9 +178,9 @@ export default function PaymentsTable({
                   )}
                 </TableCell>
                 <TableCell>
-                  {cumulativeRecord ? (
+                  {payment.status === 'paid' && cumulativeValue ? (
                     <span className="font-medium text-bgs-blue">
-                      {cumulativeRecord.cumulativeReturn} €
+                      {cumulativeValue} €
                     </span>
                   ) : (
                     "—"
@@ -178,7 +203,7 @@ export default function PaymentsTable({
               </TableRow>
             );
           })}
-          {allPayments.length === 0 && (
+          {allPaymentsWithCumulative.length === 0 && (
             <TableRow>
               <TableCell colSpan={6} className="text-center py-4 text-bgs-gray-medium">
                 Aucun versement trouvé
