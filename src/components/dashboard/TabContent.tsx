@@ -1,5 +1,5 @@
 
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,7 +58,12 @@ export default function TabContent({
   setActiveTab,
   refreshData
 }: TabContentProps) {
-  console.log("Current active tab:", activeTab); // Add logging to debug
+  console.log("TabContent rendering with active tab:", activeTab);
+  
+  // Add debug logging when tab content changes
+  useEffect(() => {
+    console.log(`TabContent mounted/updated with active tab: ${activeTab}`);
+  }, [activeTab]);
   
   return (
     <div className="w-full mt-4">

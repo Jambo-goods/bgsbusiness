@@ -26,6 +26,7 @@ export default function SidebarNavItem({
   const navigate = useNavigate();
   
   const handleClick = () => {
+    console.log(`SidebarNavItem clicked: ${value}`);
     setActiveTab(value);
     
     // Update URL with query parameter for direct access
@@ -37,6 +38,7 @@ export default function SidebarNavItem({
   };
 
   const isActive = activeTab === value;
+  console.log(`SidebarNavItem ${value} - isActive: ${isActive}, activeTab: ${activeTab}`);
 
   return (
     <button
