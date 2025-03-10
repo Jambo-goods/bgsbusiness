@@ -182,6 +182,7 @@ export type Database = {
           duration: string
           end_date: string | null
           featured: boolean | null
+          first_payment_date: string | null
           funding_progress: number
           id: string
           image: string
@@ -206,6 +207,7 @@ export type Database = {
           duration: string
           end_date?: string | null
           featured?: boolean | null
+          first_payment_date?: string | null
           funding_progress: number
           id?: string
           image: string
@@ -230,6 +232,7 @@ export type Database = {
           duration?: string
           end_date?: string | null
           featured?: boolean | null
+          first_payment_date?: string | null
           funding_progress?: number
           id?: string
           image?: string

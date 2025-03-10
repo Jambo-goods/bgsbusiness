@@ -73,6 +73,7 @@ export const useInvestmentsData = (userId: string | null): InvestmentsDataReturn
               endDate: project.end_date,
               raised: project.raised,
               target: project.target,
+              firstPaymentDate: project.first_payment_date,
               investedAmount: investment ? investment.amount : 0,
               investmentDate: investment ? investment.date : null
             };

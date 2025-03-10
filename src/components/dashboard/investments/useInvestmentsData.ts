@@ -36,7 +36,16 @@ export function useInvestmentsData() {
           throw error;
         }
         
-        setInvestments(data || []);
+        // Map the data to include first_payment_date
+        const mappedData = data?.map(investment => ({
+          ...investment,
+          projects: {
+            ...investment.projects,
+            firstPaymentDate: investment.projects?.first_payment_date
+          }
+        }));
+        
+        setInvestments(mappedData || []);
       } catch (error) {
         console.error("Erreur:", error);
         toast({
