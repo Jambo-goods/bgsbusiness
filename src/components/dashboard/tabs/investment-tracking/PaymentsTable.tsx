@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow 
 } from "@/components/ui/table";
-import { Calendar, SortAsc, SortDesc, Check, Clock, AlertCircle } from "lucide-react";
+import { Calendar, SortAsc, SortDesc, Check, Clock, AlertCircle, Percent } from "lucide-react";
 import { Project } from "@/types/project";
 import { PaymentRecord, ScheduledPayment } from "./types";
 
@@ -56,7 +56,8 @@ export default function PaymentsTable({
       amount: sp.total_scheduled_amount,
       date: new Date(sp.payment_date),
       type: 'yield' as const,
-      status: sp.status as 'paid' | 'pending' | 'scheduled'
+      status: sp.status as 'paid' | 'pending' | 'scheduled',
+      percentage: sp.percentage // Add percentage to the payment object
     }))
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
   
@@ -85,6 +86,7 @@ export default function PaymentsTable({
                 )}
               </div>
             </TableHead>
+            <TableHead>Pourcentage</TableHead>
             <TableHead className="cursor-pointer" onClick={() => handleSort('amount')}>
               <div className="flex items-center">
                 Montant
@@ -129,7 +131,17 @@ export default function PaymentsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-green-600 font-medium">{payment.amount} €</span>
+                  {payment.percentage ? (
+                    <div className="flex items-center">
+                      <Percent className="h-3.5 w-3.5 mr-1.5 text-blue-500" />
+                      {payment.percentage}%
+                    </div>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell>
+                  <span className="text-green-600 font-medium">{Math.round(payment.amount)} €</span>
                 </TableCell>
                 <TableCell>
                   {cumulativeRecord ? (
@@ -159,7 +171,7 @@ export default function PaymentsTable({
           })}
           {allPayments.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-4 text-bgs-gray-medium">
+              <TableCell colSpan={6} className="text-center py-4 text-bgs-gray-medium">
                 Aucun versement trouvé
               </TableCell>
             </TableRow>
