@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Project } from "@/types/project";
-import { AlertCircle, RefreshCcw } from "lucide-react";
+import { AlertCircle, RefreshCcw, Database } from "lucide-react";
 import FilterControls from "./investment-tracking/FilterControls";
 import PaymentsTable from "./investment-tracking/PaymentsTable";
 import ReturnsSummary from "./investment-tracking/ReturnsSummary";
@@ -10,6 +10,7 @@ import LoadingIndicator from "./investment-tracking/LoadingIndicator";
 import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracking";
 import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
 import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
+import { format } from "date-fns";
 
 interface InvestmentTrackingTabProps {
   userInvestments: Project[];
@@ -26,6 +27,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
     scheduledPayments,
     animateRefresh,
     userId,
+    syncStatus,
     handleSort,
     handleRefresh
   } = useInvestmentTracking(userInvestments);
@@ -67,6 +69,21 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
   
   const hasData = scheduledPayments && scheduledPayments.length > 0;
   
+  const renderSyncStatus = () => {
+    if (!syncStatus.lastSynced) return null;
+    
+    return (
+      <div className="text-xs text-gray-500 flex items-center mt-1">
+        <Database className="h-3 w-3 mr-1" />
+        <span>
+          {syncStatus.isError 
+            ? "Erreur de synchronisation" 
+            : `Synchronisé le ${format(syncStatus.lastSynced, "dd/MM/yyyy à HH:mm")}`}
+        </span>
+      </div>
+    );
+  };
+  
   const renderContent = () => {
     if (isLoading) {
       return <LoadingIndicator message="Chargement des données de versements..." />;
@@ -82,6 +99,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
               Aucun versement programmé n'a été trouvé. <br />
               Veuillez vérifier ultérieurement.
             </p>
+            {renderSyncStatus()}
           </div>
           <div>
             <button
@@ -105,6 +123,10 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
           isRefreshing={animateRefresh}
           onRefresh={handleRefresh}
         />
+        
+        <div className="mb-2">
+          {renderSyncStatus()}
+        </div>
         
         <PaymentsTable 
           scheduledPayments={sortedScheduledPayments}

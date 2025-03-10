@@ -26,3 +26,9 @@ export interface ScheduledPayment {
     image: string | null;
   } | null;
 }
+
+export interface DatabaseSyncStatus {
+  lastSynced: Date | null;
+  isError: boolean;
+  errorMessage: string | null;
+}

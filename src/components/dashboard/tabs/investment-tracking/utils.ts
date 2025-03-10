@@ -1,3 +1,4 @@
+
 import { PaymentRecord, ScheduledPayment } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,7 +49,7 @@ export const fetchScheduledPayments = async (): Promise<ScheduledPayment[]> => {
     
     if (error) {
       console.error("Error fetching scheduled payments:", error);
-      return [];
+      throw error;
     }
     
     if (!data) return [];
@@ -61,7 +62,7 @@ export const fetchScheduledPayments = async (): Promise<ScheduledPayment[]> => {
     })) as ScheduledPayment[];
   } catch (error) {
     console.error("Error fetching scheduled payments:", error);
-    return [];
+    throw error; // Re-throw to propagate to caller
   }
 };
 
