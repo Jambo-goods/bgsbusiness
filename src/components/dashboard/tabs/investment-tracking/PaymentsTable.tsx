@@ -56,7 +56,8 @@ export default function PaymentsTable({
       amount: sp.total_scheduled_amount,
       date: new Date(sp.payment_date),
       type: 'yield' as const,
-      status: sp.status as 'paid' | 'pending' | 'scheduled'
+      status: sp.status as 'paid' | 'pending' | 'scheduled',
+      percentage: sp.percentage  // Include percentage from scheduled payment
     }))
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
   
@@ -95,6 +96,7 @@ export default function PaymentsTable({
                 )}
               </div>
             </TableHead>
+            <TableHead>Pourcentage</TableHead>
             <TableHead>Cumulé</TableHead>
             <TableHead>Statut</TableHead>
           </TableRow>
@@ -132,6 +134,13 @@ export default function PaymentsTable({
                   <span className="text-green-600 font-medium">{payment.amount} €</span>
                 </TableCell>
                 <TableCell>
+                  {payment.percentage ? (
+                    <span className="text-blue-600 font-medium">{payment.percentage}%</span>
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell>
                   {cumulativeRecord ? (
                     <span className="font-medium text-bgs-blue">
                       {cumulativeRecord.cumulativeReturn} €
@@ -159,7 +168,7 @@ export default function PaymentsTable({
           })}
           {allPayments.length === 0 && (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-4 text-bgs-gray-medium">
+              <TableCell colSpan={6} className="text-center py-4 text-bgs-gray-medium">
                 Aucun versement trouvé
               </TableCell>
             </TableRow>

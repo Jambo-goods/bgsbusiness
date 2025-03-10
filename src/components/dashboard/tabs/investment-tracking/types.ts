@@ -7,6 +7,7 @@ export interface PaymentRecord {
   date: Date;
   type: 'yield' | 'capital';
   status: 'paid' | 'pending' | 'scheduled';
+  percentage?: number;  // Optional percentage field for scheduled payments
 }
 
 export interface ScheduledPayment {
