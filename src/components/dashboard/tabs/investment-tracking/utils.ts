@@ -1,3 +1,4 @@
+
 import { PaymentRecord, ScheduledPayment } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -175,44 +176,39 @@ export const generatePaymentsFromRealData = (investments: any[], scheduledPaymen
       type: 'yield',
       status: 'pending'
     });
-    
-    // Find scheduled payments for this project
-    const projectScheduledPayments = scheduledPayments.filter(
-      payment => payment.project_id === investment.project_id
-    );
-    
-    if (projectScheduledPayments.length > 0) {
-      // Add scheduled payments from the database
-      const scheduledRecords = scheduledPaymentsToPaymentRecords(projectScheduledPayments);
-      payments = [...payments, ...scheduledRecords];
-    } else {
-      // Generate default scheduled payments if none exist in database
-      for (let i = 2; i <= 6; i++) {
-        const futureDate = new Date(now);
-        futureDate.setMonth(now.getMonth() + i);
-        
-        payments.push({
-          id: `payment-${investment.id}-future-${i}`,
-          projectId: investment.project_id,
-          projectName: investment.projects.name,
-          amount: monthlyReturn,
-          date: futureDate,
-          type: 'yield',
-          status: 'scheduled'
-        });
-      }
-    }
   });
   
-  // Add any scheduled payments that aren't associated with a current investment
-  // This could happen if we have scheduled payments for projects the user doesn't have investments in
-  const investmentProjectIds = investments.map(inv => inv.project_id);
+  // Add scheduled payments for future months
+  const projectIds = new Set(investments.map(inv => inv.project_id));
+  const relevantScheduledPayments = scheduledPayments.filter(payment => 
+    projectIds.has(payment.project_id)
+  );
+  
+  if (relevantScheduledPayments.length > 0) {
+    const scheduledRecords = scheduledPaymentsToPaymentRecords(relevantScheduledPayments);
+    payments = [...payments, ...scheduledRecords];
+  }
+  
+  // Calculate user's share of scheduled payments for projects they've invested in
+  const userProjectShares = investments.reduce((acc, inv) => {
+    if (!acc[inv.project_id]) {
+      acc[inv.project_id] = {
+        totalInvested: 0,
+        userAmount: 0
+      };
+    }
+    acc[inv.project_id].userAmount += inv.amount;
+    return acc;
+  }, {});
+  
+  // Add global scheduled payments for projects the user hasn't invested in
   const otherScheduledPayments = scheduledPayments.filter(
-    payment => !investmentProjectIds.includes(payment.project_id)
+    payment => !projectIds.has(payment.project_id)
   );
   
   if (otherScheduledPayments.length > 0) {
-    payments = [...payments, ...scheduledPaymentsToPaymentRecords(otherScheduledPayments)];
+    const globalPaymentRecords = scheduledPaymentsToPaymentRecords(otherScheduledPayments);
+    payments = [...payments, ...globalPaymentRecords];
   }
   
   console.log(`Generated ${payments.length} payment records from real investment data and scheduled payments`);
@@ -225,7 +221,7 @@ const scheduledPaymentsToPaymentRecords = (scheduledPayments: ScheduledPayment[]
     id: payment.id,
     projectId: payment.project_id,
     projectName: payment.project?.name || "Projet inconnu",
-    amount: Number(payment.amount),
+    amount: Number(payment.total_scheduled_amount || 0),
     date: new Date(payment.payment_date),
     type: 'yield',
     status: payment.status as 'paid' | 'pending' | 'scheduled',

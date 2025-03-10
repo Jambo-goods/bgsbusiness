@@ -253,36 +253,49 @@ export type Database = {
       }
       scheduled_payments: {
         Row: {
-          amount: number
           created_at: string
           cumulative_amount: number | null
           id: string
+          investors_count: number | null
           payment_date: string
           project_id: string | null
           status: string
+          total_invested_amount: number
+          total_scheduled_amount: number
           updated_at: string
         }
         Insert: {
-          amount: number
           created_at?: string
           cumulative_amount?: number | null
           id?: string
+          investors_count?: number | null
           payment_date: string
           project_id?: string | null
           status?: string
+          total_invested_amount?: number
+          total_scheduled_amount?: number
           updated_at?: string
         }
         Update: {
-          amount?: number
           created_at?: string
           cumulative_amount?: number | null
           id?: string
+          investors_count?: number | null
           payment_date?: string
           project_id?: string | null
           status?: string
+          total_invested_amount?: number
+          total_scheduled_amount?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_project"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "scheduled_payments_project_id_fkey"
             columns: ["project_id"]
@@ -370,6 +383,16 @@ export type Database = {
         Args: {
           user_id: string
           increment_amount: number
+        }
+        Returns: undefined
+      }
+      initialize_all_projects_scheduled_payments: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      initialize_project_scheduled_payments: {
+        Args: {
+          project_uuid: string
         }
         Returns: undefined
       }
