@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Project } from "@/types/project";
 import { AlertCircle, RefreshCcw } from "lucide-react";
@@ -22,6 +23,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
     setFilterStatus,
     isLoading,
     paymentRecords,
+    scheduledPayments,
     animateRefresh,
     userId,
     handleSort,
@@ -29,8 +31,6 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
   } = useInvestmentTracking(userInvestments);
   
   const {
-    cumulativeReturns,
-    filteredAndSortedPayments,
     totalPaid,
     totalPending,
     averageMonthlyReturn
@@ -38,11 +38,39 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
   
   useInvestmentSubscriptions(userId, handleRefresh);
   
-  const hasData = paymentRecords && paymentRecords.length > 0;
+  // Filter and sort scheduled payments according to the selected criteria
+  const filteredAndSortedScheduledPayments = React.useMemo(() => {
+    return [...scheduledPayments]
+      .filter(payment => filterStatus === 'all' || payment.status === filterStatus)
+      .sort((a, b) => {
+        if (sortColumn === 'date') {
+          return sortDirection === 'asc' 
+            ? new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime() 
+            : new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime();
+        } else if (sortColumn === 'amount') {
+          return sortDirection === 'asc' 
+            ? Number(a.total_scheduled_amount) - Number(b.total_scheduled_amount) 
+            : Number(b.total_scheduled_amount) - Number(a.total_scheduled_amount);
+        } else if (sortColumn === 'projectName') {
+          const nameA = a.project?.name || '';
+          const nameB = b.project?.name || '';
+          return sortDirection === 'asc'
+            ? nameA.localeCompare(nameB)
+            : nameB.localeCompare(nameA);
+        } else if (sortColumn === 'investors') {
+          return sortDirection === 'asc'
+            ? (a.investors_count || 0) - (b.investors_count || 0)
+            : (b.investors_count || 0) - (a.investors_count || 0);
+        }
+        return 0;
+      });
+  }, [scheduledPayments, filterStatus, sortColumn, sortDirection]);
+  
+  const hasData = scheduledPayments && scheduledPayments.length > 0;
   
   const renderContent = () => {
     if (isLoading) {
-      return <LoadingIndicator message="Chargement des données de rendement..." />;
+      return <LoadingIndicator message="Chargement des données de versements..." />;
     }
     
     if (!hasData) {
@@ -50,10 +78,10 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
         <div className="py-10 text-center">
           <div className="bg-blue-50 p-6 rounded-lg inline-block mb-4">
             <AlertCircle className="h-10 w-10 text-blue-500 mx-auto mb-2" />
-            <h3 className="text-lg font-medium text-bgs-blue mb-1">Aucun rendement trouvé</h3>
+            <h3 className="text-lg font-medium text-bgs-blue mb-1">Aucun versement trouvé</h3>
             <p className="text-sm text-bgs-gray-medium">
-              Aucun investissement n'a été trouvé pour votre compte. <br />
-              Investissez dans des projets pour voir apparaître vos rendements ici.
+              Aucun versement programmé n'a été trouvé. <br />
+              Veuillez vérifier ultérieurement.
             </p>
           </div>
           <div>
@@ -80,8 +108,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
         />
         
         <PaymentsTable 
-          filteredAndSortedPayments={filteredAndSortedPayments}
-          cumulativeReturns={cumulativeReturns}
+          scheduledPayments={filteredAndSortedScheduledPayments}
           sortColumn={sortColumn}
           sortDirection={sortDirection}
           handleSort={handleSort}

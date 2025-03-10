@@ -38,7 +38,7 @@ export const fetchRealTimeInvestmentData = async (userId: string | undefined) =>
 
 export const fetchScheduledPayments = async () => {
   try {
-    console.log("Fetching all scheduled payments");
+    console.log("Fetching all scheduled payments with project details");
     const { data: scheduledPayments, error } = await supabase
       .from('scheduled_payments')
       .select(`

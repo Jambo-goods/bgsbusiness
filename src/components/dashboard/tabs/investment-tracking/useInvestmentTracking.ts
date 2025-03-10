@@ -32,6 +32,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
           description: "Connectez-vous pour voir vos données."
         });
         setPaymentRecords([]);
+        setScheduledPayments([]);
         return;
       }
       
@@ -39,39 +40,31 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       setUserId(currentUserId);
       console.log("Using user ID for investment tracking:", currentUserId);
       
-      // Fetch investments
+      // Fetch investments for user-specific calculations
       const investments = await fetchRealTimeInvestmentData(currentUserId);
       console.log("Fetched investments:", investments.length);
       
-      // Fetch scheduled payments from the updated table structure
+      // Fetch ALL scheduled payments with project details
       const scheduledPaymentsData = await fetchScheduledPayments();
       setScheduledPayments(scheduledPaymentsData);
       console.log("Fetched scheduled payments:", scheduledPaymentsData.length);
       
+      // Generate payment records for user-specific displays (charts, totals, etc.)
       if (investments && investments.length > 0) {
-        // Use investment data and scheduled payments to generate payment records
         const realPayments = generatePaymentsFromRealData(investments, scheduledPaymentsData);
         setPaymentRecords(realPayments);
         console.log("Updated payment records with data:", realPayments.length);
-      } else if (scheduledPaymentsData && scheduledPaymentsData.length > 0) {
-        // Only use scheduled payments if no investments
-        const scheduledRecords = generatePaymentsFromRealData([], scheduledPaymentsData);
-        setPaymentRecords(scheduledRecords);
-        console.log("Updated payment records with only scheduled payments:", scheduledRecords.length);
       } else {
-        // No investments or scheduled payments found
-        console.log("No investments or scheduled payments found");
+        console.log("No investments found");
         setPaymentRecords([]);
-        toast.info("Aucune donnée", {
-          description: "Aucun investissement ou versement programmé trouvé."
-        });
       }
     } catch (error) {
       console.error("Error loading investment data:", error);
       toast.error("Erreur de chargement", {
-        description: "Impossible de charger les données de rendement."
+        description: "Impossible de charger les données de versement."
       });
       setPaymentRecords([]);
+      setScheduledPayments([]);
     } finally {
       setIsLoading(false);
       setAnimateRefresh(false);
