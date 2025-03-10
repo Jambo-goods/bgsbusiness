@@ -89,7 +89,6 @@ export default function PaymentsTable({
                 )}
               </div>
             </TableHead>
-            <TableHead>Cumulé</TableHead>
             <TableHead>Statut</TableHead>
           </TableRow>
         </TableHeader>
@@ -130,15 +129,6 @@ export default function PaymentsTable({
                     </span>
                   </TableCell>
                   <TableCell>
-                    {payment.cumulative_amount !== null ? (
-                      <span className="font-medium text-bgs-blue">
-                        {formatCurrency(payment.cumulative_amount)}
-                      </span>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell>
                     <div className="flex items-center">
                       {getStatusIcon(payment.status)}
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -157,7 +147,7 @@ export default function PaymentsTable({
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="text-center py-4 text-bgs-gray-medium">
+              <TableCell colSpan={5} className="text-center py-4 text-bgs-gray-medium">
                 Aucun versement programmé trouvé
               </TableCell>
             </TableRow>
