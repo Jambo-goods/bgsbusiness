@@ -87,6 +87,11 @@ export default function PaymentsTable({
               ? cumulativeReturns.find(record => record.id === payment.id)
               : null;
             
+            // Use cumulativeAmount if provided directly by the scheduled_payments table
+            const cumulativeAmount = payment.cumulativeAmount !== undefined
+              ? payment.cumulativeAmount
+              : cumulativeRecord?.cumulativeReturn;
+            
             // Find project image - first try from userInvestments, then use a default
             const projectImage = userInvestments.find(p => p.id === payment.projectId)?.image || 
               "https://via.placeholder.com/40";
@@ -113,9 +118,9 @@ export default function PaymentsTable({
                   <span className="text-green-600 font-medium">{payment.amount} €</span>
                 </TableCell>
                 <TableCell>
-                  {cumulativeRecord ? (
+                  {cumulativeAmount !== undefined ? (
                     <span className="font-medium text-bgs-blue">
-                      {cumulativeRecord.cumulativeReturn} €
+                      {cumulativeAmount} €
                     </span>
                   ) : (
                     "—"

@@ -27,17 +27,29 @@ export const useReturnsStatistics = (
   const totalPending = paymentRecords
     .filter(payment => payment.status === 'pending')
     .reduce((sum, payment) => sum + payment.amount, 0);
+    
+  const totalScheduled = paymentRecords
+    .filter(payment => payment.status === 'scheduled')
+    .reduce((sum, payment) => sum + payment.amount, 0);
   
   // Calculate average monthly return
-  const averageMonthlyReturn = Math.round(
-    totalPaid / Math.max(cumulativeReturns.length, 1)
-  );
+  const paidPayments = paymentRecords.filter(payment => payment.status === 'paid');
+  const averageMonthlyReturn = paidPayments.length > 0
+    ? Math.round(totalPaid / paidPayments.length)
+    : 0;
+  
+  // Count future payments
+  const futurePaymentsCount = paymentRecords.filter(
+    payment => payment.status === 'pending' || payment.status === 'scheduled'
+  ).length;
   
   return {
     cumulativeReturns,
     filteredAndSortedPayments,
     totalPaid,
     totalPending,
-    averageMonthlyReturn
+    totalScheduled,
+    averageMonthlyReturn,
+    futurePaymentsCount
   };
 };

@@ -1,10 +1,12 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/types/project";
-import { PaymentRecord } from "./types";
+import { PaymentRecord, ScheduledPayment } from "./types";
 import { toast } from "sonner";
 import { 
   fetchRealTimeInvestmentData,
+  fetchScheduledPayments,
   generatePaymentsFromRealData
 } from "./utils";
 
@@ -14,6 +16,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
+  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
   const [animateRefresh, setAnimateRefresh] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   
@@ -36,21 +39,31 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       setUserId(currentUserId);
       console.log("Using user ID for investment tracking:", currentUserId);
       
+      // Fetch investments
       const investments = await fetchRealTimeInvestmentData(currentUserId);
-      
       console.log("Fetched investments:", investments.length);
       
+      // Fetch scheduled payments
+      const scheduledPaymentsData = await fetchScheduledPayments(currentUserId);
+      setScheduledPayments(scheduledPaymentsData);
+      console.log("Fetched scheduled payments:", scheduledPaymentsData.length);
+      
       if (investments && investments.length > 0) {
-        // Use investment data to generate payment records
-        const realPayments = generatePaymentsFromRealData(investments);
+        // Use investment data and scheduled payments to generate payment records
+        const realPayments = generatePaymentsFromRealData(investments, scheduledPaymentsData);
         setPaymentRecords(realPayments);
         console.log("Updated payment records with data:", realPayments.length);
+      } else if (scheduledPaymentsData && scheduledPaymentsData.length > 0) {
+        // Only use scheduled payments if no investments
+        const scheduledRecords = generatePaymentsFromRealData([], scheduledPaymentsData);
+        setPaymentRecords(scheduledRecords);
+        console.log("Updated payment records with only scheduled payments:", scheduledRecords.length);
       } else {
-        // No investments found
-        console.log("No investments found");
+        // No investments or scheduled payments found
+        console.log("No investments or scheduled payments found");
         setPaymentRecords([]);
-        toast.info("Aucun investissement", {
-          description: "Aucun investissement trouvé pour votre compte."
+        toast.info("Aucune donnée", {
+          description: "Aucun investissement ou versement programmé trouvé pour votre compte."
         });
       }
     } catch (error) {
@@ -68,7 +81,21 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   useEffect(() => {
     loadRealTimeData();
     
-    // Set up manual refresh interval instead of real-time subscription
+    // Set up subscription for real-time updates to scheduled_payments
+    const scheduledPaymentsSubscription = supabase
+      .channel('scheduled_payments_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'scheduled_payments',
+        filter: userId ? `user_id=eq.${userId}` : undefined
+      }, () => {
+        console.log("Scheduled payments changed, refreshing data...");
+        loadRealTimeData();
+      })
+      .subscribe();
+    
+    // Set up manual refresh interval as a backup
     const refreshInterval = setInterval(() => {
       console.log("Running scheduled data refresh...");
       loadRealTimeData();
@@ -76,8 +103,9 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
     
     return () => {
       clearInterval(refreshInterval);
+      scheduledPaymentsSubscription.unsubscribe();
     };
-  }, [loadRealTimeData]);
+  }, [loadRealTimeData, userId]);
   
   // Toggle sort direction when clicking on a column header
   const handleSort = (column: string) => {
@@ -103,6 +131,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
     setFilterStatus,
     isLoading,
     paymentRecords,
+    scheduledPayments,
     animateRefresh,
     userId,
     handleSort,
