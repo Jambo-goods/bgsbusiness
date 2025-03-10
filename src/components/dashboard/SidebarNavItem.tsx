@@ -1,59 +1,70 @@
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { LucideIcon } from "lucide-react";
 
 interface SidebarNavItemProps {
-  icon: React.ReactNode;
+  icon: LucideIcon;
   label: string;
-  active: boolean;
-  onClick: () => void;
+  value: string;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
   expanded: boolean;
-  badge?: number;
+  labelPosition?: "right" | "tooltip";
 }
 
 export default function SidebarNavItem({
-  icon,
+  icon: Icon,
   label,
-  active,
-  onClick,
+  value,
+  activeTab,
+  setActiveTab,
   expanded,
-  badge
+  labelPosition = "right"
 }: SidebarNavItemProps) {
+  const navigate = useNavigate();
+  
+  const handleClick = () => {
+    setActiveTab(value);
+    
+    // Update URL with query parameter for direct access
+    if (value === 'overview') {
+      navigate('/dashboard');
+    } else {
+      navigate(`/dashboard?tab=${value}`);
+    }
+  };
+
+  const isActive = activeTab === value;
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className={cn(
-        "w-full flex items-center px-3 py-2 rounded-md transition-colors",
-        "hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200",
-        active 
-          ? "bg-bgs-blue/10 text-bgs-blue font-medium" 
-          : "text-gray-700"
+        "flex items-center w-full py-2 px-3 my-1 rounded-lg text-left transition-colors duration-200",
+        "text-sm font-medium",
+        "hover:bg-gray-100",
+        isActive ? "bg-blue-50 text-bgs-blue" : "text-gray-700"
       )}
+      title={expanded ? undefined : label}
     >
-      <div className="flex items-center justify-center">
-        <span className={cn(
-          "flex-shrink-0",
-          active ? "text-bgs-blue" : "text-gray-500"
-        )}>
-          {icon}
-        </span>
-      </div>
+      <Icon
+        className={cn(
+          "h-5 w-5 flex-shrink-0",
+          isActive ? "text-bgs-blue" : "text-gray-500"
+        )}
+      />
       
-      {expanded && (
-        <div className="flex items-center justify-between flex-1 ml-3">
-          <span className="text-sm">{label}</span>
-          
-          {badge !== undefined && badge > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-medium">
-              {badge}
-            </span>
+      {(expanded || labelPosition === "tooltip") && (
+        <span 
+          className={cn(
+            "transition-all duration-200",
+            expanded ? "ml-3 opacity-100" : "opacity-0 absolute",
+            labelPosition === "tooltip" && !expanded ? "ml-8 bg-gray-800 text-white py-1 px-2 rounded text-xs" : ""
           )}
-        </div>
-      )}
-      
-      {!expanded && badge !== undefined && badge > 0 && (
-        <span className="absolute -right-1 top-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-medium">
-          {badge}
+        >
+          {label}
         </span>
       )}
     </button>

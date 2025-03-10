@@ -2,7 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import DashboardLayout from "../layouts/DashboardLayout";
 import DashboardMain from "../components/dashboard/DashboardMain";
 import { useProfileData } from "@/hooks/dashboard/useProfileData";
@@ -13,7 +13,8 @@ import { useSidebarState } from "@/hooks/useSidebarState";
 
 export default function Dashboard() {
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [userId, setUserId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState(() => {
     const tabParam = searchParams.get('tab');
@@ -33,6 +34,7 @@ export default function Dashboard() {
   const { isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useSidebarState();
   const [isRefreshing, setIsRefreshing] = useState(false);
   
+  // Update active tab when URL params change
   useEffect(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam) {
@@ -40,6 +42,15 @@ export default function Dashboard() {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
+  
+  // Update URL when active tab changes
+  useEffect(() => {
+    if (activeTab && activeTab !== 'overview') {
+      setSearchParams({ tab: activeTab });
+    } else if (activeTab === 'overview') {
+      setSearchParams({});
+    }
+  }, [activeTab, setSearchParams]);
   
   useEffect(() => {
     if (location.state && location.state.activeTab) {
@@ -60,7 +71,6 @@ export default function Dashboard() {
         }
       } catch (error) {
         console.error("Error fetching user session:", error);
-        // Removed toast notification for error
       }
     };
     
@@ -94,8 +104,6 @@ export default function Dashboard() {
   
   useEffect(() => {
     console.log("Dashboard polling status:", pollingStatus);
-    
-    // Removed toast notification for disabled polling status
     
     const dataRefreshInterval = setInterval(() => {
       refreshAllData();
