@@ -22,6 +22,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
   
   const minInvestment = project.minInvestment;
   const maxInvestment = 10000;
+  const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
   
   const durations = project.possibleDurations || 
     [parseInt(project.duration.split(' ')[0])];
@@ -53,11 +54,12 @@ export const useInvestment = (project: Project, investorCount: number) => {
   
   useEffect(() => {
     const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
-    const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * selectedDuration);
+    const effectiveDuration = selectedDuration - firstPaymentDelay;
+    const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * Math.max(0, effectiveDuration));
     
     setMonthlyReturn(calculatedMonthlyReturn);
     setTotalReturn(calculatedTotalReturn);
-  }, [investmentAmount, selectedDuration, project.yield]);
+  }, [investmentAmount, selectedDuration, project.yield, firstPaymentDelay]);
   
   const handleInvest = () => {
     if (userBalance < investmentAmount) {
@@ -192,7 +194,8 @@ export const useInvestment = (project: Project, investorCount: number) => {
         yield: project.yield,
         date: new Date().toISOString(),
         monthlyReturn: monthlyReturn,
-        totalReturn: totalReturn
+        totalReturn: totalReturn,
+        firstPaymentDelay: firstPaymentDelay
       };
       
       localStorage.setItem("recentInvestment", JSON.stringify(investmentData));

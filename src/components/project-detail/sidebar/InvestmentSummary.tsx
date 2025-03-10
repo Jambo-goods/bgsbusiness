@@ -18,6 +18,7 @@ export default function InvestmentSummary({
 }: InvestmentSummaryProps) {
   // Calculate annual yield from monthly yield
   const annualYield = project.yield * 12;
+  const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
   
   return (
     <div className="bg-gradient-to-br from-white to-bgs-gray-light p-4 rounded-lg mb-4 shadow-sm border border-gray-100">
@@ -52,6 +53,16 @@ export default function InvestmentSummary({
             <span>Durée</span>
           </div>
           <span className="font-semibold text-bgs-blue">{selectedDuration} mois</span>
+        </div>
+        
+        <div className="flex justify-between items-center text-sm">
+          <div className="flex items-center gap-2 text-amber-700">
+            <div className="bg-amber-100 p-1.5 rounded-lg">
+              <Clock size={14} className="text-amber-600" />
+            </div>
+            <span>Délai 1er versement</span>
+          </div>
+          <span className="font-semibold text-amber-600">{firstPaymentDelay} mois</span>
         </div>
         
         <div className="flex justify-between items-center text-sm">

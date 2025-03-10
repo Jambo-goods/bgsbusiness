@@ -21,7 +21,8 @@ export const projects: Project[] = [
     possibleDurations: [12, 24, 36],
     startDate: "2023-10-15",
     endDate: "2025-10-15",
-    image: "https://images.unsplash.com/photo-1614254136161-0314a45127a9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+    image: "https://images.unsplash.com/photo-1614254136161-0314a45127a9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+    firstPaymentDelayMonths: 1
   },
   {
     id: "energy",
@@ -41,7 +42,8 @@ export const projects: Project[] = [
     possibleDurations: [6, 12, 18],
     startDate: "2024-01-10",
     endDate: "2025-01-10",
-    image: "https://images.unsplash.com/photo-1540324603583-fa99c8235661?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+    image: "https://images.unsplash.com/photo-1540324603583-fa99c8235661?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+    firstPaymentDelayMonths: 2
   },
   {
     id: "agro-tech",
@@ -61,7 +63,8 @@ export const projects: Project[] = [
     possibleDurations: [12, 24, 36, 48],
     startDate: "2024-03-01",
     endDate: "2026-03-01",
-    image: "https://images.unsplash.com/photo-1589923188651-268a9765e432?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+    image: "https://images.unsplash.com/photo-1589923188651-268a9765e432?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+    firstPaymentDelayMonths: 3
   },
   {
     id: "logistics",
@@ -81,7 +84,8 @@ export const projects: Project[] = [
     possibleDurations: [12, 18, 24],
     startDate: "2023-08-15",
     endDate: "2025-02-15",
-    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
+    firstPaymentDelayMonths: 1
   },
   {
     id: "poules-pondeuses",
@@ -101,6 +105,7 @@ export const projects: Project[] = [
     possibleDurations: [12, 24, 36],
     startDate: "2024-07-01",
     endDate: "2026-07-01",
-    image: "https://images.unsplash.com/photo-1569615313731-7294bb3843be?q=80&w=1000&auto=format&fit=crop"
+    image: "https://images.unsplash.com/photo-1569615313731-7294bb3843be?q=80&w=1000&auto=format&fit=crop",
+    firstPaymentDelayMonths: 2
   },
 ];

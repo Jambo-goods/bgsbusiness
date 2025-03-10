@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { Slider } from "@/components/ui/slider";
-import { Check, AlertCircle, Calculator, Calendar, TrendingUp } from "lucide-react";
+import { Check, AlertCircle, Calculator, Calendar, TrendingUp, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,6 +19,7 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   const [monthlyReturn, setMonthlyReturn] = useState<number>(0);
   const [userBalance, setUserBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
   
   useEffect(() => {
     const fetchUserBalance = async () => {
@@ -64,11 +66,13 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   
   useEffect(() => {
     const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
-    const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * duration);
+    // Calcul tenant compte de la période avant le premier versement
+    const effectiveDuration = duration - firstPaymentDelay; 
+    const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * Math.max(0, effectiveDuration));
     
     setTotalReturn(calculatedTotalReturn);
     setMonthlyReturn(calculatedMonthlyReturn);
-  }, [investmentAmount, duration, project.yield]);
+  }, [investmentAmount, duration, project.yield, firstPaymentDelay]);
   
   const annualYieldPercentage = project.yield * 12;
   
@@ -120,6 +124,18 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
             ))}
           </div>
         )}
+      </div>
+      
+      <div className="bg-amber-50 p-4 rounded-lg mb-4 border border-amber-100">
+        <div className="flex items-start">
+          <Clock className="h-4 w-4 text-amber-600 mr-2 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-amber-700">Délai avant premier versement</p>
+            <p className="text-xs text-amber-600 mt-1">
+              Le premier versement sera effectué {firstPaymentDelay} mois après votre investissement.
+            </p>
+          </div>
+        </div>
       </div>
       
       <div className="bg-bgs-gray-light p-4 rounded-lg mb-6">

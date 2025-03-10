@@ -22,4 +22,5 @@ export interface Project {
   target?: number;
   amount?: number;
   investmentDate?: string;
+  firstPaymentDelayMonths?: number;
 }
