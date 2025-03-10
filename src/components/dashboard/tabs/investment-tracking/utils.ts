@@ -1,4 +1,3 @@
-
 import { PaymentRecord, ScheduledPayment } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,14 +47,17 @@ export const fetchScheduledPayments = async (): Promise<ScheduledPayment[]> => {
       .order('payment_date', { ascending: false });
     
     if (error) {
-      throw error;
+      console.error("Error fetching scheduled payments:", error);
+      return [];
     }
     
-    // Generate unique IDs for payments that don't have them
-    return (data || []).map(payment => ({
+    if (!data) return [];
+    
+    // Map the data to match our ScheduledPayment type
+    return data.map(payment => ({
       ...payment,
-      // Generate a unique ID if none exists
-      id: payment.id || `payment-${payment.project_id}-${payment.payment_date}`
+      id: `payment-${payment.project_id}-${payment.payment_date}`,
+      project: payment.project || { name: null, image: null }
     })) as ScheduledPayment[];
   } catch (error) {
     console.error("Error fetching scheduled payments:", error);
@@ -180,38 +182,9 @@ export const generatePaymentsFromRealData = (investments: any[], scheduledPaymen
     });
   });
   
-  // Add scheduled payments for future months
-  const projectIds = new Set(investments.map(inv => inv.project_id));
-  const relevantScheduledPayments = scheduledPayments.filter(payment => 
-    projectIds.has(payment.project_id)
-  );
-  
-  if (relevantScheduledPayments.length > 0) {
-    const scheduledRecords = scheduledPaymentsToPaymentRecords(relevantScheduledPayments);
-    payments = [...payments, ...scheduledRecords];
-  }
-  
-  // Calculate user's share of scheduled payments for projects they've invested in
-  const userProjectShares = investments.reduce((acc, inv) => {
-    if (!acc[inv.project_id]) {
-      acc[inv.project_id] = {
-        totalInvested: 0,
-        userAmount: 0
-      };
-    }
-    acc[inv.project_id].userAmount += inv.amount;
-    return acc;
-  }, {});
-  
-  // Add global scheduled payments for projects the user hasn't invested in
-  const otherScheduledPayments = scheduledPayments.filter(
-    payment => !projectIds.has(payment.project_id)
-  );
-  
-  if (otherScheduledPayments.length > 0) {
-    const globalPaymentRecords = scheduledPaymentsToPaymentRecords(otherScheduledPayments);
-    payments = [...payments, ...globalPaymentRecords];
-  }
+  // Convert scheduled payments to PaymentRecord format
+  const scheduledRecords = scheduledPaymentsToPaymentRecords(scheduledPayments);
+  payments = [...payments, ...scheduledRecords];
   
   console.log(`Generated ${payments.length} payment records from real investment data and scheduled payments`);
   return payments;
@@ -221,7 +194,7 @@ export const generatePaymentsFromRealData = (investments: any[], scheduledPaymen
 const scheduledPaymentsToPaymentRecords = (scheduledPayments: ScheduledPayment[]): PaymentRecord[] => {
   return scheduledPayments.map(payment => ({
     id: payment.id || `payment-${payment.project_id}-${payment.payment_date}`,
-    projectId: payment.project_id,
+    projectId: payment.project_id || '',
     projectName: payment.project?.name || "Projet inconnu",
     amount: Number(payment.total_scheduled_amount || 0),
     date: new Date(payment.payment_date),

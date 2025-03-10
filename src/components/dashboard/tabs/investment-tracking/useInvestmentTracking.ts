@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/types/project";
@@ -38,26 +37,21 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       
       const currentUserId = session.session.user.id;
       setUserId(currentUserId);
-      console.log("Using user ID for investment tracking:", currentUserId);
       
-      // Fetch ALL scheduled payments with project details
+      // Fetch ALL scheduled payments first
       const scheduledPaymentsData = await fetchScheduledPayments();
       setScheduledPayments(scheduledPaymentsData);
       console.log("Fetched scheduled payments:", scheduledPaymentsData.length);
       
-      // Fetch investments for user-specific calculations
+      // Then get user investments for additional data
       const investments = await fetchRealTimeInvestmentData(currentUserId);
       console.log("Fetched investments:", investments.length);
       
-      // Generate payment records for user-specific displays (charts, totals, etc.)
-      if (investments && investments.length > 0) {
-        const realPayments = generatePaymentsFromRealData(investments, scheduledPaymentsData);
-        setPaymentRecords(realPayments);
-        console.log("Updated payment records with data:", realPayments.length);
-      } else {
-        console.log("No investments found");
-        setPaymentRecords([]);
-      }
+      // Generate combined payment records
+      const realPayments = generatePaymentsFromRealData(investments, scheduledPaymentsData);
+      setPaymentRecords(realPayments);
+      console.log("Updated payment records with data:", realPayments.length);
+      
     } catch (error) {
       console.error("Error loading investment data:", error);
       toast.error("Erreur de chargement", {
