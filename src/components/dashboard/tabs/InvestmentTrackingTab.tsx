@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Project } from "@/types/project";
 import { AlertCircle, RefreshCcw } from "lucide-react";
@@ -31,6 +32,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
   const {
     cumulativeReturns,
     filteredAndSortedPayments,
+    scheduledPayments,
     totalPaid,
     totalPending,
     averageMonthlyReturn
@@ -81,6 +83,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
         
         <PaymentsTable 
           filteredAndSortedPayments={filteredAndSortedPayments}
+          scheduledPayments={scheduledPayments}
           cumulativeReturns={cumulativeReturns}
           sortColumn={sortColumn}
           sortDirection={sortDirection}

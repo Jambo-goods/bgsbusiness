@@ -18,4 +18,5 @@ export interface ScheduledPayment {
   total_invested_amount: number;
   total_scheduled_amount: number;
   cumulative_amount: number;
+  projects?: { name: string }; // Add this to match the join structure from Supabase
 }

@@ -1,5 +1,5 @@
 
-import { PaymentRecord } from "./types";
+import { PaymentRecord, ScheduledPayment } from "./types";
 import { calculateCumulativeReturns, filterAndSortPayments } from "./utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -11,7 +11,7 @@ export const useReturnsStatistics = (
   sortDirection: "asc" | "desc"
 ) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [scheduledPayments, setScheduledPayments] = useState<any[]>([]);
+  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
 
   // Fetch scheduled payments from Supabase
   useEffect(() => {
