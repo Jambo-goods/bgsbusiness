@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/table";
 import { Calendar, SortAsc, SortDesc, Check, Clock, AlertCircle } from "lucide-react";
 import { Project } from "@/types/project";
-import { ScheduledPayment } from "./types";
+import { PaymentRecord } from "./types";
 
 interface PaymentsTableProps {
-  scheduledPayments: ScheduledPayment[];
+  filteredAndSortedPayments: PaymentRecord[];
+  cumulativeReturns: (PaymentRecord & { cumulativeReturn: number })[];
   sortColumn: string;
   sortDirection: "asc" | "desc";
   handleSort: (column: string) => void;
@@ -22,7 +23,8 @@ interface PaymentsTableProps {
 }
 
 export default function PaymentsTable({ 
-  scheduledPayments,
+  filteredAndSortedPayments,
+  cumulativeReturns,
   sortColumn,
   sortDirection,
   handleSort,
@@ -37,11 +39,6 @@ export default function PaymentsTable({
       default:
         return <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-blue-500" />;
     }
-  };
-
-  const formatCurrency = (amount: number | null | undefined) => {
-    if (amount === null || amount === undefined) return "—";
-    return `${Number(amount).toLocaleString()} €`;
   };
   
   return (
@@ -71,7 +68,7 @@ export default function PaymentsTable({
             </TableHead>
             <TableHead className="cursor-pointer" onClick={() => handleSort('amount')}>
               <div className="flex items-center">
-                Montant total
+                Montant
                 {sortColumn === 'amount' && (
                   sortDirection === 'asc' ? 
                     <SortAsc className="ml-1 h-3 w-3" /> : 
@@ -79,79 +76,72 @@ export default function PaymentsTable({
                 )}
               </div>
             </TableHead>
-            <TableHead className="cursor-pointer" onClick={() => handleSort('investors')}>
-              <div className="flex items-center">
-                Investisseurs
-                {sortColumn === 'investors' && (
-                  sortDirection === 'asc' ? 
-                    <SortAsc className="ml-1 h-3 w-3" /> : 
-                    <SortDesc className="ml-1 h-3 w-3" />
-                )}
-              </div>
-            </TableHead>
+            <TableHead>Cumulé</TableHead>
             <TableHead>Statut</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {scheduledPayments.length > 0 ? (
-            scheduledPayments.map((payment, index) => {
-              // Use index as fallback key if id is not available
-              const paymentKey = payment.id || `payment-${index}`;
+          {filteredAndSortedPayments.map((payment) => {
+            // Find cumulative value for this payment if it's paid
+            const cumulativeRecord = payment.status === 'paid' 
+              ? cumulativeReturns.find(record => record.id === payment.id)
+              : null;
+            
+            // Find project image - first try from userInvestments, then use a default
+            const projectImage = userInvestments.find(p => p.id === payment.projectId)?.image || 
+              "https://via.placeholder.com/40";
               
-              // Find project image - first try from payment.project, then from userInvestments, then use a default
-              const projectImage = payment.project?.image || 
-                userInvestments.find(p => p.id === payment.project_id)?.image || 
-                "https://via.placeholder.com/40";
-                
-              return (
-                <TableRow key={paymentKey} className="animate-in fade-in duration-300">
-                  <TableCell className="font-medium">
-                    <div className="flex items-center">
-                      <img
-                        src={projectImage}
-                        alt={payment.project?.name || "Projet"}
-                        className="h-6 w-6 rounded-md object-cover mr-2"
-                      />
-                      {payment.project?.name || "Projet inconnu"}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Calendar className="h-3.5 w-3.5 mr-1.5 text-bgs-gray-medium" />
-                      {format(new Date(payment.payment_date), "dd/MM/yyyy")}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-green-600 font-medium">
-                      {formatCurrency(payment.total_scheduled_amount)}
+            return (
+              <TableRow key={payment.id} className="animate-in fade-in duration-300">
+                <TableCell className="font-medium">
+                  <div className="flex items-center">
+                    <img
+                      src={projectImage}
+                      alt={payment.projectName}
+                      className="h-6 w-6 rounded-md object-cover mr-2"
+                    />
+                    {payment.projectName}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center">
+                    <Calendar className="h-3.5 w-3.5 mr-1.5 text-bgs-gray-medium" />
+                    {format(new Date(payment.date), "dd/MM/yyyy")}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="text-green-600 font-medium">{payment.amount} €</span>
+                </TableCell>
+                <TableCell>
+                  {cumulativeRecord ? (
+                    <span className="font-medium text-bgs-blue">
+                      {cumulativeRecord.cumulativeReturn} €
                     </span>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-medium">
-                      {payment.investors_count || 0}
+                  ) : (
+                    "—"
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center">
+                    {getStatusIcon(payment.status)}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      payment.status === 'paid' 
+                        ? 'bg-green-100 text-green-600' 
+                        : payment.status === 'pending'
+                        ? 'bg-orange-100 text-orange-600'
+                        : 'bg-blue-100 text-blue-600'
+                    }`}>
+                      {payment.status === 'paid' ? 'Payé' : payment.status === 'pending' ? 'En attente' : 'Programmé'}
                     </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      {getStatusIcon(payment.status)}
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                        payment.status === 'paid' 
-                          ? 'bg-green-100 text-green-600' 
-                          : payment.status === 'pending'
-                          ? 'bg-orange-100 text-orange-600'
-                          : 'bg-blue-100 text-blue-600'
-                      }`}>
-                        {payment.status === 'paid' ? 'Payé' : payment.status === 'pending' ? 'En attente' : 'Programmé'}
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })
-          ) : (
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          {filteredAndSortedPayments.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} className="text-center py-4 text-bgs-gray-medium">
-                Aucun versement programmé trouvé
+                Aucun versement trouvé
               </TableCell>
             </TableRow>
           )}

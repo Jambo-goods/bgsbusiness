@@ -1,60 +1,66 @@
 
 import React from "react";
-import { RefreshCcw } from "lucide-react";
+import { TrendingUp, CheckCircle, Clock, RefreshCw } from "lucide-react";
 
-export interface ReturnsSummaryProps {
+interface ReturnsSummaryProps {
   totalPaid: number;
   totalPending: number;
   averageMonthlyReturn: number;
   isRefreshing?: boolean;
-  onRefresh: () => void;
+  onRefresh?: () => void;
 }
 
-const ReturnsSummary = ({ 
+export default function ReturnsSummary({ 
   totalPaid, 
   totalPending, 
   averageMonthlyReturn,
   isRefreshing = false,
-  onRefresh 
-}: ReturnsSummaryProps) => {
+  onRefresh
+}: ReturnsSummaryProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <div className="bg-gradient-to-r from-green-100 to-green-50 p-5 rounded-lg border border-green-100">
-        <h3 className="text-sm font-semibold text-green-800 mb-2">Rendements versés</h3>
-        <div className="text-2xl font-bold text-green-700">{totalPaid.toLocaleString()} €</div>
-        <p className="text-xs text-green-600 mt-1">
-          Total des rendements déjà versés
-        </p>
+    <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
+      <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg transition-all duration-300 hover:shadow-md border border-green-100">
+        <div className="flex items-center mb-2 justify-between">
+          <div className="flex items-center">
+            <div className="bg-green-100 p-1.5 rounded-lg mr-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </div>
+            <p className="text-xs text-green-700">Total des rendements perçus</p>
+          </div>
+          {onRefresh && (
+            <button 
+              onClick={onRefresh}
+              className="text-green-600 hover:text-green-800 transition-colors"
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+          )}
+        </div>
+        <p className="text-lg font-medium text-green-700">{totalPaid} €</p>
       </div>
       
-      <div className="bg-gradient-to-r from-blue-100 to-blue-50 p-5 rounded-lg border border-blue-100">
-        <h3 className="text-sm font-semibold text-blue-800 mb-2">Rendements à venir</h3>
-        <div className="text-2xl font-bold text-blue-700">{totalPending.toLocaleString()} €</div>
-        <p className="text-xs text-blue-600 mt-1">
-          Rendements prévus pour les 6 prochains mois
-        </p>
+      <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-4 rounded-lg transition-all duration-300 hover:shadow-md border border-orange-100">
+        <div className="flex items-center mb-2">
+          <div className="bg-orange-100 p-1.5 rounded-lg mr-2">
+            <Clock className="h-4 w-4 text-bgs-orange" />
+          </div>
+          <p className="text-xs text-bgs-orange">Rendements en attente</p>
+        </div>
+        <p className="text-lg font-medium text-bgs-orange">{totalPending} €</p>
       </div>
       
-      <div className="bg-white p-5 rounded-lg border border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700 mb-2">Rendement mensuel moyen</h3>
-          <button 
-            onClick={onRefresh}
-            className="text-bgs-blue hover:text-bgs-blue-dark text-xs flex items-center gap-1"
-          >
-            <RefreshCcw className={`h-3 w-3 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Actualiser
-          </button>
+      <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg transition-all duration-300 hover:shadow-md border border-blue-100">
+        <div className="flex items-center mb-2">
+          <div className="bg-blue-100 p-1.5 rounded-lg mr-2">
+            <TrendingUp className="h-4 w-4 text-blue-600" />
+          </div>
+          <p className="text-xs text-blue-700">Rendement mensuel moyen</p>
         </div>
-        <div className="text-2xl font-bold text-bgs-blue">
-          {averageMonthlyReturn.toLocaleString()} €
-        </div>
-        <p className="text-xs text-gray-500 mt-1">
-          Moyenne mensuelle calculée sur l'année
+        <p className="text-lg font-medium text-blue-700">
+          {averageMonthlyReturn} €
         </p>
       </div>
     </div>
   );
-};
-
-export default ReturnsSummary;
+}

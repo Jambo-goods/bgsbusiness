@@ -251,57 +251,6 @@ export type Database = {
         }
         Relationships: []
       }
-      scheduled_payments: {
-        Row: {
-          created_at: string
-          cumulative_amount: number | null
-          investors_count: number | null
-          payment_date: string
-          project_id: string | null
-          status: string
-          total_invested_amount: number
-          total_scheduled_amount: number
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          cumulative_amount?: number | null
-          investors_count?: number | null
-          payment_date: string
-          project_id?: string | null
-          status?: string
-          total_invested_amount?: number
-          total_scheduled_amount?: number
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          cumulative_amount?: number | null
-          investors_count?: number | null
-          payment_date?: string
-          project_id?: string | null
-          status?: string
-          total_invested_amount?: number
-          total_scheduled_amount?: number
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_project"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scheduled_payments_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       wallet_transactions: {
         Row: {
           amount: number
@@ -380,16 +329,6 @@ export type Database = {
         Args: {
           user_id: string
           increment_amount: number
-        }
-        Returns: undefined
-      }
-      initialize_all_projects_scheduled_payments: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      initialize_project_scheduled_payments: {
-        Args: {
-          project_uuid: string
         }
         Returns: undefined
       }

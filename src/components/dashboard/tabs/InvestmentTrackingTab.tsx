@@ -1,7 +1,6 @@
-
 import React from "react";
 import { Project } from "@/types/project";
-import { AlertCircle, RefreshCcw, Database } from "lucide-react";
+import { AlertCircle, RefreshCcw } from "lucide-react";
 import FilterControls from "./investment-tracking/FilterControls";
 import PaymentsTable from "./investment-tracking/PaymentsTable";
 import ReturnsSummary from "./investment-tracking/ReturnsSummary";
@@ -10,7 +9,6 @@ import LoadingIndicator from "./investment-tracking/LoadingIndicator";
 import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracking";
 import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
 import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
-import { format } from "date-fns";
 
 interface InvestmentTrackingTabProps {
   userInvestments: Project[];
@@ -24,15 +22,15 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
     setFilterStatus,
     isLoading,
     paymentRecords,
-    scheduledPayments,
     animateRefresh,
     userId,
-    syncStatus,
     handleSort,
     handleRefresh
   } = useInvestmentTracking(userInvestments);
   
   const {
+    cumulativeReturns,
+    filteredAndSortedPayments,
     totalPaid,
     totalPending,
     averageMonthlyReturn
@@ -40,53 +38,11 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
   
   useInvestmentSubscriptions(userId, handleRefresh);
   
-  // Sort scheduled payments according to the selected criteria, but don't filter
-  const sortedScheduledPayments = React.useMemo(() => {
-    return [...scheduledPayments]
-      .sort((a, b) => {
-        if (sortColumn === 'date') {
-          return sortDirection === 'asc' 
-            ? new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime() 
-            : new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime();
-        } else if (sortColumn === 'amount') {
-          return sortDirection === 'asc' 
-            ? Number(a.total_scheduled_amount) - Number(b.total_scheduled_amount) 
-            : Number(b.total_scheduled_amount) - Number(a.total_scheduled_amount);
-        } else if (sortColumn === 'projectName') {
-          const nameA = a.project?.name || '';
-          const nameB = b.project?.name || '';
-          return sortDirection === 'asc'
-            ? nameA.localeCompare(nameB)
-            : nameB.localeCompare(nameA);
-        } else if (sortColumn === 'investors') {
-          return sortDirection === 'asc'
-            ? (a.investors_count || 0) - (b.investors_count || 0)
-            : (b.investors_count || 0) - (a.investors_count || 0);
-        }
-        return 0;
-      });
-  }, [scheduledPayments, sortColumn, sortDirection]);
-  
-  const hasData = scheduledPayments && scheduledPayments.length > 0;
-  
-  const renderSyncStatus = () => {
-    if (!syncStatus.lastSynced) return null;
-    
-    return (
-      <div className="text-xs text-gray-500 flex items-center mt-1">
-        <Database className="h-3 w-3 mr-1" />
-        <span>
-          {syncStatus.isError 
-            ? "Erreur de synchronisation" 
-            : `Synchronisé le ${format(syncStatus.lastSynced, "dd/MM/yyyy à HH:mm")}`}
-        </span>
-      </div>
-    );
-  };
+  const hasData = paymentRecords && paymentRecords.length > 0;
   
   const renderContent = () => {
     if (isLoading) {
-      return <LoadingIndicator message="Chargement des données de versements..." />;
+      return <LoadingIndicator message="Chargement des données de rendement..." />;
     }
     
     if (!hasData) {
@@ -94,12 +50,11 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
         <div className="py-10 text-center">
           <div className="bg-blue-50 p-6 rounded-lg inline-block mb-4">
             <AlertCircle className="h-10 w-10 text-blue-500 mx-auto mb-2" />
-            <h3 className="text-lg font-medium text-bgs-blue mb-1">Aucun versement trouvé</h3>
+            <h3 className="text-lg font-medium text-bgs-blue mb-1">Aucun rendement trouvé</h3>
             <p className="text-sm text-bgs-gray-medium">
-              Aucun versement programmé n'a été trouvé. <br />
-              Veuillez vérifier ultérieurement.
+              Aucun investissement n'a été trouvé pour votre compte. <br />
+              Investissez dans des projets pour voir apparaître vos rendements ici.
             </p>
-            {renderSyncStatus()}
           </div>
           <div>
             <button
@@ -124,12 +79,9 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
           onRefresh={handleRefresh}
         />
         
-        <div className="mb-2">
-          {renderSyncStatus()}
-        </div>
-        
         <PaymentsTable 
-          scheduledPayments={sortedScheduledPayments}
+          filteredAndSortedPayments={filteredAndSortedPayments}
+          cumulativeReturns={cumulativeReturns}
           sortColumn={sortColumn}
           sortDirection={sortDirection}
           handleSort={handleSort}

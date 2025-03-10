@@ -1,5 +1,5 @@
 
-import { PaymentRecord, ScheduledPayment } from "./types";
+import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
 export const fetchRealTimeInvestmentData = async (userId: string | undefined) => {
@@ -33,36 +33,6 @@ export const fetchRealTimeInvestmentData = async (userId: string | undefined) =>
   } catch (error) {
     console.error("Error in fetchRealTimeInvestmentData:", error);
     return [];
-  }
-};
-
-export const fetchScheduledPayments = async (): Promise<ScheduledPayment[]> => {
-  try {
-    // Get all scheduled payments with project details
-    const { data, error } = await supabase
-      .from('scheduled_payments')
-      .select(`
-        *,
-        project:projects(name, image)
-      `)
-      .order('payment_date', { ascending: false });
-    
-    if (error) {
-      console.error("Error fetching scheduled payments:", error);
-      throw error;
-    }
-    
-    if (!data) return [];
-    
-    // Map the data to match our ScheduledPayment type
-    return data.map(payment => ({
-      ...payment,
-      id: `payment-${payment.project_id}-${payment.payment_date}`,
-      project: payment.project || { name: null, image: null }
-    })) as ScheduledPayment[];
-  } catch (error) {
-    console.error("Error fetching scheduled payments:", error);
-    throw error; // Re-throw to propagate to caller
   }
 };
 
@@ -107,25 +77,17 @@ export const filterAndSortPayments = (
     });
 };
 
-export const generatePaymentsFromRealData = (investments: any[], scheduledPayments: ScheduledPayment[] = []): PaymentRecord[] => {
+export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[] => {
   if (!investments || investments.length === 0) {
     console.log("No investments provided to generate payment records");
-    
-    // If we have scheduled payments but no investments, just use the scheduled payments
-    if (scheduledPayments.length > 0) {
-      console.log(`Converting ${scheduledPayments.length} scheduled payments to payment records`);
-      return scheduledPaymentsToPaymentRecords(scheduledPayments);
-    }
-    
     return [];
   }
   
-  console.log(`Generating payment records from ${investments.length} real investments and ${scheduledPayments.length} scheduled payments`);
+  console.log(`Generating payment records from ${investments.length} real investments`);
   
   let payments: PaymentRecord[] = [];
   const now = new Date();
   
-  // Create payments from investments data
   investments.forEach((investment, index) => {
     if (!investment.projects) {
       console.log(`Investment at index ${index} missing projects data:`, investment);
@@ -136,7 +98,7 @@ export const generatePaymentsFromRealData = (investments: any[], scheduledPaymen
     const startDate = investment.date ? new Date(investment.date) : new Date();
     const amount = investment.amount || 0;
     const yield_rate = investment.yield_rate || investment.projects.yield || 0;
-    const monthlyReturn = Math.round((yield_rate / 100) * amount / 12);
+    const monthlyReturn = Math.round((yield_rate / 100) * amount);
     
     console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}`);
     
@@ -181,26 +143,24 @@ export const generatePaymentsFromRealData = (investments: any[], scheduledPaymen
       type: 'yield',
       status: 'pending'
     });
+    
+    // Future scheduled payments
+    for (let i = 2; i <= 3; i++) {
+      const futureDate = new Date(now);
+      futureDate.setMonth(now.getMonth() + i);
+      
+      payments.push({
+        id: `payment-${investment.id}-future-${i}`,
+        projectId: investment.project_id,
+        projectName: investment.projects.name,
+        amount: monthlyReturn,
+        date: futureDate,
+        type: 'yield',
+        status: 'scheduled'
+      });
+    }
   });
   
-  // Convert scheduled payments to PaymentRecord format
-  const scheduledRecords = scheduledPaymentsToPaymentRecords(scheduledPayments);
-  payments = [...payments, ...scheduledRecords];
-  
-  console.log(`Generated ${payments.length} payment records from real investment data and scheduled payments`);
+  console.log(`Generated ${payments.length} payment records from real investment data`);
   return payments;
-};
-
-// Helper function to convert ScheduledPayment objects to PaymentRecord objects
-const scheduledPaymentsToPaymentRecords = (scheduledPayments: ScheduledPayment[]): PaymentRecord[] => {
-  return scheduledPayments.map(payment => ({
-    id: payment.id || `payment-${payment.project_id}-${payment.payment_date}`,
-    projectId: payment.project_id || '',
-    projectName: payment.project?.name || "Projet inconnu",
-    amount: Number(payment.total_scheduled_amount || 0),
-    date: new Date(payment.payment_date),
-    type: 'yield',
-    status: payment.status as 'paid' | 'pending' | 'scheduled',
-    cumulativeAmount: payment.cumulative_amount ? Number(payment.cumulative_amount) : undefined
-  }));
 };

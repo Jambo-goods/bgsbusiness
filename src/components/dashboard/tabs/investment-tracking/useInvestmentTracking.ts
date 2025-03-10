@@ -1,12 +1,10 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/types/project";
-import { PaymentRecord, ScheduledPayment, DatabaseSyncStatus } from "./types";
+import { PaymentRecord } from "./types";
 import { toast } from "sonner";
 import { 
   fetchRealTimeInvestmentData,
-  fetchScheduledPayments,
   generatePaymentsFromRealData
 } from "./utils";
 
@@ -16,14 +14,8 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [isLoading, setIsLoading] = useState(true);
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
-  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
   const [animateRefresh, setAnimateRefresh] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
-  const [syncStatus, setSyncStatus] = useState<DatabaseSyncStatus>({
-    lastSynced: null,
-    isError: false,
-    errorMessage: null
-  });
   
   const loadRealTimeData = useCallback(async () => {
     setIsLoading(true);
@@ -37,55 +29,36 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
           description: "Connectez-vous pour voir vos données."
         });
         setPaymentRecords([]);
-        setScheduledPayments([]);
-        setSyncStatus({
-          lastSynced: null,
-          isError: true,
-          errorMessage: "Pas de session active"
-        });
         return;
       }
       
       const currentUserId = session.session.user.id;
       setUserId(currentUserId);
+      console.log("Using user ID for investment tracking:", currentUserId);
       
-      // Fetch ALL scheduled payments with fresh data from the database
-      const scheduledPaymentsData = await fetchScheduledPayments();
-      setScheduledPayments(scheduledPaymentsData);
-      console.log("Fetched scheduled payments:", scheduledPaymentsData.length);
-      
-      // Then get user investments for additional data
       const investments = await fetchRealTimeInvestmentData(currentUserId);
+      
       console.log("Fetched investments:", investments.length);
       
-      // Generate combined payment records
-      const realPayments = generatePaymentsFromRealData(investments, scheduledPaymentsData);
-      setPaymentRecords(realPayments);
-      console.log("Updated payment records with data:", realPayments.length);
-      
-      // Update sync status
-      setSyncStatus({
-        lastSynced: new Date(),
-        isError: false,
-        errorMessage: null
-      });
-      
-      toast.success("Données synchronisées", {
-        description: "Les données de versement ont été mises à jour."
-      });
-      
+      if (investments && investments.length > 0) {
+        // Use investment data to generate payment records
+        const realPayments = generatePaymentsFromRealData(investments);
+        setPaymentRecords(realPayments);
+        console.log("Updated payment records with data:", realPayments.length);
+      } else {
+        // No investments found
+        console.log("No investments found");
+        setPaymentRecords([]);
+        toast.info("Aucun investissement", {
+          description: "Aucun investissement trouvé pour votre compte."
+        });
+      }
     } catch (error) {
       console.error("Error loading investment data:", error);
-      toast.error("Erreur de synchronisation", {
-        description: "Impossible de charger les données de versement."
+      toast.error("Erreur de chargement", {
+        description: "Impossible de charger les données de rendement."
       });
       setPaymentRecords([]);
-      setScheduledPayments([]);
-      setSyncStatus({
-        lastSynced: new Date(),
-        isError: true,
-        errorMessage: error instanceof Error ? error.message : "Erreur inconnue"
-      });
     } finally {
       setIsLoading(false);
       setAnimateRefresh(false);
@@ -95,33 +68,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   useEffect(() => {
     loadRealTimeData();
     
-    // Set up subscription for real-time updates to scheduled_payments
-    const scheduledPaymentsSubscription = supabase
-      .channel('scheduled_payments_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'scheduled_payments'
-      }, () => {
-        console.log("Scheduled payments changed, refreshing data...");
-        loadRealTimeData();
-      })
-      .subscribe();
-    
-    // Set up subscription for real-time updates to investments
-    const investmentsSubscription = supabase
-      .channel('investments_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'investments'
-      }, () => {
-        console.log("Investments changed, refreshing data...");
-        loadRealTimeData();
-      })
-      .subscribe();
-    
-    // Set up manual refresh interval as a backup
+    // Set up manual refresh interval instead of real-time subscription
     const refreshInterval = setInterval(() => {
       console.log("Running scheduled data refresh...");
       loadRealTimeData();
@@ -129,8 +76,6 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
     
     return () => {
       clearInterval(refreshInterval);
-      scheduledPaymentsSubscription.unsubscribe();
-      investmentsSubscription.unsubscribe();
     };
   }, [loadRealTimeData]);
   
@@ -158,10 +103,8 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
     setFilterStatus,
     isLoading,
     paymentRecords,
-    scheduledPayments,
     animateRefresh,
     userId,
-    syncStatus,
     handleSort,
     handleRefresh
   };
