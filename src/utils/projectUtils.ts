@@ -47,8 +47,7 @@ export const createProjectInDatabase = async (project: Project, toast: any) => {
         possible_durations: project.possibleDurations,
         status: project.status || 'active',
         profitability: project.profitability,
-        image: project.image,
-        first_payment_date: project.firstPaymentDate
+        image: project.image
       })
       .select('id')
       .single();
@@ -120,12 +119,7 @@ export const fetchProjectsFromDatabase = async () => {
         fundingProgress: project.funding_progress,
         featured: project.featured,
         possibleDurations: project.possible_durations,
-        image: project.image,
-        startDate: project.start_date,
-        endDate: project.end_date,
-        raised: project.raised,
-        target: project.target,
-        firstPaymentDate: project.first_payment_date
+        image: project.image
       };
     });
   } catch (error) {

@@ -22,5 +22,4 @@ export interface Project {
   target?: number;
   amount?: number;
   investmentDate?: string;
-  firstPaymentDate?: string;
 }

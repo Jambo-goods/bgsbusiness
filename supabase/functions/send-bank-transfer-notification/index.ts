@@ -15,7 +15,6 @@ interface BankTransferNotificationRequest {
   userId: string;
   userEmail: string;
   reference: string;
-  amount: number;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -26,9 +25,9 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log("Received bank transfer notification request");
-    const { userName, userId, userEmail, reference, amount }: BankTransferNotificationRequest = await req.json();
+    const { userName, userId, userEmail, reference }: BankTransferNotificationRequest = await req.json();
     
-    console.log(`Preparing to send notification for user: ${userName} (${userId}), reference: ${reference}, amount: ${amount}€`);
+    console.log(`Preparing to send notification for user: ${userName} (${userId}), reference: ${reference}`);
     console.log(`Sending email to: ${adminEmail}`);
 
     const emailResponse = await resend.emails.send({
@@ -40,8 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
         <p><strong>Utilisateur:</strong> ${userName}</p>
         <p><strong>ID utilisateur:</strong> ${userId}</p>
         <p><strong>Email:</strong> ${userEmail}</p>
-        <p><strong>Montant:</strong> ${amount}€</p>
-        <p>${userName} a confirmé avoir effectué un virement bancaire de ${amount}€ avec la référence ${reference}</p>
+        <p>${userName} a confirmé avoir effectué un virement bancaire avec la référence ${reference}</p>
         <p>Veuillez vérifier la réception du virement avant de créditer le compte.</p>
       `,
     });

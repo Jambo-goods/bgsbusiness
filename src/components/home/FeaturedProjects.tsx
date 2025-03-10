@@ -1,26 +1,14 @@
 
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CircleCheck, Star, Calendar } from "lucide-react";
+import { ArrowRight, CircleCheck, Star } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { projects } from "@/data/projects";
 import { Project } from "@/types/project";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 
 export default function FeaturedProjects() {
   const [visibleProjects, setVisibleProjects] = useState(3);
   const featuredProjects = projects.filter((project: Project) => project.featured);
-  
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "Date non définie";
-    try {
-      return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr });
-    } catch (error) {
-      console.error("Date parsing error:", error);
-      return "Date non valide";
-    }
-  };
   
   return (
     <section className="py-16 bg-gradient-to-b from-white to-bgs-gray-light">
@@ -73,13 +61,6 @@ export default function FeaturedProjects() {
                   </div>
                   <Progress value={project.fundingProgress} className="h-1.5" />
                 </div>
-                
-                {project.firstPaymentDate && (
-                  <div className="flex items-center mb-4 text-xs text-bgs-blue/70">
-                    <Calendar size={14} className="mr-1 text-bgs-blue/60" />
-                    <span>Premier versement: {formatDate(project.firstPaymentDate)}</span>
-                  </div>
-                )}
                 
                 <div className="flex items-center justify-between">
                   <div>
