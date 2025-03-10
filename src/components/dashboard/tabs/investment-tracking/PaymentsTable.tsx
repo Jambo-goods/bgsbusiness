@@ -1,3 +1,4 @@
+
 import React from "react";
 import { format } from "date-fns";
 import { 
@@ -44,14 +45,24 @@ export default function PaymentsTable({
 
   console.log("Scheduled payments in PaymentsTable:", scheduledPayments);
 
+  // Calculate total investment amount from userInvestments
+  const totalInvestedAmount = userInvestments.reduce((sum, project) => {
+    return sum + (project.investedAmount || 0);
+  }, 0);
+
   const allPayments = [
     ...filteredAndSortedPayments,
     ...scheduledPayments.map(sp => {
+      // Calculate amount based on percentage and total invested amount
+      const percentage = sp.percentage || 0;
+      // Use the actual total investment amount instead of the one from the database
+      const calculatedAmount = (percentage / 100) * totalInvestedAmount;
+
       return {
         id: sp.id,
         projectId: sp.project_id,
         projectName: sp.projects?.name || "Projet inconnu",
-        amount: sp.total_scheduled_amount,
+        amount: calculatedAmount,
         date: new Date(sp.payment_date),
         type: 'yield' as const,
         status: sp.status as 'paid' | 'pending' | 'scheduled',
