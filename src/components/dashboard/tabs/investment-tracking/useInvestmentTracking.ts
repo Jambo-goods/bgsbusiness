@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/types/project";
@@ -46,9 +45,6 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
         const realPayments = generatePaymentsFromRealData(investments);
         setPaymentRecords(realPayments);
         console.log("Updated payment records with data:", realPayments.length);
-        toast.success("Données mises à jour", {
-          description: `${realPayments.length} versements chargés avec succès.`
-        });
       } else {
         // No investments found
         console.log("No investments found");
