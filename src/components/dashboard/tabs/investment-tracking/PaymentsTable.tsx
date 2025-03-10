@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow 
 } from "@/components/ui/table";
-import { Calendar, Euro, SortAsc, SortDesc, Check, Clock, AlertCircle } from "lucide-react";
+import { Calendar, SortAsc, SortDesc, Check, Clock, AlertCircle } from "lucide-react";
 import { Project } from "@/types/project";
 import { PaymentRecord } from "./types";
 
@@ -110,10 +110,7 @@ export default function PaymentsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div className="flex items-center">
-                    <Euro className="h-3.5 w-3.5 mr-1.5 text-green-500" />
-                    <span className="text-green-600 font-medium">{payment.amount} €</span>
-                  </div>
+                  <span className="text-green-600 font-medium">{payment.amount} €</span>
                 </TableCell>
                 <TableCell>
                   {cumulativeRecord ? (
