@@ -43,6 +43,9 @@ export default function PaymentsTable({
     }
   };
 
+  // Debug: Log the scheduled payments to check what's coming from the database
+  console.log("Scheduled payments in PaymentsTable:", scheduledPayments);
+
   // Combine scheduled payments with filtered payments
   const allPayments = [
     ...filteredAndSortedPayments,

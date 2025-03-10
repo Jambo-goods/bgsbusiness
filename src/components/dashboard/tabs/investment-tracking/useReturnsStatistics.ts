@@ -26,7 +26,15 @@ export const useReturnsStatistics = (
           .order('payment_date', { ascending: true });
 
         if (error) throw error;
-        setScheduledPayments(payments || []);
+        
+        // Cast the payments to match the ScheduledPayment type
+        const typedPayments: ScheduledPayment[] = payments?.map(payment => ({
+          ...payment,
+          status: payment.status as 'scheduled' | 'pending' | 'paid'
+        })) || [];
+        
+        setScheduledPayments(typedPayments);
+        console.log("Fetched scheduled payments:", typedPayments);
       } catch (error) {
         console.error('Error fetching scheduled payments:', error);
       } finally {
