@@ -4,12 +4,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon, AlertCircle, CopyIcon, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function BankTransferInstructions() {
   const [copied, setCopied] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [transferAmount, setTransferAmount] = useState("");
 
   const bankDetails = {
     name: "BGS Invest",
@@ -28,6 +31,13 @@ export default function BankTransferInstructions() {
 
   const handleConfirmTransfer = async () => {
     try {
+      // Validate transfer amount
+      const amount = parseFloat(transferAmount);
+      if (!transferAmount || isNaN(amount) || amount < 100) {
+        toast.error("Veuillez saisir un montant valide (minimum 100€)");
+        return;
+      }
+
       setIsConfirming(true);
       
       // Get current user session
@@ -44,11 +54,12 @@ export default function BankTransferInstructions() {
       await supabase.from('notifications').insert({
         user_id: userId,
         title: "Virement bancaire confirmé",
-        description: `Vous avez confirmé avoir effectué un virement bancaire avec la référence ${bankDetails.reference}`,
+        description: `Vous avez confirmé avoir effectué un virement bancaire de ${amount}€ avec la référence ${bankDetails.reference}`,
         type: "deposit",
         category: "finance",
         metadata: {
           reference: bankDetails.reference,
+          amount: amount,
           timestamp: new Date().toISOString()
         }
       });
@@ -57,6 +68,7 @@ export default function BankTransferInstructions() {
       await supabase.from('bank_transfers').insert({
         user_id: userId,
         reference: bankDetails.reference,
+        amount: amount,
         status: 'pending',
         notes: 'Confirmation de virement par l\'utilisateur'
       });
@@ -64,10 +76,10 @@ export default function BankTransferInstructions() {
       // Add a record to the wallet_transactions table
       await supabase.from('wallet_transactions').insert({
         user_id: userId,
-        amount: 0, // The actual amount will be updated by admin when they process it
+        amount: amount, // Now we use the actual amount entered by the user
         type: "deposit",
         status: "pending",
-        description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
+        description: `Virement bancaire confirmé de ${amount}€ (réf: ${bankDetails.reference})`
       });
       
       // Fetch user profile data for email notification
@@ -85,7 +97,8 @@ export default function BankTransferInstructions() {
           userName: userName,
           userId: userId,
           userEmail: userEmail || "Email non disponible",
-          reference: bankDetails.reference
+          reference: bankDetails.reference,
+          amount: amount
         }
       });
       
@@ -96,6 +109,9 @@ export default function BankTransferInstructions() {
       }
       
       toast.success("Confirmation de virement envoyée. Nous traiterons votre virement dès réception.");
+      
+      // Reset the transfer amount field after successful submission
+      setTransferAmount("");
     } catch (error) {
       console.error("Erreur lors de la confirmation du virement:", error);
       toast.error("Une erreur est survenue lors de la confirmation");
@@ -187,20 +203,36 @@ export default function BankTransferInstructions() {
         </AlertDescription>
       </Alert>
       
-      <div className="flex flex-col items-center pt-4 border-t border-gray-200">
-        <Button 
-          onClick={handleConfirmTransfer}
-          disabled={isConfirming}
-          className="w-full md:w-auto bg-gradient-to-r from-bgs-blue to-bgs-blue-light text-white"
-        >
-          {isConfirming ? 
-            "Confirmation en cours..." : 
-            "J'ai effectué le virement bancaire"
-          }
-        </Button>
-        <p className="text-sm text-gray-500 mt-2 text-center">
-          Une fois le virement effectué, cliquez sur ce bouton pour nous informer
-        </p>
+      <div className="space-y-4 pt-4 border-t border-gray-200">
+        <div>
+          <Label htmlFor="transferAmount" className="font-medium">Montant du virement (€)</Label>
+          <Input
+            id="transferAmount"
+            type="number"
+            min="100"
+            step="1"
+            value={transferAmount}
+            onChange={(e) => setTransferAmount(e.target.value)}
+            placeholder="Saisissez le montant du virement (minimum 100€)"
+            className="mt-1"
+          />
+        </div>
+        
+        <div className="flex flex-col items-center">
+          <Button 
+            onClick={handleConfirmTransfer}
+            disabled={isConfirming}
+            className="w-full md:w-auto bg-gradient-to-r from-bgs-blue to-bgs-blue-light text-white"
+          >
+            {isConfirming ? 
+              "Confirmation en cours..." : 
+              "J'ai effectué le virement bancaire"
+            }
+          </Button>
+          <p className="text-sm text-gray-500 mt-2 text-center">
+            Une fois le virement effectué, cliquez sur ce bouton pour nous informer
+          </p>
+        </div>
       </div>
     </div>
   );
