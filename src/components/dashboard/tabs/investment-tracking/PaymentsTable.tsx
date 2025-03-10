@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/table";
 import { Calendar, SortAsc, SortDesc, Check, Clock, AlertCircle } from "lucide-react";
 import { Project } from "@/types/project";
-import { PaymentRecord } from "./types";
+import { PaymentRecord, ScheduledPayment } from "./types";
 
 interface PaymentsTableProps {
   filteredAndSortedPayments: PaymentRecord[];
+  scheduledPayments: ScheduledPayment[];
   cumulativeReturns: (PaymentRecord & { cumulativeReturn: number })[];
   sortColumn: string;
   sortDirection: "asc" | "desc";
@@ -24,6 +25,7 @@ interface PaymentsTableProps {
 
 export default function PaymentsTable({ 
   filteredAndSortedPayments,
+  scheduledPayments,
   cumulativeReturns,
   sortColumn,
   sortDirection,
@@ -40,6 +42,20 @@ export default function PaymentsTable({
         return <AlertCircle className="h-3.5 w-3.5 mr-1.5 text-blue-500" />;
     }
   };
+
+  // Combine scheduled payments with filtered payments
+  const allPayments = [
+    ...filteredAndSortedPayments,
+    ...scheduledPayments.map(sp => ({
+      id: sp.id,
+      projectId: sp.project_id,
+      projectName: sp.projects?.name || "Projet inconnu",
+      amount: sp.total_scheduled_amount,
+      date: new Date(sp.payment_date),
+      type: 'yield' as const,
+      status: sp.status as 'paid' | 'pending' | 'scheduled'
+    }))
+  ].sort((a, b) => a.date.getTime() - b.date.getTime());
   
   return (
     <div className="overflow-x-auto">
@@ -81,13 +97,13 @@ export default function PaymentsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredAndSortedPayments.map((payment) => {
+          {allPayments.map((payment) => {
             // Find cumulative value for this payment if it's paid
             const cumulativeRecord = payment.status === 'paid' 
               ? cumulativeReturns.find(record => record.id === payment.id)
               : null;
             
-            // Find project image - first try from userInvestments, then use a default
+            // Find project image
             const projectImage = userInvestments.find(p => p.id === payment.projectId)?.image || 
               "https://via.placeholder.com/40";
               
@@ -138,7 +154,7 @@ export default function PaymentsTable({
               </TableRow>
             );
           })}
-          {filteredAndSortedPayments.length === 0 && (
+          {allPayments.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} className="text-center py-4 text-bgs-gray-medium">
                 Aucun versement trouvé

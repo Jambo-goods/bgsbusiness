@@ -251,6 +251,59 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_payments: {
+        Row: {
+          created_at: string
+          cumulative_amount: number | null
+          id: string
+          investors_count: number | null
+          payment_date: string
+          percentage: number
+          processed_at: string | null
+          project_id: string
+          status: string
+          total_invested_amount: number | null
+          total_scheduled_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cumulative_amount?: number | null
+          id?: string
+          investors_count?: number | null
+          payment_date: string
+          percentage?: number
+          processed_at?: string | null
+          project_id: string
+          status: string
+          total_invested_amount?: number | null
+          total_scheduled_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cumulative_amount?: number | null
+          id?: string
+          investors_count?: number | null
+          payment_date?: string
+          percentage?: number
+          processed_at?: string | null
+          project_id?: string
+          status?: string
+          total_invested_amount?: number | null
+          total_scheduled_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_payments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_transactions: {
         Row: {
           amount: number
@@ -329,6 +382,16 @@ export type Database = {
         Args: {
           user_id: string
           increment_amount: number
+        }
+        Returns: undefined
+      }
+      initialize_all_projects_scheduled_payments: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      initialize_project_scheduled_payments: {
+        Args: {
+          project_uuid: string
         }
         Returns: undefined
       }
