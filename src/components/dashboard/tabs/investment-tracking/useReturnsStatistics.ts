@@ -27,22 +27,14 @@ export const useReturnsStatistics = (
 
         if (error) throw error;
         
-        // Cast the payments to match the ScheduledPayment type and calculate amounts
-        const typedPayments: ScheduledPayment[] = payments?.map(payment => {
-          // Make sure total_scheduled_amount is calculated based on percentage
-          const calculatedAmount = payment.percentage && payment.total_invested_amount
-            ? (payment.total_invested_amount * payment.percentage / 100)
-            : payment.total_scheduled_amount;
-            
-          return {
-            ...payment,
-            status: payment.status as 'scheduled' | 'pending' | 'paid',
-            total_scheduled_amount: calculatedAmount
-          };
-        }) || [];
+        // Cast the payments to match the ScheduledPayment type
+        const typedPayments: ScheduledPayment[] = payments?.map(payment => ({
+          ...payment,
+          status: payment.status as 'scheduled' | 'pending' | 'paid'
+        })) || [];
         
         setScheduledPayments(typedPayments);
-        console.log("Fetched scheduled payments with calculated amounts:", typedPayments);
+        console.log("Fetched scheduled payments:", typedPayments);
       } catch (error) {
         console.error('Error fetching scheduled payments:', error);
       } finally {
