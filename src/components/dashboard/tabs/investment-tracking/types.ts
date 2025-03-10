@@ -12,9 +12,7 @@ export interface PaymentRecord {
 
 export interface ScheduledPayment {
   id: string;
-  user_id: string;
   project_id: string;
-  investment_id: string | null;
   amount: number;
   payment_date: string;
   cumulative_amount: number | null;

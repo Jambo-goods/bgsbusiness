@@ -257,45 +257,32 @@ export type Database = {
           created_at: string
           cumulative_amount: number | null
           id: string
-          investment_id: string | null
           payment_date: string
           project_id: string | null
           status: string
           updated_at: string
-          user_id: string
         }
         Insert: {
           amount: number
           created_at?: string
           cumulative_amount?: number | null
           id?: string
-          investment_id?: string | null
           payment_date: string
           project_id?: string | null
           status?: string
           updated_at?: string
-          user_id: string
         }
         Update: {
           amount?: number
           created_at?: string
           cumulative_amount?: number | null
           id?: string
-          investment_id?: string | null
           payment_date?: string
           project_id?: string | null
           status?: string
           updated_at?: string
-          user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "scheduled_payments_investment_id_fkey"
-            columns: ["investment_id"]
-            isOneToOne: false
-            referencedRelation: "investments"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "scheduled_payments_project_id_fkey"
             columns: ["project_id"]

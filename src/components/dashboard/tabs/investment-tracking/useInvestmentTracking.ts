@@ -43,8 +43,8 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       const investments = await fetchRealTimeInvestmentData(currentUserId);
       console.log("Fetched investments:", investments.length);
       
-      // Fetch scheduled payments
-      const scheduledPaymentsData = await fetchScheduledPayments(currentUserId);
+      // Fetch scheduled payments (now without user_id filter)
+      const scheduledPaymentsData = await fetchScheduledPayments();
       setScheduledPayments(scheduledPaymentsData);
       console.log("Fetched scheduled payments:", scheduledPaymentsData.length);
       
@@ -63,7 +63,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
         console.log("No investments or scheduled payments found");
         setPaymentRecords([]);
         toast.info("Aucune donnée", {
-          description: "Aucun investissement ou versement programmé trouvé pour votre compte."
+          description: "Aucun investissement ou versement programmé trouvé."
         });
       }
     } catch (error) {
@@ -87,8 +87,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'scheduled_payments',
-        filter: userId ? `user_id=eq.${userId}` : undefined
+        table: 'scheduled_payments'
       }, () => {
         console.log("Scheduled payments changed, refreshing data...");
         loadRealTimeData();
@@ -105,7 +104,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       clearInterval(refreshInterval);
       scheduledPaymentsSubscription.unsubscribe();
     };
-  }, [loadRealTimeData, userId]);
+  }, [loadRealTimeData]);
   
   // Toggle sort direction when clicking on a column header
   const handleSort = (column: string) => {

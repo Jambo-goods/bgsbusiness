@@ -1,4 +1,3 @@
-
 import { PaymentRecord, ScheduledPayment } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -36,21 +35,15 @@ export const fetchRealTimeInvestmentData = async (userId: string | undefined) =>
   }
 };
 
-export const fetchScheduledPayments = async (userId: string | undefined) => {
-  if (!userId) {
-    console.log("No user ID provided, cannot fetch scheduled payments");
-    return [];
-  }
-  
+export const fetchScheduledPayments = async () => {
   try {
-    console.log("Fetching scheduled payments for user:", userId);
+    console.log("Fetching all scheduled payments");
     const { data: scheduledPayments, error } = await supabase
       .from('scheduled_payments')
       .select(`
         *,
         projects(name, image)
       `)
-      .eq('user_id', userId)
       .order('payment_date', { ascending: true });
       
     if (error) {
@@ -183,14 +176,14 @@ export const generatePaymentsFromRealData = (investments: any[], scheduledPaymen
       status: 'pending'
     });
     
-    // Future scheduled payments (from the database if available)
-    const investmentScheduledPayments = scheduledPayments.filter(
-      payment => payment.investment_id === investment.id
+    // Find scheduled payments for this project
+    const projectScheduledPayments = scheduledPayments.filter(
+      payment => payment.project_id === investment.project_id
     );
     
-    if (investmentScheduledPayments.length > 0) {
+    if (projectScheduledPayments.length > 0) {
       // Add scheduled payments from the database
-      const scheduledRecords = scheduledPaymentsToPaymentRecords(investmentScheduledPayments);
+      const scheduledRecords = scheduledPaymentsToPaymentRecords(projectScheduledPayments);
       payments = [...payments, ...scheduledRecords];
     } else {
       // Generate default scheduled payments if none exist in database
@@ -212,14 +205,14 @@ export const generatePaymentsFromRealData = (investments: any[], scheduledPaymen
   });
   
   // Add any scheduled payments that aren't associated with a current investment
-  // (This could happen if an investment is removed but scheduled payments remain)
-  const unassociatedScheduledPayments = scheduledPayments.filter(
-    payment => !payments.some(p => p.id === payment.id) &&
-               !investments.some(inv => inv.id === payment.investment_id)
+  // This could happen if we have scheduled payments for projects the user doesn't have investments in
+  const investmentProjectIds = investments.map(inv => inv.project_id);
+  const otherScheduledPayments = scheduledPayments.filter(
+    payment => !investmentProjectIds.includes(payment.project_id)
   );
   
-  if (unassociatedScheduledPayments.length > 0) {
-    payments = [...payments, ...scheduledPaymentsToPaymentRecords(unassociatedScheduledPayments)];
+  if (otherScheduledPayments.length > 0) {
+    payments = [...payments, ...scheduledPaymentsToPaymentRecords(otherScheduledPayments)];
   }
   
   console.log(`Generated ${payments.length} payment records from real investment data and scheduled payments`);
