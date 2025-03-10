@@ -30,7 +30,10 @@ export const useReturnsStatistics = (
         // Cast the payments to match the ScheduledPayment type
         const typedPayments: ScheduledPayment[] = payments?.map(payment => {
           // Calculate the scheduled amount based on percentage
-          const calculatedAmount = payment.total_invested_amount * (payment.percentage / 100);
+          // Make sure to handle non-numeric values properly
+          const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
+          const investedAmount = typeof payment.total_invested_amount === 'number' ? payment.total_invested_amount : 0;
+          const calculatedAmount = investedAmount * (percentage / 100);
           
           return {
             ...payment,

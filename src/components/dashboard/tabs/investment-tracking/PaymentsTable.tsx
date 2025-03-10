@@ -1,4 +1,3 @@
-
 import React from "react";
 import { format } from "date-fns";
 import { 
@@ -43,14 +42,11 @@ export default function PaymentsTable({
     }
   };
 
-  // Debug: Log the scheduled payments to check what's coming from the database
   console.log("Scheduled payments in PaymentsTable:", scheduledPayments);
 
-  // Combine scheduled payments with filtered payments
   const allPayments = [
     ...filteredAndSortedPayments,
     ...scheduledPayments.map(sp => {
-      // The amount is now calculated from the percentage in useReturnsStatistics
       return {
         id: sp.id,
         projectId: sp.project_id,
@@ -106,12 +102,10 @@ export default function PaymentsTable({
         </TableHeader>
         <TableBody>
           {allPayments.map((payment) => {
-            // Find cumulative value for this payment if it's paid
             const cumulativeRecord = payment.status === 'paid' 
               ? cumulativeReturns.find(record => record.id === payment.id)
               : null;
             
-            // Find project image
             const projectImage = userInvestments.find(p => p.id === payment.projectId)?.image || 
               "https://via.placeholder.com/40";
               
@@ -134,7 +128,9 @@ export default function PaymentsTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-green-600 font-medium">{Math.round(payment.amount)} €</span>
+                  <span className="text-green-600 font-medium">
+                    {typeof payment.amount === 'number' ? Math.round(payment.amount) : 0} €
+                  </span>
                 </TableCell>
                 <TableCell>
                   {payment.percentage ? (
