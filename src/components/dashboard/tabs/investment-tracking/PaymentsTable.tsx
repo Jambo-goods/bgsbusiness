@@ -94,14 +94,17 @@ export default function PaymentsTable({
         </TableHeader>
         <TableBody>
           {scheduledPayments.length > 0 ? (
-            scheduledPayments.map((payment) => {
-              // Find project image - first try from userInvestments, then use a default
+            scheduledPayments.map((payment, index) => {
+              // Use index as fallback key if id is not available
+              const paymentKey = payment.id || `payment-${index}`;
+              
+              // Find project image - first try from payment.project, then from userInvestments, then use a default
               const projectImage = payment.project?.image || 
                 userInvestments.find(p => p.id === payment.project_id)?.image || 
                 "https://via.placeholder.com/40";
                 
               return (
-                <TableRow key={payment.id} className="animate-in fade-in duration-300">
+                <TableRow key={paymentKey} className="animate-in fade-in duration-300">
                   <TableCell className="font-medium">
                     <div className="flex items-center">
                       <img

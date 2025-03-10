@@ -11,7 +11,7 @@ export interface PaymentRecord {
 }
 
 export interface ScheduledPayment {
-  id: string;
+  id?: string; // Make ID optional to match the database schema
   project_id: string;
   total_invested_amount: number;
   total_scheduled_amount: number;

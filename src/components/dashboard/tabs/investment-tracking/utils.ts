@@ -1,4 +1,3 @@
-
 import { PaymentRecord, ScheduledPayment } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -38,25 +37,26 @@ export const fetchRealTimeInvestmentData = async (userId: string | undefined) =>
 
 export const fetchScheduledPayments = async () => {
   try {
-    console.log("Fetching all scheduled payments with project details");
-    const { data: scheduledPayments, error } = await supabase
+    // Get all scheduled payments with project details
+    const { data: scheduledPaymentsData, error: scheduledPaymentsError } = await supabase
       .from('scheduled_payments')
       .select(`
         *,
-        projects(name, image)
+        project:projects(name, image)
       `)
-      .order('payment_date', { ascending: true });
-      
-    if (error) {
-      console.error("Error fetching scheduled payments:", error);
-      throw error;
+      .order('payment_date', { ascending: false });
+    
+    if (scheduledPaymentsError) {
+      throw scheduledPaymentsError;
     }
     
-    console.log(`Fetched ${scheduledPayments?.length || 0} scheduled payments`);
-    
-    return scheduledPayments || [];
+    // Generate unique IDs for payments that don't have them
+    return scheduledPaymentsData.map(payment => ({
+      ...payment,
+      id: payment.id || `payment-${payment.project_id}-${payment.payment_date}`
+    }));
   } catch (error) {
-    console.error("Error in fetchScheduledPayments:", error);
+    console.error("Error fetching scheduled payments:", error);
     return [];
   }
 };
