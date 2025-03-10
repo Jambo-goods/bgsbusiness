@@ -1,4 +1,3 @@
-
 import React from "react";
 import { format } from "date-fns";
 import { 
@@ -44,19 +43,22 @@ export default function PaymentsTable({
   };
 
   console.log("Scheduled payments in PaymentsTable:", scheduledPayments);
+  console.log("User investments:", userInvestments);
 
-  // Calculate total investment amount from userInvestments
   const totalInvestedAmount = userInvestments.reduce((sum, project) => {
-    return sum + (project.investedAmount || 0);
+    const amount = project.investedAmount || 0;
+    console.log(`Investment amount for ${project.name}:`, amount);
+    return sum + amount;
   }, 0);
+
+  console.log("Total invested amount:", totalInvestedAmount);
 
   const allPayments = [
     ...filteredAndSortedPayments,
     ...scheduledPayments.map(sp => {
-      // Calculate amount based on percentage and total invested amount
       const percentage = sp.percentage || 0;
-      // Use the actual total investment amount instead of the one from the database
       const calculatedAmount = (percentage / 100) * totalInvestedAmount;
+      console.log(`Calculated amount for ${sp.projects?.name}:`, calculatedAmount, `(${percentage}% of ${totalInvestedAmount})`);
 
       return {
         id: sp.id,
