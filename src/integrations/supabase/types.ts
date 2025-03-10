@@ -255,7 +255,6 @@ export type Database = {
         Row: {
           created_at: string
           cumulative_amount: number | null
-          id: string
           investors_count: number | null
           payment_date: string
           project_id: string | null
@@ -267,7 +266,6 @@ export type Database = {
         Insert: {
           created_at?: string
           cumulative_amount?: number | null
-          id?: string
           investors_count?: number | null
           payment_date: string
           project_id?: string | null
@@ -279,7 +277,6 @@ export type Database = {
         Update: {
           created_at?: string
           cumulative_amount?: number | null
-          id?: string
           investors_count?: number | null
           payment_date?: string
           project_id?: string | null

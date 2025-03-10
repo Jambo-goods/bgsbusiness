@@ -38,10 +38,9 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
   
   useInvestmentSubscriptions(userId, handleRefresh);
   
-  // Filter and sort scheduled payments according to the selected criteria
-  const filteredAndSortedScheduledPayments = React.useMemo(() => {
+  // Sort scheduled payments according to the selected criteria, but don't filter
+  const sortedScheduledPayments = React.useMemo(() => {
     return [...scheduledPayments]
-      .filter(payment => filterStatus === 'all' || payment.status === filterStatus)
       .sort((a, b) => {
         if (sortColumn === 'date') {
           return sortDirection === 'asc' 
@@ -64,7 +63,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
         }
         return 0;
       });
-  }, [scheduledPayments, filterStatus, sortColumn, sortDirection]);
+  }, [scheduledPayments, sortColumn, sortDirection]);
   
   const hasData = scheduledPayments && scheduledPayments.length > 0;
   
@@ -108,7 +107,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
         />
         
         <PaymentsTable 
-          scheduledPayments={filteredAndSortedScheduledPayments}
+          scheduledPayments={sortedScheduledPayments}
           sortColumn={sortColumn}
           sortDirection={sortDirection}
           handleSort={handleSort}
