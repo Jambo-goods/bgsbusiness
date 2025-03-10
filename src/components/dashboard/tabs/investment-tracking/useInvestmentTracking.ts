@@ -20,6 +20,78 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const [animateRefresh, setAnimateRefresh] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   
+  // Cette fonction ajoutera automatiquement les projets nouveaux et en cours aux scheduled_payments
+  const updateScheduledPaymentsForProjects = async (investments: any[]) => {
+    try {
+      console.log("Mise à jour des paiements programmés pour les projets...");
+      
+      // Récupérer tous les projets actifs
+      const { data: activeProjects } = await supabase
+        .from('projects')
+        .select('id, name, yield')
+        .eq('status', 'active');
+      
+      if (!activeProjects || activeProjects.length === 0) {
+        console.log("Aucun projet actif trouvé");
+        return;
+      }
+      
+      // Pour chaque projet actif
+      for (const project of activeProjects) {
+        // Vérifier si des paiements programmés existent déjà pour ce projet
+        const { data: existingPayments, error: fetchError } = await supabase
+          .from('scheduled_payments')
+          .select('id')
+          .eq('project_id', project.id);
+          
+        if (fetchError) {
+          console.error("Erreur lors de la vérification des paiements existants:", fetchError);
+          continue;
+        }
+        
+        // Si aucun paiement programmé n'existe pour ce projet, créer les entrées
+        if (!existingPayments || existingPayments.length === 0) {
+          console.log(`Création de paiements programmés pour le projet: ${project.name}`);
+          
+          const now = new Date();
+          let cumulativeAmount = 0;
+          
+          // Créer 6 paiements mensuels pour les 6 prochains mois
+          for (let i = 1; i <= 6; i++) {
+            const futureDate = new Date(now);
+            futureDate.setMonth(now.getMonth() + i);
+            
+            // Utiliser une valeur de rendement mensuel estimée
+            // On pourrait ajuster cela en fonction de la logique métier
+            const monthlyAmount = Math.round((project.yield / 100) * 5000 / 12); // Exemple avec 5000€ d'investissement
+            cumulativeAmount += monthlyAmount;
+            
+            // Insérer le paiement programmé
+            const { error: insertError } = await supabase
+              .from('scheduled_payments')
+              .insert({
+                project_id: project.id,
+                amount: monthlyAmount,
+                payment_date: futureDate.toISOString(),
+                cumulative_amount: cumulativeAmount,
+                status: 'scheduled'
+              });
+              
+            if (insertError) {
+              console.error(`Erreur lors de l'ajout du paiement programmé #${i}:`, insertError);
+            }
+          }
+        } else {
+          console.log(`Les paiements programmés existent déjà pour le projet: ${project.name}`);
+        }
+      }
+      
+      console.log("Mise à jour des paiements programmés terminée");
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour des paiements programmés:", error);
+    }
+  };
+  
   const loadRealTimeData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -43,7 +115,10 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       const investments = await fetchRealTimeInvestmentData(currentUserId);
       console.log("Fetched investments:", investments.length);
       
-      // Fetch scheduled payments (now without user_id filter)
+      // Mise à jour automatique des paiements programmés pour tous les projets
+      await updateScheduledPaymentsForProjects(investments);
+      
+      // Fetch scheduled payments (maintenant sans filtrage par user_id)
       const scheduledPaymentsData = await fetchScheduledPayments();
       setScheduledPayments(scheduledPaymentsData);
       console.log("Fetched scheduled payments:", scheduledPaymentsData.length);
