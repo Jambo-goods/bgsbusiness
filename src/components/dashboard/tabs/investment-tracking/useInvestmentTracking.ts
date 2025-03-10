@@ -40,14 +40,14 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       setUserId(currentUserId);
       console.log("Using user ID for investment tracking:", currentUserId);
       
-      // Fetch investments for user-specific calculations
-      const investments = await fetchRealTimeInvestmentData(currentUserId);
-      console.log("Fetched investments:", investments.length);
-      
       // Fetch ALL scheduled payments with project details
       const scheduledPaymentsData = await fetchScheduledPayments();
       setScheduledPayments(scheduledPaymentsData);
       console.log("Fetched scheduled payments:", scheduledPaymentsData.length);
+      
+      // Fetch investments for user-specific calculations
+      const investments = await fetchRealTimeInvestmentData(currentUserId);
+      console.log("Fetched investments:", investments.length);
       
       // Generate payment records for user-specific displays (charts, totals, etc.)
       if (investments && investments.length > 0) {

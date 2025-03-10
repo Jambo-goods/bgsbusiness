@@ -1,3 +1,4 @@
+
 import { PaymentRecord, ScheduledPayment } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,10 +36,10 @@ export const fetchRealTimeInvestmentData = async (userId: string | undefined) =>
   }
 };
 
-export const fetchScheduledPayments = async () => {
+export const fetchScheduledPayments = async (): Promise<ScheduledPayment[]> => {
   try {
     // Get all scheduled payments with project details
-    const { data: scheduledPaymentsData, error: scheduledPaymentsError } = await supabase
+    const { data, error } = await supabase
       .from('scheduled_payments')
       .select(`
         *,
@@ -46,15 +47,16 @@ export const fetchScheduledPayments = async () => {
       `)
       .order('payment_date', { ascending: false });
     
-    if (scheduledPaymentsError) {
-      throw scheduledPaymentsError;
+    if (error) {
+      throw error;
     }
     
     // Generate unique IDs for payments that don't have them
-    return scheduledPaymentsData.map(payment => ({
+    return (data || []).map(payment => ({
       ...payment,
+      // Generate a unique ID if none exists
       id: payment.id || `payment-${payment.project_id}-${payment.payment_date}`
-    }));
+    })) as ScheduledPayment[];
   } catch (error) {
     console.error("Error fetching scheduled payments:", error);
     return [];
@@ -218,7 +220,7 @@ export const generatePaymentsFromRealData = (investments: any[], scheduledPaymen
 // Helper function to convert ScheduledPayment objects to PaymentRecord objects
 const scheduledPaymentsToPaymentRecords = (scheduledPayments: ScheduledPayment[]): PaymentRecord[] => {
   return scheduledPayments.map(payment => ({
-    id: payment.id,
+    id: payment.id || `payment-${payment.project_id}-${payment.payment_date}`,
     projectId: payment.project_id,
     projectName: payment.project?.name || "Projet inconnu",
     amount: Number(payment.total_scheduled_amount || 0),
