@@ -31,9 +31,26 @@ export interface ScheduledPayment {
   };
 }
 
+export interface PaymentRecord {
+  id: string;
+  projectId: string;
+  projectName: string;
+  amount: number;
+  date: Date;
+  type: 'yield' | 'principal';
+  status: 'paid' | 'pending' | 'scheduled';
+  percentage?: number;
+  calculatedCumulative?: number | null;
+}
+
 export interface PaymentStatistics {
   totalScheduledAmount: number;
   paymentsReceived: number;
   percentageReceived: number;
   paymentsWithCumulative: ScheduledPayment[];
+  totalPaid: number;
+  totalPending: number;
+  averageMonthlyReturn: number;
+  filteredAndSortedPayments: PaymentRecord[];
+  cumulativeReturns: (PaymentRecord & { cumulativeReturn: number })[];
 }

@@ -21,7 +21,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
     sortDirection,
     filterStatus,
     setFilterStatus,
-    isLoading,
+    isLoading: investmentTracking,
     paymentRecords,
     animateRefresh,
     userId,
@@ -29,17 +29,11 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
     handleRefresh
   } = useInvestmentTracking(userInvestments);
   
-  const {
-    cumulativeReturns,
-    filteredAndSortedPayments,
-    scheduledPayments,
-    totalPaid,
-    totalPending,
-    averageMonthlyReturn
-  } = useReturnsStatistics(paymentRecords, filterStatus, sortColumn, sortDirection);
+  const { statistics, isLoading: statsLoading } = useReturnsStatistics();
   
   useInvestmentSubscriptions(userId, handleRefresh);
   
+  const isLoading = investmentTracking || statsLoading;
   const hasData = paymentRecords && paymentRecords.length > 0;
   
   const renderContent = () => {
@@ -47,7 +41,7 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
       return <LoadingIndicator message="Chargement des données de rendement..." />;
     }
     
-    if (!hasData) {
+    if (!hasData || !statistics) {
       return (
         <div className="py-10 text-center">
           <div className="bg-blue-50 p-6 rounded-lg inline-block mb-4">
@@ -74,17 +68,17 @@ export default function InvestmentTrackingTab({ userInvestments }: InvestmentTra
     return (
       <>
         <ReturnsSummary 
-          totalPaid={totalPaid}
-          totalPending={totalPending}
-          averageMonthlyReturn={averageMonthlyReturn}
+          totalPaid={statistics.totalPaid}
+          totalPending={statistics.totalPending}
+          averageMonthlyReturn={statistics.averageMonthlyReturn}
           isRefreshing={animateRefresh}
           onRefresh={handleRefresh}
         />
         
         <PaymentsTable 
-          filteredAndSortedPayments={filteredAndSortedPayments}
-          scheduledPayments={scheduledPayments}
-          cumulativeReturns={cumulativeReturns}
+          filteredAndSortedPayments={statistics.filteredAndSortedPayments}
+          scheduledPayments={statistics.paymentsWithCumulative}
+          cumulativeReturns={statistics.cumulativeReturns}
           sortColumn={sortColumn}
           sortDirection={sortDirection}
           handleSort={handleSort}

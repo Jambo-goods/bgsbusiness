@@ -2,7 +2,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
-import { Investment, ScheduledPayment } from "./types";
+import { Investment, PaymentRecord, PaymentStatistics, ScheduledPayment } from "./types";
+import { calculateCumulativeReturns, filterAndSortPayments } from "./utils";
 
 export const useReturnsStatistics = () => {
   const { data: scheduledPayments, isLoading } = useQuery({
@@ -60,6 +61,43 @@ export const useReturnsStatistics = () => {
       };
     });
 
+    // Convert scheduled payments to PaymentRecord format for consistent processing
+    const paymentRecords: PaymentRecord[] = scheduledPayments.map(payment => ({
+      id: payment.id,
+      projectId: payment.project_id,
+      projectName: payment.projects?.name || "Projet inconnu",
+      amount: payment.total_scheduled_amount || 0,
+      date: new Date(payment.payment_date),
+      type: 'yield',
+      status: payment.status,
+      percentage: payment.percentage
+    }));
+
+    // Calculate additional statistics
+    const totalPaid = paymentRecords
+      .filter(payment => payment.status === 'paid')
+      .reduce((sum, payment) => sum + payment.amount, 0);
+    
+    const totalPending = paymentRecords
+      .filter(payment => payment.status === 'pending')
+      .reduce((sum, payment) => sum + payment.amount, 0);
+    
+    const paidPayments = paymentRecords.filter(payment => payment.status === 'paid');
+    const averageMonthlyReturn = paidPayments.length > 0 
+      ? totalPaid / paidPayments.length 
+      : 0;
+
+    // Apply default filters and sorting
+    const filteredAndSortedPayments = filterAndSortPayments(
+      paymentRecords,
+      'all',
+      'date',
+      'desc'
+    );
+
+    // Calculate cumulative returns
+    const cumulativeReturns = calculateCumulativeReturns(paymentRecords);
+
     return {
       totalScheduledAmount,
       paymentsReceived,
@@ -67,7 +105,12 @@ export const useReturnsStatistics = () => {
       percentageReceived: totalScheduledAmount > 0 
         ? (paymentsReceived / totalScheduledAmount) * 100 
         : 0,
-    };
+      totalPaid,
+      totalPending,
+      averageMonthlyReturn,
+      filteredAndSortedPayments,
+      cumulativeReturns
+    } as PaymentStatistics;
   }, [scheduledPayments]);
 
   return {
