@@ -2,6 +2,7 @@
 import { Project } from "@/types/project";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
+import { toast } from "sonner";
 
 export const isUUID = (str: string): boolean => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -84,16 +85,28 @@ export const createProjectInDatabase = async (project: Project, toast: any) => {
 // Fonction pour récupérer tous les projets de la base de données
 export const fetchProjectsFromDatabase = async () => {
   try {
+    console.log("Début de la récupération des projets depuis la base de données");
+    
     const { data, error } = await supabase
       .from('projects')
       .select('*');
       
     if (error) {
       console.error("Erreur lors de la récupération des projets:", error);
+      toast.error("Erreur de chargement", {
+        description: "Impossible de charger les projets depuis la base de données."
+      });
       throw error;
     }
     
-    return data.map(project => {
+    if (!data || data.length === 0) {
+      console.log("Aucun projet trouvé dans la base de données");
+      return [];
+    }
+    
+    console.log(`${data.length} projets récupérés depuis la base de données`);
+    
+    const projects = data.map(project => {
       // Vérifier que le statut est l'une des valeurs autorisées
       let validStatus: "active" | "upcoming" | "completed" = "active";
       
@@ -121,9 +134,12 @@ export const fetchProjectsFromDatabase = async () => {
         featured: project.featured,
         possibleDurations: project.possible_durations,
         image: project.image,
-        firstPaymentDelayMonths: project.first_payment_delay_months || 1
+        firstPaymentDelayMonths: project.first_payment_delay_months || 1,
+        maxInvestment: project.max_investment || project.price || 10000
       };
     });
+    
+    return projects;
   } catch (error) {
     console.error("Erreur dans fetchProjectsFromDatabase:", error);
     throw error;

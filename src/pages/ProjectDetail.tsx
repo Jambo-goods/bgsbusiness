@@ -6,6 +6,7 @@ import Footer from "@/components/layout/Footer";
 import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 // Import refactored components
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -23,10 +24,11 @@ export default function ProjectDetail() {
   const navigate = useNavigate();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'updates'>('overview');
   const [remainingDays] = useState(Math.floor(Math.random() * 30) + 10); // Simulate remaining days
   const [investorCount] = useState(Math.floor(Math.random() * 20) + 5); // Simulate investor count
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
 
   useEffect(() => {
     // Redirect if the user came from the old path "/projects/:id"
@@ -41,10 +43,22 @@ export default function ProjectDetail() {
     // Function to load project from database
     const loadProject = async () => {
       setLoading(true);
+      setError(null);
+      
       try {
         console.log("Chargement du projet avec ID:", id);
+        
+        if (!id) {
+          console.error("ID de projet manquant");
+          setError("ID de projet manquant");
+          toast.error("Erreur", { description: "ID de projet manquant" });
+          setLoading(false);
+          return;
+        }
+        
         // Get projects from database
         const databaseProjects = await fetchProjectsFromDatabase();
+        console.log("Projets récupérés:", databaseProjects);
         
         // Check if project exists in database
         const databaseProject = databaseProjects.find(p => p.id === id);
@@ -53,15 +67,18 @@ export default function ProjectDetail() {
           console.log("Projet trouvé dans la base de données:", databaseProject);
           setProject(databaseProject);
         } else {
-          console.log("Projet non trouvé:", id);
+          console.log("Projet non trouvé avec l'ID:", id);
+          setError(`Aucun projet trouvé avec l'identifiant: ${id}`);
+          toast.error("Projet non trouvé", { 
+            description: `Aucun projet avec l'identifiant ${id} n'a été trouvé.` 
+          });
           setProject(null);
         }
       } catch (error) {
         console.error("Erreur lors du chargement du projet:", error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger les détails du projet",
-          variant: "destructive"
+        setError("Impossible de charger les détails du projet");
+        toast.error("Erreur", {
+          description: "Impossible de charger les détails du projet"
         });
         setProject(null);
       } finally {
@@ -70,14 +87,32 @@ export default function ProjectDetail() {
     };
     
     loadProject();
-  }, [id, toast, navigate]);
+  }, [id, navigate]);
 
   if (loading) {
     return <ProjectLoading />;
   }
 
-  if (!project) {
-    return <ProjectNotFound />;
+  if (error || !project) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="container mx-auto px-4 py-24">
+          <div className="bg-white p-6 rounded-lg shadow-md">
+            <h1 className="text-2xl font-bold text-red-600 mb-4">Erreur</h1>
+            <p className="mb-4">{error || "Aucun projet trouvé"}</p>
+            <p className="mb-4">ID du projet: {id || "Non spécifié"}</p>
+            <button 
+              onClick={() => navigate('/projects')}
+              className="px-4 py-2 bg-bgs-blue text-white rounded-md"
+            >
+              Retour à la liste des projets
+            </button>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    );
   }
 
   return (
