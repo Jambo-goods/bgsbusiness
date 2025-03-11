@@ -135,7 +135,7 @@ export const fetchProjectsFromDatabase = async () => {
         possibleDurations: project.possible_durations,
         image: project.image,
         firstPaymentDelayMonths: project.first_payment_delay_months || 1,
-        maxInvestment: project.max_investment || project.price || 10000
+        maxInvestment: project.price || 10000 // Correction ici: utilisation de project.price au lieu de project.max_investment
       };
     });
     
