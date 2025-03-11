@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { projects as localProjects } from "@/data/projects";
 import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { useToast } from "@/hooks/use-toast";
@@ -39,12 +38,12 @@ export default function ProjectDetail() {
 
     window.scrollTo(0, 0);
     
-    // Function to load project from database and local data
+    // Function to load project from database
     const loadProject = async () => {
       setLoading(true);
       try {
         console.log("Chargement du projet avec ID:", id);
-        // Try to get projects from database first
+        // Get projects from database
         const databaseProjects = await fetchProjectsFromDatabase();
         
         // Check if project exists in database
@@ -54,17 +53,8 @@ export default function ProjectDetail() {
           console.log("Projet trouvé dans la base de données:", databaseProject);
           setProject(databaseProject);
         } else {
-          // If not found in database, look in local projects
-          console.log("Projet non trouvé dans la base de données, recherche dans les projets locaux");
-          const localProject = localProjects.find(p => p.id === id);
-          
-          if (localProject) {
-            console.log("Projet trouvé dans les données locales:", localProject);
-            setProject(localProject);
-          } else {
-            console.log("Projet non trouvé:", id);
-            setProject(null);
-          }
+          console.log("Projet non trouvé:", id);
+          setProject(null);
         }
       } catch (error) {
         console.error("Erreur lors du chargement du projet:", error);
@@ -73,14 +63,7 @@ export default function ProjectDetail() {
           description: "Impossible de charger les détails du projet",
           variant: "destructive"
         });
-        
-        // In case of error, try loading from local data
-        const localProject = localProjects.find(p => p.id === id);
-        if (localProject) {
-          setProject(localProject);
-        } else {
-          setProject(null);
-        }
+        setProject(null);
       } finally {
         setLoading(false);
       }

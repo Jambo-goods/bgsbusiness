@@ -1,13 +1,43 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Award, Search } from "lucide-react";
 import ProjectsList from "@/components/projects/ProjectsList";
-import { projects } from "@/data/projects";
 import { Input } from "@/components/ui/input";
+import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
+import { Project } from "@/types/project";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OpportunitiesTab() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredProjects, setFilteredProjects] = useState(projects);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Load projects from database only
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        setIsLoading(true);
+        const dbProjects = await fetchProjectsFromDatabase();
+        setProjects(dbProjects || []);
+        setFilteredProjects(dbProjects || []);
+      } catch (error) {
+        console.error("Error loading database projects:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les projets depuis la base de données.",
+          variant: "destructive"
+        });
+        setProjects([]);
+        setFilteredProjects([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadProjects();
+  }, [toast]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value.toLowerCase();
@@ -51,12 +81,18 @@ export default function OpportunitiesTab() {
           />
         </div>
         
-        {filteredProjects.length > 0 ? (
-          <ProjectsList projects={filteredProjects} />
-        ) : (
-          <div className="text-center py-10">
-            <p className="text-gray-500">Aucune opportunité ne correspond à votre recherche.</p>
+        {isLoading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
           </div>
+        ) : (
+          filteredProjects.length > 0 ? (
+            <ProjectsList projects={filteredProjects} />
+          ) : (
+            <div className="text-center py-10">
+              <p className="text-gray-500">Aucune opportunité ne correspond à votre recherche.</p>
+            </div>
+          )
         )}
       </div>
     </div>

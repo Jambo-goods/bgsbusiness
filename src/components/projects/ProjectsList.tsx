@@ -30,6 +30,14 @@ export default function ProjectsList({ projects }: ProjectsListProps) {
     preloadImages();
   }, [projects, visibleProjects]);
   
+  if (projects.length === 0) {
+    return (
+      <div className="text-center py-10">
+        <p className="text-gray-500">Aucun projet disponible.</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-10">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

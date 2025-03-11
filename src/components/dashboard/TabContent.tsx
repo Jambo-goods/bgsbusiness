@@ -1,10 +1,11 @@
 
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
 import { Skeleton } from "@/components/ui/skeleton";
 import ProjectsList from "../projects/ProjectsList";
-import { projects } from "@/data/projects";
+import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
+import { Project } from "@/types/project";
 
 // Prefetch critical paths
 const preloadWalletTab = () => import("./tabs/WalletTab");
@@ -57,7 +58,30 @@ export default function TabContent({
   setActiveTab,
   refreshData
 }: TabContentProps) {
+  const [dbProjects, setDbProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   console.log("TabContent rendering with active tab:", activeTab);
+  
+  // Load projects from database only
+  useEffect(() => {
+    const loadProjects = async () => {
+      try {
+        setLoading(true);
+        const projects = await fetchProjectsFromDatabase();
+        setDbProjects(projects || []);
+      } catch (error) {
+        console.error("Error loading database projects:", error);
+        setDbProjects([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (activeTab === "projects") {
+      loadProjects();
+    }
+  }, [activeTab]);
   
   // Add debug logging when tab content changes
   useEffect(() => {
@@ -93,7 +117,19 @@ export default function TabContent({
               <p className="text-gray-600">
                 Découvrez tous les projets d'investissement disponibles sur la plateforme et trouvez ceux qui correspondent à vos objectifs financiers.
               </p>
-              <ProjectsList projects={projects} />
+              {loading ? (
+                <div className="flex justify-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
+                </div>
+              ) : (
+                dbProjects.length > 0 ? (
+                  <ProjectsList projects={dbProjects} />
+                ) : (
+                  <div className="text-center py-20">
+                    <p className="text-gray-500">Aucun projet disponible actuellement.</p>
+                  </div>
+                )
+              )}
             </div>
           )}
 
