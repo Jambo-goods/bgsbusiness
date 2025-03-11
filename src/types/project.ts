@@ -23,5 +23,6 @@ export interface Project {
   amount?: number;
   investmentDate?: string;
   firstPaymentDelayMonths?: number;
-  investedAmount?: number;  // Ajout de cette propriété
+  investedAmount?: number;
+  maxInvestment?: number;  // Added this property
 }

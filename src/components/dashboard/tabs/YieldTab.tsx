@@ -163,8 +163,9 @@ const YieldTab = () => {
         location: '',
         minInvestment: 0,
         maxInvestment: 0,
-        startDate: '',
-        endDate: '',
+        price: 0,
+        profitability: 0,
+        duration: '',
         category: '',
         fundingProgress: 0
       }));

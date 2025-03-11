@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
@@ -145,9 +144,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw investmentError;
       }
       
-      // Créer les paiements programmés (en évitant d'utiliser total_invested_amount)
       try {
-        // Calculer les dates et montants de paiement
         const currentDate = new Date();
         
         for (let i = firstPaymentDelay; i < selectedDuration; i++) {
@@ -230,7 +227,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
       
       localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
       
-      // Créer la notification d'investissement confirmé
       try {
         console.log("Création de la notification d'investissement confirmé");
         await notificationService.investmentConfirmed(investmentAmount, project.name, projectId);
