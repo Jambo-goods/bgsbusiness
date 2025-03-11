@@ -21,7 +21,6 @@ const Investments = lazy(() => {
   return preloadInvestments();
 });
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
-const InvestmentTrackingTab = lazy(() => import("./tabs/InvestmentTrackingTab"));
 const OpportunitiesTab = lazy(() => import("./tabs/OpportunitiesTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
 const NotificationsTab = lazy(() => import("./tabs/NotificationsTab"));
@@ -96,10 +95,6 @@ export default function TabContent({
           )}
 
           {activeTab === "opportunities" && <OpportunitiesTab />}
-          
-          {activeTab === "tracking" && (
-            <InvestmentTrackingTab userInvestments={userInvestments} />
-          )}
           
           {activeTab === "profile" && (
             <ProfileTab userData={userData} />
