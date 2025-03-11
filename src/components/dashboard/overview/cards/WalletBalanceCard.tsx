@@ -1,8 +1,6 @@
 
 import { Banknote } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import DashboardCard from "../../DashboardCard";
-import { Button } from "@/components/ui/button";
 import { WalletChange } from "@/hooks/dashboard/types";
 
 interface WalletBalanceCardProps {
@@ -11,14 +9,6 @@ interface WalletBalanceCardProps {
 }
 
 export default function WalletBalanceCard({ walletBalance = 0, walletChange }: WalletBalanceCardProps) {
-  const navigate = useNavigate();
-
-  const handleManageWallet = () => {
-    // Navigate to wallet tab in dashboard
-    // Using state parameter to set the active tab
-    navigate('/dashboard', { state: { activeTab: 'wallet' } });
-  };
-
   return (
     <DashboardCard
       title="Solde disponible"
@@ -30,15 +20,6 @@ export default function WalletBalanceCard({ walletBalance = 0, walletChange }: W
       changeValue={walletChange.value || "0€"}
       changeTimeframe="le dernier mois"
       description="Méthode : Virement bancaire"
-      footer={
-        <Button 
-          onClick={handleManageWallet} 
-          className="w-full mt-2 bg-bgs-blue hover:bg-bgs-blue-light text-white"
-          size="sm"
-        >
-          Gérer mon portefeuille
-        </Button>
-      }
     />
   );
 }
