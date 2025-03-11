@@ -9,6 +9,27 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          role: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          role?: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          role?: string
+        }
+        Relationships: []
+      }
       bank_transfers: {
         Row: {
           amount: number | null
@@ -397,6 +418,13 @@ export type Database = {
           user_email: string
         }
         Returns: boolean
+      }
+      update_user_profile_investment: {
+        Args: {
+          user_id: string
+          investment_amount: number
+        }
+        Returns: undefined
       }
     }
     Enums: {

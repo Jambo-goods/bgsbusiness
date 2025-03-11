@@ -103,13 +103,10 @@ const updateScheduledPayments = async (projectId: string) => {
 
 // Update user profile with investment info
 const updateUserProfile = async (userId: string, investmentAmount: number) => {
-  const { error: profileUpdateError } = await supabase
-    .from('profiles')
-    .update({
-      investment_total: supabase.rpc('increment_wallet_balance', { user_id: userId, increment_amount: investmentAmount }),
-      projects_count: supabase.rpc('increment_wallet_balance', { user_id: userId, increment_amount: 1 })
-    })
-    .eq('id', userId);
+  const { error: profileUpdateError } = await supabase.rpc(
+    'update_user_profile_investment',
+    { user_id: userId, investment_amount: investmentAmount }
+  );
   
   if (profileUpdateError) {
     console.error("Erreur lors de la mise à jour du profil:", profileUpdateError);
@@ -191,6 +188,9 @@ export const useInvestmentConfirmation = (
         
         // Update scheduled payments - non-critical
         await updateScheduledPayments(projectId);
+        
+        // Update user profile with investment data - using the new function
+        await updateUserProfile(userId, investmentAmount);
         
         // Save investment data for confirmation page
         saveInvestmentData(
