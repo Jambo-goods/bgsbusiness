@@ -71,9 +71,14 @@ export class BaseNotificationService {
         .order('created_at', { ascending: false })
         .limit(limit);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching notifications:", error);
+        throw error;
+      }
       
-      return (data || []).map(notification => ({
+      if (!data) return [];
+      
+      return data.map(notification => ({
         id: notification.id,
         title: notification.title,
         description: notification.description,
@@ -86,7 +91,7 @@ export class BaseNotificationService {
       
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      return [];
+      throw error;
     }
   }
   
@@ -104,7 +109,10 @@ export class BaseNotificationService {
         .eq('user_id', session.session.user.id)
         .eq('read', false);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error getting unread notification count:", error);
+        throw error;
+      }
       
       return count || 0;
       
@@ -121,10 +129,14 @@ export class BaseNotificationService {
         .update({ read: true })
         .eq('id', notificationId);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error marking notification as read:", error);
+        throw error;
+      }
       
     } catch (error) {
       console.error("Error marking notification as read:", error);
+      throw error;
     }
   }
   
@@ -142,10 +154,14 @@ export class BaseNotificationService {
         .eq('user_id', session.session.user.id)
         .eq('read', false);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error marking all notifications as read:", error);
+        throw error;
+      }
       
     } catch (error) {
       console.error("Error marking all notifications as read:", error);
+      throw error;
     }
   }
 }

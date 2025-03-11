@@ -6,7 +6,7 @@ import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
-import { notificationService } from "@/services/NotificationService";
+import { notificationService } from "@/services/notifications";
 
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
@@ -27,34 +27,39 @@ export default function NavbarActions({
   useEffect(() => {
     const checkAuth = async () => {
       setIsLoading(true);
-      const {
-        data
-      } = await supabase.auth.getSession();
-      const hasSession = !!data.session;
-      setIsAuthenticated(hasSession);
-      
-      // Get wallet balance if authenticated
-      if (hasSession) {
-        try {
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('wallet_balance')
-            .eq('id', data.session.user.id)
-            .maybeSingle();
-            
-          if (!error && profileData) {
-            setWalletBalance(profileData.wallet_balance || 0);
-          } else {
-            console.error("Error fetching wallet balance:", error);
+      try {
+        const {
+          data
+        } = await supabase.auth.getSession();
+        const hasSession = !!data.session;
+        setIsAuthenticated(hasSession);
+        
+        // Get wallet balance if authenticated
+        if (hasSession) {
+          try {
+            const { data: profileData, error } = await supabase
+              .from('profiles')
+              .select('wallet_balance')
+              .eq('id', data.session.user.id)
+              .maybeSingle();
+              
+            if (!error && profileData) {
+              setWalletBalance(profileData.wallet_balance || 0);
+            } else {
+              console.error("Error fetching wallet balance:", error);
+              setWalletBalance(0);
+            }
+          } catch (err) {
+            console.error("Failed to fetch wallet balance:", err);
             setWalletBalance(0);
           }
-        } catch (err) {
-          console.error("Failed to fetch wallet balance:", err);
-          setWalletBalance(0);
         }
+      } catch (error) {
+        console.error("Error checking authentication:", error);
+        setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
     
     checkAuth();
@@ -81,8 +86,12 @@ export default function NavbarActions({
   }, [isAuthenticated]);
 
   const fetchUnreadCount = async () => {
-    const count = await notificationService.getUnreadCount();
-    setUnreadNotificationCount(count);
+    try {
+      const count = await notificationService.getUnreadCount();
+      setUnreadNotificationCount(count);
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+    }
   };
 
   useEffect(() => {
@@ -99,6 +108,10 @@ export default function NavbarActions({
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
+
+  const handleCloseNotifications = () => {
+    setIsNotificationOpen(false);
+  };
 
   const isDashboardPage = location.pathname.includes('/dashboard');
 
@@ -137,7 +150,10 @@ export default function NavbarActions({
             )}
           </button>
           
-          <NotificationDropdown isOpen={isNotificationOpen} />
+          <NotificationDropdown 
+            isOpen={isNotificationOpen} 
+            onClose={handleCloseNotifications}
+          />
         </div>
       </div>
     );

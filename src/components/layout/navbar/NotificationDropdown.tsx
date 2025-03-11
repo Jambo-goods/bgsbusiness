@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Bell, 
   Check, 
@@ -21,11 +21,13 @@ import { Separator } from "@/components/ui/separator";
 
 interface NotificationDropdownProps {
   isOpen: boolean;
+  onClose?: () => void;
 }
 
-export default function NotificationDropdown({ isOpen }: NotificationDropdownProps) {
+export default function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (isOpen) {
@@ -35,9 +37,14 @@ export default function NotificationDropdown({ isOpen }: NotificationDropdownPro
 
   const fetchNotifications = async () => {
     setIsLoading(true);
-    const data = await notificationService.getNotifications(5);
-    setNotifications(data);
-    setIsLoading(false);
+    try {
+      const data = await notificationService.getNotifications(5);
+      setNotifications(data);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleMarkAsRead = async (id: string) => {
@@ -54,6 +61,12 @@ export default function NotificationDropdown({ isOpen }: NotificationDropdownPro
     setNotifications(prev => 
       prev.map(notification => ({ ...notification, read: true }))
     );
+  };
+
+  const handleViewAllClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onClose) onClose();
+    navigate("/dashboard?tab=notifications");
   };
 
   const getTypeIcon = (type: NotificationType) => {
@@ -160,12 +173,12 @@ export default function NotificationDropdown({ isOpen }: NotificationDropdownPro
         )}
       </div>
       
-      <Link 
-        to="/dashboard?tab=notifications" 
+      <button 
+        onClick={handleViewAllClick}
         className="block w-full text-center text-sm text-bgs-blue hover:text-bgs-blue-dark mt-3 font-medium transition-colors"
       >
         Voir toutes les notifications
-      </Link>
+      </button>
     </div>
   );
 }

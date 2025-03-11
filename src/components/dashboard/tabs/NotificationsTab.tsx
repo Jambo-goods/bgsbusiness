@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { notificationService, Notification } from "@/services/notifications";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import NotificationHeader from "./notifications/NotificationHeader";
 import NotificationActions from "./notifications/NotificationActions";
 import NotificationTabs from "./notifications/NotificationTabs";
@@ -12,16 +13,30 @@ export default function NotificationsTab() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchNotifications();
-    
-    // Real-time subscription removed
   }, []);
 
   const fetchNotifications = async () => {
-    const data = await notificationService.getNotifications(50);
-    setNotifications(data);
+    setIsRefreshing(true);
+    setError(null);
+    
+    try {
+      console.log("Fetching notifications...");
+      const data = await notificationService.getNotifications(50);
+      console.log("Notifications fetched:", data.length);
+      setNotifications(data);
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+      setError("Impossible de charger les notifications. Veuillez réessayer plus tard.");
+      toast.error("Erreur", { description: "Impossible de charger les notifications" });
+    } finally {
+      setIsRefreshing(false);
+      setIsLoading(false);
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -31,19 +46,30 @@ export default function NotificationsTab() {
     : notifications.filter(n => !n.read);
 
   const handleMarkAllAsRead = async () => {
-    await notificationService.markAllAsRead();
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, read: true }))
+      );
+      toast.success("Toutes les notifications ont été marquées comme lues");
+    } catch (err) {
+      console.error("Error marking all as read:", err);
+      toast.error("Erreur", { description: "Impossible de marquer toutes les notifications comme lues" });
+    }
   };
 
   const handleMarkAsRead = async (id: string) => {
-    await notificationService.markAsRead(id);
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id ? { ...notification, read: true } : notification
+        )
+      );
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
+      toast.error("Erreur", { description: "Impossible de marquer la notification comme lue" });
+    }
   };
 
   const handleDeleteNotification = async (id: string) => {
@@ -58,20 +84,43 @@ export default function NotificationsTab() {
       setNotifications(prev => 
         prev.filter(notification => notification.id !== id)
       );
+      toast.success("Notification supprimée");
     } catch (error) {
       console.error("Error deleting notification:", error);
+      toast.error("Erreur", { description: "Impossible de supprimer la notification" });
     }
   };
 
   const handleRefresh = async () => {
-    setIsRefreshing(true);
     await fetchNotifications();
-    setIsRefreshing(false);
   };
 
   const handleFilterChange = (newFilter: 'all' | 'unread') => {
     setFilter(newFilter);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <h3 className="text-lg font-medium text-red-800 mb-2">Erreur de chargement</h3>
+        <p className="text-red-600">{error}</p>
+        <button 
+          onClick={handleRefresh}
+          className="mt-4 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition-colors"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -95,15 +144,6 @@ export default function NotificationsTab() {
         />
         
         <TabsContent value="all" className="mt-4">
-          <NotificationsList 
-            notifications={filteredNotifications}
-            onMarkAsRead={handleMarkAsRead}
-            onDelete={handleDeleteNotification}
-            filter={filter}
-          />
-        </TabsContent>
-        
-        <TabsContent value="unread" className="mt-4">
           <NotificationsList 
             notifications={filteredNotifications}
             onMarkAsRead={handleMarkAsRead}
