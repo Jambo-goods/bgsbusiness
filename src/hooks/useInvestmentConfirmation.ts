@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,6 +88,39 @@ const updateUserWalletBalance = async (userId: string, investmentAmount: number)
   }
 };
 
+// Update user profile with investment info
+const updateUserProfile = async (userId: string, investmentAmount: number, yieldRate: number) => {
+  // First, get current profile data
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('investment_total, projects_count')
+    .eq('id', userId)
+    .single();
+    
+  if (profileError) {
+    console.error("Error fetching profile:", profileError);
+    throw new Error("Erreur lors de la mise à jour du profil");
+  }
+
+  // Calculate new values
+  const newInvestmentTotal = (profile?.investment_total || 0) + investmentAmount;
+  const newProjectsCount = (profile?.projects_count || 0) + 1;
+
+  // Update profile with new values
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({
+      investment_total: newInvestmentTotal,
+      projects_count: newProjectsCount
+    })
+    .eq('id', userId);
+  
+  if (updateError) {
+    console.error("Erreur lors de la mise à jour du profil:", updateError);
+    throw new Error("Erreur lors de la mise à jour du profil");
+  }
+};
+
 // Update scheduled payments
 const updateScheduledPayments = async (projectId: string) => {
   try {
@@ -97,19 +129,6 @@ const updateScheduledPayments = async (projectId: string) => {
     });
   } catch (error) {
     console.error("Erreur lors de la programmation des paiements:", error);
-    // Non-critical error, continue execution
-  }
-};
-
-// Update user profile with investment info
-const updateUserProfile = async (userId: string, investmentAmount: number) => {
-  const { error: profileUpdateError } = await supabase.rpc(
-    'update_user_profile_investment',
-    { user_id: userId, investment_amount: investmentAmount }
-  );
-  
-  if (profileUpdateError) {
-    console.error("Erreur lors de la mise à jour du profil:", profileUpdateError);
     // Non-critical error, continue execution
   }
 };
@@ -189,8 +208,8 @@ export const useInvestmentConfirmation = (
         // Update scheduled payments - non-critical
         await updateScheduledPayments(projectId);
         
-        // Update user profile with investment data - using the new function
-        await updateUserProfile(userId, investmentAmount);
+        // Update user profile with investment data
+        await updateUserProfile(userId, investmentAmount, project.yield);
         
         // Save investment data for confirmation page
         saveInvestmentData(
