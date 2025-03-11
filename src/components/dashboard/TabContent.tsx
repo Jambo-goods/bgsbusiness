@@ -81,7 +81,10 @@ export default function TabContent({
           {activeTab === "yield" && <YieldTab />}
           
           {activeTab === "investments" && (
-            <Investments userInvestments={userInvestments} />
+            <Investments 
+              userInvestments={userInvestments}
+              onRefresh={refreshData}
+            />
           )}
 
           {activeTab === "projects" && (
