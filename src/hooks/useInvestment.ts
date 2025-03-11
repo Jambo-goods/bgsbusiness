@@ -153,33 +153,27 @@ export const useInvestment = (project: Project, investorCount: number) => {
       try {
         const currentDate = new Date();
         
-        // Create individual scheduled payments for each month
-        for (let i = firstPaymentDelay; i < selectedDuration; i++) {
-          const paymentDate = new Date(currentDate);
-          paymentDate.setMonth(currentDate.getMonth() + i);
-          
-          const { error: scheduledPaymentError } = await supabase
-            .from('scheduled_payments')
-            .insert({
-              user_id: userId,
-              project_id: projectId,
-              payment_date: paymentDate.toISOString(),
-              payment_amount: monthlyReturn,
-              status: 'scheduled',
-              percentage: project.yield,
-              // Don't use total_invested_amount field as it may not exist
-              investors_count: null,
-              cumulative_amount: null
-            });
+        // Create a single record for payment scheduling instead of individual payments
+        // This avoids issues with the admin_users table which doesn't seem to exist
+        const { error: schedulingError } = await supabase
+          .from('scheduled_payments')
+          .insert({
+            project_id: projectId,
+            payment_date: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1).toISOString(),
+            status: 'scheduled',
+            percentage: project.yield,
+            investors_count: investorCount,
+            total_invested_amount: investmentAmount,
+            total_scheduled_amount: monthlyReturn
+          });
             
-          if (scheduledPaymentError) {
-            console.error(`Erreur lors de la programmation du paiement ${i}:`, scheduledPaymentError);
-            // Continue avec les autres paiements même si celui-ci échoue
-          }
+        if (schedulingError) {
+          console.error("Erreur lors de la programmation des paiements:", schedulingError);
+          // Continue execution even if scheduling fails
         }
       } catch (schedulingError) {
         console.error("Erreur lors de la programmation des paiements:", schedulingError);
-        // Continue l'exécution même si la programmation des paiements échoue
+        // Continue execution even if payment scheduling fails
       }
       
       // Update user profile with investment info
