@@ -1,19 +1,25 @@
+
 import React, { useState, useEffect } from 'react';
-import { useUser } from '@/context/UserContext';
-import { useRouter } from 'next/router';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Home, LayoutDashboard, Users, Settings, HelpCircle, LogOut, MailIcon } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SidebarProps {
-  className?: string;
+  isSidebarOpen: boolean;
+  toggleSidebar: () => void;
+  handleLogout: () => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
 }
 
-export default function Sidebar({ className }: SidebarProps) {
+export default function Sidebar({ isSidebarOpen, toggleSidebar, handleLogout, activeTab, setActiveTab }: SidebarProps) {
   const [expanded, setExpanded] = useState(true);
-  const { user, signOut } = useUser();
-  const router = useRouter();
-  const isAdmin = user?.email === 'jambogoodsafrica@gmail.com';
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -23,10 +29,30 @@ export default function Sidebar({ className }: SidebarProps) {
     handleResize();
     window.addEventListener('resize', handleResize);
 
+    // Get user email
+    const getUserEmail = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData?.session?.user) {
+        const email = sessionData.session.user.email;
+        setUserEmail(email);
+        setIsAdmin(email === 'jambogoodsafrica@gmail.com');
+      }
+    };
+
+    getUserEmail();
+
     return () => {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
+
+  const handleNavigation = (path: string) => {
+    if (path.startsWith('/')) {
+      navigate(path);
+    } else {
+      setActiveTab(path);
+    }
+  };
 
   const sections = [
     {
@@ -34,7 +60,7 @@ export default function Sidebar({ className }: SidebarProps) {
       items: [
         {
           name: 'Dashboard',
-          href: '/dashboard',
+          href: 'overview',
           icon: Home,
         },
         {
@@ -59,7 +85,7 @@ export default function Sidebar({ className }: SidebarProps) {
       items: [
         {
           name: 'Settings',
-          href: '/settings',
+          href: 'settings',
           icon: Settings,
         },
         {
@@ -72,9 +98,9 @@ export default function Sidebar({ className }: SidebarProps) {
   ];
 
   return (
-    <aside className={`${className} ${expanded ? 'w-64' : 'w-20'} fixed left-0 top-0 h-full bg-white border-r border-gray-200 z-30 transition-all duration-300 ease-in-out flex flex-col`}>
+    <aside className={`${isSidebarOpen ? 'w-64' : 'w-20'} fixed left-0 top-0 h-full bg-white border-r border-gray-200 z-30 transition-all duration-300 ease-in-out flex flex-col`}>
       <div className="flex items-center justify-center h-16 border-b border-gray-200 p-4">
-        {expanded ? (
+        {isSidebarOpen ? (
           <span className="text-lg font-bold">BGS Invest</span>
         ) : (
           <span className="text-2xl font-bold">BGS</span>
@@ -85,49 +111,48 @@ export default function Sidebar({ className }: SidebarProps) {
         {sections.map((section, index) => (
           <div key={index} className="mb-4">
             {section.title && (
-              <div className={`px-4 py-2 font-semibold text-gray-500 uppercase text-xs ${expanded ? 'block' : 'hidden'}`}>
+              <div className={`px-4 py-2 font-semibold text-gray-500 uppercase text-xs ${isSidebarOpen ? 'block' : 'hidden'}`}>
                 {section.title}
               </div>
             )}
             {section.items.map((item) => (
-              <a
+              <button
                 key={item.name}
-                href={item.href}
-                className="flex items-center p-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100"
+                onClick={() => handleNavigation(item.href)}
+                className={`flex items-center w-full text-left p-2 text-sm ${
+                  (item.href === activeTab || location.pathname === item.href) 
+                    ? 'bg-gray-100 text-bgs-blue' 
+                    : 'text-gray-600 hover:bg-gray-100'
+                } rounded-lg`}
               >
                 <item.icon className="h-5 w-5 mr-3" />
-                <span className={cn({ 'hidden': !expanded })}>{item.name}</span>
-              </a>
+                <span className={cn({ 'hidden': !isSidebarOpen })}>{item.name}</span>
+              </button>
             ))}
           </div>
         ))}
         
         {/* Add Email Test link for admins */}
         {isAdmin && (
-          <div className={`px-4 py-2 ${expanded ? 'block' : 'hidden'}`}>
-            <a 
-              href="/admin/email-test" 
-              className="flex items-center p-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100"
+          <div className={`px-4 py-2 ${isSidebarOpen ? 'block' : 'hidden'}`}>
+            <button 
+              onClick={() => navigate('/admin/email-test')}
+              className="flex items-center w-full text-left p-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100"
             >
               <MailIcon className="h-5 w-5 mr-3" />
               <span>Test Email</span>
-            </a>
+            </button>
           </div>
         )}
         
         <div className="mt-auto p-4 border-t border-gray-200">
-          <a
-            href="#"
-            className="flex items-center p-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100"
-            onClick={(e) => {
-              e.preventDefault();
-              signOut();
-              router.push('/');
-            }}
+          <button
+            className="flex items-center w-full text-left p-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100"
+            onClick={handleLogout}
           >
             <LogOut className="h-5 w-5 mr-3" />
-            <span className={cn({ 'hidden': !expanded })}>Logout</span>
-          </a>
+            <span className={cn({ 'hidden': !isSidebarOpen })}>Logout</span>
+          </button>
         </div>
       </div>
     </aside>
