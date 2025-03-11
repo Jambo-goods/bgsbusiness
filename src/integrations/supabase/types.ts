@@ -261,6 +261,7 @@ export type Database = {
           processed_at: string | null
           project_id: string
           status: string
+          total_invested_amount: number | null
           total_scheduled_amount: number | null
           updated_at: string
         }
@@ -273,6 +274,7 @@ export type Database = {
           processed_at?: string | null
           project_id: string
           status: string
+          total_invested_amount?: number | null
           total_scheduled_amount?: number | null
           updated_at?: string
         }
@@ -285,6 +287,7 @@ export type Database = {
           processed_at?: string | null
           project_id?: string
           status?: string
+          total_invested_amount?: number | null
           total_scheduled_amount?: number | null
           updated_at?: string
         }

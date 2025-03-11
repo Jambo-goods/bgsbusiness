@@ -16,7 +16,7 @@ export default function InvestmentAmountSection({
   minInvestment,
   maxInvestment
 }: InvestmentAmountSectionProps) {
-  // Handlers for input and slider updates
+  // Handle input changes with proper validation
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value.replace(/\D/g, ''));
     if (!isNaN(value)) {
