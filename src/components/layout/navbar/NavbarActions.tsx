@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { Bell, Wallet, Home } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
@@ -23,6 +22,7 @@ export default function NavbarActions({
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -34,7 +34,6 @@ export default function NavbarActions({
         const hasSession = !!data.session;
         setIsAuthenticated(hasSession);
         
-        // Get wallet balance if authenticated
         if (hasSession) {
           try {
             const { data: profileData, error } = await supabase
@@ -64,9 +63,7 @@ export default function NavbarActions({
     
     checkAuth();
 
-    // Replace real-time subscription with periodic check
-    const authCheckInterval = setInterval(checkAuth, 60000); // Check every minute
-    
+    const authCheckInterval = setInterval(checkAuth, 60000);
     return () => {
       clearInterval(authCheckInterval);
     };
@@ -76,9 +73,7 @@ export default function NavbarActions({
     if (isAuthenticated) {
       fetchUnreadCount();
       
-      // Replace real-time subscription with periodic check
-      const notificationCheckInterval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
-      
+      const notificationCheckInterval = setInterval(fetchUnreadCount, 30000);
       return () => {
         clearInterval(notificationCheckInterval);
       };
@@ -113,6 +108,10 @@ export default function NavbarActions({
     setIsNotificationOpen(false);
   };
 
+  const handleWalletClick = () => {
+    navigate('/dashboard?tab=wallet');
+  };
+
   const isDashboardPage = location.pathname.includes('/dashboard');
 
   if (isLoading) {
@@ -126,9 +125,11 @@ export default function NavbarActions({
           <Home className="h-5 w-5 text-bgs-blue" />
         </Link>
         
-        <Link 
-          to="/dashboard?tab=wallet" 
+        <button 
+          onClick={handleWalletClick}
           className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1"
+          aria-label="Voir le portefeuille"
+          title="Voir le portefeuille"
         >
           <Wallet className="h-5 w-5 text-bgs-blue" />
           {walletBalance !== null && (
@@ -136,7 +137,7 @@ export default function NavbarActions({
               {walletBalance.toLocaleString('fr-FR')}€
             </span>
           )}
-        </Link>
+        </button>
 
         <div className="relative notification-dropdown">
           <button onClick={() => {
