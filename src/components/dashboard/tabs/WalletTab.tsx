@@ -4,15 +4,61 @@ import { toast } from "sonner";
 import WalletBalance from "./wallet/WalletBalance";
 import ActionButtons from "./wallet/ActionButtons";
 import WalletHistory from "./wallet/WalletHistory";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 export default function WalletTab() {
+  const [balance, setBalance] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
-  const { walletBalance: balance, isLoadingBalance: isLoading, refreshBalance } = useWalletBalance();
+
+  useEffect(() => {
+    fetchWalletBalance();
+    
+    // Real-time subscriptions removed
+  }, []);
+
+  const fetchWalletBalance = async () => {
+    try {
+      setIsLoading(true);
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        toast.error("Veuillez vous connecter pour accéder à votre portefeuille");
+        return;
+      }
+      
+      // Fetch wallet balance from profiles table
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('wallet_balance')
+        .eq('id', session.session.user.id)
+        .single();
+        
+      if (error) throw error;
+      
+      if (data) {
+        console.log('Wallet balance updated:', data.wallet_balance);
+        setBalance(data.wallet_balance || 0);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération du solde:", error);
+      toast.error("Impossible de récupérer votre solde");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeposit = async () => {
+    await fetchWalletBalance();
+  };
+
+  const handleWithdraw = async () => {
+    await fetchWalletBalance();
+  };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -34,12 +80,8 @@ export default function WalletTab() {
         </TabsList>
         
         <TabsContent value="overview" className="space-y-6">
-          <ActionButtons 
-            onDeposit={() => handleTabChange("deposit")} 
-            onWithdraw={() => handleTabChange("withdraw")} 
-            refreshBalance={refreshBalance}
-          />
-          <WalletHistory refreshBalance={refreshBalance} />
+          <ActionButtons onDeposit={handleDeposit} onWithdraw={handleWithdraw} refreshBalance={fetchWalletBalance} />
+          <WalletHistory refreshBalance={fetchWalletBalance} />
         </TabsContent>
         
         <TabsContent value="deposit">
@@ -59,7 +101,7 @@ export default function WalletTab() {
               <CardTitle>Retirer des fonds</CardTitle>
             </CardHeader>
             <CardContent>
-              <WithdrawFundsForm balance={balance} onWithdraw={refreshBalance} />
+              <WithdrawFundsForm balance={balance} onWithdraw={handleWithdraw} />
             </CardContent>
           </Card>
         </TabsContent>
