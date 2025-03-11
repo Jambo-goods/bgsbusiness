@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { Slider } from "@/components/ui/slider";
@@ -20,6 +19,8 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   const [userBalance, setUserBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
+  
+  const maxInvestment = project.maxInvestment || Math.min(project.price, 20000);
   
   useEffect(() => {
     const fetchUserBalance = async () => {
@@ -66,7 +67,6 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   
   useEffect(() => {
     const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
-    // Calcul tenant compte de la période avant le premier versement
     const effectiveDuration = duration - firstPaymentDelay; 
     const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * Math.max(0, effectiveDuration));
     
@@ -91,14 +91,14 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
         <Slider
           value={[investmentAmount]}
           min={project.minInvestment}
-          max={Math.min(project.price, 20000)}
+          max={maxInvestment}
           step={100}
           onValueChange={(value) => setInvestmentAmount(value[0])}
           className="mb-2"
         />
         <div className="flex justify-between text-xs text-bgs-blue/60">
           <span>Min: {project.minInvestment} €</span>
-          <span>Max: {Math.min(project.price, 20000).toLocaleString()} €</span>
+          <span>Max: {maxInvestment.toLocaleString()} €</span>
         </div>
       </div>
       

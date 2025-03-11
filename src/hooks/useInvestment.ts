@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +21,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
   const navigate = useNavigate();
   
   const minInvestment = project.minInvestment;
-  const maxInvestment = 10000;
+  const maxInvestment = project.maxInvestment || 10000;
   const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
   
   const durations = project.possibleDurations || 
@@ -84,6 +85,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
     setIsProcessing(true);
     
     try {
+      // Get the current user session
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
@@ -98,6 +100,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
       
       const userId = session.session.user.id;
       
+      // Make sure we have a valid project ID
       console.log("Création/recherche du projet:", project.name);
       let projectId;
       try {
@@ -117,6 +120,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
         return;
       }
       
+      // Update the user's wallet balance
       const { error: walletError } = await supabase.rpc(
         'increment_wallet_balance',
         { user_id: userId, increment_amount: -investmentAmount }
@@ -127,6 +131,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw walletError;
       }
       
+      // Create the investment record
       const { error: investmentError } = await supabase
         .from('investments')
         .insert({
@@ -144,9 +149,11 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw investmentError;
       }
       
+      // Create scheduled payments for this investment
       try {
         const currentDate = new Date();
         
+        // Create individual scheduled payments for each month
         for (let i = firstPaymentDelay; i < selectedDuration; i++) {
           const paymentDate = new Date(currentDate);
           paymentDate.setMonth(currentDate.getMonth() + i);
@@ -159,7 +166,10 @@ export const useInvestment = (project: Project, investorCount: number) => {
               payment_date: paymentDate.toISOString(),
               payment_amount: monthlyReturn,
               status: 'scheduled',
-              percentage: project.yield
+              percentage: project.yield,
+              // Don't use total_invested_amount field as it may not exist
+              investors_count: null,
+              cumulative_amount: null
             });
             
           if (scheduledPaymentError) {
@@ -172,6 +182,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
         // Continue l'exécution même si la programmation des paiements échoue
       }
       
+      // Update user profile with investment info
       const { data: profileData, error: profileFetchError } = await supabase
         .from('profiles')
         .select('investment_total, projects_count')
@@ -198,6 +209,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw profileUpdateError;
       }
       
+      // Record the transaction in wallet history
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
@@ -213,6 +225,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw transactionError;
       }
       
+      // Save investment data for confirmation page
       const investmentData = {
         projectId: projectId,
         projectName: project.name,
@@ -227,6 +240,7 @@ export const useInvestment = (project: Project, investorCount: number) => {
       
       localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
       
+      // Create confirmation notification
       try {
         console.log("Création de la notification d'investissement confirmé");
         await notificationService.investmentConfirmed(investmentAmount, project.name, projectId);

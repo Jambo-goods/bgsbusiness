@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -39,8 +40,9 @@ const YieldTab = () => {
       location: 'Paris, France',
       minInvestment: 1000,
       maxInvestment: 50000,
-      startDate: '2024-01-01',
-      endDate: '2024-12-31',
+      price: 100000,
+      profitability: 8,
+      duration: '12 months',
       category: 'energy',
       fundingProgress: 75
     },
@@ -56,8 +58,9 @@ const YieldTab = () => {
       location: 'London, UK',
       minInvestment: 500,
       maxInvestment: 20000,
-      startDate: '2023-06-01',
-      endDate: '2023-12-31',
+      price: 80000,
+      profitability: 6,
+      duration: '24 months',
       category: 'renewable',
       fundingProgress: 90
     },
@@ -73,8 +76,9 @@ const YieldTab = () => {
       location: 'New York, USA',
       minInvestment: 200,
       maxInvestment: 10000,
-      startDate: '2022-01-01',
-      endDate: '2022-12-31',
+      price: 50000,
+      profitability: 4,
+      duration: '36 months',
       category: 'green',
       fundingProgress: 50
     }
@@ -165,7 +169,7 @@ const YieldTab = () => {
         maxInvestment: 0,
         price: 0,
         profitability: 0,
-        duration: '',
+        duration: '12 months',
         category: '',
         fundingProgress: 0
       }));
