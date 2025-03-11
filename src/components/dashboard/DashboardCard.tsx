@@ -61,7 +61,7 @@ export default function DashboardCard({
       </p>
       {changeValue && changeTimeframe && (
         <div className="mt-2 text-xs text-bgs-gray-medium">
-          <span className={isPositive ? "text-green-500 font-medium" : "text-red-500 font-medium"}>{changeValue}</span> depuis <span className="font-medium">{changeTimeframe}</span>
+          <span className={isPositive ? "text-green-500 font-medium" : "text-red-500 font-medium"}>{changeValue}</span> <span className="font-medium">{changeTimeframe}</span>
         </div>
       )}
       {footer && (
