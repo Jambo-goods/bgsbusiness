@@ -145,6 +145,36 @@ export const useInvestment = (project: Project, investorCount: number) => {
         throw investmentError;
       }
       
+      // Créer les paiements programmés (en évitant d'utiliser total_invested_amount)
+      try {
+        // Calculer les dates et montants de paiement
+        const currentDate = new Date();
+        
+        for (let i = firstPaymentDelay; i < selectedDuration; i++) {
+          const paymentDate = new Date(currentDate);
+          paymentDate.setMonth(currentDate.getMonth() + i);
+          
+          const { error: scheduledPaymentError } = await supabase
+            .from('scheduled_payments')
+            .insert({
+              user_id: userId,
+              project_id: projectId,
+              payment_date: paymentDate.toISOString(),
+              payment_amount: monthlyReturn,
+              status: 'scheduled',
+              percentage: project.yield
+            });
+            
+          if (scheduledPaymentError) {
+            console.error(`Erreur lors de la programmation du paiement ${i}:`, scheduledPaymentError);
+            // Continue avec les autres paiements même si celui-ci échoue
+          }
+        }
+      } catch (schedulingError) {
+        console.error("Erreur lors de la programmation des paiements:", schedulingError);
+        // Continue l'exécution même si la programmation des paiements échoue
+      }
+      
       const { data: profileData, error: profileFetchError } = await supabase
         .from('profiles')
         .select('investment_total, projects_count')
