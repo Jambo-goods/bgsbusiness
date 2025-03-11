@@ -1,107 +1,78 @@
 
-import { PaymentRecord, ScheduledPayment } from "./types";
-import { calculateCumulativeReturns, filterAndSortPayments } from "./utils";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { Investment, ScheduledPayment } from "./types";
 
-export const useReturnsStatistics = (
-  paymentRecords: PaymentRecord[],
-  filterStatus: string,
-  sortColumn: string,
-  sortDirection: "asc" | "desc"
-) => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
+export const useReturnsStatistics = () => {
+  const { data: scheduledPayments, isLoading } = useQuery({
+    queryKey: ["scheduled-payments"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("scheduled_payments")
+        .select(`
+          *,
+          projects:project_id (
+            name,
+            image,
+            company_name,
+            status
+          )
+        `)
+        .order("payment_date", { ascending: true });
 
-  // Fetch scheduled payments from Supabase
-  useEffect(() => {
-    const fetchScheduledPayments = async () => {
-      try {
-        const { data: payments, error } = await supabase
-          .from('scheduled_payments')
-          .select(`
-            *,
-            projects(name)
-          `)
-          .order('payment_date', { ascending: true });
-
-        if (error) throw error;
-        
-        // Cast the payments to match the ScheduledPayment type
-        const typedPayments: ScheduledPayment[] = payments?.map(payment => {
-          // Calculate the scheduled amount based on percentage
-          // Make sure to handle non-numeric values properly
-          const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
-          const investedAmount = typeof payment.total_invested_amount === 'number' ? payment.total_invested_amount : 0;
-          const calculatedAmount = investedAmount * (percentage / 100);
-          
-          return {
-            ...payment,
-            // Override the total_scheduled_amount with the calculated value
-            total_scheduled_amount: calculatedAmount,
-            status: payment.status as 'scheduled' | 'pending' | 'paid'
-          };
-        }) || [];
-        
-        setScheduledPayments(typedPayments);
-        console.log("Fetched scheduled payments with calculated amounts:", typedPayments);
-      } catch (error) {
-        console.error('Error fetching scheduled payments:', error);
-      } finally {
-        setIsLoading(false);
+      if (error) {
+        console.error("Error fetching scheduled payments:", error);
+        throw error;
       }
+
+      return data || [];
+    },
+  });
+
+  const statistics = useMemo(() => {
+    if (!scheduledPayments) return null;
+
+    const totalScheduledAmount = scheduledPayments.reduce(
+      (sum, payment) => sum + (payment.total_scheduled_amount || 0),
+      0
+    );
+
+    // Calculate payments received
+    const paymentsReceived = scheduledPayments
+      .filter((payment) => payment.status === "paid")
+      .reduce((sum, payment) => sum + (payment.total_scheduled_amount || 0), 0);
+
+    // Sort payments by date for cumulative calculation
+    const sortedPayments = [...scheduledPayments].sort(
+      (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
+    );
+
+    // Calculate cumulative amounts for each payment
+    let cumulativeAmount = 0;
+    const paymentsWithCumulative = sortedPayments.map(payment => {
+      if (payment.status === "paid") {
+        cumulativeAmount += (payment.total_scheduled_amount || 0);
+      }
+      return {
+        ...payment,
+        calculatedCumulativeAmount: payment.status === "paid" ? cumulativeAmount : 0
+      };
+    });
+
+    return {
+      totalScheduledAmount,
+      paymentsReceived,
+      paymentsWithCumulative,
+      percentageReceived: totalScheduledAmount > 0 
+        ? (paymentsReceived / totalScheduledAmount) * 100 
+        : 0,
     };
+  }, [scheduledPayments]);
 
-    fetchScheduledPayments();
-
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('scheduled_payments_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'scheduled_payments' },
-        () => {
-          fetchScheduledPayments();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  // Calculate cumulative returns
-  const cumulativeReturns = calculateCumulativeReturns(paymentRecords);
-  
-  // Filter and sort payment records
-  const filteredAndSortedPayments = filterAndSortPayments(
-    paymentRecords,
-    filterStatus,
-    sortColumn,
-    sortDirection
-  );
-  
-  // Calculate totals
-  const totalPaid = paymentRecords
-    .filter(payment => payment.status === 'paid')
-    .reduce((sum, payment) => sum + payment.amount, 0);
-  
-  const totalPending = paymentRecords
-    .filter(payment => payment.status === 'pending')
-    .reduce((sum, payment) => sum + payment.amount, 0);
-  
-  // Calculate average monthly return
-  const averageMonthlyReturn = Math.round(
-    totalPaid / Math.max(cumulativeReturns.length, 1)
-  );
-  
   return {
-    cumulativeReturns,
-    filteredAndSortedPayments,
+    statistics,
+    isLoading,
     scheduledPayments,
-    totalPaid,
-    totalPending,
-    averageMonthlyReturn,
-    isLoading
   };
 };

@@ -1,13 +1,14 @@
 
-export interface PaymentRecord {
+export interface Investment {
   id: string;
-  projectId: string;
-  projectName: string;
+  project_id: string;
+  user_id: string;
   amount: number;
-  date: Date;
-  type: 'yield' | 'capital';
-  status: 'paid' | 'pending' | 'scheduled';
-  percentage?: number;  // Optional percentage field for scheduled payments
+  yield_rate: number;
+  duration: number;
+  status: string;
+  date: string;
+  end_date: string;
 }
 
 export interface ScheduledPayment {
@@ -15,13 +16,24 @@ export interface ScheduledPayment {
   project_id: string;
   payment_date: string;
   percentage: number;
-  status: 'scheduled' | 'pending' | 'paid';
-  total_invested_amount: number;
-  total_scheduled_amount: number;
-  cumulative_amount: number;
-  created_at?: string;
-  updated_at?: string;
-  investors_count?: number;
-  processed_at?: string;
-  projects?: { name: string }; // This is for the join from Supabase
+  status: "scheduled" | "pending" | "paid";
+  total_scheduled_amount: number | null;
+  investors_count: number | null;
+  processed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  calculatedCumulativeAmount?: number;
+  projects?: {
+    name: string;
+    image: string;
+    company_name: string;
+    status: string;
+  };
+}
+
+export interface PaymentStatistics {
+  totalScheduledAmount: number;
+  paymentsReceived: number;
+  percentageReceived: number;
+  paymentsWithCumulative: ScheduledPayment[];
 }
