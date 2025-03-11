@@ -1,4 +1,5 @@
 
+
 import { useEffect, useState } from "react";
 import { DashboardCardData, UserData } from "./types";
 
@@ -6,10 +7,10 @@ export const useDashboardCardsData = (userData: UserData | null): DashboardCardD
   const [dashboardData, setDashboardData] = useState<DashboardCardData>({
     monthlyYield: 0,
     annualYield: 0,
-    walletChange: { percentage: "0%", value: "0€" },
-    investmentChange: { percentage: "0%", value: "0€" },
-    projectsChange: { value: "0" },
-    yieldChange: { value: "0%" }
+    walletChange: { percentage: "", value: "" },
+    investmentChange: { percentage: "", value: "" },
+    projectsChange: { value: "" },
+    yieldChange: { value: "" }
   });
 
   useEffect(() => {
@@ -22,12 +23,13 @@ export const useDashboardCardsData = (userData: UserData | null): DashboardCardD
     setDashboardData({
       monthlyYield,
       annualYield,
-      walletChange: { percentage: "0%", value: "0€" },
-      investmentChange: { percentage: "0%", value: "0€" },
-      projectsChange: { value: "0" },
-      yieldChange: { value: "0%" }
+      walletChange: { percentage: "", value: "" },
+      investmentChange: { percentage: "", value: "" },
+      projectsChange: { value: "" },
+      yieldChange: { value: "" }
     });
   }, [userData]);
 
   return dashboardData;
 };
+

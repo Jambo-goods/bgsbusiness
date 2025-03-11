@@ -29,8 +29,11 @@ export default function DashboardCard({
   // Determine if change is positive based on the actual data
   const isPositive = changePercentage ? changePercentage.startsWith('+') || changeValue && changeValue.startsWith('↑') : false;
   
-  // Don't show the change percentage if it's "0%"
-  const showChangePercentage = changePercentage && changePercentage !== "0%";
+  // Don't show the change percentage if it's "0%" or "0"
+  const showChangePercentage = changePercentage && changePercentage !== "0%" && changePercentage !== "0";
+  
+  // Don't show zero values
+  const displayValue = value.toString() === "0" || value.toString() === "0€" ? "" : value;
   
   return <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md hover:translate-y-[-2px]">
       <div className="flex items-center justify-between mb-4">
@@ -55,7 +58,7 @@ export default function DashboardCard({
         {title}
       </h3>
       <p className="text-2xl font-bold text-bgs-blue mb-1">
-        {value}
+        {displayValue}
       </p>
       {footer && <div className="mt-4 pt-4 border-t border-gray-100">
           {footer}

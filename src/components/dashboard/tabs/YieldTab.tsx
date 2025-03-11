@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -101,15 +100,23 @@ export default function YieldTab() {
         return;
       }
       
-      // Convert to Project[] format
+      // Convert to Project[] format with all required properties
       const projects: Project[] = data.map(inv => ({
         id: inv.projects.id,
         name: inv.projects.name,
         image: inv.projects.image,
         company: inv.projects.company_name,
+        companyName: inv.projects.company_name,
         status: inv.projects.status,
         investedAmount: inv.amount,
-        yield: inv.projects.yield
+        yield: inv.projects.yield,
+        description: "",
+        profitability: 0,
+        duration: 0,
+        minimumInvestment: 0,
+        maximumInvestment: 0,
+        totalFunding: 0,
+        remainingAmount: 0
       }));
       
       setUserInvestments(projects);
