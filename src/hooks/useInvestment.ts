@@ -153,13 +153,12 @@ export const useInvestment = (project: Project, investorCount: number) => {
       try {
         const currentDate = new Date();
         
-        // Create a single record for payment scheduling instead of individual payments
-        // This avoids issues with the admin_users table which doesn't seem to exist
+        // Create a single record for payment scheduling - with correct fields
         const { error: schedulingError } = await supabase
           .from('scheduled_payments')
           .insert({
             project_id: projectId,
-            payment_date: new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1).toISOString(),
+            payment_date: new Date(currentDate.getFullYear(), currentDate.getMonth() + firstPaymentDelay, 1).toISOString(),
             status: 'scheduled',
             percentage: project.yield,
             investors_count: investorCount,
