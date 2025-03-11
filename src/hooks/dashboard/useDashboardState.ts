@@ -45,6 +45,15 @@ export function useDashboardState() {
     };
   }, [activeTab, setSearchParams, searchParams]);
 
+  // Also listen for URL changes to update the active tab
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && tabFromUrl !== activeTab) {
+      console.log(`Updating active tab from URL: ${tabFromUrl}`);
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams, activeTab]);
+
   return {
     activeTab,
     setActiveTab

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Bell, Wallet, Home } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -109,7 +110,19 @@ export default function NavbarActions({
   };
 
   const handleWalletClick = () => {
-    navigate('/dashboard?tab=wallet');
+    console.log("Wallet button clicked, navigating to wallet tab");
+    if (location.pathname.includes('/dashboard')) {
+      // Already on dashboard, just update the search params
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.set('tab', 'wallet');
+      navigate({
+        pathname: '/dashboard',
+        search: searchParams.toString()
+      }, { replace: true });
+    } else {
+      // Not on dashboard, navigate to dashboard with wallet tab
+      navigate('/dashboard?tab=wallet');
+    }
   };
 
   const isDashboardPage = location.pathname.includes('/dashboard');
