@@ -17,6 +17,7 @@ export function useWalletBalance() {
       
       if (!session.session) {
         setWalletBalance(0);
+        setIsLoadingBalance(false);
         return;
       }
       
@@ -24,24 +25,19 @@ export function useWalletBalance() {
         .from('profiles')
         .select('wallet_balance')
         .eq('id', session.session.user.id)
-        .single();
+        .maybeSingle();
         
       if (error) {
         console.error("Error fetching wallet balance:", error);
-        // Suppression de la notification d'erreur
         setWalletBalance(0);
-        return;
+      } else {
+        setWalletBalance(data?.wallet_balance || 0);
       }
-      
-      setWalletBalance(data.wallet_balance || 0);
     } catch (error) {
       console.error("Error:", error);
-      // Suppression de la notification d'erreur
       setWalletBalance(0);
     } finally {
-      if (showLoading) {
-        setIsLoadingBalance(false);
-      }
+      setIsLoadingBalance(false);
     }
   }, []);
 

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Bell, Wallet, Home } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
@@ -23,10 +23,11 @@ export default function NavbarActions({
   const [isLoading, setIsLoading] = useState(true);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const {
-    walletBalance
+    walletBalance,
+    isLoadingBalance,
+    refreshBalance
   } = useWalletBalance();
   const location = useLocation();
-  const navigate = useNavigate();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -37,11 +38,6 @@ export default function NavbarActions({
       const hasSession = !!data.session;
       setIsAuthenticated(hasSession);
       setIsLoading(false);
-      
-      const isDashboardPage = location.pathname.includes('/dashboard');
-      if (hasSession && !isDashboardPage && location.pathname === '/login') {
-        navigate('/dashboard');
-      }
     };
     checkAuth();
 
@@ -51,7 +47,7 @@ export default function NavbarActions({
     return () => {
       clearInterval(authCheckInterval);
     };
-  }, [location.pathname, navigate]);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -99,15 +95,15 @@ export default function NavbarActions({
           <Home className="h-5 w-5 text-bgs-blue" />
         </Link>
         
-        <button 
-          onClick={() => navigate('/dashboard?tab=wallet')} 
+        <Link 
+          to="/dashboard?tab=wallet" 
           className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1"
         >
           <Wallet className="h-5 w-5 text-bgs-blue" />
           <span className="text-xs font-medium text-bgs-blue">
-            {walletBalance.toLocaleString('fr-FR')}€
+            {isLoadingBalance ? '...' : `${walletBalance.toLocaleString('fr-FR')}€`}
           </span>
-        </button>
+        </Link>
 
         <div className="relative notification-dropdown">
           <button onClick={() => {
