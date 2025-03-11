@@ -1,4 +1,3 @@
-
 import React from "react";
 import { WalletCards, Euro, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,10 +19,7 @@ export default function WalletBalance({
           </div>
           <h2 className="text-lg font-semibold text-bgs-blue">Solde disponible</h2>
         </div>
-        <div className="bg-green-50 px-2 py-1 rounded-lg flex items-center">
-          <TrendingUp className="h-3.5 w-3.5 text-green-500 mr-1" />
-          <span className="text-xs font-medium text-green-600">+2.4%</span>
-        </div>
+        
       </div>
       
       {isLoading ? <Skeleton className="h-9 w-32 mb-4" /> : <div className="flex items-center text-3xl font-bold text-bgs-blue mb-4">
@@ -36,16 +32,10 @@ export default function WalletBalance({
           Votre solde disponible peut être utilisé pour investir dans de nouveaux projets ou être retiré sur votre compte bancaire.
         </p>
         <div className="flex justify-between items-center">
-          <button 
-            className="text-bgs-blue hover:text-bgs-blue-light text-sm font-medium transition-colors"
-            onClick={() => onTabChange && onTabChange('deposit')}
-          >
+          <button className="text-bgs-blue hover:text-bgs-blue-light text-sm font-medium transition-colors" onClick={() => onTabChange && onTabChange('deposit')}>
             Ajouter des fonds
           </button>
-          <button 
-            className="text-bgs-orange hover:text-bgs-orange-light text-sm font-medium transition-colors"
-            onClick={() => onTabChange && onTabChange('withdraw')}
-          >
+          <button className="text-bgs-orange hover:text-bgs-orange-light text-sm font-medium transition-colors" onClick={() => onTabChange && onTabChange('withdraw')}>
             Effectuer un retrait
           </button>
         </div>
