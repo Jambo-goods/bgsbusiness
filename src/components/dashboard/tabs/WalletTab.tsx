@@ -18,16 +18,25 @@ export default function WalletTab() {
   useEffect(() => {
     fetchWalletBalance();
     
-    // Real-time subscriptions removed
+    // Create polling for balance updates
+    const balanceInterval = setInterval(() => {
+      fetchWalletBalance(false); // Silent refresh (no loading indicator)
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(balanceInterval);
   }, []);
 
-  const fetchWalletBalance = async () => {
+  const fetchWalletBalance = async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      if (showLoading) {
+        setIsLoading(true);
+      }
+      
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
         toast.error("Veuillez vous connecter pour accéder à votre portefeuille");
+        setIsLoading(false);
         return;
       }
       
@@ -36,13 +45,14 @@ export default function WalletTab() {
         .from('profiles')
         .select('wallet_balance')
         .eq('id', session.session.user.id)
-        .single();
+        .maybeSingle();
         
-      if (error) throw error;
-      
-      if (data) {
-        console.log('Wallet balance updated:', data.wallet_balance);
-        setBalance(data.wallet_balance || 0);
+      if (error) {
+        console.error("Erreur lors de la récupération du solde:", error);
+        toast.error("Impossible de récupérer votre solde");
+      } else {
+        console.log('Wallet balance updated:', data?.wallet_balance);
+        setBalance(data?.wallet_balance || 0);
       }
     } catch (error) {
       console.error("Erreur lors de la récupération du solde:", error);

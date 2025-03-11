@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { Bell, Wallet, Home } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
 import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
@@ -22,11 +21,7 @@ export default function NavbarActions({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const {
-    walletBalance,
-    isLoadingBalance,
-    refreshBalance
-  } = useWalletBalance();
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -37,8 +32,31 @@ export default function NavbarActions({
       } = await supabase.auth.getSession();
       const hasSession = !!data.session;
       setIsAuthenticated(hasSession);
+      
+      // Get wallet balance if authenticated
+      if (hasSession) {
+        try {
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('wallet_balance')
+            .eq('id', data.session.user.id)
+            .maybeSingle();
+            
+          if (!error && profileData) {
+            setWalletBalance(profileData.wallet_balance || 0);
+          } else {
+            console.error("Error fetching wallet balance:", error);
+            setWalletBalance(0);
+          }
+        } catch (err) {
+          console.error("Failed to fetch wallet balance:", err);
+          setWalletBalance(0);
+        }
+      }
+      
       setIsLoading(false);
     };
+    
     checkAuth();
 
     // Replace real-time subscription with periodic check
@@ -100,9 +118,11 @@ export default function NavbarActions({
           className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1"
         >
           <Wallet className="h-5 w-5 text-bgs-blue" />
-          <span className="text-xs font-medium text-bgs-blue">
-            {isLoadingBalance ? '...' : `${walletBalance.toLocaleString('fr-FR')}€`}
-          </span>
+          {walletBalance !== null && (
+            <span className="text-xs font-medium text-bgs-blue">
+              {walletBalance.toLocaleString('fr-FR')}€
+            </span>
+          )}
         </Link>
 
         <div className="relative notification-dropdown">
