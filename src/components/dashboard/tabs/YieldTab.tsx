@@ -101,15 +101,25 @@ export default function YieldTab() {
         return;
       }
       
-      // Convert to Project[] format
+      // Convert to Project[] format with all required properties
       const projects: Project[] = data.map(inv => ({
         id: inv.projects.id,
         name: inv.projects.name,
         image: inv.projects.image,
         company: inv.projects.company_name,
+        companyName: inv.projects.company_name,
         status: inv.projects.status,
         investedAmount: inv.amount,
-        yield: inv.projects.yield
+        yield: inv.projects.yield,
+        // Add required properties from the Project interface with default values
+        description: '',
+        location: '',
+        minInvestment: 0,
+        category: '',
+        price: 0,
+        duration: '',
+        profitability: 0,
+        fundingProgress: 0
       }));
       
       setUserInvestments(projects);
