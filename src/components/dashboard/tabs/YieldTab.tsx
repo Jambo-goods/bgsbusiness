@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -13,7 +12,7 @@ import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics
 import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
 import { Project } from "@/types/project";
 
-export default function YieldTab() {
+const YieldTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [monthlyYield, setMonthlyYield] = useState(0);
@@ -27,7 +26,63 @@ export default function YieldTab() {
   }[]>([]);
   const [userInvestments, setUserInvestments] = useState<Project[]>([]);
   
-  // Investment tracking
+  const mockProjects: Project[] = [
+    {
+      id: '1',
+      name: 'Project Alpha',
+      image: '/placeholder.svg',
+      company: 'Alpha Corp',
+      companyName: 'Alpha Corporation',
+      status: 'active',
+      investedAmount: 5000,
+      yield: 8,
+      description: 'A sustainable energy project',
+      location: 'Paris, France',
+      minInvestment: 1000,
+      maxInvestment: 50000,
+      startDate: '2024-01-01',
+      endDate: '2024-12-31',
+      category: 'energy',
+      fundingProgress: 75
+    },
+    {
+      id: '2',
+      name: 'Project Beta',
+      image: '/placeholder.svg',
+      company: 'Beta Corp',
+      companyName: 'Beta Corporation',
+      status: 'active',
+      investedAmount: 3000,
+      yield: 6,
+      description: 'A renewable energy project',
+      location: 'London, UK',
+      minInvestment: 500,
+      maxInvestment: 20000,
+      startDate: '2023-06-01',
+      endDate: '2023-12-31',
+      category: 'renewable',
+      fundingProgress: 90
+    },
+    {
+      id: '3',
+      name: 'Project Gamma',
+      image: '/placeholder.svg',
+      company: 'Gamma Corp',
+      companyName: 'Gamma Corporation',
+      status: 'active',
+      investedAmount: 1000,
+      yield: 4,
+      description: 'A green building project',
+      location: 'New York, USA',
+      minInvestment: 200,
+      maxInvestment: 10000,
+      startDate: '2022-01-01',
+      endDate: '2022-12-31',
+      category: 'green',
+      fundingProgress: 50
+    }
+  ];
+
   const {
     sortColumn,
     sortDirection,
@@ -52,7 +107,6 @@ export default function YieldTab() {
     fetchInvestmentYields();
     fetchUserInvestments();
     
-    // Set up realtime subscription
     const channel = supabase
       .channel('public:investments')
       .on('postgres_changes', {
@@ -60,7 +114,6 @@ export default function YieldTab() {
         schema: 'public',
         table: 'investments'
       }, () => {
-        // When any change happens to investments, refetch
         fetchInvestmentYields();
         fetchUserInvestments();
       })
@@ -101,7 +154,6 @@ export default function YieldTab() {
         return;
       }
       
-      // Convert to Project[] format with all required properties
       const projects: Project[] = data.map(inv => ({
         id: inv.projects.id,
         name: inv.projects.name,
@@ -111,7 +163,6 @@ export default function YieldTab() {
         status: inv.projects.status,
         investedAmount: inv.amount,
         yield: inv.projects.yield,
-        // Add required properties from the Project interface with default values
         description: '',
         location: '',
         minInvestment: 0,
@@ -138,7 +189,6 @@ export default function YieldTab() {
         return;
       }
       
-      // Fetch user investments
       const { data: investmentsData, error: investmentsError } = await supabase
         .from('investments')
         .select('amount, yield_rate, project_id')
@@ -155,7 +205,6 @@ export default function YieldTab() {
         return;
       }
       
-      // Get project details for each investment
       const projectIds = investmentsData.map(inv => inv.project_id);
       
       const { data: projectsData, error: projectsError } = await supabase
@@ -168,7 +217,6 @@ export default function YieldTab() {
         throw projectsError;
       }
       
-      // Calculate yields for each investment
       let totalMonthlyYield = 0;
       let weightedAnnualPercent = 0;
       let totalInvestment = 0;
@@ -190,7 +238,6 @@ export default function YieldTab() {
         };
       });
       
-      // Calculate annual yield and percentage
       const calculatedAnnualYield = totalMonthlyYield * 12;
       const calculatedAnnualPercent = totalInvestment > 0 
         ? (weightedAnnualPercent / totalInvestment) 
@@ -399,7 +446,6 @@ export default function YieldTab() {
         )}
       </div>
       
-      {/* Section de suivi des rendements intégrée (précédemment dans InvestmentTrackingTab) */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <HeaderSection 
@@ -421,4 +467,6 @@ export default function YieldTab() {
       </div>
     </div>
   );
-}
+};
+
+export default YieldTab;
