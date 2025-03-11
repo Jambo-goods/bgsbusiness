@@ -2,6 +2,8 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight, Calendar, Coins, Clock } from "lucide-react";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
 
 interface InvestmentItemProps {
   investment: any;
@@ -16,6 +18,18 @@ export default function InvestmentItem({ investment }: InvestmentItemProps) {
         return 'bg-green-100 text-green-600 hover:bg-green-200';
       default:
         return 'bg-orange-100 text-orange-600 hover:bg-orange-200';
+    }
+  };
+
+  // Format the date using date-fns
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "Date inconnue";
+    
+    try {
+      return format(new Date(dateString), 'dd MMMM yyyy', { locale: fr });
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return "Date invalide";
     }
   };
 
@@ -59,7 +73,7 @@ export default function InvestmentItem({ investment }: InvestmentItemProps) {
             </div>
             <div className="bg-orange-50 p-2 rounded-md">
               <p className="text-xs text-bgs-gray-medium flex items-center"><Calendar className="h-3 w-3 mr-1" /> Date</p>
-              <p className="font-semibold text-bgs-blue text-sm">{new Date(investment.created_at).toLocaleDateString('fr-FR')}</p>
+              <p className="font-semibold text-bgs-blue text-sm">{formatDate(investment.date || investment.created_at)}</p>
             </div>
             <div className="bg-purple-50 p-2 rounded-md">
               <p className="text-xs text-bgs-gray-medium flex items-center"><Clock className="h-3 w-3 mr-1" /> Durée</p>
