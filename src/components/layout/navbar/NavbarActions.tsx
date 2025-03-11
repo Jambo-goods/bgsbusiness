@@ -99,12 +99,15 @@ export default function NavbarActions({
           <Home className="h-5 w-5 text-bgs-blue" />
         </Link>
         
-        <Link to="/dashboard?tab=wallet" className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1">
+        <button 
+          onClick={() => navigate('/dashboard?tab=wallet')} 
+          className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1"
+        >
           <Wallet className="h-5 w-5 text-bgs-blue" />
           <span className="text-xs font-medium text-bgs-blue">
             {walletBalance.toLocaleString('fr-FR')}€
           </span>
-        </Link>
+        </button>
 
         <div className="relative notification-dropdown">
           <button onClick={() => {
