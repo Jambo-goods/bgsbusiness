@@ -68,8 +68,8 @@ export const useReturnsStatistics = () => {
       projectName: payment.projects?.name || "Projet inconnu",
       amount: payment.total_scheduled_amount || 0,
       date: new Date(payment.payment_date),
-      type: 'yield',
-      status: payment.status,
+      type: 'yield' as const,
+      status: payment.status as "paid" | "pending" | "scheduled",
       percentage: payment.percentage
     }));
 
