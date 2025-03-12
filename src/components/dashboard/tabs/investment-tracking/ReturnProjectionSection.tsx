@@ -69,6 +69,9 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {futurePayments.length > 0 ? (
               futurePayments.map((payment, index) => {
+                // Afficher toujours 12% fixe pour tous les paiements
+                const fixedPercentage = 12;
+                
                 return (
                   <tr key={payment.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -78,7 +81,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
                       {payment.projectName}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {payment.percentage}%
+                      {fixedPercentage}%
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                       {payment.amount.toFixed(2)} €

@@ -110,14 +110,14 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     
     const investmentDate = investment.date ? new Date(investment.date) : new Date();
     const amount = investment.amount || 0;
-    const yield_rate = investment.yield_rate || investment.projects.yield || 0;
     
-    // Use the direct percentage value from the database
-    const monthlyPercentage = yield_rate;
+    // Utiliser un pourcentage fixe de 12% pour tous les investissements
+    const fixedYieldRate = 12;
     
-    const monthlyReturn = (monthlyPercentage / 100) * amount;
+    // Calculer le rendement mensuel basé sur le pourcentage fixe
+    const monthlyReturn = (fixedYieldRate / 100) * amount / 12;
     
-    console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}, monthly percentage=${monthlyPercentage}%`);
+    console.log(`Investment ${index}: amount=${amount}, yield=${fixedYieldRate}%, monthly=${monthlyReturn}, monthly percentage=${fixedYieldRate/12}%`);
     
     const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
     console.log(`Investment ${index}: First payment delay: ${firstPaymentDelayMonths} months`);
@@ -153,7 +153,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
             type: 'yield',
             status: 'paid',
             isProjectedPayment: false,
-            percentage: monthlyPercentage
+            percentage: fixedYieldRate
           });
         }
       }
@@ -175,7 +175,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         type: 'yield',
         status: 'pending',
         isProjectedPayment: false,
-        percentage: monthlyPercentage
+        percentage: fixedYieldRate
       });
       
       for (let i = 1; i <= 2; i++) {
@@ -191,7 +191,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
           type: 'yield',
           status: 'scheduled',
           isProjectedPayment: false,
-          percentage: monthlyPercentage
+          percentage: fixedYieldRate
         });
       }
     } else {
@@ -204,7 +204,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         type: 'yield',
         status: 'scheduled',
         isProjectedPayment: true,
-        percentage: monthlyPercentage
+        percentage: fixedYieldRate
       });
     }
   });
