@@ -1,4 +1,3 @@
-
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -145,18 +144,9 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
           });
         }
       }
-    }
-    
-    // Calculate the correct next payment date based on the first payment date
-    let nextPaymentDate;
-    
-    if (firstPaymentDate > now) {
-      // If the first payment date is in the future, that's our next payment
-      nextPaymentDate = new Date(firstPaymentDate);
-      console.log(`Investment ${index}: First payment is in the future at ${nextPaymentDate.toISOString()}, respecting ${firstPaymentDelayMonths} months delay`);
-    } else {
+      
       // Calculate the next payment date after the last paid one
-      nextPaymentDate = new Date(firstPaymentDate);
+      let nextPaymentDate = new Date(firstPaymentDate);
       nextPaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment);
       
       // Make sure the next payment date is in the future
@@ -164,10 +154,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
       }
       console.log(`Investment ${index}: Next payment after paid ones at ${nextPaymentDate.toISOString()}`);
-    }
-    
-    // Only show pending payments if we're past the initial delay or exactly at the first payment date
-    if (isFirstPaymentDue || firstPaymentDate.getMonth() === now.getMonth() && firstPaymentDate.getFullYear() === now.getFullYear()) {
+      
       // Add the next pending payment
       payments.push({
         id: `payment-${investment.id}-pending`,
@@ -177,7 +164,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         date: nextPaymentDate,
         type: 'yield',
         status: 'pending',
-        isProjectedPayment: firstPaymentDate > now
+        isProjectedPayment: false
       });
       
       // Future scheduled payments (2 months after the pending payment)
@@ -193,12 +180,12 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
           date: futureDate,
           type: 'yield',
           status: 'scheduled',
-          isProjectedPayment: firstPaymentDate > now
+          isProjectedPayment: false
         });
       }
     } else {
-      // For investments still in the delay period, only show the first future payment
-      // with a clear projected status, but not any payments before that
+      // For investments still in the delay period, only show the first payment AFTER the delay period
+      // and mark it clearly as a projected payment
       payments.push({
         id: `payment-${investment.id}-projected`,
         projectId: investment.project_id,
