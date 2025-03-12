@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TrendingUp, RefreshCw } from 'lucide-react';
 import { PaymentRecord } from './types';
@@ -67,9 +66,6 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {futurePayments.length > 0 ? (
               futurePayments.map((payment, index) => {
-                // Afficher le pourcentage exactement comme il est dans la base de données
-                const paymentPercentage = payment.percentage !== undefined ? payment.percentage : 0;
-                
                 return (
                   <tr key={payment.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -79,7 +75,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
                       {payment.projectName}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {paymentPercentage}%
+                      {payment.percentage}%
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                       {payment.amount.toFixed(2)} €
