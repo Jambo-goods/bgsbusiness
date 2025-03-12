@@ -1,3 +1,4 @@
+
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -141,33 +142,37 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       }
     }
     
-    // Pending payment
-    let pendingDate;
+    // Determine the correct status for future payments based on the first payment date
+    
+    // Pending payment is always the FIRST upcoming payment after today
+    let nextPaymentDate;
+    
     if (firstPaymentDate > now) {
-      // If first payment date is in the future, that's our pending payment
-      pendingDate = new Date(firstPaymentDate);
-      console.log(`Investment ${index}: First payment is in the future at ${pendingDate.toISOString()}`);
+      // If the first payment date is in the future, that's our next payment
+      nextPaymentDate = new Date(firstPaymentDate);
+      console.log(`Investment ${index}: First payment is in the future at ${nextPaymentDate.toISOString()}`);
     } else {
-      // Otherwise, pending payment is the next month after the last paid payment
-      pendingDate = new Date(firstPaymentDate);
-      pendingDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + 1);
-      console.log(`Investment ${index}: Next payment after paid ones at ${pendingDate.toISOString()}`);
+      // Calculate the next payment after the last paid one
+      nextPaymentDate = new Date(firstPaymentDate);
+      nextPaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + 1);
+      console.log(`Investment ${index}: Next payment after paid ones at ${nextPaymentDate.toISOString()}`);
     }
     
+    // Add the pending payment (first upcoming payment)
     payments.push({
       id: `payment-${investment.id}-pending`,
       projectId: investment.project_id,
       projectName: investment.projects.name,
       amount: monthlyReturn,
-      date: pendingDate,
+      date: nextPaymentDate,
       type: 'yield',
       status: 'pending'
     });
     
     // Future scheduled payments (2 months after pending)
     for (let i = 1; i <= 2; i++) {
-      const futureDate = new Date(pendingDate);
-      futureDate.setMonth(pendingDate.getMonth() + i);
+      const futureDate = new Date(nextPaymentDate);
+      futureDate.setMonth(nextPaymentDate.getMonth() + i);
       
       payments.push({
         id: `payment-${investment.id}-future-${i}`,
