@@ -67,8 +67,8 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {futurePayments.length > 0 ? (
               futurePayments.map((payment, index) => {
-                // Directly display the percentage value from the database without any modifications
-                const paymentPercentage = payment.percentage !== undefined ? payment.percentage.toString() : '0';
+                // Afficher le pourcentage exactement comme il est dans la base de données
+                const paymentPercentage = payment.percentage !== undefined ? payment.percentage : 0;
                 
                 return (
                   <tr key={payment.id} className="hover:bg-gray-50">
