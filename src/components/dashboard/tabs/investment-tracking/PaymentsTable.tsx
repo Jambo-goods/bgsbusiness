@@ -74,7 +74,8 @@ export default function PaymentsTable({
         date: new Date(sp.payment_date),
         type: 'yield' as const,
         status: sp.status as 'paid' | 'pending' | 'scheduled',
-        percentage: sp.percentage
+        percentage: sp.percentage,
+        isProjectedPayment: false // Initialize as false for scheduled payments
       };
     })
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -147,8 +148,8 @@ export default function PaymentsTable({
             const projectImage = userInvestments.find(p => p.id === payment.projectId)?.image || 
               "https://via.placeholder.com/40";
               
-            // Determine if this is a projected payment (first payment delay not met yet)
-            const isProjectedPayment = payment.isProjectedPayment;
+            // Safely check for isProjectedPayment property
+            const isProjectedPayment = 'isProjectedPayment' in payment ? payment.isProjectedPayment : false;
               
             return (
               <TableRow key={payment.id} className={`animate-in fade-in duration-300 ${isProjectedPayment ? 'bg-gray-50' : ''}`}>

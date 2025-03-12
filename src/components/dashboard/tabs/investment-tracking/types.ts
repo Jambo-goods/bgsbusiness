@@ -8,7 +8,7 @@ export type PaymentRecord = {
   type: 'yield';
   status: 'paid' | 'pending' | 'scheduled';
   percentage?: number;
-  isProjectedPayment?: boolean; // Nouveau champ pour indiquer que le paiement est prévisionnel
+  isProjectedPayment?: boolean; // Explicitly define this property
 };
 
 export type ScheduledPayment = {
