@@ -1,6 +1,6 @@
-
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
+import { Project } from "@/types/project";
 
 export const fetchRealTimeInvestmentData = async (userId: string | undefined) => {
   if (!userId) {
@@ -77,7 +77,7 @@ export const filterAndSortPayments = (
     });
 };
 
-export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[] => {
+export const generatePaymentsFromRealData = async (investments: any[]): Promise<PaymentRecord[]> => {
   if (!investments || investments.length === 0) {
     console.log("No investments provided to generate payment records");
     return [];
@@ -87,34 +87,57 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
   
   let payments: PaymentRecord[] = [];
   const now = new Date();
+
+  // Fetch all related projects to get their first payment delay
+  const projectIds = investments.map(inv => inv.project_id);
+  const { data: projectsData, error } = await supabase
+    .from('projects')
+    .select('id, first_payment_delay_months')
+    .in('id', projectIds);
+
+  if (error) {
+    console.error("Error fetching projects data:", error);
+    return [];
+  }
+
+  const projectDelays = new Map(projectsData?.map(p => [p.id, p.first_payment_delay_months || 1]) || []);
   
-  investments.forEach((investment, index) => {
+  for (const investment of investments) {
     if (!investment.projects) {
-      console.log(`Investment at index ${index} missing projects data:`, investment);
-      return;
+      console.log(`Investment missing projects data:`, investment);
+      continue;
     }
     
-    // Calculate payments based on actual investment data
-    const startDate = investment.date ? new Date(investment.date) : new Date();
+    const investmentDate = new Date(investment.date);
     const amount = investment.amount || 0;
     const yield_rate = investment.yield_rate || investment.projects.yield || 0;
     const monthlyReturn = Math.round((yield_rate / 100) * amount);
+    const firstPaymentDelay = projectDelays.get(investment.project_id) || 1;
     
-    console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}`);
+    console.log(`Investment for ${investment.projects.name}:`, {
+      amount,
+      yield: yield_rate,
+      monthly: monthlyReturn,
+      firstPaymentDelay
+    });
+
+    // Calculate first payment date (investment date + delay months)
+    const firstPaymentDate = new Date(investmentDate);
+    firstPaymentDate.setMonth(firstPaymentDate.getMonth() + firstPaymentDelay);
     
-    // Generate past payments based on actual investment date
-    const monthsSinceInvestment = Math.max(
+    // Calculate how many months have passed since the first payment date
+    const monthsSinceFirstPayment = Math.max(
       0,
-      (now.getFullYear() - startDate.getFullYear()) * 12 + 
-      now.getMonth() - startDate.getMonth()
+      (now.getFullYear() - firstPaymentDate.getFullYear()) * 12 + 
+      now.getMonth() - firstPaymentDate.getMonth()
     );
     
-    console.log(`Investment ${index}: months since start=${monthsSinceInvestment}`);
+    console.log(`Months since first payment for ${investment.projects.name}:`, monthsSinceFirstPayment);
     
-    // Past and current payments (paid)
-    for (let i = 0; i <= monthsSinceInvestment; i++) {
-      const paymentDate = new Date(startDate);
-      paymentDate.setMonth(startDate.getMonth() + i);
+    // Generate past payments starting from the first payment date
+    for (let i = 0; i <= monthsSinceFirstPayment; i++) {
+      const paymentDate = new Date(firstPaymentDate);
+      paymentDate.setMonth(firstPaymentDate.getMonth() + i);
       
       // Only add if payment date is not in the future
       if (paymentDate <= now) {
@@ -130,37 +153,40 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       }
     }
     
-    // Pending payment (next month)
-    const pendingDate = new Date(now);
-    pendingDate.setMonth(now.getMonth() + 1);
+    // Add pending payment (next month after the last paid payment)
+    const lastPaymentDate = new Date(firstPaymentDate);
+    lastPaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + 1);
     
     payments.push({
       id: `payment-${investment.id}-pending`,
       projectId: investment.project_id,
       projectName: investment.projects.name,
       amount: monthlyReturn,
-      date: pendingDate,
+      date: lastPaymentDate,
       type: 'yield',
       status: 'pending'
     });
     
-    // Future scheduled payments
+    // Add scheduled future payments
     for (let i = 2; i <= 3; i++) {
-      const futureDate = new Date(now);
-      futureDate.setMonth(now.getMonth() + i);
+      const futurePaymentDate = new Date(firstPaymentDate);
+      futurePaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + i);
       
       payments.push({
         id: `payment-${investment.id}-future-${i}`,
         projectId: investment.project_id,
         projectName: investment.projects.name,
         amount: monthlyReturn,
-        date: futureDate,
+        date: futurePaymentDate,
         type: 'yield',
         status: 'scheduled'
       });
     }
-  });
+  }
   
-  console.log(`Generated ${payments.length} payment records from real investment data`);
+  // Sort payments by date
+  payments.sort((a, b) => a.date.getTime() - b.date.getTime());
+  
+  console.log(`Generated ${payments.length} payment records considering first payment delays`);
   return payments;
 };

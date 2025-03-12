@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Project } from "@/types/project";
 
 export function useInvestmentsData() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,7 +37,26 @@ export function useInvestmentsData() {
           throw error;
         }
         
-        setInvestments(data || []);
+        const mappedProjects: Project[] = data?.map(inv => ({
+          id: inv.projects.id,
+          name: inv.projects.name,
+          image: inv.projects.image || '',
+          companyName: inv.projects.company_name,
+          status: inv.projects.status as "active" | "upcoming" | "completed",
+          investedAmount: inv.amount,
+          yield: inv.projects.yield,
+          description: inv.projects.description || '',
+          location: inv.projects.location || '',
+          minInvestment: inv.projects.min_investment,
+          maxInvestment: inv.projects.max_investment,
+          price: inv.projects.price,
+          profitability: inv.projects.profitability,
+          duration: inv.projects.duration,
+          category: inv.projects.category,
+          fundingProgress: inv.projects.funding_progress
+        })) || [];
+        
+        setInvestments(mappedProjects);
       } catch (error) {
         console.error("Erreur:", error);
         toast({
@@ -51,8 +71,6 @@ export function useInvestmentsData() {
     }
     
     fetchUserInvestments();
-    
-    // Real-time subscription removed
   }, [toast]);
 
   // Filtered and sorted investments
