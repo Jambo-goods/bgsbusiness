@@ -2,14 +2,6 @@ import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BarChart3, TrendingUp, DollarSign, RefreshCw, AlertCircle, Clock, Check } from "lucide-react";
-import FilterControls from "./investment-tracking/FilterControls";
-import PaymentsTable from "./investment-tracking/PaymentsTable";
-import ReturnsSummary from "./investment-tracking/ReturnsSummary";
-import HeaderSection from "./investment-tracking/HeaderSection";
-import LoadingIndicator from "./investment-tracking/LoadingIndicator";
-import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracking";
-import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
-import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
 import { Project } from "@/types/project";
 import { calculateExpectedCumulativeReturns } from "./investment-tracking/utils";
 import ReturnProjectionSection from "./investment-tracking/ReturnProjectionSection";
@@ -86,30 +78,8 @@ const YieldTab = () => {
     }
   ];
 
-  const {
-    sortColumn,
-    sortDirection,
-    filterStatus,
-    setFilterStatus,
-    isLoading: trackingLoading,
-    paymentRecords,
-    animateRefresh: trackingRefresh,
-    userId,
-    handleSort,
-    handleRefresh: refreshTracking
-  } = useInvestmentTracking(userInvestments);
-  
-  const { statistics, isLoading: statsLoading } = useReturnsStatistics();
-  
-  useInvestmentSubscriptions(userId, refreshTracking);
-  
-  const isTrackingLoading = trackingLoading || statsLoading;
-  const hasTrackingData = paymentRecords && paymentRecords.length > 0;
-
-  const cumulativeExpectedReturns = React.useMemo(() => {
-    if (!paymentRecords || paymentRecords.length === 0) return [];
-    return calculateExpectedCumulativeReturns(paymentRecords);
-  }, [paymentRecords]);
+  const paymentRecords = []; // Empty array instead of using tracking data
+  const cumulativeExpectedReturns = [];
 
   useEffect(() => {
     fetchInvestmentYields();
@@ -277,64 +247,11 @@ const YieldTab = () => {
       setIsRefreshing(false);
     }
   };
-  
+
   const handleRefresh = () => {
     setIsRefreshing(true);
     fetchInvestmentYields();
     fetchUserInvestments();
-    refreshTracking();
-  };
-
-  const renderTrackingContent = () => {
-    if (isTrackingLoading) {
-      return <LoadingIndicator message="Chargement des données de rendement..." />;
-    }
-    
-    if (!hasTrackingData || !statistics) {
-      return (
-        <div className="py-10 text-center">
-          <div className="bg-blue-50 p-6 rounded-lg inline-block mb-4">
-            <AlertCircle className="h-10 w-10 text-blue-500 mx-auto mb-2" />
-            <h3 className="text-lg font-medium text-bgs-blue mb-1">Aucun rendement trouvé</h3>
-            <p className="text-sm text-bgs-gray-medium">
-              Aucun investissement n'a été trouvé pour votre compte. <br />
-              Investissez dans des projets pour voir apparaître vos rendements ici.
-            </p>
-          </div>
-          <div>
-            <button
-              onClick={refreshTracking}
-              className="text-bgs-blue hover:text-bgs-blue-dark flex items-center gap-1 mx-auto"
-            >
-              <RefreshCw className="h-4 w-4" />
-              <span>Rafraîchir</span>
-            </button>
-          </div>
-        </div>
-      );
-    }
-    
-    return (
-      <>
-        <ReturnsSummary 
-          totalPaid={statistics.totalPaid}
-          totalPending={statistics.totalPending}
-          averageMonthlyReturn={statistics.averageMonthlyReturn}
-          isRefreshing={trackingRefresh}
-          onRefresh={refreshTracking}
-        />
-        
-        <PaymentsTable 
-          filteredAndSortedPayments={statistics.filteredAndSortedPayments}
-          scheduledPayments={statistics.paymentsWithCumulative}
-          cumulativeReturns={statistics.cumulativeReturns}
-          sortColumn={sortColumn}
-          sortDirection={sortDirection}
-          handleSort={handleSort}
-          userInvestments={userInvestments}
-        />
-      </>
-    );
   };
   
   return (
@@ -467,31 +384,13 @@ const YieldTab = () => {
         )}
       </div>
       
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-          <HeaderSection 
-            handleRefresh={refreshTracking}
-            isLoading={isTrackingLoading}
-            animateRefresh={trackingRefresh}
-            dataSource="la base de données"
-          />
-          
-          {hasTrackingData && (
-            <FilterControls 
-              filterStatus={filterStatus}
-              setFilterStatus={setFilterStatus}
-            />
-          )}
-        </div>
-        
-        {renderTrackingContent()}
-      </div>
+      {/* Payment tracking section removed */}
       
       {paymentRecords && paymentRecords.length > 0 && (
         <ReturnProjectionSection
           paymentRecords={paymentRecords}
           cumulativeExpectedReturns={cumulativeExpectedReturns}
-          isLoading={isTrackingLoading}
+          isLoading={false}
           userInvestments={userInvestments}
         />
       )}
