@@ -111,6 +111,9 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     console.log(`Investment ${index}: Investment date=${investmentDate.toISOString()}, First payment date=${firstPaymentDate.toISOString()}`);
     console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}`);
     
+    // Déterminez la date minimale pour les paiements "paid"
+    const minimumDateForPaidPayments = new Date(firstPaymentDate);
+    
     // Calculate how many months have passed since the first payment date
     const monthsSinceFirstPayment = Math.max(
       0,
@@ -157,9 +160,9 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       console.log(`Investment ${index}: Next payment after paid ones at ${nextPaymentDate.toISOString()}`);
     }
     
-    // Always add pending and scheduled payments for newly created investments
-    // This ensures newly scheduled payments are visible without waiting for delay
-    // Add the pending payment (first upcoming payment)
+    // Toujours ajouter les paiements à venir (pending et scheduled)
+    // pour tous les investissements, peu importe la date de début
+    // Ajout du prochain paiement en attente (pending)
     payments.push({
       id: `payment-${investment.id}-pending`,
       projectId: investment.project_id,
@@ -167,10 +170,11 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       amount: monthlyReturn,
       date: nextPaymentDate,
       type: 'yield',
-      status: 'pending'
+      status: 'pending',
+      isProjectedPayment: firstPaymentDate > now // Marquer comme prévisionnel si le premier paiement est futur
     });
     
-    // Future scheduled payments (next 2 months after the pending payment)
+    // Paiements futurs programmés (2 mois après le paiement en attente)
     for (let i = 1; i <= 2; i++) {
       const futureDate = new Date(nextPaymentDate);
       futureDate.setMonth(nextPaymentDate.getMonth() + i);
@@ -182,7 +186,8 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         amount: monthlyReturn,
         date: futureDate,
         type: 'yield',
-        status: 'scheduled'
+        status: 'scheduled',
+        isProjectedPayment: firstPaymentDate > now // Marquer comme prévisionnel si le premier paiement est futur
       });
     }
   });

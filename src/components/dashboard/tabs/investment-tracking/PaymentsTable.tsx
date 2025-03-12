@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow 
 } from "@/components/ui/table";
-import { Calendar, SortAsc, SortDesc, Check, Clock, AlertCircle } from "lucide-react";
+import { Calendar, SortAsc, SortDesc, Check, Clock, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { Project } from "@/types/project";
 import { PaymentRecord, ScheduledPayment } from "./types";
 
@@ -147,8 +147,11 @@ export default function PaymentsTable({
             const projectImage = userInvestments.find(p => p.id === payment.projectId)?.image || 
               "https://via.placeholder.com/40";
               
+            // Determine if this is a projected payment (first payment delay not met yet)
+            const isProjectedPayment = payment.isProjectedPayment;
+              
             return (
-              <TableRow key={payment.id} className="animate-in fade-in duration-300">
+              <TableRow key={payment.id} className={`animate-in fade-in duration-300 ${isProjectedPayment ? 'bg-gray-50' : ''}`}>
                 <TableCell className="font-medium">
                   <div className="flex items-center">
                     <img
@@ -157,16 +160,25 @@ export default function PaymentsTable({
                       className="h-6 w-6 rounded-md object-cover mr-2"
                     />
                     {payment.projectName}
+                    {isProjectedPayment && (
+                      <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-md">
+                        Prévisionnel
+                      </span>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center">
-                    <Calendar className="h-3.5 w-3.5 mr-1.5 text-bgs-gray-medium" />
+                    {isProjectedPayment ? (
+                      <CalendarIcon className="h-3.5 w-3.5 mr-1.5 text-purple-500" />
+                    ) : (
+                      <Calendar className="h-3.5 w-3.5 mr-1.5 text-bgs-gray-medium" />
+                    )}
                     {format(new Date(payment.date), "dd/MM/yyyy")}
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-green-600 font-medium">
+                  <span className={`font-medium ${isProjectedPayment ? 'text-purple-600' : 'text-green-600'}`}>
                     {typeof payment.amount === 'number' ? Math.round(payment.amount) : 0} €
                   </span>
                 </TableCell>
@@ -190,13 +202,21 @@ export default function PaymentsTable({
                   <div className="flex items-center">
                     {getStatusIcon(payment.status)}
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                      payment.status === 'paid' 
+                      isProjectedPayment 
+                        ? 'bg-purple-100 text-purple-600'
+                        : payment.status === 'paid' 
                         ? 'bg-green-100 text-green-600' 
                         : payment.status === 'pending'
                         ? 'bg-orange-100 text-orange-600'
                         : 'bg-blue-100 text-blue-600'
                     }`}>
-                      {payment.status === 'paid' ? 'Payé' : payment.status === 'pending' ? 'En attente' : 'Programmé'}
+                      {isProjectedPayment 
+                        ? 'Prévisionnel' 
+                        : payment.status === 'paid' 
+                        ? 'Payé' 
+                        : payment.status === 'pending' 
+                        ? 'En attente' 
+                        : 'Programmé'}
                     </span>
                   </div>
                 </TableCell>
