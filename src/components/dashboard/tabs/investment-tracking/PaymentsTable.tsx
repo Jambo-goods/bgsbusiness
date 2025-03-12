@@ -65,27 +65,41 @@ export default function PaymentsTable({
   });
   
   // Then process scheduled payments, only adding if they don't overlap with existing payments
+  // and if they are past the first payment delay for their project
   scheduledPayments.forEach(sp => {
     const paymentDate = new Date(sp.payment_date);
     const key = `${sp.project_id}-${paymentDate.toISOString()}`;
     
+    // Find the corresponding project for this scheduled payment
+    const project = userInvestments.find(p => p.id === sp.project_id);
+    
     // Only add if this date+project combination doesn't exist yet
-    if (!uniquePaymentMap.has(key)) {
-      const percentage = sp.percentage || 0;
-      const calculatedAmount = (percentage / 100) * totalInvestedAmount;
-      console.log(`Calculated amount for ${sp.projects?.name}:`, calculatedAmount, `(${percentage}% of ${totalInvestedAmount})`);
-
-      uniquePaymentMap.set(key, {
-        id: `${sp.id}-scheduled`,  // Add suffix to ensure unique keys
-        projectId: sp.project_id,
-        projectName: sp.projects?.name || "Projet inconnu",
-        amount: calculatedAmount,
-        date: paymentDate,
-        type: 'yield' as const,
-        status: sp.status as 'paid' | 'pending' | 'scheduled',
-        percentage: sp.percentage,
-        isProjectedPayment: false // Initialize as false for scheduled payments
-      });
+    if (!uniquePaymentMap.has(key) && project) {
+      // Get the investment date and calculate if this payment should be shown
+      const investmentDate = project.investmentDate ? new Date(project.investmentDate) : new Date();
+      const firstPaymentDelayMonths = project.firstPaymentDelayMonths || 1;
+      
+      // Calculate the first valid payment date
+      const firstValidPaymentDate = new Date(investmentDate);
+      firstValidPaymentDate.setMonth(investmentDate.getMonth() + firstPaymentDelayMonths);
+      
+      // Only add the payment if it's on or after the first valid payment date
+      if (paymentDate >= firstValidPaymentDate) {
+        const percentage = sp.percentage || 0;
+        const calculatedAmount = (percentage / 100) * totalInvestedAmount;
+        
+        uniquePaymentMap.set(key, {
+          id: `${sp.id}-scheduled`,
+          projectId: sp.project_id,
+          projectName: sp.projects?.name || "Projet inconnu",
+          amount: calculatedAmount,
+          date: paymentDate,
+          type: 'yield' as const,
+          status: sp.status as 'paid' | 'pending' | 'scheduled',
+          percentage: sp.percentage,
+          isProjectedPayment: false
+        });
+      }
     }
   });
   
