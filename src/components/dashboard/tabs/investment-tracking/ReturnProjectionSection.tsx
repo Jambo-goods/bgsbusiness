@@ -1,5 +1,6 @@
-import React from 'react';
-import { TrendingUp, RefreshCw } from 'lucide-react';
+
+import React, { useMemo } from 'react';
+import { TrendingUp } from 'lucide-react';
 import { PaymentRecord } from './types';
 import { Project } from '@/types/project';
 
@@ -10,34 +11,65 @@ interface ReturnProjectionSectionProps {
   userInvestments: Project[];
 }
 
+// Status badge component for better reusability
+const PaymentStatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  switch (status) {
+    case 'pending':
+      return (
+        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+          En attente
+        </span>
+      );
+    case 'scheduled':
+      return (
+        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+          Programmé
+        </span>
+      );
+    default:
+      return (
+        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+          {status}
+        </span>
+      );
+  }
+};
+
+// Loading state component
+const LoadingState: React.FC = () => (
+  <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+    <div className="animate-pulse">
+      <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+      <div className="h-4 bg-gray-200 rounded w-2/3 mb-6"></div>
+      <div className="space-y-3">
+        <div className="h-10 bg-gray-200 rounded w-full"></div>
+        <div className="h-10 bg-gray-200 rounded w-full"></div>
+        <div className="h-10 bg-gray-200 rounded w-full"></div>
+      </div>
+    </div>
+  </div>
+);
+
 const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   paymentRecords,
   cumulativeExpectedReturns,
   isLoading,
   userInvestments
 }) => {
-  if (isLoading) {
-    return (
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-        <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-4 bg-gray-200 rounded w-2/3 mb-6"></div>
-          <div className="space-y-3">
-            <div className="h-10 bg-gray-200 rounded w-full"></div>
-            <div className="h-10 bg-gray-200 rounded w-full"></div>
-            <div className="h-10 bg-gray-200 rounded w-full"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Filter only future payments
-  const futurePayments = cumulativeExpectedReturns.filter(payment => 
-    payment.status === 'scheduled' || payment.status === 'pending'
+  // Only calculate future payments when dependencies change
+  const futurePayments = useMemo(() => 
+    cumulativeExpectedReturns.filter(payment => 
+      payment.status === 'scheduled' || payment.status === 'pending'
+    ),
+    [cumulativeExpectedReturns]
   );
 
-  console.log("Pourcentages affichés dans ReturnProjectionSection:", futurePayments.map(p => p.percentage));
+  if (isLoading) {
+    return <LoadingState />;
+  }
+
+  // Fixed percentage for all payments (12%)
+  const fixedPercentage = 12;
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
@@ -67,45 +99,28 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {futurePayments.length > 0 ? (
-              futurePayments.map((payment, index) => {
-                // Afficher toujours 12% fixe pour tous les paiements
-                const fixedPercentage = 12;
-                
-                return (
-                  <tr key={payment.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {payment.date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
-                      {payment.projectName}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {fixedPercentage}%
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {payment.amount.toFixed(2)} €
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
-                      {payment.expectedCumulativeReturn ? payment.expectedCumulativeReturn.toFixed(2) : 0} €
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {payment.status === 'pending' ? (
-                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                          En attente
-                        </span>
-                      ) : payment.status === 'scheduled' ? (
-                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                          Programmé
-                        </span>
-                      ) : (
-                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                          {payment.status}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
+              futurePayments.map((payment) => (
+                <tr key={payment.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    {payment.date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
+                    {payment.projectName}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    {fixedPercentage}%
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {payment.amount.toFixed(2)} €
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                    {payment.expectedCumulativeReturn ? payment.expectedCumulativeReturn.toFixed(2) : 0} €
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <PaymentStatusBadge status={payment.status} />
+                  </td>
+                </tr>
+              ))
             ) : (
               <tr>
                 <td colSpan={6} className="px-4 py-4 text-sm text-center text-gray-500">
