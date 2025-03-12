@@ -1,4 +1,3 @@
-
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -114,8 +113,8 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     const amount = investment.amount || 0;
     const yield_rate = investment.yield_rate || investment.projects.yield || 0;
     
-    // Get the monthly percentage from the yield rate (divided by 12 for monthly)
-    const monthlyPercentage = parseFloat((yield_rate / 12).toFixed(2));
+    // Get the percentage from the database without dividing
+    const monthlyPercentage = yield_rate;
     
     // Calculate monthly return based on the monthly percentage
     const monthlyReturn = (monthlyPercentage / 100) * amount;

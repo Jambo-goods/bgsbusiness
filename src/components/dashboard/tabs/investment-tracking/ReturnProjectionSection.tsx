@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { TrendingUp, RefreshCw } from 'lucide-react';
 import { PaymentRecord } from './types';
@@ -36,6 +37,8 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   const futurePayments = cumulativeExpectedReturns.filter(payment => 
     payment.status === 'scheduled' || payment.status === 'pending'
   );
+
+  console.log("Pourcentages affichés dans ReturnProjectionSection:", futurePayments.map(p => p.percentage));
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
