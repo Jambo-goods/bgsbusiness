@@ -112,6 +112,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     const amount = investment.amount || 0;
     const yield_rate = investment.yield_rate || investment.projects.yield || 0;
     
+    // Use the direct percentage value from the database
     const monthlyPercentage = yield_rate;
     
     const monthlyReturn = (monthlyPercentage / 100) * amount;
