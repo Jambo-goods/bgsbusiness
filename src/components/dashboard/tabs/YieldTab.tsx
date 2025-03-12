@@ -11,6 +11,8 @@ import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracki
 import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
 import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
 import { Project } from "@/types/project";
+import { calculateExpectedCumulativeReturns } from "./investment-tracking/utils";
+import ReturnProjectionSection from "./investment-tracking/ReturnProjectionSection";
 
 const YieldTab = () => {
   const [isLoading, setIsLoading] = useState(true);
