@@ -1,4 +1,3 @@
-
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -142,17 +141,16 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       }
     }
     
-    // Determine the correct status for future payments based on the first payment date
-    
-    // Pending payment is always the FIRST upcoming payment after today
+    // Calculate the correct next payment date based on the first payment date
+    // and respecting the payment delay months
     let nextPaymentDate;
     
     if (firstPaymentDate > now) {
       // If the first payment date is in the future, that's our next payment
       nextPaymentDate = new Date(firstPaymentDate);
-      console.log(`Investment ${index}: First payment is in the future at ${nextPaymentDate.toISOString()}`);
+      console.log(`Investment ${index}: First payment is in the future at ${nextPaymentDate.toISOString()}, respecting ${firstPaymentDelayMonths} months delay`);
     } else {
-      // Calculate the next payment after the last paid one
+      // Calculate the next payment date after the last paid one
       nextPaymentDate = new Date(firstPaymentDate);
       nextPaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + 1);
       console.log(`Investment ${index}: Next payment after paid ones at ${nextPaymentDate.toISOString()}`);
@@ -169,7 +167,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       status: 'pending'
     });
     
-    // Future scheduled payments (2 months after pending)
+    // Future scheduled payments (next 2 months after the pending payment)
     for (let i = 1; i <= 2; i++) {
       const futureDate = new Date(nextPaymentDate);
       futureDate.setMonth(nextPaymentDate.getMonth() + i);
