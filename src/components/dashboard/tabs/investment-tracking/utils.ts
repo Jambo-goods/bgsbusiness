@@ -1,3 +1,4 @@
+
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -172,6 +173,9 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         const futureDate = new Date(nextPaymentDate);
         futureDate.setMonth(nextPaymentDate.getMonth() + i);
         
+        // Calculate the percentage for this payment (to be used for amount calculation)
+        const monthlyPercentage = (yield_rate / 12).toFixed(2);
+        
         payments.push({
           id: `payment-${investment.id}-future-${i}`,
           projectId: investment.project_id,
@@ -180,12 +184,16 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
           date: futureDate,
           type: 'yield',
           status: 'scheduled',
-          isProjectedPayment: false
+          isProjectedPayment: false,
+          percentage: parseFloat(monthlyPercentage)
         });
       }
     } else {
       // For investments still in the delay period, only show the first payment AFTER the delay period
       // and mark it clearly as a projected payment
+      // Calculate the percentage for this payment
+      const monthlyPercentage = (yield_rate / 12).toFixed(2);
+      
       payments.push({
         id: `payment-${investment.id}-projected`,
         projectId: investment.project_id,
@@ -194,7 +202,8 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         date: firstPaymentDate,
         type: 'yield',
         status: 'scheduled',
-        isProjectedPayment: true
+        isProjectedPayment: true,
+        percentage: parseFloat(monthlyPercentage)
       });
     }
   });

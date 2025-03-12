@@ -86,7 +86,9 @@ export default function PaymentsTable({
       // Only add the payment if it's on or after the first valid payment date
       if (paymentDate >= firstValidPaymentDate) {
         const percentage = sp.percentage || 0;
+        // Make sure to calculate the amount properly for ALL payments
         const calculatedAmount = (percentage / 100) * totalInvestedAmount;
+        console.log(`Scheduled payment: Date=${paymentDate.toISOString()}, Project=${sp.projects?.name}, Percentage=${percentage}%, Amount=${calculatedAmount}`);
         
         uniquePaymentMap.set(key, {
           id: `${sp.id}-scheduled`,
