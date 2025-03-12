@@ -20,6 +20,7 @@ const YieldTab = () => {
   const [annualYield, setAnnualYield] = useState(0);
   const [annualPercent, setAnnualPercent] = useState(0);
   const [investments, setInvestments] = useState<{
+    projectId: string;
     projectName: string;
     monthlyRate: number;
     amount: number;
@@ -218,25 +219,43 @@ const YieldTab = () => {
         throw projectsError;
       }
       
+      // Group investments by project
+      const investmentsByProject = new Map();
+      
+      investmentsData.forEach(investment => {
+        const project = projectsData?.find(p => p.id === investment.project_id);
+        const projectId = investment.project_id;
+        const monthlyRate = project?.yield || investment.yield_rate;
+        
+        if (investmentsByProject.has(projectId)) {
+          // Add to existing project entry
+          const existingProject = investmentsByProject.get(projectId);
+          existingProject.amount += investment.amount;
+          existingProject.monthlyReturn += (monthlyRate / 100) * investment.amount;
+        } else {
+          // Create new project entry
+          investmentsByProject.set(projectId, {
+            projectId: projectId,
+            projectName: project?.name || 'Projet inconnu',
+            monthlyRate: monthlyRate,
+            amount: investment.amount,
+            monthlyReturn: (monthlyRate / 100) * investment.amount
+          });
+        }
+      });
+      
+      // Convert map to array
+      const groupedInvestments = Array.from(investmentsByProject.values());
+      
+      // Calculate totals
       let totalMonthlyYield = 0;
       let weightedAnnualPercent = 0;
       let totalInvestment = 0;
       
-      const investmentsWithYields = investmentsData.map(investment => {
-        const project = projectsData?.find(p => p.id === investment.project_id);
-        const monthlyRate = project?.yield || investment.yield_rate;
-        const monthlyReturn = (monthlyRate / 100) * investment.amount;
-        
-        totalMonthlyYield += monthlyReturn;
-        weightedAnnualPercent += (monthlyRate * 12) * investment.amount;
+      groupedInvestments.forEach(investment => {
+        totalMonthlyYield += investment.monthlyReturn;
+        weightedAnnualPercent += (investment.monthlyRate * 12) * investment.amount;
         totalInvestment += investment.amount;
-        
-        return {
-          projectName: project?.name || 'Projet inconnu',
-          monthlyRate: monthlyRate,
-          amount: investment.amount,
-          monthlyReturn: monthlyReturn
-        };
       });
       
       const calculatedAnnualYield = totalMonthlyYield * 12;
@@ -247,7 +266,7 @@ const YieldTab = () => {
       setMonthlyYield(Math.round(totalMonthlyYield));
       setAnnualYield(Math.round(calculatedAnnualYield));
       setAnnualPercent(parseFloat(calculatedAnnualPercent.toFixed(2)));
-      setInvestments(investmentsWithYields);
+      setInvestments(groupedInvestments);
       
     } catch (error) {
       console.error("Erreur lors du calcul des rendements:", error);
@@ -415,7 +434,7 @@ const YieldTab = () => {
                   <tbody className="bg-white divide-y divide-gray-100">
                     {investments.length > 0 ? (
                       investments.map((investment, index) => (
-                        <tr key={index} className="hover:bg-gray-50 transition-colors">
+                        <tr key={investment.projectId} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-bgs-blue">
                             {investment.projectName}
                           </td>

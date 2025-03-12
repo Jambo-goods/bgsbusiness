@@ -41,11 +41,12 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       console.log("Fetched investments:", investments.length);
       
       if (investments && investments.length > 0) {
-        // Generate payment records with first payment delay consideration
-        const realPayments = await generatePaymentsFromRealData(investments);
+        // Use investment data to generate payment records
+        const realPayments = generatePaymentsFromRealData(investments);
         setPaymentRecords(realPayments);
         console.log("Updated payment records with data:", realPayments.length);
       } else {
+        // No investments found
         console.log("No investments found");
         setPaymentRecords([]);
         toast.info("Aucun investissement", {
