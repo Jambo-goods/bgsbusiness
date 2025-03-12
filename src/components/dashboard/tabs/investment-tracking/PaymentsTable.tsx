@@ -66,25 +66,15 @@ export default function PaymentsTable({
       const calculatedAmount = (percentage / 100) * totalInvestedAmount;
       console.log(`Calculated amount for ${sp.projects?.name}:`, calculatedAmount, `(${percentage}% of ${totalInvestedAmount})`);
 
-      // Check if the project has a first payment delay
-      const project = userInvestments.find(p => p.id === sp.project_id);
-      const paymentDate = new Date(sp.payment_date);
-      
-      // Log the payment delay information
-      if (project) {
-        console.log(`Project ${project.name} has first payment delay: ${project.firstPaymentDelayMonths || 1} months`);
-      }
-
       return {
         id: sp.id,
         projectId: sp.project_id,
         projectName: sp.projects?.name || "Projet inconnu",
         amount: calculatedAmount,
-        date: paymentDate,
+        date: new Date(sp.payment_date),
         type: 'yield' as const,
         status: sp.status as 'paid' | 'pending' | 'scheduled',
-        percentage: sp.percentage,
-        firstPaymentDelay: sp.first_payment_delay_months || 1
+        percentage: sp.percentage
       };
     })
   ].sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -173,11 +163,6 @@ export default function PaymentsTable({
                   <div className="flex items-center">
                     <Calendar className="h-3.5 w-3.5 mr-1.5 text-bgs-gray-medium" />
                     {format(new Date(payment.date), "dd/MM/yyyy")}
-                    {payment.firstPaymentDelay > 1 && 
-                      <span className="ml-1.5 text-xs bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">
-                        +{payment.firstPaymentDelay} mois
-                      </span>
-                    }
                   </div>
                 </TableCell>
                 <TableCell>

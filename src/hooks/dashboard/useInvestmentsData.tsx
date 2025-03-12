@@ -74,8 +74,7 @@ export const useInvestmentsData = (userId: string | null): InvestmentsDataReturn
               raised: project.raised,
               target: project.target,
               investedAmount: investment ? investment.amount : 0,
-              investmentDate: investment ? investment.date : null,
-              firstPaymentDelayMonths: project.first_payment_delay_months || 1
+              investmentDate: investment ? investment.date : null
             };
           });
         }

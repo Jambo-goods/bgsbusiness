@@ -9,19 +9,20 @@ export interface Project {
   location: string;
   status: "upcoming" | "active" | "completed";
   minInvestment: number;
-  maxInvestment?: number;
   image: string;
   category: string;
   price: number;
   yield: number;
   fundingProgress: number;
   featured?: boolean;
-  investedAmount?: number;
   possibleDurations?: number[];
-  startDate?: string | null;
-  endDate?: string | null;
+  startDate?: string;
+  endDate?: string;
   raised?: number;
   target?: number;
-  investmentDate?: string | null;
-  firstPaymentDelayMonths?: number; // New field to handle first payment delay
+  amount?: number;
+  investmentDate?: string;
+  firstPaymentDelayMonths?: number;
+  investedAmount?: number;
+  maxInvestment?: number;  // Added this property
 }
