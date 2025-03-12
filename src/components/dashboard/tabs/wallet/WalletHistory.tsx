@@ -105,11 +105,28 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   };
 
   const getTransactionLabel = (transaction: Transaction) => {
+    if (transaction.description && transaction.description.includes("Virement bancaire confirmé")) {
+      return transaction.status === "pending" 
+        ? "Virement bancaire en attente" 
+        : "Virement bancaire reçu";
+    }
+    
     if (transaction.description && transaction.description.includes("Investissement dans")) {
       return "Investissement effectué";
     }
     
     return transaction.type === 'deposit' ? 'Dépôt' : 'Retrait';
+  };
+
+  const getStatusBadge = (transaction: Transaction) => {
+    if (transaction.status === "pending") {
+      return (
+        <span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full ml-2">
+          En attente
+        </span>
+      );
+    }
+    return null;
   };
 
   return (
@@ -153,9 +170,12 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                   {getTransactionIcon(transaction.type)}
                 </div>
                 <div>
-                  <p className="font-medium text-bgs-blue">
-                    {getTransactionLabel(transaction)}
-                  </p>
+                  <div className="flex items-center">
+                    <p className="font-medium text-bgs-blue">
+                      {getTransactionLabel(transaction)}
+                    </p>
+                    {getStatusBadge(transaction)}
+                  </div>
                   <p className="text-sm text-bgs-gray-medium">
                     {formatRelativeTime(transaction.created_at)}
                   </p>
