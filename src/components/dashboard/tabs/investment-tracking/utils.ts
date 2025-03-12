@@ -120,28 +120,36 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     
     console.log(`Investment ${index}: Months since first payment date: ${monthsSinceFirstPayment}`);
     
-    // Past and current payments (paid)
-    for (let i = 0; i <= monthsSinceFirstPayment; i++) {
-      const paymentDate = new Date(firstPaymentDate);
-      paymentDate.setMonth(firstPaymentDate.getMonth() + i);
-      
-      // Only add if payment date is not in the future
-      if (paymentDate <= now) {
-        payments.push({
-          id: `payment-${investment.id}-${i}`,
-          projectId: investment.project_id,
-          projectName: investment.projects.name,
-          amount: monthlyReturn,
-          date: paymentDate,
-          type: 'yield',
-          status: 'paid'
-        });
+    // Only add past payments if the first payment date is in the past
+    if (firstPaymentDate <= now) {
+      // Past and current payments (paid)
+      for (let i = 0; i <= monthsSinceFirstPayment; i++) {
+        const paymentDate = new Date(firstPaymentDate);
+        paymentDate.setMonth(firstPaymentDate.getMonth() + i);
+        
+        // Only add if payment date is not in the future and if the payment date has passed
+        if (paymentDate <= now) {
+          payments.push({
+            id: `payment-${investment.id}-${i}`,
+            projectId: investment.project_id,
+            projectName: investment.projects.name,
+            amount: monthlyReturn,
+            date: paymentDate,
+            type: 'yield',
+            status: 'paid'
+          });
+        }
       }
     }
     
-    // Pending payment (next month after the last paid payment)
+    // Pending payment (next month after the last paid payment or first payment if none paid yet)
     const pendingDate = new Date(firstPaymentDate);
-    pendingDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + 1);
+    if (firstPaymentDate <= now) {
+      // If the first payment date is already in the past, the pending payment is one month after the last paid payment
+      pendingDate.setMonth(firstPaymentDate.getMonth() + Math.max(1, monthsSinceFirstPayment + 1));
+    } else {
+      // If the first payment date is in the future, that's our pending payment
+    }
     
     payments.push({
       id: `payment-${investment.id}-pending`,
@@ -154,9 +162,9 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     });
     
     // Future scheduled payments (2 months after pending)
-    for (let i = 2; i <= 3; i++) {
-      const futureDate = new Date(firstPaymentDate);
-      futureDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + i);
+    for (let i = 1; i <= 2; i++) {
+      const futureDate = new Date(pendingDate);
+      futureDate.setMonth(pendingDate.getMonth() + i);
       
       payments.push({
         id: `payment-${investment.id}-future-${i}`,
