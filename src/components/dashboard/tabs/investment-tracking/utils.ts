@@ -157,40 +157,33 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       console.log(`Investment ${index}: Next payment after paid ones at ${nextPaymentDate.toISOString()}`);
     }
     
-    // Only add pending payment if we already reached the correct date based on the delay
-    // Check if current date + firstPaymentDelayMonths is at least equal to investmentDate
-    const minimumDateForPayment = new Date(investmentDate);
-    minimumDateForPayment.setMonth(investmentDate.getMonth() + firstPaymentDelayMonths - 1);
+    // Always add pending and scheduled payments for newly created investments
+    // This ensures newly scheduled payments are visible without waiting for delay
+    // Add the pending payment (first upcoming payment)
+    payments.push({
+      id: `payment-${investment.id}-pending`,
+      projectId: investment.project_id,
+      projectName: investment.projects.name,
+      amount: monthlyReturn,
+      date: nextPaymentDate,
+      type: 'yield',
+      status: 'pending'
+    });
     
-    if (now >= minimumDateForPayment) {
-      // Add the pending payment (first upcoming payment)
+    // Future scheduled payments (next 2 months after the pending payment)
+    for (let i = 1; i <= 2; i++) {
+      const futureDate = new Date(nextPaymentDate);
+      futureDate.setMonth(nextPaymentDate.getMonth() + i);
+      
       payments.push({
-        id: `payment-${investment.id}-pending`,
+        id: `payment-${investment.id}-future-${i}`,
         projectId: investment.project_id,
         projectName: investment.projects.name,
         amount: monthlyReturn,
-        date: nextPaymentDate,
+        date: futureDate,
         type: 'yield',
-        status: 'pending'
+        status: 'scheduled'
       });
-      
-      // Future scheduled payments (next 2 months after the pending payment)
-      for (let i = 1; i <= 2; i++) {
-        const futureDate = new Date(nextPaymentDate);
-        futureDate.setMonth(nextPaymentDate.getMonth() + i);
-        
-        payments.push({
-          id: `payment-${investment.id}-future-${i}`,
-          projectId: investment.project_id,
-          projectName: investment.projects.name,
-          amount: monthlyReturn,
-          date: futureDate,
-          type: 'yield',
-          status: 'scheduled'
-        });
-      }
-    } else {
-      console.log(`Investment ${index}: Not showing any payments yet due to delay period`);
     }
   });
   
