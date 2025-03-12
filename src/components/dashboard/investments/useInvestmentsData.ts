@@ -9,7 +9,7 @@ export function useInvestmentsData() {
   const [sortBy, setSortBy] = useState("date");
   const [filterActive, setFilterActive] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const [investments, setInvestments] = useState<any[]>([]);
+  const [investments, setInvestments] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -48,12 +48,19 @@ export function useInvestmentsData() {
           description: inv.projects.description || '',
           location: inv.projects.location || '',
           minInvestment: inv.projects.min_investment,
-          maxInvestment: inv.projects.max_investment,
+          maxInvestment: undefined, // Remove this property as it's not in the type
           price: inv.projects.price,
           profitability: inv.projects.profitability,
           duration: inv.projects.duration,
           category: inv.projects.category,
-          fundingProgress: inv.projects.funding_progress
+          fundingProgress: inv.projects.funding_progress,
+          firstPaymentDelayMonths: inv.projects.first_payment_delay_months,
+          featured: inv.projects.featured,
+          possibleDurations: inv.projects.possible_durations,
+          startDate: inv.projects.start_date,
+          endDate: inv.projects.end_date,
+          raised: inv.projects.raised,
+          target: inv.projects.target
         })) || [];
         
         setInvestments(mappedProjects);
@@ -76,17 +83,17 @@ export function useInvestmentsData() {
   // Filtered and sorted investments
   const filteredInvestments = investments
     .filter(investment => 
-      filterActive ? investment.projects?.status === "active" : true
+      filterActive ? investment.status === "active" : true
     )
     .filter(investment => 
-      investment.projects?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      investment.projects?.location.toLowerCase().includes(searchTerm.toLowerCase())
+      investment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      investment.location.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
-      if (sortBy === "name") return a.projects?.name.localeCompare(b.projects?.name);
-      if (sortBy === "yield") return b.projects?.yield - a.projects?.yield;
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "yield") return b.yield - a.yield;
       // Default sort by date (newest first)
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      return new Date(b.startDate || '').getTime() - new Date(a.startDate || '').getTime();
     });
 
   return {
