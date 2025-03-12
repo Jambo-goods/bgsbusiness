@@ -67,10 +67,8 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {futurePayments.length > 0 ? (
               futurePayments.map((payment, index) => {
-                // Use the project's yield rate directly from userInvestments
-                const project = userInvestments.find(p => p.id === payment.projectId);
-                const projectYield = project ? (project.yield / 12).toFixed(2) : 
-                                    (payment.percentage || 0).toFixed(2);
+                // Use the percentage directly from the payment record
+                const paymentPercentage = payment.percentage ? payment.percentage.toFixed(2) : '0.00';
                 
                 return (
                   <tr key={payment.id} className="hover:bg-gray-50">
@@ -81,7 +79,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
                       {payment.projectName}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {projectYield}%
+                      {paymentPercentage}%
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                       {payment.amount.toFixed(2)} €

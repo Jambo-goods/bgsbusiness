@@ -27,6 +27,7 @@ export const useReturnsStatistics = () => {
         throw error;
       }
 
+      console.log("Scheduled payments with percentage:", data);
       return data || [];
     },
   });
@@ -70,7 +71,7 @@ export const useReturnsStatistics = () => {
       date: new Date(payment.payment_date),
       type: 'yield' as const,
       status: payment.status as "paid" | "pending" | "scheduled",
-      percentage: payment.percentage
+      percentage: payment.percentage  // Make sure we're using the percentage from the database
     }));
 
     // Calculate additional statistics
