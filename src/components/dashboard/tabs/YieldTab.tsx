@@ -5,6 +5,7 @@ import { BarChart3, TrendingUp, DollarSign, RefreshCw, AlertCircle, Clock, Check
 import { Project } from "@/types/project";
 import { calculateExpectedCumulativeReturns } from "./investment-tracking/utils";
 import ReturnProjectionSection from "./investment-tracking/ReturnProjectionSection";
+import { generatePaymentsFromRealData } from "./investment-tracking/utils";
 
 const YieldTab = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -78,8 +79,9 @@ const YieldTab = () => {
     }
   ];
 
-  const paymentRecords = []; // Empty array instead of using tracking data
-  const cumulativeExpectedReturns = [];
+  const [paymentRecords, setPaymentRecords] = useState([]);
+  const [cumulativeExpectedReturns, setCumulativeExpectedReturns] = useState([]);
+  const [paymentDataLoading, setPaymentDataLoading] = useState(true);
 
   useEffect(() => {
     fetchInvestmentYields();
@@ -101,6 +103,74 @@ const YieldTab = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  useEffect(() => {
+    if (userInvestments.length > 0) {
+      generateProjectionData();
+    }
+  }, [userInvestments]);
+
+  const generateProjectionData = async () => {
+    try {
+      setPaymentDataLoading(true);
+      
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session?.user?.id) {
+        console.log("No active session found");
+        setPaymentDataLoading(false);
+        return;
+      }
+      
+      const { data: realInvestments, error } = await supabase
+        .from('investments')
+        .select(`
+          *,
+          projects(*, first_payment_delay_months)
+        `)
+        .eq('user_id', sessionData.session.user.id)
+        .eq('status', 'active');
+        
+      if (error) {
+        console.error("Error fetching real-time investment data:", error);
+        setPaymentDataLoading(false);
+        return;
+      }
+      
+      if (!realInvestments || realInvestments.length === 0) {
+        const mockInvestments = userInvestments.map(investment => ({
+          id: investment.id,
+          project_id: investment.id,
+          user_id: sessionData.session.user.id,
+          amount: investment.investedAmount,
+          date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          yield_rate: investment.yield,
+          projects: {
+            id: investment.id,
+            name: investment.name,
+            yield: investment.yield,
+            first_payment_delay_months: 1
+          }
+        }));
+        
+        const generatedPayments = generatePaymentsFromRealData(mockInvestments);
+        const cumulativeReturns = calculateExpectedCumulativeReturns(generatedPayments);
+        
+        setPaymentRecords(generatedPayments);
+        setCumulativeExpectedReturns(cumulativeReturns);
+      } else {
+        const generatedPayments = generatePaymentsFromRealData(realInvestments);
+        const cumulativeReturns = calculateExpectedCumulativeReturns(generatedPayments);
+        
+        setPaymentRecords(generatedPayments);
+        setCumulativeExpectedReturns(cumulativeReturns);
+      }
+    } catch (error) {
+      console.error("Error generating projection data:", error);
+    } finally {
+      setPaymentDataLoading(false);
+    }
+  };
 
   const fetchUserInvestments = async () => {
     try {
@@ -252,6 +322,7 @@ const YieldTab = () => {
     setIsRefreshing(true);
     fetchInvestmentYields();
     fetchUserInvestments();
+    generateProjectionData();
   };
   
   return (
@@ -384,13 +455,11 @@ const YieldTab = () => {
         )}
       </div>
       
-      {/* Payment tracking section removed */}
-      
-      {paymentRecords && paymentRecords.length > 0 && (
+      {paymentRecords.length > 0 || userInvestments.length > 0 && (
         <ReturnProjectionSection
           paymentRecords={paymentRecords}
           cumulativeExpectedReturns={cumulativeExpectedReturns}
-          isLoading={false}
+          isLoading={paymentDataLoading}
           userInvestments={userInvestments}
         />
       )}

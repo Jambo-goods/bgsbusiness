@@ -1,7 +1,16 @@
+
 import React from 'react';
 import { TrendingUp, RefreshCw } from 'lucide-react';
 import { PaymentRecord } from './types';
 import { Project } from '@/types/project';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface ReturnProjectionSectionProps {
   paymentRecords: PaymentRecord[];
@@ -37,7 +46,28 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
     payment.status === 'scheduled' || payment.status === 'pending'
   );
 
-  console.log("Pourcentages affichés dans ReturnProjectionSection:", futurePayments.map(p => p.percentage));
+  // If no data after loading, show empty state
+  if (futurePayments.length === 0 && !isLoading) {
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="bg-green-50 p-2.5 rounded-lg">
+            <TrendingUp className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800">Projection des rendements</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Aucune projection disponible pour le moment</p>
+          </div>
+        </div>
+        
+        <div className="text-center py-8">
+          <p className="text-sm text-gray-500">
+            Vous n'avez pas encore d'investissements actifs ou vos investissements n'ont pas encore généré de rendements prévus.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
@@ -54,41 +84,41 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projet</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pourcentage</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cumul</th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Projet</TableHead>
+              <TableHead>Pourcentage</TableHead>
+              <TableHead>Montant</TableHead>
+              <TableHead>Cumul</TableHead>
+              <TableHead>Statut</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {futurePayments.length > 0 ? (
               futurePayments.map((payment, index) => {
-                // Afficher toujours 12% fixe pour tous les paiements
-                const fixedPercentage = 12;
+                // Use the percentage from the payment record, default to 12% if not available
+                const fixedPercentage = payment.percentage || 12;
                 
                 return (
-                  <tr key={payment.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {payment.date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
+                  <TableRow key={payment.id} className="hover:bg-gray-50">
+                    <TableCell className="py-3 text-sm text-gray-900">
+                      {new Date(payment.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </TableCell>
+                    <TableCell className="py-3 text-sm font-medium text-blue-600">
                       {payment.projectName}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                    </TableCell>
+                    <TableCell className="py-3 text-sm text-gray-900">
                       {fixedPercentage}%
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                    </TableCell>
+                    <TableCell className="py-3 text-sm font-medium text-gray-900">
                       {payment.amount.toFixed(2)} €
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                    </TableCell>
+                    <TableCell className="py-3 text-sm font-medium text-green-600">
                       {payment.expectedCumulativeReturn ? payment.expectedCumulativeReturn.toFixed(2) : 0} €
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    </TableCell>
+                    <TableCell>
                       {payment.status === 'pending' ? (
                         <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                           En attente
@@ -102,22 +132,22 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
                           {payment.status}
                         </span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })
             ) : (
-              <tr>
-                <td colSpan={6} className="px-4 py-4 text-sm text-center text-gray-500">
+              <TableRow>
+                <TableCell colSpan={6} className="py-4 text-sm text-center text-gray-500">
                   Aucune projection de rendement disponible
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             )}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </div>
 
-      {userInvestments.length > 0 && (
+      {userInvestments.length > 0 && futurePayments.length > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-100">
           <p className="text-xs text-gray-500">
             <strong>Note:</strong> Ces projections sont basées sur les taux de rendement actuels et peuvent varier. 
