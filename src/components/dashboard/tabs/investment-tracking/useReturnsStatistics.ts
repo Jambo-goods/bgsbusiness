@@ -17,7 +17,8 @@ export const useReturnsStatistics = () => {
             name,
             image,
             company_name,
-            status
+            status,
+            first_payment_delay_months
           )
         `)
         .order("payment_date", { ascending: true });
@@ -27,7 +28,14 @@ export const useReturnsStatistics = () => {
         throw error;
       }
 
-      return data || [];
+      // Add the first_payment_delay_months field from the project to the payment
+      const paymentsWithDelay = data.map(payment => ({
+        ...payment,
+        first_payment_delay_months: payment.projects?.first_payment_delay_months || 1
+      }));
+
+      console.log("Fetched scheduled payments with delay:", paymentsWithDelay);
+      return paymentsWithDelay || [];
     },
   });
 
@@ -70,7 +78,8 @@ export const useReturnsStatistics = () => {
       date: new Date(payment.payment_date),
       type: 'yield' as const,
       status: payment.status as "paid" | "pending" | "scheduled",
-      percentage: payment.percentage
+      percentage: payment.percentage,
+      firstPaymentDelay: payment.first_payment_delay_months || 1
     }));
 
     // Calculate additional statistics
