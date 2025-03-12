@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TrendingUp, RefreshCw } from 'lucide-react';
 import { PaymentRecord } from './types';
