@@ -10,7 +10,9 @@ import LoadingIndicator from "./investment-tracking/LoadingIndicator";
 import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracking";
 import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
 import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
+import ReturnProjectionSection from "./investment-tracking/ReturnProjectionSection";
 import { Project } from "@/types/project";
+
 const YieldTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -77,6 +79,7 @@ const YieldTab = () => {
     category: 'green',
     fundingProgress: 50
   }];
+
   const {
     sortColumn,
     sortDirection,
@@ -89,13 +92,17 @@ const YieldTab = () => {
     handleSort,
     handleRefresh: refreshTracking
   } = useInvestmentTracking(userInvestments);
+
   const {
     statistics,
     isLoading: statsLoading
   } = useReturnsStatistics();
+
   useInvestmentSubscriptions(userId, refreshTracking);
+
   const isTrackingLoading = trackingLoading || statsLoading;
   const hasTrackingData = paymentRecords && paymentRecords.length > 0;
+
   useEffect(() => {
     fetchInvestmentYields();
     fetchUserInvestments();
@@ -111,6 +118,7 @@ const YieldTab = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
   const fetchUserInvestments = async () => {
     try {
       const {
@@ -161,6 +169,7 @@ const YieldTab = () => {
       console.error("Error in fetchUserInvestments:", error);
     }
   };
+
   const fetchInvestmentYields = async () => {
     try {
       setIsLoading(true);
@@ -193,19 +202,16 @@ const YieldTab = () => {
         throw projectsError;
       }
 
-      // Group investments by project
       const investmentsByProject = new Map();
       investmentsData.forEach(investment => {
         const project = projectsData?.find(p => p.id === investment.project_id);
         const projectId = investment.project_id;
         const monthlyRate = project?.yield || investment.yield_rate;
         if (investmentsByProject.has(projectId)) {
-          // Add to existing project entry
           const existingProject = investmentsByProject.get(projectId);
           existingProject.amount += investment.amount;
           existingProject.monthlyReturn += monthlyRate / 100 * investment.amount;
         } else {
-          // Create new project entry
           investmentsByProject.set(projectId, {
             projectId: projectId,
             projectName: project?.name || 'Projet inconnu',
@@ -216,10 +222,8 @@ const YieldTab = () => {
         }
       });
 
-      // Convert map to array
       const groupedInvestments = Array.from(investmentsByProject.values());
 
-      // Calculate totals
       let totalMonthlyYield = 0;
       let weightedAnnualPercent = 0;
       let totalInvestment = 0;
@@ -242,16 +246,19 @@ const YieldTab = () => {
       setIsRefreshing(false);
     }
   };
+
   const handleRefresh = () => {
     setIsRefreshing(true);
     fetchInvestmentYields();
     fetchUserInvestments();
     refreshTracking();
   };
+
   const renderTrackingContent = () => {
     if (isTrackingLoading) {
       return <LoadingIndicator message="Chargement des données de rendement..." />;
     }
+    
     if (!hasTrackingData || !statistics) {
       return <div className="py-10 text-center">
           <div className="bg-blue-50 p-6 rounded-lg inline-block mb-4">
@@ -270,12 +277,35 @@ const YieldTab = () => {
           </div>
         </div>;
     }
+    
     return <>
-        <ReturnsSummary totalPaid={statistics.totalPaid} totalPending={statistics.totalPending} averageMonthlyReturn={statistics.averageMonthlyReturn} isRefreshing={trackingRefresh} onRefresh={refreshTracking} />
+        <ReturnsSummary 
+          totalPaid={statistics.totalPaid} 
+          totalPending={statistics.totalPending} 
+          averageMonthlyReturn={statistics.averageMonthlyReturn} 
+          isRefreshing={trackingRefresh} 
+          onRefresh={refreshTracking} 
+        />
         
-        <PaymentsTable filteredAndSortedPayments={statistics.filteredAndSortedPayments} scheduledPayments={statistics.paymentsWithCumulative} cumulativeReturns={statistics.cumulativeReturns} sortColumn={sortColumn} sortDirection={sortDirection} handleSort={handleSort} userInvestments={userInvestments} />
+        <ReturnProjectionSection 
+          paymentRecords={paymentRecords} 
+          cumulativeExpectedReturns={statistics.paymentsWithCumulative || []} 
+          isLoading={isTrackingLoading}
+          userInvestments={userInvestments}
+        />
+        
+        <PaymentsTable 
+          filteredAndSortedPayments={statistics.filteredAndSortedPayments} 
+          scheduledPayments={statistics.paymentsWithCumulative} 
+          cumulativeReturns={statistics.cumulativeReturns} 
+          sortColumn={sortColumn} 
+          sortDirection={sortDirection} 
+          handleSort={handleSort}
+          userInvestments={userInvestments}
+        />
       </>;
   };
+
   return <div className="space-y-6">
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
         <div className="flex justify-between items-center mb-6">
@@ -392,10 +422,9 @@ const YieldTab = () => {
       </div>
       
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-        
-        
         {renderTrackingContent()}
       </div>
     </div>;
 };
+
 export default YieldTab;
