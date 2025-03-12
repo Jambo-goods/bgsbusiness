@@ -51,6 +51,21 @@ export const calculateCumulativeReturns = (paymentRecords: PaymentRecord[]) => {
   });
 };
 
+export const calculateExpectedCumulativeReturns = (paymentRecords: PaymentRecord[]) => {
+  // Sort all payments by date, including scheduled ones
+  const sortedPayments = [...paymentRecords]
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+  
+  let cumulative = 0;
+  return sortedPayments.map(payment => {
+    cumulative += payment.amount;
+    return {
+      ...payment,
+      expectedCumulativeReturn: cumulative
+    };
+  });
+};
+
 export const filterAndSortPayments = (
   paymentRecords: PaymentRecord[],
   filterStatus: string,
@@ -124,6 +139,9 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     
     console.log(`Investment ${index}: Months since first payment date: ${monthsSinceFirstPayment}`);
     
+    // Monthly percentage for calculations
+    const monthlyPercentage = parseFloat((yield_rate / 12).toFixed(2));
+    
     // Only add past payments if the first payment date is in the past
     if (isFirstPaymentDue) {
       // Past and current payments (paid)
@@ -141,7 +159,8 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
             date: paymentDate,
             type: 'yield',
             status: 'paid',
-            isProjectedPayment: false
+            isProjectedPayment: false,
+            percentage: monthlyPercentage
           });
         }
       }
@@ -165,16 +184,14 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         date: nextPaymentDate,
         type: 'yield',
         status: 'pending',
-        isProjectedPayment: false
+        isProjectedPayment: false,
+        percentage: monthlyPercentage
       });
       
       // Future scheduled payments (2 months after the pending payment)
       for (let i = 1; i <= 2; i++) {
         const futureDate = new Date(nextPaymentDate);
         futureDate.setMonth(nextPaymentDate.getMonth() + i);
-        
-        // Calculate the percentage for this payment (to be used for amount calculation)
-        const monthlyPercentage = (yield_rate / 12).toFixed(2);
         
         payments.push({
           id: `payment-${investment.id}-future-${i}`,
@@ -185,15 +202,12 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
           type: 'yield',
           status: 'scheduled',
           isProjectedPayment: false,
-          percentage: parseFloat(monthlyPercentage)
+          percentage: monthlyPercentage
         });
       }
     } else {
       // For investments still in the delay period, only show the first payment AFTER the delay period
       // and mark it clearly as a projected payment
-      // Calculate the percentage for this payment
-      const monthlyPercentage = (yield_rate / 12).toFixed(2);
-      
       payments.push({
         id: `payment-${investment.id}-projected`,
         projectId: investment.project_id,
@@ -203,7 +217,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         type: 'yield',
         status: 'scheduled',
         isProjectedPayment: true,
-        percentage: parseFloat(monthlyPercentage)
+        percentage: monthlyPercentage
       });
     }
   });

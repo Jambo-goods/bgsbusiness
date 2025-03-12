@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BarChart3, TrendingUp, DollarSign, RefreshCw, AlertCircle, Clock, Check } from "lucide-react";
@@ -104,6 +103,11 @@ const YieldTab = () => {
   
   const isTrackingLoading = trackingLoading || statsLoading;
   const hasTrackingData = paymentRecords && paymentRecords.length > 0;
+
+  const cumulativeExpectedReturns = React.useMemo(() => {
+    if (!paymentRecords || paymentRecords.length === 0) return [];
+    return calculateExpectedCumulativeReturns(paymentRecords);
+  }, [paymentRecords]);
 
   useEffect(() => {
     fetchInvestmentYields();
@@ -219,7 +223,6 @@ const YieldTab = () => {
         throw projectsError;
       }
       
-      // Group investments by project
       const investmentsByProject = new Map();
       
       investmentsData.forEach(investment => {
@@ -228,12 +231,10 @@ const YieldTab = () => {
         const monthlyRate = project?.yield || investment.yield_rate;
         
         if (investmentsByProject.has(projectId)) {
-          // Add to existing project entry
           const existingProject = investmentsByProject.get(projectId);
           existingProject.amount += investment.amount;
           existingProject.monthlyReturn += (monthlyRate / 100) * investment.amount;
         } else {
-          // Create new project entry
           investmentsByProject.set(projectId, {
             projectId: projectId,
             projectName: project?.name || 'Projet inconnu',
@@ -244,10 +245,8 @@ const YieldTab = () => {
         }
       });
       
-      // Convert map to array
       const groupedInvestments = Array.from(investmentsByProject.values());
       
-      // Calculate totals
       let totalMonthlyYield = 0;
       let weightedAnnualPercent = 0;
       let totalInvestment = 0;
@@ -485,6 +484,15 @@ const YieldTab = () => {
         
         {renderTrackingContent()}
       </div>
+      
+      {paymentRecords && paymentRecords.length > 0 && (
+        <ReturnProjectionSection
+          paymentRecords={paymentRecords}
+          cumulativeExpectedReturns={cumulativeExpectedReturns}
+          isLoading={isTrackingLoading}
+          userInvestments={userInvestments}
+        />
+      )}
     </div>
   );
 };

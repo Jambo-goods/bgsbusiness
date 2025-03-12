@@ -8,7 +8,8 @@ export type PaymentRecord = {
   type: 'yield';
   status: 'paid' | 'pending' | 'scheduled';
   percentage?: number;
-  isProjectedPayment?: boolean; // Explicitly define this property
+  isProjectedPayment?: boolean;
+  expectedCumulativeReturn?: number;
 };
 
 export type ScheduledPayment = {
