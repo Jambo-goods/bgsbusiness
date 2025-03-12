@@ -55,32 +55,46 @@ export default function PaymentsTable({
 
   console.log("Total invested amount:", totalInvestedAmount);
 
-  // Calculate running cumulative total for all payments, regardless of source
-  let runningCumulative = 0;
+  // Map to store unique payment entries by date and project
+  const uniquePaymentMap = new Map();
   
-  // First process and sort all payments by date
-  const allPayments = [
-    ...filteredAndSortedPayments,
-    ...scheduledPayments.map(sp => {
+  // First process all payments from filteredAndSortedPayments
+  filteredAndSortedPayments.forEach(payment => {
+    const key = `${payment.projectId}-${payment.date.toISOString()}`;
+    uniquePaymentMap.set(key, payment);
+  });
+  
+  // Then process scheduled payments, only adding if they don't overlap with existing payments
+  scheduledPayments.forEach(sp => {
+    const paymentDate = new Date(sp.payment_date);
+    const key = `${sp.project_id}-${paymentDate.toISOString()}`;
+    
+    // Only add if this date+project combination doesn't exist yet
+    if (!uniquePaymentMap.has(key)) {
       const percentage = sp.percentage || 0;
       const calculatedAmount = (percentage / 100) * totalInvestedAmount;
       console.log(`Calculated amount for ${sp.projects?.name}:`, calculatedAmount, `(${percentage}% of ${totalInvestedAmount})`);
 
-      return {
+      uniquePaymentMap.set(key, {
         id: `${sp.id}-scheduled`,  // Add suffix to ensure unique keys
         projectId: sp.project_id,
         projectName: sp.projects?.name || "Projet inconnu",
         amount: calculatedAmount,
-        date: new Date(sp.payment_date),
+        date: paymentDate,
         type: 'yield' as const,
         status: sp.status as 'paid' | 'pending' | 'scheduled',
         percentage: sp.percentage,
         isProjectedPayment: false // Initialize as false for scheduled payments
-      };
-    })
-  ].sort((a, b) => a.date.getTime() - b.date.getTime());
+      });
+    }
+  });
+  
+  // Convert map to array and sort by date
+  const allPayments = Array.from(uniquePaymentMap.values())
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
   
   // Calculate cumulative totals for all paid payments
+  let runningCumulative = 0;
   const allPaymentsWithCumulative = allPayments.map(payment => {
     // Only add to cumulative if paid
     if (payment.status === 'paid') {
