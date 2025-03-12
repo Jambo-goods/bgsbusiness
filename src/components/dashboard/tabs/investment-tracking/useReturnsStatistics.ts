@@ -71,7 +71,7 @@ export const useReturnsStatistics = () => {
       date: new Date(payment.payment_date),
       type: 'yield' as const,
       status: payment.status as "paid" | "pending" | "scheduled",
-      percentage: payment.percentage  // Make sure we're using the percentage from the database
+      percentage: payment.percentage  // Make sure we're using the percentage directly from the database
     }));
 
     // Calculate additional statistics

@@ -51,7 +51,6 @@ export const calculateCumulativeReturns = (paymentRecords: PaymentRecord[]) => {
 };
 
 export const calculateExpectedCumulativeReturns = (paymentRecords: PaymentRecord[]) => {
-  // Sort all payments by date, including scheduled ones
   const sortedPayments = [...paymentRecords]
     .sort((a, b) => a.date.getTime() - b.date.getTime());
   
@@ -108,34 +107,27 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       return;
     }
     
-    // Calculate payments based on actual investment data
     const investmentDate = investment.date ? new Date(investment.date) : new Date();
     const amount = investment.amount || 0;
     const yield_rate = investment.yield_rate || investment.projects.yield || 0;
     
-    // Get the percentage from the database without dividing
     const monthlyPercentage = yield_rate;
     
-    // Calculate monthly return based on the monthly percentage
     const monthlyReturn = (monthlyPercentage / 100) * amount;
     
     console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}, monthly percentage=${monthlyPercentage}%`);
     
-    // Get the first payment delay months value from the project
     const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
     console.log(`Investment ${index}: First payment delay: ${firstPaymentDelayMonths} months`);
     
-    // Calculate first payment date by adding the delay to the investment date
     const firstPaymentDate = new Date(investmentDate);
     firstPaymentDate.setMonth(investmentDate.getMonth() + firstPaymentDelayMonths);
     
     console.log(`Investment ${index}: Investment date=${investmentDate.toISOString()}, First payment date=${firstPaymentDate.toISOString()}`);
     
-    // Only proceed with payments if we're past the investment delay period
     const isFirstPaymentDue = firstPaymentDate <= now;
     console.log(`Investment ${index}: Is first payment due? ${isFirstPaymentDue ? 'Yes' : 'No'}`);
     
-    // Calculate how many months have passed since the first payment date
     const monthsSinceFirstPayment = Math.max(
       0,
       (now.getFullYear() - firstPaymentDate.getFullYear()) * 12 + 
@@ -144,14 +136,11 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     
     console.log(`Investment ${index}: Months since first payment date: ${monthsSinceFirstPayment}`);
     
-    // Only add past payments if the first payment date is in the past
     if (isFirstPaymentDue) {
-      // Past and current payments (paid)
       for (let i = 0; i <= monthsSinceFirstPayment; i++) {
         const paymentDate = new Date(firstPaymentDate);
         paymentDate.setMonth(firstPaymentDate.getMonth() + i);
         
-        // Only add payments that are strictly in the past
         if (paymentDate < now) {
           payments.push({
             id: `payment-${investment.id}-${i}`,
@@ -167,17 +156,14 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         }
       }
       
-      // Calculate the next payment date after the last paid one
       let nextPaymentDate = new Date(firstPaymentDate);
       nextPaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment);
       
-      // Make sure the next payment date is in the future
       if (nextPaymentDate <= now) {
         nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
       }
       console.log(`Investment ${index}: Next payment after paid ones at ${nextPaymentDate.toISOString()}`);
       
-      // Add the next pending payment
       payments.push({
         id: `payment-${investment.id}-pending`,
         projectId: investment.project_id,
@@ -190,7 +176,6 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         percentage: monthlyPercentage
       });
       
-      // Future scheduled payments (2 months after the pending payment)
       for (let i = 1; i <= 2; i++) {
         const futureDate = new Date(nextPaymentDate);
         futureDate.setMonth(nextPaymentDate.getMonth() + i);
@@ -208,8 +193,6 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         });
       }
     } else {
-      // For investments still in the delay period, only show the first payment AFTER the delay period
-      // and mark it clearly as a projected payment
       payments.push({
         id: `payment-${investment.id}-projected`,
         projectId: investment.project_id,
