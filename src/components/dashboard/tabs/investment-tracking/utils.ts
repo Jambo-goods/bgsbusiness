@@ -1,4 +1,3 @@
-
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -98,7 +97,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     const investmentDate = investment.date ? new Date(investment.date) : new Date();
     const amount = investment.amount || 0;
     const yield_rate = investment.yield_rate || investment.projects.yield || 0;
-    const monthlyReturn = Math.round((yield_rate / 100) * amount);
+    const monthlyReturn = Math.round((yield_rate / 100) * amount / 12);
     
     // Get the first payment delay months value from the project
     const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
@@ -142,13 +141,17 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       }
     }
     
-    // Pending payment (next month after the last paid payment or first payment if none paid yet)
-    const pendingDate = new Date(firstPaymentDate);
-    if (firstPaymentDate <= now) {
-      // If the first payment date is already in the past, the pending payment is one month after the last paid payment
-      pendingDate.setMonth(firstPaymentDate.getMonth() + Math.max(1, monthsSinceFirstPayment + 1));
+    // Pending payment
+    let pendingDate;
+    if (firstPaymentDate > now) {
+      // If first payment date is in the future, that's our pending payment
+      pendingDate = new Date(firstPaymentDate);
+      console.log(`Investment ${index}: First payment is in the future at ${pendingDate.toISOString()}`);
     } else {
-      // If the first payment date is in the future, that's our pending payment
+      // Otherwise, pending payment is the next month after the last paid payment
+      pendingDate = new Date(firstPaymentDate);
+      pendingDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + 1);
+      console.log(`Investment ${index}: Next payment after paid ones at ${pendingDate.toISOString()}`);
     }
     
     payments.push({

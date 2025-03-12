@@ -67,7 +67,7 @@ export default function PaymentsTable({
       console.log(`Calculated amount for ${sp.projects?.name}:`, calculatedAmount, `(${percentage}% of ${totalInvestedAmount})`);
 
       return {
-        id: sp.id,
+        id: `${sp.id}-scheduled`,  // Add suffix to ensure unique keys
         projectId: sp.project_id,
         projectName: sp.projects?.name || "Projet inconnu",
         amount: calculatedAmount,
