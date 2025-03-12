@@ -114,10 +114,10 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     // Utiliser un pourcentage fixe de 12% pour tous les investissements
     const fixedYieldRate = 12;
     
-    // Calculer le rendement mensuel basé sur le pourcentage fixe
-    const monthlyReturn = (fixedYieldRate / 100) * amount / 12;
+    // Calculer le rendement mensuel basé sur le pourcentage fixe (sans diviser par 12)
+    const monthlyReturn = (fixedYieldRate / 100) * amount;
     
-    console.log(`Investment ${index}: amount=${amount}, yield=${fixedYieldRate}%, monthly=${monthlyReturn}, monthly percentage=${fixedYieldRate/12}%`);
+    console.log(`Investment ${index}: amount=${amount}, yield=${fixedYieldRate}%, monthly=${monthlyReturn}, monthly percentage=${fixedYieldRate}%`);
     
     const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
     console.log(`Investment ${index}: First payment delay: ${firstPaymentDelayMonths} months`);

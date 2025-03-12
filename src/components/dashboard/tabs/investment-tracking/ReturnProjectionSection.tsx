@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { TrendingUp, RefreshCw } from 'lucide-react';
 import { PaymentRecord } from './types';
@@ -71,10 +70,6 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
               futurePayments.map((payment, index) => {
                 // Afficher toujours 12% fixe pour tous les paiements
                 const fixedPercentage = 12;
-                
-                // Calculer le montant mensuel basé sur un taux annuel de 12%
-                // Pour un projet avec investissement de 1000€, cela donnerait 10€ par mois (1000 * 0.12 / 12)
-                const monthlyAmount = (payment.amount * 12); // Le montant mensuel est déjà calculé correctement dans utils.ts
                 
                 return (
                   <tr key={payment.id} className="hover:bg-gray-50">

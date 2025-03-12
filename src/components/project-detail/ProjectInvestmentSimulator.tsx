@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { Slider } from "@/components/ui/slider";
@@ -66,6 +67,7 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   }, []);
   
   useEffect(() => {
+    // Calculer le rendement mensuel sans diviser par 12
     const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
     const effectiveDuration = duration - firstPaymentDelay; 
     const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * Math.max(0, effectiveDuration));
