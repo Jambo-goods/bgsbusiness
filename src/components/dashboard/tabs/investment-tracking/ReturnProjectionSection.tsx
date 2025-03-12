@@ -67,7 +67,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {futurePayments.length > 0 ? (
               futurePayments.map((payment, index) => {
-                // Use the percentage directly from the payment record
+                // Display the percentage directly from the database without any division
                 const paymentPercentage = payment.percentage ? payment.percentage.toFixed(2) : '0.00';
                 
                 return (
