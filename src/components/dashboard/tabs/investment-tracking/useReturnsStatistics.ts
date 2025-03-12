@@ -63,16 +63,19 @@ export const useReturnsStatistics = () => {
     });
 
     // Convert scheduled payments to PaymentRecord format for consistent processing
-    const paymentRecords: PaymentRecord[] = scheduledPayments.map(payment => ({
-      id: payment.id,
-      projectId: payment.project_id,
-      projectName: payment.projects?.name || "Projet inconnu",
-      amount: payment.total_scheduled_amount || 0,
-      date: new Date(payment.payment_date),
-      type: 'yield' as const,
-      status: payment.status as "paid" | "pending" | "scheduled",
-      percentage: payment.percentage  // Make sure we're using the percentage directly from the database
-    }));
+    const paymentRecords: PaymentRecord[] = scheduledPayments.map(payment => {
+      console.log(`Payment record with percentage: ${payment.id}, percentage: ${payment.percentage}`);
+      return {
+        id: payment.id,
+        projectId: payment.project_id,
+        projectName: payment.projects?.name || "Projet inconnu",
+        amount: payment.total_scheduled_amount || 0,
+        date: new Date(payment.payment_date),
+        type: 'yield' as const,
+        status: payment.status as "paid" | "pending" | "scheduled",
+        percentage: payment.percentage // Direct from database, no calculation needed
+      };
+    });
 
     // Calculate additional statistics
     const totalPaid = paymentRecords
