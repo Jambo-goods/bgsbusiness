@@ -111,9 +111,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     console.log(`Investment ${index}: Investment date=${investmentDate.toISOString()}, First payment date=${firstPaymentDate.toISOString()}`);
     console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}`);
     
-    // Déterminez la date minimale pour les paiements "paid"
-    const minimumDateForPaidPayments = new Date(firstPaymentDate);
-    
+    // CORRECTION: N'ajoutez PAS de paiements "paid" avant la date du premier paiement
     // Calculate how many months have passed since the first payment date
     const monthsSinceFirstPayment = Math.max(
       0,
@@ -130,8 +128,8 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         const paymentDate = new Date(firstPaymentDate);
         paymentDate.setMonth(firstPaymentDate.getMonth() + i);
         
-        // Only add if payment date is not in the future and if the payment date has passed
-        if (paymentDate <= now) {
+        // CORRECTION: Vérifiez que le paiement est STRICTEMENT dans le passé
+        if (paymentDate < now) {
           payments.push({
             id: `payment-${investment.id}-${i}`,
             projectId: investment.project_id,
@@ -139,7 +137,8 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
             amount: monthlyReturn,
             date: paymentDate,
             type: 'yield',
-            status: 'paid'
+            status: 'paid',
+            isProjectedPayment: false
           });
         }
       }
@@ -156,12 +155,15 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     } else {
       // Calculate the next payment date after the last paid one
       nextPaymentDate = new Date(firstPaymentDate);
-      nextPaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + 1);
+      nextPaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment);
+      
+      // CORRECTION: Assurez-vous que la date du prochain paiement est dans le futur
+      if (nextPaymentDate <= now) {
+        nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+      }
       console.log(`Investment ${index}: Next payment after paid ones at ${nextPaymentDate.toISOString()}`);
     }
     
-    // Toujours ajouter les paiements à venir (pending et scheduled)
-    // pour tous les investissements, peu importe la date de début
     // Ajout du prochain paiement en attente (pending)
     payments.push({
       id: `payment-${investment.id}-pending`,
@@ -171,7 +173,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       date: nextPaymentDate,
       type: 'yield',
       status: 'pending',
-      isProjectedPayment: firstPaymentDate > now // Marquer comme prévisionnel si le premier paiement est futur
+      isProjectedPayment: firstPaymentDate > now
     });
     
     // Paiements futurs programmés (2 mois après le paiement en attente)
@@ -187,7 +189,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
         date: futureDate,
         type: 'yield',
         status: 'scheduled',
-        isProjectedPayment: firstPaymentDate > now // Marquer comme prévisionnel si le premier paiement est futur
+        isProjectedPayment: firstPaymentDate > now
       });
     }
   });
