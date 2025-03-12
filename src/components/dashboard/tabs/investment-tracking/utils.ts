@@ -113,7 +113,14 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     const investmentDate = investment.date ? new Date(investment.date) : new Date();
     const amount = investment.amount || 0;
     const yield_rate = investment.yield_rate || investment.projects.yield || 0;
-    const monthlyReturn = Math.round((yield_rate / 100) * amount / 12);
+    
+    // Get the monthly percentage from the yield rate (divided by 12 for monthly)
+    const monthlyPercentage = parseFloat((yield_rate / 12).toFixed(2));
+    
+    // Calculate monthly return based on the monthly percentage
+    const monthlyReturn = (monthlyPercentage / 100) * amount;
+    
+    console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}, monthly percentage=${monthlyPercentage}%`);
     
     // Get the first payment delay months value from the project
     const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
@@ -124,7 +131,6 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     firstPaymentDate.setMonth(investmentDate.getMonth() + firstPaymentDelayMonths);
     
     console.log(`Investment ${index}: Investment date=${investmentDate.toISOString()}, First payment date=${firstPaymentDate.toISOString()}`);
-    console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}`);
     
     // Only proceed with payments if we're past the investment delay period
     const isFirstPaymentDue = firstPaymentDate <= now;
@@ -138,9 +144,6 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     );
     
     console.log(`Investment ${index}: Months since first payment date: ${monthsSinceFirstPayment}`);
-    
-    // Monthly percentage for calculations
-    const monthlyPercentage = parseFloat((yield_rate / 12).toFixed(2));
     
     // Only add past payments if the first payment date is in the past
     if (isFirstPaymentDue) {

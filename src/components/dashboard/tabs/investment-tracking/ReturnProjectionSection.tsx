@@ -66,40 +66,47 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {futurePayments.length > 0 ? (
-              futurePayments.map((payment, index) => (
-                <tr key={payment.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {payment.date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
-                    {payment.projectName}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {payment.percentage ? `${payment.percentage.toFixed(2)}%` : 'N/A'}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {payment.amount.toFixed(2)} €
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
-                    {payment.expectedCumulativeReturn ? payment.expectedCumulativeReturn.toFixed(2) : 0} €
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {payment.status === 'pending' ? (
-                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                        En attente
-                      </span>
-                    ) : payment.status === 'scheduled' ? (
-                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                        Programmé
-                      </span>
-                    ) : (
-                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                        {payment.status}
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))
+              futurePayments.map((payment, index) => {
+                // Use the project's yield rate directly from userInvestments
+                const project = userInvestments.find(p => p.id === payment.projectId);
+                const projectYield = project ? (project.yield / 12).toFixed(2) : 
+                                    (payment.percentage || 0).toFixed(2);
+                
+                return (
+                  <tr key={payment.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {payment.date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
+                      {payment.projectName}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {projectYield}%
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {payment.amount.toFixed(2)} €
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                      {payment.expectedCumulativeReturn ? payment.expectedCumulativeReturn.toFixed(2) : 0} €
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {payment.status === 'pending' ? (
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                          En attente
+                        </span>
+                      ) : payment.status === 'scheduled' ? (
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                          Programmé
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                          {payment.status}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan={6} className="px-4 py-4 text-sm text-center text-gray-500">
