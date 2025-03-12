@@ -14,7 +14,7 @@ export const fetchRealTimeInvestmentData = async (userId: string | undefined) =>
       .from('investments')
       .select(`
         *,
-        projects(*)
+        projects(*, first_payment_delay_months)
       `)
       .eq('user_id', userId);
       
@@ -95,26 +95,35 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     }
     
     // Calculate payments based on actual investment data
-    const startDate = investment.date ? new Date(investment.date) : new Date();
+    const investmentDate = investment.date ? new Date(investment.date) : new Date();
     const amount = investment.amount || 0;
     const yield_rate = investment.yield_rate || investment.projects.yield || 0;
     const monthlyReturn = Math.round((yield_rate / 100) * amount);
     
+    // Get the first payment delay months value from the project
+    const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
+    console.log(`Investment ${index}: First payment delay: ${firstPaymentDelayMonths} months`);
+    
+    // Calculate first payment date by adding the delay to the investment date
+    const firstPaymentDate = new Date(investmentDate);
+    firstPaymentDate.setMonth(investmentDate.getMonth() + firstPaymentDelayMonths);
+    
+    console.log(`Investment ${index}: Investment date=${investmentDate.toISOString()}, First payment date=${firstPaymentDate.toISOString()}`);
     console.log(`Investment ${index}: amount=${amount}, yield=${yield_rate}%, monthly=${monthlyReturn}`);
     
-    // Generate past payments based on actual investment date
-    const monthsSinceInvestment = Math.max(
+    // Calculate how many months have passed since the first payment date
+    const monthsSinceFirstPayment = Math.max(
       0,
-      (now.getFullYear() - startDate.getFullYear()) * 12 + 
-      now.getMonth() - startDate.getMonth()
+      (now.getFullYear() - firstPaymentDate.getFullYear()) * 12 + 
+      now.getMonth() - firstPaymentDate.getMonth()
     );
     
-    console.log(`Investment ${index}: months since start=${monthsSinceInvestment}`);
+    console.log(`Investment ${index}: Months since first payment date: ${monthsSinceFirstPayment}`);
     
     // Past and current payments (paid)
-    for (let i = 0; i <= monthsSinceInvestment; i++) {
-      const paymentDate = new Date(startDate);
-      paymentDate.setMonth(startDate.getMonth() + i);
+    for (let i = 0; i <= monthsSinceFirstPayment; i++) {
+      const paymentDate = new Date(firstPaymentDate);
+      paymentDate.setMonth(firstPaymentDate.getMonth() + i);
       
       // Only add if payment date is not in the future
       if (paymentDate <= now) {
@@ -130,9 +139,9 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       }
     }
     
-    // Pending payment (next month)
-    const pendingDate = new Date(now);
-    pendingDate.setMonth(now.getMonth() + 1);
+    // Pending payment (next month after the last paid payment)
+    const pendingDate = new Date(firstPaymentDate);
+    pendingDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + 1);
     
     payments.push({
       id: `payment-${investment.id}-pending`,
@@ -144,10 +153,10 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       status: 'pending'
     });
     
-    // Future scheduled payments
+    // Future scheduled payments (2 months after pending)
     for (let i = 2; i <= 3; i++) {
-      const futureDate = new Date(now);
-      futureDate.setMonth(now.getMonth() + i);
+      const futureDate = new Date(firstPaymentDate);
+      futureDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment + i);
       
       payments.push({
         id: `payment-${investment.id}-future-${i}`,
