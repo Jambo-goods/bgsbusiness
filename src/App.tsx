@@ -1,70 +1,91 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { HelmetProvider } from "react-helmet-async";
-import { Suspense, lazy } from "react";
-import Index from "./pages/Index";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from '@/components/ui/toaster';
+import { HelmetProvider } from 'react-helmet-async';
+import { AdminProvider } from '@/contexts/AdminContext';
 
-// Lazy load routes to improve performance
-const Opportunite = lazy(() => import("./pages/Projects"));
-const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
-const HowItWorks = lazy(() => import("./pages/HowItWorks"));
-const About = lazy(() => import("./pages/About"));
-const Login = lazy(() => import("./pages/Login"));
-const Register = lazy(() => import("./pages/Register"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
-const NotFound = lazy(() => import("./pages/NotFound"));
+// Pages principales
+import Index from '@/pages/Index';
+import Login from '@/pages/Login';
+import Register from '@/pages/Register';
+import ForgotPassword from '@/pages/ForgotPassword';
+import Projects from '@/pages/Projects';
+import ProjectDetail from '@/pages/ProjectDetail';
+import Dashboard from '@/pages/Dashboard';
+import HowItWorks from '@/pages/HowItWorks';
+import About from '@/pages/About';
+import NotFound from '@/pages/NotFound';
 
-// Loading fallback component
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
-  </div>
-);
+// Pages Admin existantes
+import AdminLogin from '@/pages/admin/AdminLogin';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import UserManagement from '@/pages/admin/UserManagement';
+import UserRegistrations from '@/pages/admin/UserRegistrations';
+import ProfileManagement from '@/pages/admin/ProfileManagement';
+import ProjectManagement from '@/pages/admin/ProjectManagement';
+import TransactionManagement from '@/pages/admin/TransactionManagement';
+import BankTransferManagement from '@/pages/admin/BankTransferManagement';
+import WithdrawalManagement from '@/pages/admin/WithdrawalManagement';
+import NotificationManagement from '@/pages/admin/NotificationManagement';
 
-// Create a client with optimized settings
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60 * 1000, // 1 minute
-      refetchOnWindowFocus: false,
-      retry: 1
-    }
-  }
-});
+// Nouvelles pages pour l'interface de base de données
+import DatabaseLogin from '@/pages/database/DatabaseLogin';
+import DatabaseDashboard from '@/pages/database/DatabaseDashboard';
+import DatabaseUsers from '@/pages/database/DatabaseUsers';
+import DatabaseScheduledPayments from '@/pages/database/DatabaseScheduledPayments';
+import DatabaseWalletTransactions from '@/pages/database/DatabaseWalletTransactions';
+import DatabaseWithdrawalRequests from '@/pages/database/DatabaseWithdrawalRequests';
+import DatabaseProjects from '@/pages/database/DatabaseProjects';
+import DatabaseBankTransfers from '@/pages/database/DatabaseBankTransfers';
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+function App() {
+  return (
     <HelmetProvider>
-      <TooltipProvider>
+      <AdminProvider>
+        <Router>
+          <Routes>
+            {/* Routes principales */}
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/dashboard/*" element={<Dashboard />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
+            <Route path="/about" element={<About />} />
+            
+            {/* Routes Admin existantes */}
+            <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<UserManagement />} />
+            <Route path="/admin/registrations" element={<UserRegistrations />} />
+            <Route path="/admin/profiles" element={<ProfileManagement />} />
+            <Route path="/admin/projects" element={<ProjectManagement />} />
+            <Route path="/admin/transactions" element={<TransactionManagement />} />
+            <Route path="/admin/bank-transfers" element={<BankTransferManagement />} />
+            <Route path="/admin/withdrawals" element={<WithdrawalManagement />} />
+            <Route path="/admin/notifications" element={<NotificationManagement />} />
+            
+            {/* Nouvelles routes pour l'interface de base de données */}
+            <Route path="/database/login" element={<DatabaseLogin />} />
+            <Route path="/database/dashboard" element={<DatabaseDashboard />} />
+            <Route path="/database/users" element={<DatabaseUsers />} />
+            <Route path="/database/scheduled-payments" element={<DatabaseScheduledPayments />} />
+            <Route path="/database/wallet-transactions" element={<DatabaseWalletTransactions />} />
+            <Route path="/database/withdrawal-requests" element={<DatabaseWithdrawalRequests />} />
+            <Route path="/database/projects" element={<DatabaseProjects />} />
+            <Route path="/database/bank-transfers" element={<DatabaseBankTransfers />} />
+            
+            {/* Route 404 */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+        
         <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/projects" element={<Opportunite />} />
-              <Route path="/project/:id" element={<ProjectDetail />} />
-              <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/*" element={<Dashboard />} />
-              
-              {/* Catch-all route for 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
+      </AdminProvider>
     </HelmetProvider>
-  </QueryClientProvider>
-);
+  );
+}
 
 export default App;
