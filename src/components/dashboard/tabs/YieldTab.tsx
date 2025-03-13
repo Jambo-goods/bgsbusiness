@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BarChart3, TrendingUp, DollarSign, RefreshCw, AlertCircle, Clock, Check } from "lucide-react";
-import FilterControls from "./investment-tracking/FilterControls";
-import PaymentsTable from "./investment-tracking/PaymentsTable";
-import ReturnsSummary from "./investment-tracking/ReturnsSummary";
-import HeaderSection from "./investment-tracking/HeaderSection";
-import LoadingIndicator from "./investment-tracking/LoadingIndicator";
 import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracking";
 import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
 import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
 import { Project } from "@/types/project";
+import { calculateExpectedCumulativeReturns } from "./investment-tracking/utils";
+import ReturnProjectionSection from "./investment-tracking/ReturnProjectionSection";
+
 const YieldTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -25,58 +23,64 @@ const YieldTab = () => {
     monthlyReturn: number;
   }[]>([]);
   const [userInvestments, setUserInvestments] = useState<Project[]>([]);
-  const mockProjects: Project[] = [{
-    id: '1',
-    name: 'Project Alpha',
-    image: '/placeholder.svg',
-    companyName: 'Alpha Corporation',
-    status: 'active',
-    investedAmount: 5000,
-    yield: 8,
-    description: 'A sustainable energy project',
-    location: 'Paris, France',
-    minInvestment: 1000,
-    maxInvestment: 50000,
-    price: 100000,
-    profitability: 8,
-    duration: '12 months',
-    category: 'energy',
-    fundingProgress: 75
-  }, {
-    id: '2',
-    name: 'Project Beta',
-    image: '/placeholder.svg',
-    companyName: 'Beta Corporation',
-    status: 'active',
-    investedAmount: 3000,
-    yield: 6,
-    description: 'A renewable energy project',
-    location: 'London, UK',
-    minInvestment: 500,
-    maxInvestment: 20000,
-    price: 80000,
-    profitability: 6,
-    duration: '24 months',
-    category: 'renewable',
-    fundingProgress: 90
-  }, {
-    id: '3',
-    name: 'Project Gamma',
-    image: '/placeholder.svg',
-    companyName: 'Gamma Corporation',
-    status: 'active',
-    investedAmount: 1000,
-    yield: 4,
-    description: 'A green building project',
-    location: 'New York, USA',
-    minInvestment: 200,
-    maxInvestment: 10000,
-    price: 50000,
-    profitability: 4,
-    duration: '36 months',
-    category: 'green',
-    fundingProgress: 50
-  }];
+  
+  const mockProjects: Project[] = [
+    {
+      id: '1',
+      name: 'Project Alpha',
+      image: '/placeholder.svg',
+      companyName: 'Alpha Corporation',
+      status: 'active',
+      investedAmount: 5000,
+      yield: 8,
+      description: 'A sustainable energy project',
+      location: 'Paris, France',
+      minInvestment: 1000,
+      maxInvestment: 50000,
+      price: 100000,
+      profitability: 8,
+      duration: '12 months',
+      category: 'energy',
+      fundingProgress: 75
+    },
+    {
+      id: '2',
+      name: 'Project Beta',
+      image: '/placeholder.svg',
+      companyName: 'Beta Corporation',
+      status: 'active',
+      investedAmount: 3000,
+      yield: 6,
+      description: 'A renewable energy project',
+      location: 'London, UK',
+      minInvestment: 500,
+      maxInvestment: 20000,
+      price: 80000,
+      profitability: 6,
+      duration: '24 months',
+      category: 'renewable',
+      fundingProgress: 90
+    },
+    {
+      id: '3',
+      name: 'Project Gamma',
+      image: '/placeholder.svg',
+      companyName: 'Gamma Corporation',
+      status: 'active',
+      investedAmount: 1000,
+      yield: 4,
+      description: 'A green building project',
+      location: 'New York, USA',
+      minInvestment: 200,
+      maxInvestment: 10000,
+      price: 50000,
+      profitability: 4,
+      duration: '36 months',
+      category: 'green',
+      fundingProgress: 50
+    }
+  ];
+
   const {
     sortColumn,
     sortDirection,
@@ -89,41 +93,52 @@ const YieldTab = () => {
     handleSort,
     handleRefresh: refreshTracking
   } = useInvestmentTracking(userInvestments);
-  const {
-    statistics,
-    isLoading: statsLoading
-  } = useReturnsStatistics();
+  
+  const { statistics, isLoading: statsLoading } = useReturnsStatistics();
+  
   useInvestmentSubscriptions(userId, refreshTracking);
+  
   const isTrackingLoading = trackingLoading || statsLoading;
   const hasTrackingData = paymentRecords && paymentRecords.length > 0;
+
+  const cumulativeExpectedReturns = React.useMemo(() => {
+    if (!paymentRecords || paymentRecords.length === 0) return [];
+    return calculateExpectedCumulativeReturns(paymentRecords);
+  }, [paymentRecords]);
+
   useEffect(() => {
     fetchInvestmentYields();
     fetchUserInvestments();
-    const channel = supabase.channel('public:investments').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'investments'
-    }, () => {
-      fetchInvestmentYields();
-      fetchUserInvestments();
-    }).subscribe();
+    
+    const channel = supabase
+      .channel('public:investments')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'investments'
+      }, () => {
+        fetchInvestmentYields();
+        fetchUserInvestments();
+      })
+      .subscribe();
+      
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
   const fetchUserInvestments = async () => {
     try {
-      const {
-        data: sessionData
-      } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabase.auth.getSession();
+      
       if (!sessionData.session?.user?.id) {
         console.log("No active session found");
         return;
       }
-      const {
-        data,
-        error
-      } = await supabase.from('investments').select(`
+      
+      const { data, error } = await supabase
+        .from('investments')
+        .select(`
           *,
           projects:project_id (
             id,
@@ -133,11 +148,15 @@ const YieldTab = () => {
             status,
             yield
           )
-        `).eq('user_id', sessionData.session.user.id).eq('status', 'active');
+        `)
+        .eq('user_id', sessionData.session.user.id)
+        .eq('status', 'active');
+        
       if (error) {
         console.error("Error fetching user investments:", error);
         return;
       }
+      
       const projects: Project[] = data.map(inv => ({
         id: inv.projects.id,
         name: inv.projects.name,
@@ -156,84 +175,95 @@ const YieldTab = () => {
         category: '',
         fundingProgress: 0
       }));
+      
       setUserInvestments(projects);
     } catch (error) {
       console.error("Error in fetchUserInvestments:", error);
     }
   };
+
   const fetchInvestmentYields = async () => {
     try {
       setIsLoading(true);
-      const {
-        data: sessionData
-      } = await supabase.auth.getSession();
+      const { data: sessionData } = await supabase.auth.getSession();
+      
       if (!sessionData.session) {
         toast.error("Veuillez vous connecter pour accéder à vos rendements");
         return;
       }
-      const {
-        data: investmentsData,
-        error: investmentsError
-      } = await supabase.from('investments').select('amount, yield_rate, project_id').eq('user_id', sessionData.session.user.id).eq('status', 'active');
+      
+      const { data: investmentsData, error: investmentsError } = await supabase
+        .from('investments')
+        .select('amount, yield_rate, project_id')
+        .eq('user_id', sessionData.session.user.id)
+        .eq('status', 'active');
+        
       if (investmentsError) {
         console.error("Erreur lors de la récupération des investissements:", investmentsError);
         throw investmentsError;
       }
+      
       if (!investmentsData || investmentsData.length === 0) {
         setIsLoading(false);
         return;
       }
+      
       const projectIds = investmentsData.map(inv => inv.project_id);
-      const {
-        data: projectsData,
-        error: projectsError
-      } = await supabase.from('projects').select('id, name, yield').in('id', projectIds);
+      
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('id, name, yield')
+        .in('id', projectIds);
+        
       if (projectsError) {
         console.error("Erreur lors de la récupération des projets:", projectsError);
         throw projectsError;
       }
-
-      // Group investments by project
+      
       const investmentsByProject = new Map();
+      
       investmentsData.forEach(investment => {
         const project = projectsData?.find(p => p.id === investment.project_id);
         const projectId = investment.project_id;
         const monthlyRate = project?.yield || investment.yield_rate;
+        
         if (investmentsByProject.has(projectId)) {
-          // Add to existing project entry
           const existingProject = investmentsByProject.get(projectId);
           existingProject.amount += investment.amount;
-          existingProject.monthlyReturn += monthlyRate / 100 * investment.amount;
+          existingProject.monthlyReturn += (monthlyRate / 100) * investment.amount;
         } else {
-          // Create new project entry
           investmentsByProject.set(projectId, {
             projectId: projectId,
             projectName: project?.name || 'Projet inconnu',
             monthlyRate: monthlyRate,
             amount: investment.amount,
-            monthlyReturn: monthlyRate / 100 * investment.amount
+            monthlyReturn: (monthlyRate / 100) * investment.amount
           });
         }
       });
-
-      // Convert map to array
+      
       const groupedInvestments = Array.from(investmentsByProject.values());
-
-      // Calculate totals
+      
       let totalMonthlyYield = 0;
       let weightedAnnualPercent = 0;
       let totalInvestment = 0;
+      
       groupedInvestments.forEach(investment => {
         totalMonthlyYield += investment.monthlyReturn;
-        weightedAnnualPercent += investment.monthlyRate * 12 * investment.amount;
+        weightedAnnualPercent += (investment.monthlyRate * 12) * investment.amount;
         totalInvestment += investment.amount;
       });
+      
       const calculatedAnnualYield = totalMonthlyYield * 12;
-      const calculatedAnnualPercent = totalInvestment > 0 ? weightedAnnualPercent / totalInvestment : 0;
+      const calculatedAnnualPercent = totalInvestment > 0 
+        ? (weightedAnnualPercent / totalInvestment) 
+        : 0;
+      
       setMonthlyYield(Math.round(totalMonthlyYield));
       setAnnualYield(Math.round(calculatedAnnualYield));
       setAnnualPercent(parseFloat(calculatedAnnualPercent.toFixed(2)));
       setInvestments(groupedInvestments);
+      
     } catch (error) {
       console.error("Erreur lors du calcul des rendements:", error);
       toast.error("Impossible de calculer vos rendements");
@@ -242,41 +272,16 @@ const YieldTab = () => {
       setIsRefreshing(false);
     }
   };
+  
   const handleRefresh = () => {
     setIsRefreshing(true);
     fetchInvestmentYields();
     fetchUserInvestments();
     refreshTracking();
   };
-  const renderTrackingContent = () => {
-    if (isTrackingLoading) {
-      return <LoadingIndicator message="Chargement des données de rendement..." />;
-    }
-    if (!hasTrackingData || !statistics) {
-      return <div className="py-10 text-center">
-          <div className="bg-blue-50 p-6 rounded-lg inline-block mb-4">
-            
-            <h3 className="text-lg font-medium text-bgs-blue mb-1">Aucun rendement trouvé</h3>
-            <p className="text-sm text-bgs-gray-medium">
-              Aucun investissement n'a été trouvé pour votre compte. <br />
-              Investissez dans des projets pour voir apparaître vos rendements ici.
-            </p>
-          </div>
-          <div>
-            <button onClick={refreshTracking} className="text-bgs-blue hover:text-bgs-blue-dark flex items-center gap-1 mx-auto">
-              <RefreshCw className="h-4 w-4" />
-              <span>Rafraîchir</span>
-            </button>
-          </div>
-        </div>;
-    }
-    return <>
-        <ReturnsSummary totalPaid={statistics.totalPaid} totalPending={statistics.totalPending} averageMonthlyReturn={statistics.averageMonthlyReturn} isRefreshing={trackingRefresh} onRefresh={refreshTracking} />
-        
-        <PaymentsTable filteredAndSortedPayments={statistics.filteredAndSortedPayments} scheduledPayments={statistics.paymentsWithCumulative} cumulativeReturns={statistics.cumulativeReturns} sortColumn={sortColumn} sortDirection={sortDirection} handleSort={handleSort} userInvestments={userInvestments} />
-      </>;
-  };
-  return <div className="space-y-6">
+
+  return (
+    <div className="space-y-6">
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
@@ -288,13 +293,18 @@ const YieldTab = () => {
               <p className="text-xs text-gray-500 mt-0.5">Basé sur vos investissements actifs</p>
             </div>
           </div>
-          <button onClick={handleRefresh} disabled={isRefreshing} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm">
+          <button 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+          >
             <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
             Actualiser
           </button>
         </div>
         
-        {isLoading ? <div className="animate-pulse">
+        {isLoading ? (
+          <div className="animate-pulse">
             <div className="h-12 bg-gray-200 rounded w-1/3 mb-6"></div>
             <div className="h-4 bg-gray-200 rounded w-2/3 mb-6"></div>
             <div className="space-y-4">
@@ -302,7 +312,9 @@ const YieldTab = () => {
               <div className="h-8 bg-gray-200 rounded w-full"></div>
               <div className="h-8 bg-gray-200 rounded w-full"></div>
             </div>
-          </div> : <>
+          </div>
+        ) : (
+          <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-gradient-to-r from-bgs-blue to-bgs-blue-light p-5 rounded-lg text-white">
                 <div className="flex items-center justify-between mb-2">
@@ -364,7 +376,9 @@ const YieldTab = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
-                    {investments.length > 0 ? investments.map((investment, index) => <tr key={investment.projectId} className="hover:bg-gray-50 transition-colors">
+                    {investments.length > 0 ? (
+                      investments.map((investment, index) => (
+                        <tr key={investment.projectId} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-bgs-blue">
                             {investment.projectName}
                           </td>
@@ -379,27 +393,33 @@ const YieldTab = () => {
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
                             {Math.round(investment.monthlyReturn)} €/mois
                           </td>
-                        </tr>) : <tr>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
                         <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500">
                           Vous n'avez pas encore d'investissements actifs.
                         </td>
-                      </tr>}
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
-          </>}
+          </>
+        )}
       </div>
       
-      <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-          <HeaderSection handleRefresh={refreshTracking} isLoading={isTrackingLoading} animateRefresh={trackingRefresh} dataSource="la base de données" />
-          
-          {hasTrackingData && <FilterControls filterStatus={filterStatus} setFilterStatus={setFilterStatus} />}
-        </div>
-        
-        {renderTrackingContent()}
-      </div>
-    </div>;
+      {paymentRecords && paymentRecords.length > 0 && (
+        <ReturnProjectionSection
+          paymentRecords={paymentRecords}
+          cumulativeExpectedReturns={cumulativeExpectedReturns}
+          isLoading={isTrackingLoading}
+          userInvestments={userInvestments}
+        />
+      )}
+    </div>
+  );
 };
+
 export default YieldTab;
