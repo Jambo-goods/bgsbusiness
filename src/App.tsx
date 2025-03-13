@@ -28,16 +28,6 @@ import BankTransferManagement from '@/pages/admin/BankTransferManagement';
 import WithdrawalManagement from '@/pages/admin/WithdrawalManagement';
 import NotificationManagement from '@/pages/admin/NotificationManagement';
 
-// Nouvelles pages pour l'interface de base de données
-import DatabaseLogin from '@/pages/database/DatabaseLogin';
-import DatabaseDashboard from '@/pages/database/DatabaseDashboard';
-import DatabaseUsers from '@/pages/database/DatabaseUsers';
-import DatabaseScheduledPayments from '@/pages/database/DatabaseScheduledPayments';
-import DatabaseWalletTransactions from '@/pages/database/DatabaseWalletTransactions';
-import DatabaseWithdrawalRequests from '@/pages/database/DatabaseWithdrawalRequests';
-import DatabaseProjects from '@/pages/database/DatabaseProjects';
-import DatabaseBankTransfers from '@/pages/database/DatabaseBankTransfers';
-
 function App() {
   return (
     <HelmetProvider>
@@ -66,16 +56,6 @@ function App() {
             <Route path="/admin/bank-transfers" element={<BankTransferManagement />} />
             <Route path="/admin/withdrawals" element={<WithdrawalManagement />} />
             <Route path="/admin/notifications" element={<NotificationManagement />} />
-            
-            {/* Nouvelles routes pour l'interface de base de données */}
-            <Route path="/database/login" element={<DatabaseLogin />} />
-            <Route path="/database/dashboard" element={<DatabaseDashboard />} />
-            <Route path="/database/users" element={<DatabaseUsers />} />
-            <Route path="/database/scheduled-payments" element={<DatabaseScheduledPayments />} />
-            <Route path="/database/wallet-transactions" element={<DatabaseWalletTransactions />} />
-            <Route path="/database/withdrawal-requests" element={<DatabaseWithdrawalRequests />} />
-            <Route path="/database/projects" element={<DatabaseProjects />} />
-            <Route path="/database/bank-transfers" element={<DatabaseBankTransfers />} />
             
             {/* Route 404 */}
             <Route path="*" element={<NotFound />} />
