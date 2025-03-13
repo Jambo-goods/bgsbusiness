@@ -24,18 +24,47 @@ export const useAdminUsers = () => {
     try {
       setIsLoading(true);
       
+      // Fetch all user profiles from the profiles table
       const { data, error } = await supabase
-        .from('admin_users')
+        .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
         
       if (error) throw error;
       
-      // Set user data without trying to get additional details
-      setAdminUsers(data || []);
+      console.log("Profiles fetched:", data);
+      
+      // Format the profiles as admin users for display
+      const formattedUsers = data?.map(profile => ({
+        id: profile.id,
+        email: profile.email || '',
+        role: 'user',
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        created_at: profile.created_at
+      })) || [];
+      
+      // Also fetch actual admin users
+      const { data: admins, error: adminError } = await supabase
+        .from('admin_users')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (adminError) {
+        console.error("Error fetching admin users:", adminError);
+        // Continue with just profiles
+      } else if (admins) {
+        // Add admin users to the list
+        formattedUsers.push(...admins.map(admin => ({
+          ...admin,
+          role: admin.role || 'admin'
+        })));
+      }
+      
+      setAdminUsers(formattedUsers);
     } catch (error) {
-      console.error('Error fetching admin users:', error);
-      toast.error('Erreur lors du chargement des administrateurs');
+      console.error('Error fetching users:', error);
+      toast.error('Erreur lors du chargement des utilisateurs');
     } finally {
       setIsLoading(false);
     }
