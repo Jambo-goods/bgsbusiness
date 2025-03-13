@@ -2,52 +2,43 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import DashboardHeader from '@/components/admin/dashboard/DashboardHeader';
-import DashboardStats from '@/components/admin/dashboard/DashboardStats';
+import DashboardGrid from '@/components/admin/dashboard/DashboardGrid';
 import ActivitySection from '@/components/admin/dashboard/ActivitySection';
 import QuickActionsSection from '@/components/admin/dashboard/QuickActionsSection';
-import AllUsersSection from '@/components/admin/dashboard/AllUsersSection';
 import AdminUsers from '@/components/admin/dashboard/AdminUsers';
-import { useAllUsersData } from '@/hooks/admin/useAllUsersData';
+import AllUsersSection from '@/components/admin/dashboard/AllUsersSection';
+import { useAdminDashboard } from '@/hooks/admin/useAdminDashboard';
 
 export default function AdminDashboard() {
-  const { users, isLoading, totalUsers, refreshUsers } = useAllUsersData();
-  
-  const stats = {
-    userCount: totalUsers,
-    totalInvestments: 0,
-    totalProjects: 0,
-    pendingWithdrawals: 0,
-    ongoingProjects: 0
-  };
-
-  const systemStatus = 'operational' as 'operational' | 'degraded' | 'maintenance';
+  const { stats, adminLogs, isLoading, isRefreshing, refreshData } = useAdminDashboard();
 
   return (
     <>
       <Helmet>
-        <title>Tableau de bord | Administration BGS</title>
+        <title>Tableau de bord Admin | BGS Invest</title>
       </Helmet>
-      
-      <div className="space-y-8">
+
+      <div className="space-y-6">
         <DashboardHeader 
-          systemStatus={systemStatus} 
-          isRefreshing={isLoading} 
-          refreshData={refreshUsers} 
+          systemStatus="operational" 
+          isRefreshing={isRefreshing}
+          refreshData={refreshData}
         />
         
-        <DashboardStats stats={stats} isLoading={isLoading} />
+        <DashboardGrid stats={stats} isLoading={isLoading} />
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="md:col-span-2">
-            <ActivitySection adminLogs={[]} isLoading={isLoading} />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            <ActivitySection adminLogs={adminLogs} isLoading={isLoading} />
           </div>
-          <div className="md:col-span-1">
+          <div className="lg:col-span-1">
             <QuickActionsSection />
           </div>
         </div>
         
-        <AdminUsers />
         <AllUsersSection />
+        
+        <AdminUsers />
       </div>
     </>
   );
