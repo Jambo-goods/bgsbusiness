@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { loginAdmin } from "@/services/adminAuthService";
 import { useAdmin } from "@/contexts/AdminContext";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("admin@example.com");
@@ -77,10 +78,10 @@ export default function AdminLogin() {
         
         <div className="bg-white p-6 md:p-8 rounded-xl shadow-xl">
           {error && (
-            <div className="bg-red-100 border border-red-200 text-red-700 px-4 py-3 rounded mb-6 flex items-center">
-              <AlertCircle size={18} className="mr-2 flex-shrink-0" />
-              <p>{error}</p>
-            </div>
+            <Alert variant="destructive" className="mb-6">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
