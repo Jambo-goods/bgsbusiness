@@ -18,7 +18,6 @@ import NotFound from '@/pages/NotFound';
 
 // Pages Admin existantes
 import AdminLogin from '@/pages/admin/AdminLogin';
-import AdminDashboard from '@/pages/admin/AdminDashboard';
 import UserManagement from '@/pages/admin/UserManagement';
 import UserRegistrations from '@/pages/admin/UserRegistrations';
 import ProfileManagement from '@/pages/admin/ProfileManagement';
@@ -49,7 +48,6 @@ function App() {
             {/* Routes Admin avec layout */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route element={<AdminLayout />}>
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
               <Route path="/admin/users" element={<UserManagement />} />
               <Route path="/admin/registrations" element={<UserRegistrations />} />
               <Route path="/admin/profiles" element={<ProfileManagement />} />
