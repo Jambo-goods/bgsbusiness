@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface AdminUser {
@@ -15,7 +16,15 @@ interface AdminLoginParams {
 
 export const loginAdmin = async ({ email, password }: AdminLoginParams) => {
   try {
-    // First authenticate with Supabase auth
+    // Check if this is the admin email first
+    if (email !== 'admin@example.com') {
+      return { 
+        success: false, 
+        error: "Identifiants invalides ou vous n'avez pas les droits d'administration" 
+      };
+    }
+    
+    // Then authenticate with Supabase auth
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -23,20 +32,20 @@ export const loginAdmin = async ({ email, password }: AdminLoginParams) => {
 
     if (error) {
       console.error("Authentication error:", error.message);
+      
+      // Provide a more user-friendly error message
+      if (error.message === "Invalid login credentials") {
+        return { 
+          success: false, 
+          error: "Email ou mot de passe incorrect. Assurez-vous que le compte existe dans Supabase Auth." 
+        };
+      }
+      
       return { success: false, error: error.message };
     }
 
     if (!data.user) {
       return { success: false, error: "Erreur lors de la connexion" };
-    }
-
-    // For now, since we're having issues with the admin_users table,
-    // we'll use a hardcoded check for the admin email
-    if (email !== 'admin@example.com') {
-      return { 
-        success: false, 
-        error: "Identifiants invalides ou vous n'avez pas les droits d'administration" 
-      };
     }
     
     // Create admin user object without querying the admin_users table
