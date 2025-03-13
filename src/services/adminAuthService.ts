@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -43,22 +42,9 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
       };
     }
 
-    // First check if the email exists in the admin_users table
-    const { data: adminUser, error: adminError } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('email', email)
-      .single();
+    console.log("Attempting admin login with:", email);
 
-    if (adminError || !adminUser) {
-      console.error("Admin check error:", adminError);
-      return {
-        success: false,
-        error: "Cet utilisateur n'est pas un administrateur"
-      };
-    }
-
-    // If admin exists, attempt to sign in
+    // First attempt to sign in
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -91,6 +77,18 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
           }
 
           if (signUpData.user) {
+            // Insert into admin_users table first
+            const { error: insertError } = await supabase
+              .from('admin_users')
+              .insert({
+                email: email,
+                role: 'admin'
+              });
+
+            if (insertError) {
+              console.error("Error inserting into admin_users:", insertError);
+            }
+
             // Admin successfully created, now sign in
             const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
               email,
@@ -142,11 +140,51 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
       };
     }
 
-    // Create admin user object with data from admin_users table
+    // Now check if this user is in the admin_users table
+    const { data: adminUsers, error: adminQueryError } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', email);
+
+    if (adminQueryError) {
+      console.error("Error checking admin status:", adminQueryError);
+      return {
+        success: false,
+        error: "Erreur lors de la vérification des droits d'administrateur"
+      };
+    }
+
+    // If no admin user found with this email
+    if (!adminUsers || adminUsers.length === 0) {
+      // Insert this user as admin if it's the default admin
+      if (email === 'admin@example.com') {
+        const { error: insertError } = await supabase
+          .from('admin_users')
+          .insert({
+            email: email,
+            role: 'admin'
+          });
+
+        if (insertError) {
+          console.error("Error inserting admin user:", insertError);
+          return {
+            success: false,
+            error: "Erreur lors de la création du compte admin"
+          };
+        }
+      } else {
+        return {
+          success: false,
+          error: "Cet utilisateur n'est pas un administrateur"
+        };
+      }
+    }
+
+    // Create admin user object
     const admin: AdminUser = {
       id: data.user.id,
       email: data.user.email || '',
-      role: adminUser.role || 'admin'
+      role: 'admin'
     };
 
     // Store admin user in localStorage
@@ -225,8 +263,23 @@ export async function logAdminAction(
       amount
     });
     
-    // In the real implementation, we would insert into an admin_logs table
-    // For now, we just log to console and toast a message for visibility
+    // Insert into admin_logs table
+    const { error } = await supabase
+      .from('admin_logs')
+      .insert({
+        admin_id: adminId,
+        action_type: actionType,
+        description,
+        user_id: targetUserId,
+        project_id: targetEntityId,
+        amount
+      });
+      
+    if (error) {
+      console.error("Error logging admin action:", error);
+      return false;
+    }
+    
     toast.success(`Action enregistrée: ${description}`, {
       id: `admin-action-${Date.now()}`,
       description: "Cette action a été enregistrée dans les logs"
