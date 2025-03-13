@@ -9,14 +9,16 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+import { fr } from 'date-fns/locale';
 import { Profile } from '@/hooks/useAllProfiles';
 
-interface ProfilesTableProps {
-  filteredProfiles: Profile[];
+interface UsersTableProps {
+  users: Profile[];
   isLoading: boolean;
 }
 
-const ProfilesTable: React.FC<ProfilesTableProps> = ({ filteredProfiles, isLoading }) => {
+const UsersTable: React.FC<UsersTableProps> = ({ users, isLoading }) => {
   if (isLoading) {
     return (
       <div className="p-4 space-y-4">
@@ -47,24 +49,24 @@ const ProfilesTable: React.FC<ProfilesTableProps> = ({ filteredProfiles, isLoadi
         </TableRow>
       </TableHeader>
       <TableBody>
-        {filteredProfiles.length === 0 ? (
+        {users.length === 0 ? (
           <TableRow>
             <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-              {filteredProfiles.length === 0 ? "Aucun profil trouvé pour cette recherche" : "Aucun profil disponible"}
+              Aucun utilisateur disponible
             </TableCell>
           </TableRow>
         ) : (
-          filteredProfiles.map((profile) => (
-            <TableRow key={profile.id}>
-              <TableCell>{profile.first_name || '-'}</TableCell>
-              <TableCell>{profile.last_name || '-'}</TableCell>
-              <TableCell>{profile.email || '-'}</TableCell>
-              <TableCell>{profile.phone || '-'}</TableCell>
-              <TableCell>{profile.wallet_balance ? `${profile.wallet_balance} €` : '0 €'}</TableCell>
-              <TableCell>{profile.projects_count || 0}</TableCell>
-              <TableCell>{profile.investment_total ? `${profile.investment_total} €` : '0 €'}</TableCell>
+          users.map((user) => (
+            <TableRow key={user.id}>
+              <TableCell>{user.first_name || '-'}</TableCell>
+              <TableCell>{user.last_name || '-'}</TableCell>
+              <TableCell>{user.email || '-'}</TableCell>
+              <TableCell>{user.phone || '-'}</TableCell>
+              <TableCell>{user.wallet_balance ? `${user.wallet_balance} €` : '0 €'}</TableCell>
+              <TableCell>{user.projects_count || 0}</TableCell>
+              <TableCell>{user.investment_total ? `${user.investment_total} €` : '0 €'}</TableCell>
               <TableCell>
-                {profile.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR') : '-'}
+                {user.created_at ? format(new Date(user.created_at), 'dd MMMM yyyy', { locale: fr }) : '-'}
               </TableCell>
             </TableRow>
           ))
@@ -74,4 +76,4 @@ const ProfilesTable: React.FC<ProfilesTableProps> = ({ filteredProfiles, isLoadi
   );
 };
 
-export default ProfilesTable;
+export default UsersTable;

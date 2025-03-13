@@ -6,6 +6,8 @@ import { toast } from "sonner";
 export interface AdminUser {
   id: string;
   email: string;
+  first_name?: string;
+  last_name?: string;
   role?: string;
 }
 
@@ -43,9 +45,7 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
       };
     }
 
-    console.log("Attempting admin login with:", email);
-
-    // Attempt to sign in
+    // Attempt sign in with Supabase
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -75,11 +75,13 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
       };
     }
 
-    // Pour simplifier et éviter l'erreur de récursivité de la politique de sécurité (RLS),
-    // nous allons considérer tous les utilisateurs comme des administrateurs pour l'instant
+    // For development purposes, assume the user is an admin
+    // In production, you would check against a database table
     const admin: AdminUser = {
       id: data.user.id,
       email: data.user.email || '',
+      first_name: data.user.user_metadata?.first_name || '',
+      last_name: data.user.user_metadata?.last_name || '',
       role: 'admin'
     };
 
@@ -90,7 +92,7 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
       success: true,
       admin
     };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Unexpected error during admin sign in:", error);
     return {
       success: false,
@@ -140,6 +142,7 @@ export function getCurrentAdmin(): AdminUser | null {
 
 /**
  * Log an admin action
+ * Note: This is a placeholder function until the admin_logs table is created
  */
 export async function logAdminAction(
   adminId: string,
@@ -159,9 +162,8 @@ export async function logAdminAction(
       amount
     });
     
-    // Pour simplifier et éviter l'erreur de récursivité, nous allons simplement
-    // enregistrer l'action dans la console sans toucher à la table admin_logs
-    
+    // In the real implementation, we would insert into an admin_logs table
+    // For now, we just log to console and toast a message for visibility
     toast.success(`Action enregistrée: ${description}`, {
       id: `admin-action-${Date.now()}`,
       description: "Cette action a été enregistrée dans les logs"

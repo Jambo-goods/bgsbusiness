@@ -8,30 +8,21 @@ import {
   TableHeader, 
   TableRow 
 } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Profile } from '@/hooks/useAllProfiles';
+import { Badge } from '@/components/ui/badge';
+import { UserCheck, UserX } from 'lucide-react';
+import { Profile } from '@/components/admin/profiles/types';
 
 interface ProfilesTableProps {
-  filteredProfiles: Profile[];
+  profiles: Profile[];
   isLoading: boolean;
+  filteredProfiles: Profile[];
 }
 
-const ProfilesTable: React.FC<ProfilesTableProps> = ({ filteredProfiles, isLoading }) => {
-  if (isLoading) {
-    return (
-      <div className="p-4 space-y-4">
-        {[...Array(5)].map((_, index) => (
-          <div key={index} className="flex space-x-4">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-6 w-24" />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
+const ProfilesTable: React.FC<ProfilesTableProps> = ({ 
+  profiles, 
+  isLoading, 
+  filteredProfiles 
+}) => {
   return (
     <Table>
       <TableHeader>
@@ -43,14 +34,15 @@ const ProfilesTable: React.FC<ProfilesTableProps> = ({ filteredProfiles, isLoadi
           <TableHead>Portefeuille</TableHead>
           <TableHead>Projets</TableHead>
           <TableHead>Total investi</TableHead>
+          <TableHead>Statut</TableHead>
           <TableHead>Date d'inscription</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {filteredProfiles.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-              {filteredProfiles.length === 0 ? "Aucun profil trouvé pour cette recherche" : "Aucun profil disponible"}
+            <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+              {profiles.length > 0 ? "Aucun profil trouvé pour cette recherche" : "Aucun profil disponible"}
             </TableCell>
           </TableRow>
         ) : (
@@ -63,6 +55,24 @@ const ProfilesTable: React.FC<ProfilesTableProps> = ({ filteredProfiles, isLoadi
               <TableCell>{profile.wallet_balance ? `${profile.wallet_balance} €` : '0 €'}</TableCell>
               <TableCell>{profile.projects_count || 0}</TableCell>
               <TableCell>{profile.investment_total ? `${profile.investment_total} €` : '0 €'}</TableCell>
+              <TableCell>
+                <Badge 
+                  variant={profile.online_status === 'online' ? 'default' : 'secondary'}
+                  className="flex items-center gap-1"
+                >
+                  {profile.online_status === 'online' ? (
+                    <>
+                      <UserCheck className="h-3 w-3" />
+                      <span>En ligne</span>
+                    </>
+                  ) : (
+                    <>
+                      <UserX className="h-3 w-3" />
+                      <span>Hors ligne</span>
+                    </>
+                  )}
+                </Badge>
+              </TableCell>
               <TableCell>
                 {profile.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR') : '-'}
               </TableCell>
