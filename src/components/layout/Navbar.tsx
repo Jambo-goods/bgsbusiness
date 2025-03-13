@@ -70,42 +70,50 @@ export default function Navbar({ isScrolled, isOnDashboard = false }: NavbarProp
     checkAuth();
   }, []);
 
-  // Manual auth state checking instead of real-time subscription
+  // Set up an auth state change listener
   useEffect(() => {
-    const checkAuthInterval = setInterval(async () => {
-      const { data } = await supabase.auth.getSession();
-      const authenticated = !!data.session?.user;
-      if (authenticated !== isLoggedIn) {
-        setIsLoggedIn(authenticated);
-        localStorage.setItem('isLoggedIn', authenticated ? 'true' : 'false');
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state changed in Navbar:", event);
+        if (event === "SIGNED_IN" && session) {
+          setIsLoggedIn(true);
+          localStorage.setItem('isLoggedIn', 'true');
+        } else if (event === "SIGNED_OUT") {
+          setIsLoggedIn(false);
+          localStorage.setItem('isLoggedIn', 'false');
+        }
       }
-    }, 60000); // Check every minute
+    );
     
     return () => {
-      clearInterval(checkAuthInterval);
+      // Clean up the auth listener when component unmounts
+      authListener.subscription.unsubscribe();
     };
-  }, [isLoggedIn]);
+  }, []);
 
   useEffect(() => {
     setIsMenuOpen(false);
   }, [location.pathname]);
 
   const handleLogout = async () => {
-    const { success, error } = await logoutUser();
-    
-    if (success) {
-      setIsLoggedIn(false);
-      localStorage.setItem('isLoggedIn', 'false');
-      toast.success("Déconnexion réussie");
+    try {
+      const { success, error } = await logoutUser();
       
-      uiToast({
-        title: "Déconnexion réussie",
-        description: "Vous avez été déconnecté avec succès",
-      });
-      
-      navigate("/");
-    } else {
-      toast.error("Erreur lors de la déconnexion: " + error);
+      if (success) {
+        // Immediately update UI state
+        setIsLoggedIn(false);
+        localStorage.setItem('isLoggedIn', 'false');
+        
+        toast.success("Déconnexion réussie");
+        
+        // Navigate to home page after logout
+        navigate("/");
+      } else {
+        toast.error("Erreur lors de la déconnexion: " + error);
+      }
+    } catch (err) {
+      console.error("Unexpected error during logout:", err);
+      toast.error("Une erreur inattendue s'est produite lors de la déconnexion");
     }
   };
 

@@ -93,8 +93,14 @@ export const loginUser = async ({ email, password }: UserCredentials) => {
 
 export const logoutUser = async () => {
   try {
+    // Clear any local storage items related to authentication first
+    localStorage.removeItem('isLoggedIn');
+    
+    // Then sign out from Supabase
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    
+    console.log("Logout successful");
     return { success: true };
   } catch (error: any) {
     console.error("Logout error:", error);

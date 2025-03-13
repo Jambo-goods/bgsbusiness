@@ -9,6 +9,47 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_logs: {
+        Row: {
+          action_type: string
+          admin_id: string | null
+          amount: number | null
+          created_at: string
+          description: string | null
+          id: string
+          project_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_id?: string | null
+          amount?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string | null
+          amount?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          project_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admin_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_users: {
         Row: {
           created_at: string | null
@@ -396,6 +437,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_all_profiles_to_admin_users: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       increment_wallet_balance: {
         Args: {
           user_id: string
