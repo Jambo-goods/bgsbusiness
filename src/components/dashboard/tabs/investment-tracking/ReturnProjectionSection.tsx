@@ -177,7 +177,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {futurePayments.length > 0 ? (
+            {futurePayments && futurePayments.length > 0 ? (
               futurePayments.map((payment) => (
                 <tr key={payment.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -211,7 +211,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
         </table>
       </div>
 
-      {userInvestments.length > 0 && (
+      {userInvestments && userInvestments.length > 0 && (
         <div className="mt-4 pt-4 border-t border-gray-100">
           <p className="text-xs text-gray-500">
             <strong>Note:</strong> Ces projections sont basées sur les taux de rendement actuels et peuvent varier. 
