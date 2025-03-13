@@ -15,7 +15,7 @@ export const useAdminUsers = () => {
     try {
       setIsLoading(true);
       
-      // Fetch all user profiles from the profiles table
+      // Fetch all user profiles from the profiles table without any filter
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -23,10 +23,14 @@ export const useAdminUsers = () => {
         
       if (error) throw error;
       
-      console.log("Profiles fetched:", data);
+      console.log("All profiles fetched:", data?.length || 0);
       
-      // Show all profiles without filtering
-      setAdminUsers(data || []);
+      if (data && data.length > 0) {
+        setAdminUsers(data);
+      } else {
+        console.log("No profiles found in the database");
+        setAdminUsers([]);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('Erreur lors du chargement des utilisateurs');

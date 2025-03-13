@@ -12,8 +12,9 @@ export const useAllUsersData = () => {
   const fetchUsers = useCallback(async () => {
     try {
       setIsLoading(true);
-      console.log("Fetching all users data...");
+      console.log("Fetching all users data without filters...");
       
+      // Get all profiles without any filters
       const { data, error, count } = await supabase
         .from('profiles')
         .select('*', { count: 'exact' })

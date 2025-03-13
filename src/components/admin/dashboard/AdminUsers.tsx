@@ -22,7 +22,17 @@ const AdminUsers = () => {
   const itemsPerPage = 10;
 
   useEffect(() => {
+    // Fetch data when component mounts
     fetchAdminUsers();
+    
+    // Set up an interval to refresh data periodically
+    const intervalId = setInterval(() => {
+      console.log("Auto-refreshing users list...");
+      fetchAdminUsers();
+    }, 60000); // Every minute
+    
+    // Clean up the interval when component unmounts
+    return () => clearInterval(intervalId);
   }, [fetchAdminUsers]);
 
   const handleAddAdmin = async () => {
@@ -98,7 +108,7 @@ const AdminUsers = () => {
     <div className="bg-white shadow-sm rounded-lg p-4 mt-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold">
-          Administrateurs
+          Tous les utilisateurs
           <span className="ml-2 bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-sm">
             {adminUsers.length}
           </span>
@@ -138,11 +148,11 @@ const AdminUsers = () => {
       {isLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin h-8 w-8 border-2 border-primary rounded-full border-t-transparent mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-500">Chargement des administrateurs...</p>
+          <p className="mt-2 text-sm text-gray-500">Chargement des utilisateurs...</p>
         </div>
       ) : adminUsers.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          <p>Aucun administrateur trouvé</p>
+          <p>Aucun utilisateur trouvé</p>
         </div>
       ) : (
         <>
@@ -154,6 +164,7 @@ const AdminUsers = () => {
                   <TableHead>Prénom</TableHead>
                   <TableHead>Nom</TableHead>
                   <TableHead>Date de création</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -167,10 +178,21 @@ const AdminUsers = () => {
                       {admin.created_at ? new Date(admin.created_at).toLocaleDateString('fr-FR') : '-'}
                     </TableCell>
                     <TableCell>
+                      {admin.last_active_at ? (
+                        <span className="px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
+                          Actif
+                        </span>
+                      ) : (
+                        <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-800 text-xs font-medium">
+                          Inactif
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <Button 
                         variant="destructive" 
                         size="sm"
-                        onClick={() => window.confirm('Êtes-vous sûr de vouloir supprimer cet administrateur ?') && fetchAdminUsers()}
+                        onClick={() => window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?') && fetchAdminUsers()}
                       >
                         Supprimer
                       </Button>
