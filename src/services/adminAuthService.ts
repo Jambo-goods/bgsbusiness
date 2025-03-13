@@ -57,7 +57,18 @@ export const loginAdmin = async ({ email, password }: AdminLoginParams) => {
     localStorage.setItem('adminUser', JSON.stringify(admin));
 
     // Log admin activity
-    await logAdminAction(admin.id, 'login', 'Admin login', null);
+    try {
+      await supabase.from('admin_logs').insert({
+        admin_id: admin.id,
+        action_type: 'login',
+        description: 'Admin login',
+        user_id: null,
+        project_id: null,
+        amount: null
+      });
+    } catch (error) {
+      console.error("Error logging admin action:", error);
+    }
 
     return { success: true, admin };
   } catch (error) {
@@ -90,7 +101,7 @@ export const logAdminAction = async (
   amount?: number
 ) => {
   try {
-    await supabase.from('admin_actions').insert({
+    await supabase.from('admin_logs').insert({
       admin_id: adminId,
       action_type: actionType,
       description,

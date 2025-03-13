@@ -31,22 +31,8 @@ export const useAdminUsers = () => {
         
       if (error) throw error;
       
-      // Join with profiles table to get first_name and last_name if available
-      const adminData = await Promise.all(
-        (data || []).map(async (admin) => {
-          // Try to get profile info from auth user
-          const { data: authData } = await supabase.auth
-            .admin.getUserById(admin.id);
-            
-          return {
-            ...admin,
-            first_name: authData?.user.user_metadata?.first_name || '',
-            last_name: authData?.user.user_metadata?.last_name || '',
-          };
-        })
-      );
-      
-      setAdminUsers(adminData);
+      // Set user data without trying to get additional details
+      setAdminUsers(data || []);
     } catch (error) {
       console.error('Error fetching admin users:', error);
       toast.error('Erreur lors du chargement des administrateurs');
@@ -59,15 +45,6 @@ export const useAdminUsers = () => {
     if (!adminUser) return;
     
     try {
-      // Check if user exists in auth system
-      const { data: existingUser, error: userError } = await supabase.auth
-        .admin.getUserByEmail(email);
-        
-      if (userError) {
-        toast.error("Utilisateur non trouvé dans le système d'authentification");
-        return;
-      }
-      
       // Check if admin already exists
       const { data: existingAdmin, error: adminCheckError } = await supabase
         .from('admin_users')
@@ -79,11 +56,22 @@ export const useAdminUsers = () => {
         return;
       }
       
+      // Get user from auth if they exist
+      const { data: userResponse, error: userError } = await supabase.auth
+        .admin.listUsers({ filter: `email.eq.${email}` });
+        
+      if (userError || !userResponse || userResponse.users.length === 0) {
+        toast.error("Utilisateur non trouvé dans le système d'authentification");
+        return;
+      }
+      
+      const userId = userResponse.users[0].id;
+      
       // Add to admin_users table
       const { error } = await supabase
         .from('admin_users')
         .insert([{ 
-          id: existingUser.user.id,
+          id: userId,
           email: email,
           role: 'admin'
         }]);
