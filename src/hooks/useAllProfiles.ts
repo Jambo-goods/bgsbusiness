@@ -10,9 +10,11 @@ export type Profile = {
   email: string | null;
   phone: string | null;
   created_at: string | null;
-  last_active_at: string | null;  // Added to fix type error
+  last_active_at: string | null;
   wallet_balance?: number | null;
   account_status?: 'active' | 'inactive' | 'suspended';
+  projects_count?: number | null;  // Added to fix type errors
+  investment_total?: number | null; // Added to fix type errors
 };
 
 export const useAllProfiles = () => {
@@ -20,6 +22,7 @@ export const useAllProfiles = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [totalProfiles, setTotalProfiles] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);  // Added for consistency with other hooks
 
   useEffect(() => {
     fetchProfiles();
@@ -28,6 +31,7 @@ export const useAllProfiles = () => {
   const fetchProfiles = async () => {
     try {
       setIsLoading(true);
+      setIsRefreshing(true);  // Added to show loading state during refresh
       
       // Get all profiles
       const { data, error, count } = await supabase
@@ -67,6 +71,7 @@ export const useAllProfiles = () => {
       toast.error('Erreur lors du chargement des utilisateurs');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);  // Make sure to reset this state
     }
   };
 
@@ -81,6 +86,10 @@ export const useAllProfiles = () => {
     );
   });
 
+  const handleRefresh = () => {
+    fetchProfiles();
+  };
+
   return {
     profiles,
     isLoading,
@@ -88,6 +97,8 @@ export const useAllProfiles = () => {
     setSearchTerm,
     totalProfiles,
     filteredProfiles,
-    refreshProfiles: fetchProfiles
+    refreshProfiles: fetchProfiles,
+    isRefreshing,
+    handleRefresh  // Added for consistency with other hooks
   };
 };

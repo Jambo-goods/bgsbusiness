@@ -1,48 +1,42 @@
 
 import React from 'react';
-import { Helmet } from "react-helmet-async";
 import { useAllProfiles } from '@/hooks/useAllProfiles';
 import ProfilesTable from '@/components/profiles/ProfilesTable';
-import ProfileSearch from '@/components/profiles/ProfileSearch';
 import ProfilesHeader from '@/components/profiles/ProfilesHeader';
+import ProfileSearch from '@/components/profiles/ProfileSearch';
 
 export default function AllProfiles() {
   const {
+    profiles,
     isLoading,
     searchTerm,
     setSearchTerm,
-    isRefreshing,
     totalProfiles,
     filteredProfiles,
+    isRefreshing,
     handleRefresh
   } = useAllProfiles();
 
   return (
-    <div className="container mx-auto py-8 px-4">
-      <Helmet>
-        <title>Tous les Profils | BGS Invest</title>
-        <meta name="description" content="Liste complète de tous les profils enregistrés" />
-      </Helmet>
+    <div className="container mx-auto px-4 py-8">
+      <ProfilesHeader 
+        totalProfiles={totalProfiles} 
+        isRefreshing={isRefreshing} 
+        onRefresh={handleRefresh}
+      />
       
-      <div className="space-y-6">
-        <ProfilesHeader 
-          totalProfiles={totalProfiles}
-          isRefreshing={isRefreshing}
-          handleRefresh={handleRefresh}
-        />
-
+      <div className="my-6">
         <ProfileSearch 
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
+          searchTerm={searchTerm} 
+          setSearchTerm={setSearchTerm} 
         />
-
-        <div className="bg-white rounded-md shadow">
-          <ProfilesTable 
-            filteredProfiles={filteredProfiles}
-            isLoading={isLoading}
-          />
-        </div>
       </div>
+      
+      <ProfilesTable 
+        profiles={profiles}
+        isLoading={isLoading}
+        filteredProfiles={filteredProfiles}
+      />
     </div>
   );
 }
