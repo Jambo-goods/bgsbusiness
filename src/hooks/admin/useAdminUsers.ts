@@ -20,6 +20,7 @@ export function useAdminUsers() {
   const fetchAdminUsers = useCallback(async () => {
     try {
       setIsLoading(true);
+      console.log("useAdminUsers - Fetching all profiles from database...");
       
       // Fetch all users from the profiles table without restrictions
       const { data, error } = await supabase
@@ -27,9 +28,14 @@ export function useAdminUsers() {
         .select('id, email, first_name, last_name, created_at, phone, wallet_balance')
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching profiles:", error);
+        throw error;
+      }
       
-      console.log("Fetched profiles:", data);
+      console.log("useAdminUsers - Fetched profiles count:", data?.length || 0);
+      console.log("useAdminUsers - First profile data:", data?.[0]);
+      
       setAdminUsers(data || []);
     } catch (error) {
       console.error("Error fetching profiles:", error);
@@ -44,7 +50,6 @@ export function useAdminUsers() {
       setIsLoading(true);
       
       // Note: This doesn't actually delete the profile, just removes it from the UI
-      // as deleting users should be handled with more caution
       setAdminUsers(prevUsers => prevUsers.filter(user => user.id !== adminId));
       toast.success("Utilisateur supprimé de la liste");
     } catch (error) {

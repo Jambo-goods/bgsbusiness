@@ -19,8 +19,11 @@ const AdminUsers: React.FC = () => {
   const { adminUsers, isLoading, fetchAdminUsers, removeAdmin } = useAdminUsers();
 
   useEffect(() => {
+    console.log("AdminUsers component - Fetching users...");
     fetchAdminUsers();
   }, [fetchAdminUsers]);
+
+  console.log("AdminUsers component - adminUsers count:", adminUsers.length);
 
   return (
     <div className="bg-white shadow-sm rounded-lg p-4">
@@ -64,7 +67,7 @@ const AdminUsers: React.FC = () => {
                   </TableCell>
                   <TableCell>{user.email || 'Pas d\'email'}</TableCell>
                   <TableCell>{user.phone || 'Non renseigné'}</TableCell>
-                  <TableCell>{user.wallet_balance ? `${user.wallet_balance} €` : '0 €'}</TableCell>
+                  <TableCell>{user.wallet_balance !== null ? `${user.wallet_balance} €` : '0 €'}</TableCell>
                   <TableCell>
                     {user.created_at 
                       ? format(new Date(user.created_at), 'dd MMMM yyyy', { locale: fr })
