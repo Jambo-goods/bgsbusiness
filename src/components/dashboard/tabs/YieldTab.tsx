@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -316,6 +317,7 @@ const YieldTab = () => {
         ) : (
           <>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {/* Monthly yield card */}
               <div className="bg-gradient-to-r from-bgs-blue to-bgs-blue-light p-5 rounded-lg text-white">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-white/80">Rendement mensuel</span>
@@ -331,6 +333,7 @@ const YieldTab = () => {
                 </div>
               </div>
               
+              {/* Annual yield card */}
               <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-500">Rendement annuel</span>
@@ -346,6 +349,7 @@ const YieldTab = () => {
                 </div>
               </div>
               
+              {/* Performance card */}
               <div className="bg-green-50 p-5 rounded-lg border border-green-100">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-green-700">Performance</span>
@@ -362,6 +366,7 @@ const YieldTab = () => {
               </div>
             </div>
             
+            {/* Investment details table */}
             <div className="border-t border-gray-100 pt-5 mt-4">
               <h3 className="text-sm font-semibold text-bgs-blue mb-4">Détail par projet</h3>
               
@@ -410,6 +415,7 @@ const YieldTab = () => {
         )}
       </div>
       
+      {/* Return projection section */}
       {paymentRecords && paymentRecords.length > 0 && (
         <ReturnProjectionSection
           paymentRecords={paymentRecords}
