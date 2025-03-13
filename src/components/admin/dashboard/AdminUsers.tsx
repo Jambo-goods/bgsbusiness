@@ -151,7 +151,8 @@ const AdminUsers = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Email</TableHead>
-                  <TableHead>Rôle</TableHead>
+                  <TableHead>Prénom</TableHead>
+                  <TableHead>Nom</TableHead>
                   <TableHead>Date de création</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -160,12 +161,12 @@ const AdminUsers = () => {
                 {paginatedUsers.map((admin) => (
                   <TableRow key={admin.id}>
                     <TableCell>{admin.email}</TableCell>
-                    <TableCell>{admin.role}</TableCell>
+                    <TableCell>{admin.first_name || '-'}</TableCell>
+                    <TableCell>{admin.last_name || '-'}</TableCell>
                     <TableCell>
                       {admin.created_at ? new Date(admin.created_at).toLocaleDateString('fr-FR') : '-'}
                     </TableCell>
                     <TableCell>
-                      {/* No delete button for the current admin user */}
                       <Button 
                         variant="destructive" 
                         size="sm"
