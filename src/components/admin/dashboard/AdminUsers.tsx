@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useAdminUsers } from '@/hooks/admin/useAdminUsers';
 import { Button } from '@/components/ui/button';
-import { Trash2, Wallet } from 'lucide-react';
+import { Trash2, User, ArrowUpRight } from 'lucide-react';
 import { 
   Table, 
   TableBody, 
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Link } from 'react-router-dom';
 
 const AdminUsers: React.FC = () => {
   const { adminUsers, isLoading, fetchAdminUsers, removeAdmin } = useAdminUsers();
@@ -22,8 +23,16 @@ const AdminUsers: React.FC = () => {
   }, [fetchAdminUsers]);
 
   return (
-    <div className="bg-white shadow-sm rounded-lg p-4 mt-8">
-      <h2 className="text-xl font-semibold mb-4">Utilisateurs du système ({adminUsers.length})</h2>
+    <div className="bg-white shadow-sm rounded-lg p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold">Utilisateurs récents ({adminUsers.length})</h2>
+        <Link to="/admin/users">
+          <Button variant="outline" size="sm" className="flex items-center gap-1">
+            <span>Voir tous</span>
+            <ArrowUpRight className="h-4 w-4" />
+          </Button>
+        </Link>
+      </div>
       
       {isLoading ? (
         <div className="flex justify-center p-8">
@@ -47,7 +56,7 @@ const AdminUsers: React.FC = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {adminUsers.map((user) => (
+              {adminUsers.slice(0, 5).map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">
                     {user.first_name || ''} {user.last_name || ''}
@@ -69,7 +78,7 @@ const AdminUsers: React.FC = () => {
                         onClick={() => console.log("View user details", user.id)}
                         title="Voir les détails"
                       >
-                        <Wallet className="h-4 w-4" />
+                        <User className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="destructive"

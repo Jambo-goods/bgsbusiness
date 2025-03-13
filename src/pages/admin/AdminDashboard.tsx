@@ -36,8 +36,6 @@ export default function AdminDashboard() {
           </div>
         </div>
         
-        <AllUsersSection />
-        
         <AdminUsers />
       </div>
     </>

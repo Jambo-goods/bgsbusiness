@@ -27,6 +27,7 @@ import TransactionManagement from '@/pages/admin/TransactionManagement';
 import BankTransferManagement from '@/pages/admin/BankTransferManagement';
 import WithdrawalManagement from '@/pages/admin/WithdrawalManagement';
 import NotificationManagement from '@/pages/admin/NotificationManagement';
+import AdminLayout from '@/components/admin/AdminLayout';
 
 function App() {
   return (
@@ -45,17 +46,19 @@ function App() {
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/about" element={<About />} />
             
-            {/* Routes Admin existantes */}
+            {/* Routes Admin avec layout */}
             <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/users" element={<UserManagement />} />
-            <Route path="/admin/registrations" element={<UserRegistrations />} />
-            <Route path="/admin/profiles" element={<ProfileManagement />} />
-            <Route path="/admin/projects" element={<ProjectManagement />} />
-            <Route path="/admin/transactions" element={<TransactionManagement />} />
-            <Route path="/admin/bank-transfers" element={<BankTransferManagement />} />
-            <Route path="/admin/withdrawals" element={<WithdrawalManagement />} />
-            <Route path="/admin/notifications" element={<NotificationManagement />} />
+            <Route element={<AdminLayout />}>
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/users" element={<UserManagement />} />
+              <Route path="/admin/registrations" element={<UserRegistrations />} />
+              <Route path="/admin/profiles" element={<ProfileManagement />} />
+              <Route path="/admin/projects" element={<ProjectManagement />} />
+              <Route path="/admin/transactions" element={<TransactionManagement />} />
+              <Route path="/admin/bank-transfers" element={<BankTransferManagement />} />
+              <Route path="/admin/withdrawals" element={<WithdrawalManagement />} />
+              <Route path="/admin/notifications" element={<NotificationManagement />} />
+            </Route>
             
             {/* Route 404 */}
             <Route path="*" element={<NotFound />} />
