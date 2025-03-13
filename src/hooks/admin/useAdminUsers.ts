@@ -1,20 +1,11 @@
-
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAdmin } from '@/contexts/AdminContext';
-
-interface AdminUser {
-  id: string;
-  email: string;
-  role: string;
-  first_name?: string;
-  last_name?: string;
-  created_at?: string;
-}
+import { Profile } from '@/hooks/useAllProfiles';
 
 export const useAdminUsers = () => {
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
+  const [adminUsers, setAdminUsers] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { adminUser } = useAdmin();
 
@@ -34,34 +25,8 @@ export const useAdminUsers = () => {
       
       console.log("Profiles fetched:", data);
       
-      // Format the profiles as admin users for display
-      const formattedUsers = data?.map(profile => ({
-        id: profile.id,
-        email: profile.email || '',
-        role: 'user',
-        first_name: profile.first_name,
-        last_name: profile.last_name,
-        created_at: profile.created_at
-      })) || [];
-      
-      // Also fetch actual admin users
-      const { data: admins, error: adminError } = await supabase
-        .from('admin_users')
-        .select('*')
-        .order('created_at', { ascending: false });
-        
-      if (adminError) {
-        console.error("Error fetching admin users:", adminError);
-        // Continue with just profiles
-      } else if (admins) {
-        // Add admin users to the list
-        formattedUsers.push(...admins.map(admin => ({
-          ...admin,
-          role: admin.role || 'admin'
-        })));
-      }
-      
-      setAdminUsers(formattedUsers);
+      // Show all profiles without filtering
+      setAdminUsers(data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('Erreur lors du chargement des utilisateurs');
@@ -84,20 +49,6 @@ export const useAdminUsers = () => {
         toast.error('Cet utilisateur est déjà administrateur');
         return;
       }
-      
-      // This method doesn't exist in Supabase v2, commenting out
-      /*
-      // Get user from auth if they exist
-      const { data: userResponse, error: userError } = await supabase.auth
-        .admin.listUsers({ filter: `email.eq.${email}` });
-        
-      if (userError || !userResponse || userResponse.users.length === 0) {
-        toast.error("Utilisateur non trouvé dans le système d'authentification");
-        return;
-      }
-      
-      const userId = userResponse.users[0].id;
-      */
       
       toast.error("Fonctionnalité non disponible dans cette version");
       return;

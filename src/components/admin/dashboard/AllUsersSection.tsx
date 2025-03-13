@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import UsersTable from './UsersTable';
 import { useAllUsersData } from '@/hooks/admin/useAllUsersData';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,11 @@ import { RefreshCw } from 'lucide-react';
 
 const AllUsersSection: React.FC = () => {
   const { users, isLoading, totalUsers, refreshUsers } = useAllUsersData();
+
+  useEffect(() => {
+    // Initial fetch when component mounts
+    refreshUsers();
+  }, [refreshUsers]);
 
   return (
     <div className="bg-white shadow-sm rounded-lg p-4 mt-8">
