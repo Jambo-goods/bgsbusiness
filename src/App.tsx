@@ -16,16 +16,8 @@ import HowItWorks from '@/pages/HowItWorks';
 import About from '@/pages/About';
 import NotFound from '@/pages/NotFound';
 
-// Pages Admin existantes
+// Page Admin login
 import AdminLogin from '@/pages/admin/AdminLogin';
-import UserManagement from '@/pages/admin/UserManagement';
-import UserRegistrations from '@/pages/admin/UserRegistrations';
-import ProfileManagement from '@/pages/admin/ProfileManagement';
-import ProjectManagement from '@/pages/admin/ProjectManagement';
-import TransactionManagement from '@/pages/admin/TransactionManagement';
-import BankTransferManagement from '@/pages/admin/BankTransferManagement';
-import WithdrawalManagement from '@/pages/admin/WithdrawalManagement';
-import NotificationManagement from '@/pages/admin/NotificationManagement';
 import AdminLayout from '@/components/admin/AdminLayout';
 
 function App() {
@@ -45,18 +37,8 @@ function App() {
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/about" element={<About />} />
             
-            {/* Routes Admin avec layout */}
+            {/* Admin Login */}
             <Route path="/admin/login" element={<AdminLogin />} />
-            <Route element={<AdminLayout />}>
-              <Route path="/admin/users" element={<UserManagement />} />
-              <Route path="/admin/registrations" element={<UserRegistrations />} />
-              <Route path="/admin/profiles" element={<ProfileManagement />} />
-              <Route path="/admin/projects" element={<ProjectManagement />} />
-              <Route path="/admin/transactions" element={<TransactionManagement />} />
-              <Route path="/admin/bank-transfers" element={<BankTransferManagement />} />
-              <Route path="/admin/withdrawals" element={<WithdrawalManagement />} />
-              <Route path="/admin/notifications" element={<NotificationManagement />} />
-            </Route>
             
             {/* Route 404 */}
             <Route path="*" element={<NotFound />} />

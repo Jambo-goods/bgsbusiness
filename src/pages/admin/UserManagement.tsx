@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,7 +43,7 @@ export default function UserManagement() {
   const [amountToAdd, setAmountToAdd] = useState('');
   const [isProcessingFunds, setIsProcessingFunds] = useState(false);
   
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = async () => {
     try {
       setIsLoading(true);
       console.log("Fetching all users from profiles table...");
@@ -59,7 +58,6 @@ export default function UserManagement() {
       }
       
       console.log("Profiles fetched:", data?.length || 0, "users");
-      console.log("Sample user data:", data?.[0]);
       
       const formattedUsers: UserProfile[] = (data || []).map(user => ({
         ...user,
@@ -74,7 +72,7 @@ export default function UserManagement() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchTerm]);
+  };
   
   const applyFilters = (usersData: UserProfile[], search: string) => {
     let filtered = [...usersData];
@@ -164,7 +162,7 @@ export default function UserManagement() {
   
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+  }, []);
   
   useEffect(() => {
     if (sortField || sortDirection) {
