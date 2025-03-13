@@ -56,6 +56,8 @@ export const useAdminUsers = () => {
         return;
       }
       
+      // This method doesn't exist in Supabase v2, commenting out
+      /*
       // Get user from auth if they exist
       const { data: userResponse, error: userError } = await supabase.auth
         .admin.listUsers({ filter: `email.eq.${email}` });
@@ -66,8 +68,13 @@ export const useAdminUsers = () => {
       }
       
       const userId = userResponse.users[0].id;
+      */
+      
+      toast.error("Fonctionnalité non disponible dans cette version");
+      return;
       
       // Add to admin_users table
+      /*
       const { error } = await supabase
         .from('admin_users')
         .insert([{ 
@@ -80,6 +87,7 @@ export const useAdminUsers = () => {
       
       toast.success('Administrateur ajouté avec succès');
       fetchAdminUsers();
+      */
     } catch (error) {
       console.error('Error adding admin:', error);
       toast.error("Erreur lors de l'ajout de l'administrateur");

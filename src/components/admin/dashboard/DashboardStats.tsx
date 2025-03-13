@@ -8,7 +8,7 @@ type StatsProps = {
     totalInvestments: number;
     totalProjects: number;
     pendingWithdrawals: number;
-    ongoingProjects?: number; // Added for ongoing projects
+    ongoingProjects?: number;
   };
   isLoading: boolean;
 };

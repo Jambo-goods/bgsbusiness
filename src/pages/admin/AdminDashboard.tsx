@@ -13,16 +13,14 @@ export default function AdminDashboard() {
   const { users, isLoading, totalUsers, refreshUsers } = useAllUsersData();
   
   const stats = {
-    totalUsers: totalUsers,
-    newUsersToday: 0,
+    userCount: totalUsers,
+    totalInvestments: 0,
     totalProjects: 0,
-    activeProjects: 0
+    pendingWithdrawals: 0,
+    ongoingProjects: 0
   };
 
-  const systemStatus = {
-    status: 'operational',
-    lastUpdated: new Date().toISOString()
-  };
+  const systemStatus = 'operational' as 'operational' | 'degraded' | 'maintenance';
 
   return (
     <>
