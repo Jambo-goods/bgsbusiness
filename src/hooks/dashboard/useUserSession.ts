@@ -24,7 +24,7 @@ export function useUserSession() {
     
     fetchUserId();
     
-    // Set up an auth state change listener instead of using polling
+    // Set up an auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log("Auth state changed:", event);
@@ -44,19 +44,24 @@ export function useUserSession() {
 
   const handleLogout = async () => {
     try {
+      // First, clear all localStorage items related to authentication
+      localStorage.removeItem('isLoggedIn');
+      localStorage.removeItem('supabase.auth.token');
+      
+      // Set userId to null immediately to update UI
+      setUserId(null);
+      
+      // Then sign out from Supabase
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear localStorage items related to authentication
-      localStorage.removeItem('isLoggedIn');
-      
-      // Set userId to null immediately
-      setUserId(null);
-      
-      // Navigate to login page
-      window.location.href = "/login";
-      
       toast.success("Déconnexion réussie");
+      
+      // Force redirect to login page after ensuring the state is cleared
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 100);
+      
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Erreur lors de la déconnexion");

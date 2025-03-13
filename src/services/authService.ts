@@ -93,12 +93,19 @@ export const loginUser = async ({ email, password }: UserCredentials) => {
 
 export const logoutUser = async () => {
   try {
-    // Clear any local storage items related to authentication first
+    // Clear all localStorage items related to authentication
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('supabase.auth.token');
+    
+    // Wait a moment to ensure localStorage is cleared
+    await new Promise(resolve => setTimeout(resolve, 50));
     
     // Then sign out from Supabase
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({ scope: 'global' });
     if (error) throw error;
+    
+    // Force clear the session from the browser
+    sessionStorage.clear();
     
     console.log("Logout successful");
     return { success: true };

@@ -15,12 +15,18 @@ export default function UserMenuDropdown({ isOpen, isActive }: UserMenuDropdownP
   if (!isOpen) return null;
   
   const handleLogout = async () => {
+    // Clear any auth-related localStorage items immediately
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('supabase.auth.token');
+    
+    // Execute the logout
     const { success, error } = await logoutUser();
     
     if (success) {
       toast.success("Déconnexion réussie");
-      // Use replace instead of push to prevent back navigation to authenticated routes
-      navigate("/", { replace: true });
+      
+      // Force navigation to login page with a fresh state
+      window.location.href = "/login";
     } else {
       toast.error("Erreur lors de la déconnexion: " + error);
     }
