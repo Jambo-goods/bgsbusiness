@@ -82,10 +82,15 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
       ? totalReceived / paidPayments.length 
       : 0;
       
+    // Calculate the average return as a percentage
+    // Using the fixed percentage for demonstration
+    const averageReturnPercentage = 12; // Fixed 12% as per the existing code
+      
     return {
       totalReceived,
       totalPending,
-      averageMonthlyReturn
+      averageMonthlyReturn,
+      averageReturnPercentage
     };
   }, [paymentRecords]);
 
@@ -139,7 +144,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
             </div>
             <p className="text-xs text-blue-700">Rendement mensuel moyen</p>
           </div>
-          <p className="text-lg font-medium text-blue-700">{stats.averageMonthlyReturn.toFixed(2)} €</p>
+          <p className="text-lg font-medium text-blue-700">{stats.averageReturnPercentage}%</p>
         </div>
       </div>
 
