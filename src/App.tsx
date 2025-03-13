@@ -1,6 +1,5 @@
-
 import React, { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
@@ -29,6 +28,8 @@ const WithdrawalManagement = lazy(() => import('./pages/admin/WithdrawalManageme
 const ProjectManagement = lazy(() => import('./pages/admin/ProjectManagement'));
 const ProfileManagement = lazy(() => import('./pages/admin/ProfileManagement'));
 const NotificationManagement = lazy(() => import('./pages/admin/NotificationManagement'));
+const AllWithdrawals = lazy(() => import('./pages/admin/AllWithdrawals'));
+const ScheduledPaymentsManagement = lazy(() => import('./pages/admin/ScheduledPaymentsManagement'));
 
 // Create a client
 const queryClient = new QueryClient();
@@ -63,6 +64,8 @@ function App() {
                   <Route path="withdrawals" element={<WithdrawalManagement />} />
                   <Route path="projects" element={<ProjectManagement />} />
                   <Route path="notifications" element={<NotificationManagement />} />
+                  <Route path="all-withdrawals" element={<AllWithdrawals />} />
+                  <Route path="scheduled-payments" element={<ScheduledPaymentsManagement />} />
                 </Route>
                 
                 {/* 404 route */}
