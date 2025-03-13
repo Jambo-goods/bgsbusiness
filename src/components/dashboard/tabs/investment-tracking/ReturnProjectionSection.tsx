@@ -56,13 +56,29 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   isLoading,
   userInvestments
 }) => {
-  // Only calculate future payments when dependencies change
-  const futurePayments = useMemo(() => 
-    cumulativeExpectedReturns.filter(payment => 
-      payment.status === 'scheduled' || payment.status === 'pending'
-    ),
-    [cumulativeExpectedReturns]
-  );
+  // Format future payments to always be on the 5th of each month
+  const futurePayments = useMemo(() => {
+    const payments = cumulativeExpectedReturns
+      .filter(payment => payment.status === 'scheduled' || payment.status === 'pending')
+      .map(payment => {
+        // Create a new date set to the 5th of the same month and year
+        const originalDate = new Date(payment.date);
+        const adjustedDate = new Date(originalDate.getFullYear(), originalDate.getMonth(), 5);
+        
+        // If we're already past the 5th of this month, move to the 5th of next month
+        if (originalDate.getDate() > 5 && payment.status === 'scheduled') {
+          adjustedDate.setMonth(adjustedDate.getMonth() + 1);
+        }
+        
+        return {
+          ...payment,
+          date: adjustedDate
+        };
+      });
+    
+    // Sort by date to ensure chronological order
+    return payments.sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [cumulativeExpectedReturns]);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -199,7 +215,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
         <div className="mt-4 pt-4 border-t border-gray-100">
           <p className="text-xs text-gray-500">
             <strong>Note:</strong> Ces projections sont basées sur les taux de rendement actuels et peuvent varier. 
-            Le premier versement est généralement effectué après la période de délai initiale spécifiée dans chaque projet.
+            Les versements sont effectués le 5 de chaque mois.
           </p>
         </div>
       )}
