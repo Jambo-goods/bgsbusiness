@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { PaymentRecord } from './types';
@@ -80,22 +81,13 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
     const averageMonthlyReturn = paidPayments.length > 0 
       ? totalReceived / paidPayments.length 
       : 0;
-    
-    // Calculate total invested amount for percentage
-    const totalInvestedAmount = userInvestments.reduce((sum, inv) => sum + inv.investedAmount, 0);
-    
-    // Calculate monthly return percentage
-    const monthlyReturnPercentage = totalInvestedAmount > 0
-      ? (averageMonthlyReturn / totalInvestedAmount) * 100
-      : 0;
       
     return {
       totalReceived,
       totalPending,
-      averageMonthlyReturn,
-      monthlyReturnPercentage
+      averageMonthlyReturn
     };
-  }, [paymentRecords, userInvestments]);
+  }, [paymentRecords]);
 
   if (isLoading) {
     return <LoadingState />;
@@ -118,7 +110,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
         </div>
       </div>
       
-      {/* Stats cards */}
+      {/* New stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-green-50 p-4 rounded-lg border border-green-100">
           <div className="flex items-center mb-2">
@@ -147,9 +139,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
             </div>
             <p className="text-xs text-blue-700">Rendement mensuel moyen</p>
           </div>
-          <p className="text-lg font-medium text-blue-700">
-            {stats.averageMonthlyReturn.toFixed(2)} € <span className="text-sm">({stats.monthlyReturnPercentage.toFixed(2)}%)</span>
-          </p>
+          <p className="text-lg font-medium text-blue-700">{stats.averageMonthlyReturn.toFixed(2)} €</p>
         </div>
       </div>
 
