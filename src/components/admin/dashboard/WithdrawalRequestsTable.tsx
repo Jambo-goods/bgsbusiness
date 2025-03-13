@@ -67,9 +67,11 @@ const WithdrawalRequestsTable: React.FC<WithdrawalRequestsTableProps> = ({ onRef
         if (userError) throw userError;
         
         const userMap: Record<string, UserData> = {};
-        users?.forEach(user => {
-          userMap[user.id] = user;
-        });
+        if (users) {
+          users.forEach(user => {
+            userMap[user.id] = user;
+          });
+        }
         
         setUserData(userMap);
       } else {
@@ -206,7 +208,11 @@ const WithdrawalRequestsTable: React.FC<WithdrawalRequestsTableProps> = ({ onRef
             </TableHeader>
             <TableBody>
               {paginatedRequests.map((request) => {
-                const user = userData[request.user_id] || {};
+                const user = userData[request.user_id] || {
+                  first_name: '',
+                  last_name: '',
+                  email: ''
+                };
                 return (
                   <TableRow key={request.id}>
                     <TableCell>

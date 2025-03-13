@@ -20,7 +20,9 @@ export interface Profile {
 export const useAllProfiles = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
   const fetchProfiles = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -36,12 +38,47 @@ export const useAllProfiles = () => {
       toast.error('Error loading profiles');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
     fetchProfiles();
+    
+    // Set up auto-refresh every minute
+    const intervalId = setInterval(() => {
+      setIsRefreshing(true);
+      fetchProfiles();
+    }, 60000);
+    
+    return () => clearInterval(intervalId);
   }, [fetchProfiles]);
+  
+  // Filter profiles based on search term
+  const filteredProfiles = profiles.filter(profile => {
+    const fullName = `${profile.first_name || ''} ${profile.last_name || ''}`.toLowerCase();
+    const email = (profile.email || '').toLowerCase();
+    const term = searchTerm.toLowerCase();
+    
+    return fullName.includes(term) || email.includes(term);
+  });
+  
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchProfiles();
+  };
+  
+  const totalProfiles = profiles.length;
 
-  return { profiles, isLoading, refreshProfiles: fetchProfiles };
+  return { 
+    profiles, 
+    filteredProfiles, 
+    isLoading, 
+    searchTerm, 
+    setSearchTerm, 
+    refreshProfiles: fetchProfiles,
+    isRefreshing,
+    totalProfiles,
+    handleRefresh
+  };
 };
