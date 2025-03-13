@@ -11,6 +11,8 @@ interface AdminUser {
   created_at: string | null;
   phone: string | null;
   wallet_balance: number | null;
+  investment_total: number | null;
+  projects_count: number | null;
 }
 
 export function useAdminUsers() {
@@ -25,7 +27,7 @@ export function useAdminUsers() {
       // Fetch all users from the profiles table without restrictions
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name, created_at, phone, wallet_balance')
+        .select('id, email, first_name, last_name, created_at, phone, wallet_balance, investment_total, projects_count')
         .order('created_at', { ascending: false });
       
       if (error) {

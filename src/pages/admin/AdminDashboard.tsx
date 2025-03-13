@@ -6,7 +6,6 @@ import DashboardGrid from '@/components/admin/dashboard/DashboardGrid';
 import ActivitySection from '@/components/admin/dashboard/ActivitySection';
 import QuickActionsSection from '@/components/admin/dashboard/QuickActionsSection';
 import AdminUsers from '@/components/admin/dashboard/AdminUsers';
-import AllUsersSection from '@/components/admin/dashboard/AllUsersSection';
 import { useAdminDashboard } from '@/hooks/admin/useAdminDashboard';
 
 export default function AdminDashboard() {

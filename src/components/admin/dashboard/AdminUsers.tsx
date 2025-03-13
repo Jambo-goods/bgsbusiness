@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useAdminUsers } from '@/hooks/admin/useAdminUsers';
 import { Button } from '@/components/ui/button';
-import { Trash2, User, ArrowUpRight } from 'lucide-react';
+import { Trash2, User, ArrowUpRight, Wallet } from 'lucide-react';
 import { 
   Table, 
   TableBody, 
@@ -28,7 +28,7 @@ const AdminUsers: React.FC = () => {
   return (
     <div className="bg-white shadow-sm rounded-lg p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Utilisateurs récents ({adminUsers.length})</h2>
+        <h2 className="text-xl font-semibold">Utilisateurs ({adminUsers.length})</h2>
         <Link to="/admin/users">
           <Button variant="outline" size="sm" className="flex items-center gap-1">
             <span>Voir tous</span>
@@ -54,6 +54,8 @@ const AdminUsers: React.FC = () => {
                 <TableHead>Email</TableHead>
                 <TableHead>Téléphone</TableHead>
                 <TableHead>Solde</TableHead>
+                <TableHead>Projets</TableHead>
+                <TableHead>Investissements</TableHead>
                 <TableHead>Date de création</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -68,6 +70,8 @@ const AdminUsers: React.FC = () => {
                   <TableCell>{user.email || 'Pas d\'email'}</TableCell>
                   <TableCell>{user.phone || 'Non renseigné'}</TableCell>
                   <TableCell>{user.wallet_balance !== null ? `${user.wallet_balance} €` : '0 €'}</TableCell>
+                  <TableCell>{user.projects_count || 0}</TableCell>
+                  <TableCell>{user.investment_total !== null ? `${user.investment_total} €` : '0 €'}</TableCell>
                   <TableCell>
                     {user.created_at 
                       ? format(new Date(user.created_at), 'dd MMMM yyyy', { locale: fr })
@@ -82,6 +86,14 @@ const AdminUsers: React.FC = () => {
                         title="Voir les détails"
                       >
                         <User className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => console.log("Manage funds", user.id)}
+                        title="Gérer les fonds"
+                      >
+                        <Wallet className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="destructive"
