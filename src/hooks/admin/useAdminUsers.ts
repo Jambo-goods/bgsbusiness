@@ -9,6 +9,8 @@ interface AdminUser {
   first_name: string | null;
   last_name: string | null;
   created_at: string | null;
+  phone: string | null;
+  wallet_balance: number | null;
 }
 
 export function useAdminUsers() {
@@ -19,12 +21,15 @@ export function useAdminUsers() {
     try {
       setIsLoading(true);
       
+      // Fetch all users from the profiles table without restrictions
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, email, first_name, last_name, created_at');
+        .select('id, email, first_name, last_name, created_at, phone, wallet_balance')
+        .order('created_at', { ascending: false });
       
       if (error) throw error;
       
+      console.log("Fetched profiles:", data);
       setAdminUsers(data || []);
     } catch (error) {
       console.error("Error fetching profiles:", error);
