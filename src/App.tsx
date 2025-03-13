@@ -18,6 +18,8 @@ import NotFound from '@/pages/NotFound';
 
 // Page Admin login
 import AdminLogin from '@/pages/admin/AdminLogin';
+import AdminDashboardPage from '@/pages/admin/AdminDashboardPage';
+import UserManagement from '@/pages/admin/UserManagement';
 import AdminLayout from '@/components/admin/AdminLayout';
 
 function App() {
@@ -37,8 +39,12 @@ function App() {
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/about" element={<About />} />
             
-            {/* Admin Login */}
+            {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLogin />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route path="dashboard" element={<AdminDashboardPage />} />
+              <Route path="users" element={<UserManagement />} />
+            </Route>
             
             {/* Route 404 */}
             <Route path="*" element={<NotFound />} />
