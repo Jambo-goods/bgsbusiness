@@ -45,7 +45,22 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
       };
     }
 
-    // Attempt sign in with Supabase
+    // First check if the email exists in the admin_users table
+    const { data: adminUser, error: adminError } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (adminError || !adminUser) {
+      console.error("Admin check error:", adminError);
+      return {
+        success: false,
+        error: "Cet utilisateur n'est pas un administrateur"
+      };
+    }
+
+    // If admin exists, attempt to sign in
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -53,6 +68,64 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
 
     if (error) {
       console.error("Admin sign in error:", error);
+      
+      // If it's a new user and we're using hardcoded credentials, let's try to create the account
+      if (error.message.includes('Invalid login credentials') && 
+          email === 'admin@example.com' && 
+          password === 'admin123') {
+        try {
+          // Try to sign up the admin user
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                first_name: 'Admin',
+                last_name: 'User',
+                role: 'admin'
+              }
+            }
+          });
+
+          if (signUpError) {
+            return {
+              success: false,
+              error: "Impossible de créer le compte admin: " + signUpError.message
+            };
+          }
+
+          if (signUpData.user) {
+            // Admin successfully created, now sign in
+            const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
+
+            if (signInError) {
+              return {
+                success: false,
+                error: "Utilisateur créé mais connexion échouée: " + signInError.message
+              };
+            }
+
+            const admin: AdminUser = {
+              id: signInData.user.id,
+              email: signInData.user.email || '',
+              first_name: signInData.user.user_metadata?.first_name || 'Admin',
+              last_name: signInData.user.user_metadata?.last_name || 'User',
+              role: 'admin'
+            };
+
+            localStorage.setItem('admin_user', JSON.stringify(admin));
+            return {
+              success: true,
+              admin
+            };
+          }
+        } catch (signUpErr) {
+          console.error("Admin sign up error:", signUpErr);
+        }
+      }
       
       // Handle specific errors
       if (error.message.includes('Invalid login credentials')) {
@@ -80,8 +153,8 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
     const admin: AdminUser = {
       id: data.user.id,
       email: data.user.email || '',
-      first_name: data.user.user_metadata?.first_name || '',
-      last_name: data.user.user_metadata?.last_name || '',
+      first_name: data.user.user_metadata?.first_name || 'Admin',
+      last_name: data.user.user_metadata?.last_name || 'User',
       role: 'admin'
     };
 
@@ -92,7 +165,7 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
       success: true,
       admin
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error during admin sign in:", error);
     return {
       success: false,

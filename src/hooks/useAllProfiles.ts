@@ -9,64 +9,65 @@ export type Profile = {
   last_name: string | null;
   email: string | null;
   phone: string | null;
-  wallet_balance: number | null;
-  projects_count: number | null;
-  investment_total: number | null;
   created_at: string | null;
+  last_active_at: string | null;  // Added to fix type error
+  wallet_balance?: number | null;
+  account_status?: 'active' | 'inactive' | 'suspended';
 };
 
 export const useAllProfiles = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [totalProfiles, setTotalProfiles] = useState(0);
 
   useEffect(() => {
-    console.log("AllProfiles component mounted");
     fetchProfiles();
-    
-    return () => {
-      console.log("AllProfiles component unmounted");
-    };
   }, []);
 
   const fetchProfiles = async () => {
     try {
       setIsLoading(true);
-      console.log("Fetching all profiles...");
       
-      // Fetch all profiles from the database without filtering
+      // Get all profiles
       const { data, error, count } = await supabase
         .from('profiles')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching profiles:', error);
         throw error;
       }
 
-      console.log('Profiles fetched successfully:', data);
-      console.log('Total profiles count:', count);
-      console.log('Number of profiles fetched:', data?.length);
+      // Process profiles and determine account status
+      const processedProfiles: Profile[] = data?.map(profile => {
+        // Determine account status based on last activity
+        let account_status: 'active' | 'inactive' | 'suspended' = 'inactive';
+        
+        if (profile.last_active_at) {
+          const lastActive = new Date(profile.last_active_at);
+          const now = new Date();
+          const diffDays = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
+          
+          if (diffDays < 30) {
+            account_status = 'active';
+          }
+        }
+        
+        return {
+          ...profile,
+          account_status
+        };
+      }) || [];
       
-      setProfiles(data || []);
+      setProfiles(processedProfiles);
       setTotalProfiles(count || 0);
-      toast.success('Profils chargés avec succès');
     } catch (error) {
       console.error('Error fetching profiles:', error);
-      toast.error('Erreur lors du chargement des profils');
+      toast.error('Erreur lors du chargement des utilisateurs');
     } finally {
       setIsLoading(false);
-      setIsRefreshing(false);
     }
-  };
-
-  const handleRefresh = () => {
-    console.log("Manual refresh requested");
-    setIsRefreshing(true);
-    fetchProfiles();
   };
 
   const filteredProfiles = profiles.filter((profile) => {
@@ -85,9 +86,8 @@ export const useAllProfiles = () => {
     isLoading,
     searchTerm,
     setSearchTerm,
-    isRefreshing,
     totalProfiles,
     filteredProfiles,
-    handleRefresh
+    refreshProfiles: fetchProfiles
   };
 };
