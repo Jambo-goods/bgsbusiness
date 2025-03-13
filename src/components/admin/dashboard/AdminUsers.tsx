@@ -47,10 +47,7 @@ const AdminUsers: React.FC = () => {
             {adminUsers.map((admin) => (
               <TableRow key={admin.id}>
                 <TableCell className="font-medium">
-                  {(admin.first_name || admin.last_name) 
-                    ? `${admin.first_name || ''} ${admin.last_name || ''}`
-                    : 'Administrateur sans nom'
-                  }
+                  {admin.first_name} {admin.last_name}
                 </TableCell>
                 <TableCell>{admin.email}</TableCell>
                 <TableCell>

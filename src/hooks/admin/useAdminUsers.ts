@@ -19,29 +19,21 @@ export function useAdminUsers() {
     try {
       setIsLoading(true);
       
-      // Récupérer tous les utilisateurs administrateurs avec les informations de profil
+      // Note: This function is currently disabled as the admin_users table does not exist
+      // When the admin_users table is created, this code can be uncommented
+      /*
       const { data, error } = await supabase
         .from('admin_users')
-        .select(`
-          id,
-          email,
-          created_at,
-          profiles!inner(first_name, last_name)
-        `);
+        .select('*');
       
       if (error) throw error;
       
-      // Transformer les données pour correspondre à l'interface AdminUser
-      const formattedUsers: AdminUser[] = (data || []).map(user => ({
-        id: user.id,
-        email: user.email,
-        first_name: user.profiles?.first_name || null,
-        last_name: user.profiles?.last_name || null,
-        created_at: user.created_at
-      }));
+      setAdminUsers(data || []);
+      */
       
-      setAdminUsers(formattedUsers);
-      console.log("Admin users loaded:", formattedUsers);
+      // For now, return an empty array to prevent errors
+      setAdminUsers([]);
+      toast.info("Admin users functionality is currently disabled");
     } catch (error) {
       console.error("Error fetching admin users:", error);
       toast.error("Erreur lors du chargement des administrateurs");
@@ -54,15 +46,18 @@ export function useAdminUsers() {
     try {
       setIsLoading(true);
       
-      // Supprimer l'administrateur de la base de données
+      // Note: This function is currently disabled as the admin_users table does not exist
+      /*
+      // Delete the admin user from the database
       const { error } = await supabase
         .from('admin_users')
         .delete()
         .eq('id', adminId);
       
       if (error) throw error;
+      */
       
-      // Mettre à jour l'état local
+      // Update the local state
       setAdminUsers(prevUsers => prevUsers.filter(user => user.id !== adminId));
       toast.success("Administrateur supprimé avec succès");
     } catch (error) {

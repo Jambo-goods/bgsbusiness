@@ -437,10 +437,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_all_profiles_to_admin_users: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       increment_wallet_balance: {
         Args: {
           user_id: string
