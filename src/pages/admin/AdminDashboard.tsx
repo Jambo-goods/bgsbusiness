@@ -2,43 +2,34 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import DashboardHeader from '@/components/admin/dashboard/DashboardHeader';
-import DashboardGrid from '@/components/admin/dashboard/DashboardGrid';
+import DashboardStats from '@/components/admin/dashboard/DashboardStats';
 import ActivitySection from '@/components/admin/dashboard/ActivitySection';
 import QuickActionsSection from '@/components/admin/dashboard/QuickActionsSection';
-import AdminUsers from '@/components/admin/dashboard/AdminUsers';
 import AllUsersSection from '@/components/admin/dashboard/AllUsersSection';
-import { useAdminDashboard } from '@/hooks/admin/useAdminDashboard';
+import AdminUsers from '@/components/admin/dashboard/AdminUsers';
 
 export default function AdminDashboard() {
-  const { stats, adminLogs, isLoading, isRefreshing, refreshData } = useAdminDashboard();
-
   return (
     <>
       <Helmet>
-        <title>Tableau de bord Admin | BGS Invest</title>
+        <title>Tableau de bord | Administration BGS</title>
       </Helmet>
-
-      <div className="space-y-6">
-        <DashboardHeader 
-          systemStatus="operational" 
-          isRefreshing={isRefreshing}
-          refreshData={refreshData}
-        />
+      
+      <div className="space-y-8">
+        <DashboardHeader />
+        <DashboardStats />
         
-        <DashboardGrid stats={stats} isLoading={isLoading} />
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <ActivitySection adminLogs={adminLogs} isLoading={isLoading} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+            <ActivitySection />
           </div>
-          <div className="lg:col-span-1">
+          <div className="md:col-span-1">
             <QuickActionsSection />
           </div>
         </div>
         
-        <AllUsersSection />
-        
         <AdminUsers />
+        <AllUsersSection />
       </div>
     </>
   );
