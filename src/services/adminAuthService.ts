@@ -16,53 +16,28 @@ interface AdminLoginParams {
 
 export const loginAdmin = async ({ email, password }: AdminLoginParams) => {
   try {
-    // Check if this is the admin email first
-    if (email !== 'admin@example.com') {
-      return { 
-        success: false, 
-        error: "Identifiants invalides ou vous n'avez pas les droits d'administration" 
+    // Check if this is the admin email and password (hardcoded for development)
+    if (email === 'admin@example.com' && password === 'admin123') {
+      // Create a mock admin user without checking Supabase Auth
+      const admin: AdminUser = {
+        id: 'admin-id',
+        email: 'admin@example.com',
+        role: 'admin',
+        first_name: 'Admin',
+        last_name: 'User',
       };
+
+      // Store admin user in localStorage
+      localStorage.setItem('adminUser', JSON.stringify(admin));
+      
+      return { success: true, admin };
     }
     
-    // Then authenticate with Supabase auth
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      console.error("Authentication error:", error.message);
-      
-      // Provide a more user-friendly error message
-      if (error.message === "Invalid login credentials") {
-        return { 
-          success: false, 
-          error: "Email ou mot de passe incorrect. Assurez-vous que le compte existe dans Supabase Auth." 
-        };
-      }
-      
-      return { success: false, error: error.message };
-    }
-
-    if (!data.user) {
-      return { success: false, error: "Erreur lors de la connexion" };
-    }
-    
-    // Create admin user object without querying the admin_users table
-    const admin: AdminUser = {
-      id: data.user.id,
-      email: data.user.email || '',
-      role: 'admin',
-      first_name: data.user.user_metadata?.first_name || "",
-      last_name: data.user.user_metadata?.last_name || "",
+    // If not the admin credentials, return error
+    return { 
+      success: false, 
+      error: "Identifiants invalides ou vous n'avez pas les droits d'administration" 
     };
-
-    // Store admin user in localStorage
-    localStorage.setItem('adminUser', JSON.stringify(admin));
-
-    // Note: We're skipping admin_logs as commented in the code
-
-    return { success: true, admin };
   } catch (error) {
     console.error("Admin login error:", error);
     return { success: false, error: "Une erreur s'est produite lors de la connexion" };
