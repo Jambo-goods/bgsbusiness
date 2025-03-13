@@ -6,8 +6,6 @@ import { toast } from "sonner";
 export interface AdminUser {
   id: string;
   email: string;
-  first_name?: string;
-  last_name?: string;
   role?: string;
 }
 
@@ -80,8 +78,6 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
             password,
             options: {
               data: {
-                first_name: 'Admin',
-                last_name: 'User',
                 role: 'admin'
               }
             }
@@ -111,8 +107,6 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
             const admin: AdminUser = {
               id: signInData.user.id,
               email: signInData.user.email || '',
-              first_name: signInData.user.user_metadata?.first_name || 'Admin',
-              last_name: signInData.user.user_metadata?.last_name || 'User',
               role: 'admin'
             };
 
@@ -148,14 +142,11 @@ export async function loginAdmin({ email, password }: AdminLoginCredentials): Pr
       };
     }
 
-    // For development purposes, assume the user is an admin
-    // In production, you would check against a database table
+    // Create admin user object with data from admin_users table
     const admin: AdminUser = {
       id: data.user.id,
       email: data.user.email || '',
-      first_name: data.user.user_metadata?.first_name || 'Admin',
-      last_name: data.user.user_metadata?.last_name || 'User',
-      role: 'admin'
+      role: adminUser.role || 'admin'
     };
 
     // Store admin user in localStorage
@@ -215,7 +206,6 @@ export function getCurrentAdmin(): AdminUser | null {
 
 /**
  * Log an admin action
- * Note: This is a placeholder function until the admin_logs table is created
  */
 export async function logAdminAction(
   adminId: string,
