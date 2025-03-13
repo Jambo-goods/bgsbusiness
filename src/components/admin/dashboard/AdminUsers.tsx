@@ -23,7 +23,7 @@ const AdminUsers: React.FC = () => {
 
   return (
     <div className="bg-white shadow-sm rounded-lg p-4 mt-8">
-      <h2 className="text-xl font-semibold mb-4">Administrateurs du système</h2>
+      <h2 className="text-xl font-semibold mb-4">Utilisateurs du système</h2>
       
       {isLoading ? (
         <div className="flex justify-center p-8">
@@ -31,7 +31,7 @@ const AdminUsers: React.FC = () => {
         </div>
       ) : adminUsers.length === 0 ? (
         <div className="text-center py-8 text-gray-500">
-          Aucun administrateur trouvé
+          Aucun utilisateur trouvé
         </div>
       ) : (
         <Table>
@@ -44,23 +44,23 @@ const AdminUsers: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {adminUsers.map((admin) => (
-              <TableRow key={admin.id}>
+            {adminUsers.map((user) => (
+              <TableRow key={user.id}>
                 <TableCell className="font-medium">
-                  {admin.first_name} {admin.last_name}
+                  {user.first_name} {user.last_name}
                 </TableCell>
-                <TableCell>{admin.email}</TableCell>
+                <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  {admin.created_at 
-                    ? format(new Date(admin.created_at), 'dd MMMM yyyy', { locale: fr })
+                  {user.created_at 
+                    ? format(new Date(user.created_at), 'dd MMMM yyyy', { locale: fr })
                     : 'N/A'}
                 </TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => removeAdmin(admin.id)}
-                    title="Supprimer cet administrateur"
+                    onClick={() => removeAdmin(user.id)}
+                    title="Supprimer cet utilisateur"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

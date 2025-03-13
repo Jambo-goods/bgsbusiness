@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 interface AdminUser {
   id: string;
-  email: string;
+  email: string | null;
   first_name: string | null;
   last_name: string | null;
   created_at: string | null;
@@ -19,24 +19,16 @@ export function useAdminUsers() {
     try {
       setIsLoading(true);
       
-      // Note: This function is currently disabled as the admin_users table does not exist
-      // When the admin_users table is created, this code can be uncommented
-      /*
       const { data, error } = await supabase
-        .from('admin_users')
-        .select('*');
+        .from('profiles')
+        .select('id, email, first_name, last_name, created_at');
       
       if (error) throw error;
       
       setAdminUsers(data || []);
-      */
-      
-      // For now, return an empty array to prevent errors
-      setAdminUsers([]);
-      toast.info("Admin users functionality is currently disabled");
     } catch (error) {
-      console.error("Error fetching admin users:", error);
-      toast.error("Erreur lors du chargement des administrateurs");
+      console.error("Error fetching profiles:", error);
+      toast.error("Erreur lors du chargement des utilisateurs");
     } finally {
       setIsLoading(false);
     }
@@ -46,23 +38,13 @@ export function useAdminUsers() {
     try {
       setIsLoading(true);
       
-      // Note: This function is currently disabled as the admin_users table does not exist
-      /*
-      // Delete the admin user from the database
-      const { error } = await supabase
-        .from('admin_users')
-        .delete()
-        .eq('id', adminId);
-      
-      if (error) throw error;
-      */
-      
-      // Update the local state
+      // Note: This doesn't actually delete the profile, just removes it from the UI
+      // as deleting users should be handled with more caution
       setAdminUsers(prevUsers => prevUsers.filter(user => user.id !== adminId));
-      toast.success("Administrateur supprimé avec succès");
+      toast.success("Utilisateur supprimé de la liste");
     } catch (error) {
-      console.error("Error removing admin:", error);
-      toast.error("Erreur lors de la suppression de l'administrateur");
+      console.error("Error removing user:", error);
+      toast.error("Erreur lors de la suppression de l'utilisateur");
     } finally {
       setIsLoading(false);
     }
