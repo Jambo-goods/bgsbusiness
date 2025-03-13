@@ -44,20 +44,24 @@ export function useUserSession() {
 
   const handleLogout = async () => {
     try {
-      // First, clear all localStorage items related to authentication
-      localStorage.removeItem('isLoggedIn');
-      localStorage.removeItem('supabase.auth.token');
-      
-      // Set userId to null immediately to update UI
+      // Clear all app state first
       setUserId(null);
       
-      // Then sign out from Supabase
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // Clear all localStorage and sessionStorage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Sign out from Supabase - ignore errors if session is already cleared
+      try {
+        await supabase.auth.signOut({ scope: 'global' });
+      } catch (e) {
+        console.log("Session may already be cleared:", e);
+        // Continue with logout flow even if there's an error
+      }
       
       toast.success("Déconnexion réussie");
       
-      // Force redirect to login page after ensuring the state is cleared
+      // Force reload and redirect to login page
       setTimeout(() => {
         window.location.href = "/login";
       }, 100);
@@ -65,6 +69,11 @@ export function useUserSession() {
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Erreur lors de la déconnexion");
+      
+      // Force reload even on error as a fallback
+      setTimeout(() => {
+        window.location.href = "/login";
+      }, 500);
     }
   };
 

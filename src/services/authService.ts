@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -93,25 +92,27 @@ export const loginUser = async ({ email, password }: UserCredentials) => {
 
 export const logoutUser = async () => {
   try {
-    // Clear all localStorage items related to authentication
-    localStorage.removeItem('isLoggedIn');
-    localStorage.removeItem('supabase.auth.token');
-    
-    // Wait a moment to ensure localStorage is cleared
-    await new Promise(resolve => setTimeout(resolve, 50));
-    
-    // Then sign out from Supabase
-    const { error } = await supabase.auth.signOut({ scope: 'global' });
-    if (error) throw error;
-    
-    // Force clear the session from the browser
+    // Clean up all possible storage
+    localStorage.clear();
     sessionStorage.clear();
     
-    console.log("Logout successful");
+    // Try to sign out from Supabase
+    try {
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      if (error) {
+        console.warn("Supabase signOut error:", error);
+        // Continue with logout flow even if there's a Supabase error
+      }
+    } catch (signOutError) {
+      console.warn("Exception during signOut:", signOutError);
+      // Continue with logout flow even if signOut throws
+    }
+    
+    console.log("Logout process completed");
     return { success: true };
   } catch (error: any) {
-    console.error("Logout error:", error);
-    return { success: false, error: error.message };
+    console.error("Logout general error:", error);
+    return { success: false, error: error.message || "An unknown error occurred" };
   }
 };
 
