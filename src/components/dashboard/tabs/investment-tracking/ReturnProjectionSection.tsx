@@ -215,7 +215,8 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
         <div className="mt-4 pt-4 border-t border-gray-100">
           <p className="text-xs text-gray-500">
             <strong>Note:</strong> Ces projections sont basées sur les taux de rendement actuels et peuvent varier. 
-            Les versements sont effectués le 5 de chaque mois.
+            Le premier versement est généralement effectué après la période de délai initiale spécifiée dans chaque projet. 
+            Les versements suivants sont effectués le 5 de chaque mois.
           </p>
         </div>
       )}
