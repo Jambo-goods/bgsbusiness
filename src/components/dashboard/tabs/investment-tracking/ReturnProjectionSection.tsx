@@ -106,7 +106,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
             <TrendingUp className="h-5 w-5 text-green-600" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-gray-800">Mes rendements mensuel</h2>
+            <h2 className="text-lg font-semibold text-gray-800">Mes rendements</h2>
             <p className="text-xs text-gray-500 mt-0.5">Basées sur vos investissements actuels</p>
           </div>
         </div>
