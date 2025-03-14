@@ -62,29 +62,6 @@ export default function DurationSection({
         <span>Min: {Math.min(...durations)} mois</span>
         <span>Max: {Math.max(...durations)} mois</span>
       </div>
-      
-      <div className="flex justify-between mt-3">
-        {durations.map((duration) => (
-          <div 
-            key={duration} 
-            className={`flex flex-col items-center cursor-pointer transition-all duration-300 ${
-              selectedDuration === duration 
-              ? 'transform scale-110' 
-              : 'opacity-70 hover:opacity-100'
-            }`}
-            onClick={() => setSelectedDuration(duration)}
-          >
-            <span className={`
-              px-3 py-1 rounded-full text-sm font-medium 
-              ${selectedDuration === duration 
-                ? 'bg-bgs-orange text-white shadow-md' 
-                : 'text-bgs-blue/70 hover:text-bgs-blue'}
-            `}>
-              {duration} mois
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

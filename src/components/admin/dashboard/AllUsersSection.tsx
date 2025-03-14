@@ -29,7 +29,7 @@ const AllUsersSection: React.FC = () => {
       </div>
       
       <div className="overflow-x-auto">
-        <UsersTable users={users} isLoading={isLoading} />
+        <UsersTable />
       </div>
     </div>
   );
