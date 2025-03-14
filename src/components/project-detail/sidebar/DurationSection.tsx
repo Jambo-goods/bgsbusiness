@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 
 interface DurationSectionProps {
   selectedDuration: number;
@@ -17,12 +18,33 @@ export default function DurationSection({
     setSelectedDuration(values[0]);
   };
 
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value.replace(/\D/g, ''));
+    if (!isNaN(value)) {
+      const minDuration = Math.min(...durations);
+      const maxDuration = Math.max(...durations);
+      setSelectedDuration(
+        Math.min(Math.max(value, minDuration), maxDuration)
+      );
+    }
+  };
+
   return (
     <div className="space-y-2">
       <label className="text-sm font-medium text-bgs-blue">Durée d'investissement</label>
       
-      <div className="mb-3">
-        <span className="block text-center text-2xl font-bold text-gradient bg-gradient-to-r from-bgs-blue to-bgs-orange">{selectedDuration} mois</span>
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Input 
+            type="text" 
+            value={selectedDuration.toString()}
+            onChange={handleInputChange}
+            className="pr-8 font-medium text-right"
+          />
+          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-bgs-blue font-medium">
+            mois
+          </span>
+        </div>
       </div>
       
       <Slider

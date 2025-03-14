@@ -52,5 +52,14 @@ export const useAllUsersData = () => {
     };
   }, []);
 
-  return { users, loading, error, fetchUsers };
+  // Provide both loading and isLoading for backward compatibility
+  return { 
+    users, 
+    loading, 
+    error, 
+    fetchUsers,
+    isLoading: loading,
+    refreshUsers: fetchUsers,
+    totalUsers: users.length
+  };
 };
