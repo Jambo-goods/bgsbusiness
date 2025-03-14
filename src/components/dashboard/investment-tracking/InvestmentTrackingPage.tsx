@@ -12,12 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import DashboardLayout from "@/layouts/DashboardLayout";
+import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
   const [investment, setInvestment] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   useEffect(() => {
     const fetchInvestmentDetails = async () => {
@@ -76,6 +78,55 @@ export default function InvestmentTrackingPage() {
     }
   }, [investmentId]);
   
+  const refreshData = async () => {
+    setIsRefreshing(true);
+    try {
+      // Reuse the same fetching logic
+      const { data, error } = await supabase
+        .from("investments")
+        .select(`
+          *,
+          projects (
+            name,
+            description,
+            category,
+            status,
+            image,
+            funding_progress,
+            yield
+          )
+        `)
+        .eq("id", investmentId)
+        .single();
+        
+      if (error) throw error;
+      
+      // Calculate remaining duration
+      if (data) {
+        const investmentData = {...data};
+        const startDate = new Date(investmentData.date);
+        const endDate = new Date(startDate.setMonth(startDate.getMonth() + investmentData.duration));
+        const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
+        investmentData.remainingDuration = remainingMonths;
+        setInvestment(investmentData);
+      }
+      
+      // Fetch transactions
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from("wallet_transactions")
+        .select("*")
+        .eq("user_id", data.user_id)
+        .order("created_at", { ascending: false });
+        
+      if (transactionsError) throw transactionsError;
+      setTransactions(transactionsData || []);
+    } catch (error) {
+      console.error("Error refreshing investment details:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
   if (loading) {
     return (
       <DashboardLayout>
@@ -102,8 +153,20 @@ export default function InvestmentTrackingPage() {
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
   };
 
+  // User data for header
+  const userData = {
+    firstName: investment.user_first_name || "Investisseur",
+    lastName: investment.user_last_name || "",
+  };
+
   return (
     <DashboardLayout>
+      <DashboardHeader 
+        userData={userData}
+        refreshData={refreshData}
+        isRefreshing={isRefreshing}
+      />
+      
       <div className="space-y-8">
         <Link to="/dashboard" className="flex items-center text-bgs-blue hover:text-bgs-blue-light mb-6">
           <ChevronLeft className="h-4 w-4 mr-1" />
@@ -247,3 +310,4 @@ export default function InvestmentTrackingPage() {
     </DashboardLayout>
   );
 }
+
