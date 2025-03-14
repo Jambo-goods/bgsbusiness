@@ -12,34 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import DashboardLayout from "@/layouts/DashboardLayout";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
-
-// Define the investment type to fix TypeScript errors
-interface Investment {
-  amount: number;
-  date: string;
-  duration: number;
-  end_date: string;
-  id: string;
-  project_id: string;
-  status: string;
-  user_id: string;
-  yield_rate: number;
-  remainingDuration?: number;
-  projects: {
-    name: string;
-    description: string;
-    category: string;
-    status: string;
-    image: string;
-    funding_progress: number;
-    yield: number;
-  };
-}
 
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
-  const [investment, setInvestment] = useState<Investment | null>(null);
+  const [investment, setInvestment] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -70,7 +46,7 @@ export default function InvestmentTrackingPage() {
         
         // Calculate remaining duration
         if (data) {
-          const investmentData = {...data} as Investment;
+          const investmentData = {...data};
           const startDate = new Date(investmentData.date);
           const endDate = new Date(startDate.setMonth(startDate.getMonth() + investmentData.duration));
           const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
@@ -129,14 +105,6 @@ export default function InvestmentTrackingPage() {
   return (
     <DashboardLayout>
       <div className="space-y-8">
-        {/* Add Dashboard Header */}
-        <DashboardHeader 
-          userData={{ 
-            firstName: "Investisseur", 
-            lastName: "BGS" 
-          }} 
-        />
-      
         <Link to="/dashboard" className="flex items-center text-bgs-blue hover:text-bgs-blue-light mb-6">
           <ChevronLeft className="h-4 w-4 mr-1" />
           Retour au tableau de bord
