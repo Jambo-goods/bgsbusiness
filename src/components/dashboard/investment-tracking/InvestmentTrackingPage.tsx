@@ -1,183 +1,21 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { 
-  Building, Calendar, ChevronLeft, Download, MessageSquare
-} from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
-import { Progress } from "@/components/ui/progress";
+import { ChevronLeft } from "lucide-react";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-
-// Define the investment type to fix TypeScript errors
-interface Investment {
-  id: string;
-  user_id: string;
-  project_id: string;
-  amount: number;
-  date: string;
-  yield_rate: number;
-  duration: number;
-  end_date: string;
-  status: string;
-  user_first_name?: string;
-  user_last_name?: string;
-  remainingDuration?: number;
-  projects: {
-    name: string;
-    description: string;
-    category: string;
-    status: string;
-    image: string;
-    funding_progress: number;
-    yield: number;
-  }
-}
+import { useInvestmentTracking } from "./hooks/useInvestmentTracking";
+import GeneralInformationCard from "./components/GeneralInformationCard";
+import InvestmentSummaryCards from "./components/InvestmentSummaryCards";
+import TransactionHistoryCard from "./components/TransactionHistoryCard";
+import ProjectUpdatesCard from "./components/ProjectUpdatesCard";
+import ContactActionsCard from "./components/ContactActionsCard";
 
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
-  const [investment, setInvestment] = useState<Investment | null>(null);
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { investment, transactions, loading, isRefreshing, refreshData } = useInvestmentTracking(investmentId);
   
-  useEffect(() => {
-    const fetchInvestmentDetails = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch investment with project details
-        const { data, error } = await supabase
-          .from("investments")
-          .select(`
-            *,
-            projects (
-              name,
-              description,
-              category,
-              status,
-              image,
-              funding_progress,
-              yield
-            )
-          `)
-          .eq("id", investmentId)
-          .single();
-          
-        if (error) throw error;
-        
-        // Calculate remaining duration
-        if (data) {
-          const investmentData = {...data};
-          const startDate = new Date(investmentData.date);
-          const endDate = new Date(startDate.setMonth(startDate.getMonth() + investmentData.duration));
-          const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
-          investmentData.remainingDuration = remainingMonths;
-          
-          // Fetch user information
-          const { data: userData, error: userError } = await supabase
-            .from("profiles")
-            .select("first_name, last_name")
-            .eq("id", data.user_id)
-            .single();
-            
-          if (!userError && userData) {
-            investmentData.user_first_name = userData.first_name;
-            investmentData.user_last_name = userData.last_name;
-          }
-          
-          setInvestment(investmentData as Investment);
-        }
-        
-        // Fetch transactions
-        const { data: transactionsData, error: transactionsError } = await supabase
-          .from("wallet_transactions")
-          .select("*")
-          .eq("user_id", data.user_id)
-          .order("created_at", { ascending: false });
-          
-        if (transactionsError) throw transactionsError;
-        setTransactions(transactionsData || []);
-        
-      } catch (error) {
-        console.error("Error fetching investment details:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    if (investmentId) {
-      fetchInvestmentDetails();
-    }
-  }, [investmentId]);
-  
-  const refreshData = async () => {
-    setIsRefreshing(true);
-    try {
-      // Reuse the same fetching logic
-      const { data, error } = await supabase
-        .from("investments")
-        .select(`
-          *,
-          projects (
-            name,
-            description,
-            category,
-            status,
-            image,
-            funding_progress,
-            yield
-          )
-        `)
-        .eq("id", investmentId)
-        .single();
-        
-      if (error) throw error;
-      
-      // Calculate remaining duration
-      if (data) {
-        const investmentData = {...data};
-        const startDate = new Date(investmentData.date);
-        const endDate = new Date(startDate.setMonth(startDate.getMonth() + investmentData.duration));
-        const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
-        investmentData.remainingDuration = remainingMonths;
-        
-        // Fetch user information
-        const { data: userData, error: userError } = await supabase
-          .from("profiles")
-          .select("first_name, last_name")
-          .eq("id", data.user_id)
-          .single();
-          
-        if (!userError && userData) {
-          investmentData.user_first_name = userData.first_name;
-          investmentData.user_last_name = userData.last_name;
-        }
-        
-        setInvestment(investmentData as Investment);
-      }
-      
-      // Fetch transactions
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from("wallet_transactions")
-        .select("*")
-        .eq("user_id", data.user_id)
-        .order("created_at", { ascending: false });
-        
-      if (transactionsError) throw transactionsError;
-      setTransactions(transactionsData || []);
-    } catch (error) {
-      console.error("Error refreshing investment details:", error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
-  
+  // Loading state
   if (loading) {
     return (
       <DashboardLayout>
@@ -188,6 +26,7 @@ export default function InvestmentTrackingPage() {
     );
   }
   
+  // No investment found state
   if (!investment) {
     return (
       <DashboardLayout>
@@ -196,14 +35,6 @@ export default function InvestmentTrackingPage() {
     );
   }
   
-  const totalEarnings = transactions
-    .filter(t => t.type === 'yield' && t.status === 'completed')
-    .reduce((sum, t) => sum + t.amount, 0);
-    
-  const formatDate = (date: string) => {
-    return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
-  };
-
   // User data for header
   const userData = {
     firstName: investment.user_first_name || "Investisseur",
@@ -225,138 +56,19 @@ export default function InvestmentTrackingPage() {
         </Link>
         
         {/* Section 1: General Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Informations générales</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4">
-              <div className="flex items-start gap-4">
-                <img 
-                  src={investment.projects.image} 
-                  alt={investment.projects.name}
-                  className="w-32 h-32 object-cover rounded-lg"
-                />
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-semibold text-bgs-blue">{investment.projects.name}</h2>
-                  <p className="flex items-center text-sm text-gray-600">
-                    <Building className="h-4 w-4 mr-1" />
-                    {investment.projects.category}
-                  </p>
-                  <p className="text-sm text-gray-600">{investment.projects.description}</p>
-                </div>
-              </div>
-              
-              <Progress value={investment.projects.funding_progress} className="h-2" />
-              <p className="text-sm text-gray-600">Progression : {investment.projects.funding_progress}%</p>
-            </div>
-          </CardContent>
-        </Card>
+        <GeneralInformationCard investment={investment} />
         
-        {/* Section 2: Personal Investment Information */}
-        <div className="grid md:grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Montant investi</p>
-                <p className="text-3xl font-bold text-bgs-blue">{investment.amount}€</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Durée restante</p>
-                <p className="text-3xl font-bold text-bgs-blue">{investment.remainingDuration} mois</p>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Total des bénéfices reçus</p>
-                <p className="text-3xl font-bold text-green-600">{totalEarnings}€</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Section 2: Investment Summary Cards */}
+        <InvestmentSummaryCards investment={investment} transactions={transactions} />
         
         {/* Section 3: Transaction History */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Historique des transactions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{formatDate(transaction.created_at)}</TableCell>
-                    <TableCell>{transaction.type === 'yield' ? 'Gain reçu' : 'Investissement'}</TableCell>
-                    <TableCell className={transaction.type === 'yield' ? 'text-green-600' : 'text-red-600'}>
-                      {transaction.type === 'yield' ? '+' : '-'}{transaction.amount}€
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {transaction.status === 'completed' ? '✓ Confirmé' : '⏳ En attente'}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+        <TransactionHistoryCard transactions={transactions} />
         
         {/* Section 4: Project Updates */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Suivi du projet en temps réel</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold mb-2">Progression des travaux</h4>
-                <Progress value={75} className="h-2 mb-4" />
-                <p className="text-sm text-gray-600">Le projet avance selon le planning prévu.</p>
-              </div>
-              <div>
-                <h4 className="font-semibold mb-2">Documents disponibles</h4>
-                <div className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Download className="h-4 w-4 mr-2" />
-                    Rapport mensuel - Mars 2024
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <ProjectUpdatesCard />
         
-        {/* Section 5: Contact */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Actions disponibles</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button className="flex items-center">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Contacter l'équipe du projet
-            </Button>
-          </CardContent>
-        </Card>
+        {/* Section 5: Contact Actions */}
+        <ContactActionsCard />
       </div>
     </DashboardLayout>
   );
