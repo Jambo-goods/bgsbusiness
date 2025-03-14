@@ -25,7 +25,7 @@ export class MarketingNotificationService extends BaseNotificationService {
   referralBonus(friendName: string, bonus: number): Promise<void> {
     return this.createNotification({
       title: "Programme de parrainage",
-      description: `Félicitations ! Votre filleul ${friendName} a rejoint la plateforme. Gagnez ${bonus}€.`,
+      description: `Félicitations ! Votre filleul ${friendName} a généré ${bonus}€ de gains. Vous recevez 10% de commission.`,
       type: 'marketing',
       category: 'success',
       metadata: { friendName, bonus }

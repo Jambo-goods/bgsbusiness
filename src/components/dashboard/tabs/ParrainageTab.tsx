@@ -40,7 +40,7 @@ const ParrainageTab = () => {
             </div>
             <h3 className="text-xl font-semibold text-gray-800">Invitez vos amis et gagnez</h3>
             <p className="text-gray-600">
-              Parrainez vos amis et recevez 50€ pour chaque nouvel investisseur qui rejoint BGS Invest avec votre code.
+              Parrainez vos amis et recevez <span className="font-semibold">10% de tous les gains de vos filleuls</span> de manière permanente.
               Votre filleul bénéficie également d'un bonus de 25€ sur son premier investissement.
             </p>
             
@@ -110,10 +110,16 @@ const ParrainageTab = () => {
                   4
                 </div>
                 <div className="ml-3">
-                  <p className="text-gray-600">Vous recevez 50€ et votre filleul 25€</p>
+                  <p className="text-gray-600">Vous recevez 10% de tous leurs gains</p>
                 </div>
               </li>
             </ul>
+            
+            <div className="mt-4 bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <span className="font-semibold">Exemple :</span> Si votre filleul gagne 100€ de rendement, vous recevez automatiquement 10€ sur votre portefeuille. Ces commissions sont calculées à vie sur l'ensemble de ses gains !
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -122,7 +128,7 @@ const ParrainageTab = () => {
         <h3 className="text-lg font-semibold text-gray-800 mb-4">Vos parrainages</h3>
         <div className="bg-gray-50 p-8 rounded-lg text-center">
           <p className="text-gray-600">Vous n'avez pas encore parrainé d'amis.</p>
-          <p className="text-gray-600 mt-2">Partagez votre code et commencez à gagner des bonus !</p>
+          <p className="text-gray-600 mt-2">Partagez votre code et commencez à gagner des commissions sur leurs gains !</p>
         </div>
       </div>
     </div>
