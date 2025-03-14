@@ -1,52 +1,56 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { Profile } from '@/hooks/useAllProfiles';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { PostgrestError } from "@supabase/supabase-js";
 
 export const useAllUsersData = () => {
-  const [users, setUsers] = useState<Profile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [totalUsers, setTotalUsers] = useState(0);
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<PostgrestError | null>(null);
 
   const fetchUsers = async () => {
     try {
-      setIsLoading(true);
-      console.log("Fetching all users data...");
+      setLoading(true);
       
-      // We need to make sure we're fetching from the profiles table without any RLS restrictions
-      const { data, error, count } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching users:', error);
-        toast.error('Erreur lors du chargement des utilisateurs');
-        return;
-      }
-
-      console.log('Users fetched successfully:', data);
-      console.log('Total users count:', count);
+        .select('*');
+        
+      if (error) throw error;
       
       setUsers(data || []);
-      setTotalUsers(count || 0);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Erreur lors du chargement des utilisateurs');
+      setError(null);
+    } catch (err: any) {
+      console.error('Error fetching users:', err);
+      setError(err);
+      toast.error('Failed to load users', {
+        description: err.message
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  return {
-    users,
-    isLoading,
-    totalUsers,
-    refreshUsers: fetchUsers
-  };
+  useEffect(() => {
+    fetchUsers();
+    
+    // Set up realtime subscription
+    const usersSubscription = supabase
+      .channel('admin_users_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'profiles' }, 
+        () => {
+          console.log('Users data changed, refreshing...');
+          fetchUsers();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(usersSubscription);
+    };
+  }, []);
+
+  return { users, loading, error, fetchUsers };
 };
