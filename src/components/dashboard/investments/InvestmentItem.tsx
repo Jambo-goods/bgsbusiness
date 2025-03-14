@@ -1,9 +1,11 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpRight, Calendar, Coins, Clock } from "lucide-react";
+import { ArrowUpRight, Calendar, Coins, Clock, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 interface InvestmentItemProps {
   investment: any;
@@ -79,6 +81,15 @@ export default function InvestmentItem({ investment }: InvestmentItemProps) {
               <p className="text-xs text-bgs-gray-medium flex items-center"><Clock className="h-3 w-3 mr-1" /> Durée</p>
               <p className="font-semibold text-bgs-blue text-sm">{investment.duration} mois</p>
             </div>
+          </div>
+          
+          <div className="mt-4 flex justify-end">
+            <Link to={`/dashboard/investment-tracking/${investment.id}`}>
+              <Button size="sm" variant="outline" className="flex items-center gap-1">
+                <ExternalLink className="h-3.5 w-3.5" />
+                Suivre cet investissement
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

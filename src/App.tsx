@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,7 +7,6 @@ import { HelmetProvider } from "react-helmet-async";
 import { Suspense, lazy } from "react";
 import Index from "./pages/Index";
 
-// Lazy load routes to improve performance
 const Opportunite = lazy(() => import("./pages/Projects"));
 const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
 const HowItWorks = lazy(() => import("./pages/HowItWorks"));
@@ -18,15 +16,14 @@ const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const InvestmentTrackingPage = lazy(() => import("./components/dashboard/investment-tracking/InvestmentTrackingPage"));
 
-// Loading fallback component
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
   </div>
 );
 
-// Create a client with optimized settings
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -56,8 +53,8 @@ const App = () => (
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/*" element={<Dashboard />} />
+              <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
               
-              {/* Catch-all route for 404 */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
