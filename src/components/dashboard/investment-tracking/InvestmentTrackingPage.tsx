@@ -14,9 +14,34 @@ import { Progress } from "@/components/ui/progress";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 
+// Define the investment type to fix TypeScript errors
+interface Investment {
+  id: string;
+  user_id: string;
+  project_id: string;
+  amount: number;
+  date: string;
+  yield_rate: number;
+  duration: number;
+  end_date: string;
+  status: string;
+  user_first_name?: string;
+  user_last_name?: string;
+  remainingDuration?: number;
+  projects: {
+    name: string;
+    description: string;
+    category: string;
+    status: string;
+    image: string;
+    funding_progress: number;
+    yield: number;
+  }
+}
+
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
-  const [investment, setInvestment] = useState<any>(null);
+  const [investment, setInvestment] = useState<Investment | null>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -53,7 +78,20 @@ export default function InvestmentTrackingPage() {
           const endDate = new Date(startDate.setMonth(startDate.getMonth() + investmentData.duration));
           const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
           investmentData.remainingDuration = remainingMonths;
-          setInvestment(investmentData);
+          
+          // Fetch user information
+          const { data: userData, error: userError } = await supabase
+            .from("profiles")
+            .select("first_name, last_name")
+            .eq("id", data.user_id)
+            .single();
+            
+          if (!userError && userData) {
+            investmentData.user_first_name = userData.first_name;
+            investmentData.user_last_name = userData.last_name;
+          }
+          
+          setInvestment(investmentData as Investment);
         }
         
         // Fetch transactions
@@ -108,7 +146,20 @@ export default function InvestmentTrackingPage() {
         const endDate = new Date(startDate.setMonth(startDate.getMonth() + investmentData.duration));
         const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
         investmentData.remainingDuration = remainingMonths;
-        setInvestment(investmentData);
+        
+        // Fetch user information
+        const { data: userData, error: userError } = await supabase
+          .from("profiles")
+          .select("first_name, last_name")
+          .eq("id", data.user_id)
+          .single();
+          
+        if (!userError && userData) {
+          investmentData.user_first_name = userData.first_name;
+          investmentData.user_last_name = userData.last_name;
+        }
+        
+        setInvestment(investmentData as Investment);
       }
       
       // Fetch transactions
@@ -310,4 +361,3 @@ export default function InvestmentTrackingPage() {
     </DashboardLayout>
   );
 }
-
