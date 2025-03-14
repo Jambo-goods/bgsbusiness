@@ -39,7 +39,7 @@ export default function DurationSection({
             type="text" 
             value={selectedDuration.toString()}
             onChange={handleInputChange}
-            className="pr-8 font-medium text-right"
+            className="pr-12 font-medium text-right"
           />
           <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-bgs-blue font-medium">
             mois
