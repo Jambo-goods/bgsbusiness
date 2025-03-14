@@ -5,13 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { 
-  Building, Calendar, Clock, ArrowUpRight, 
-  PieChart, Download, MessageSquare, ChevronLeft 
+  Building, Calendar, ChevronLeft, Download, MessageSquare
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
+import DashboardLayout from "@/layouts/DashboardLayout";
 
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
@@ -46,11 +46,12 @@ export default function InvestmentTrackingPage() {
         
         // Calculate remaining duration
         if (data) {
-          const startDate = new Date(data.date);
-          const endDate = new Date(startDate.setMonth(startDate.getMonth() + data.duration));
+          const investmentData = {...data};
+          const startDate = new Date(investmentData.date);
+          const endDate = new Date(startDate.setMonth(startDate.getMonth() + investmentData.duration));
           const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
-          data.remainingDuration = remainingMonths;
-          setInvestment(data);
+          investmentData.remainingDuration = remainingMonths;
+          setInvestment(investmentData);
         }
         
         // Fetch transactions
@@ -76,13 +77,21 @@ export default function InvestmentTrackingPage() {
   }, [investmentId]);
   
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
-    </div>;
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
+        </div>
+      </DashboardLayout>
+    );
   }
   
   if (!investment) {
-    return <div className="text-center py-8">Investissement non trouvé</div>;
+    return (
+      <DashboardLayout>
+        <div className="text-center py-8">Investissement non trouvé</div>
+      </DashboardLayout>
+    );
   }
   
   const totalEarnings = transactions
@@ -94,13 +103,13 @@ export default function InvestmentTrackingPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <Link to="/dashboard" className="flex items-center text-bgs-blue hover:text-bgs-blue-light mb-6">
-        <ChevronLeft className="h-4 w-4 mr-1" />
-        Retour au tableau de bord
-      </Link>
-      
+    <DashboardLayout>
       <div className="space-y-8">
+        <Link to="/dashboard" className="flex items-center text-bgs-blue hover:text-bgs-blue-light mb-6">
+          <ChevronLeft className="h-4 w-4 mr-1" />
+          Retour au tableau de bord
+        </Link>
+        
         {/* Section 1: General Information */}
         <Card>
           <CardHeader>
@@ -235,6 +244,6 @@ export default function InvestmentTrackingPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </DashboardLayout>
   );
 }
