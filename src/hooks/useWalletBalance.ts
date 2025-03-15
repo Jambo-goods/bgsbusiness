@@ -92,9 +92,9 @@ export function useWalletBalance() {
           },
           (payload) => {
             console.log("Bank transfer changed in real-time:", payload);
-            // Check for status changes, especially to 'reçu'
-            if (payload.new && payload.new.status === 'reçu') {
-              console.log("Transfer status changed to 'reçu', refreshing balance...");
+            // Check for status changes, especially to 'reçu' or 'received'
+            if (payload.new && (payload.new.status === 'reçu' || payload.new.status === 'received')) {
+              console.log("Transfer status changed to 'received', refreshing balance...");
               fetchWalletBalance(false);
               toast.success("Un transfert bancaire a été confirmé");
             }

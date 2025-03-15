@@ -35,13 +35,18 @@ export default function BankTransferTableRow({
     hour: '2-digit',
     minute: '2-digit'
   });
+
+  // Check if status is 'received' (French: 'reçu' or English: 'received')
+  const isReceived = item.status === 'reçu' || item.status === 'received';
   
   return (
     <TableRow key={item.id}>
       <TableCell>
         <div className="font-medium">{formattedDate}</div>
         <Badge variant="outline" className="mt-1">
-          {item.status === 'pending' ? 'En attente' : item.status === 'completed' ? 'Confirmé' : 'Rejeté'}
+          {item.status === 'pending' ? 'En attente' : 
+           isReceived ? 'Reçu' : 
+           item.status === 'completed' ? 'Confirmé' : 'Rejeté'}
         </Badge>
       </TableCell>
       <TableCell>
@@ -54,7 +59,7 @@ export default function BankTransferTableRow({
         <div className="font-mono font-medium">{reference}</div>
       </TableCell>
       <TableCell>
-        {item.receipt_confirmed ? (
+        {item.receipt_confirmed || isReceived ? (
           <div className="flex items-center text-green-600">
             <CheckCircleIcon className="h-4 w-4 mr-1" />
             <span className="text-sm">Virement reçu</span>
@@ -81,6 +86,7 @@ export default function BankTransferTableRow({
               className="w-24 px-2 py-1 border rounded-md"
               id={`amount-${item.id}`}
               min="100"
+              defaultValue={item.amount || ""}
             />
             <Button
               variant="outline"
@@ -109,8 +115,9 @@ export default function BankTransferTableRow({
           </div>
         )}
         {item.status !== 'pending' && (
-          <Badge variant={item.status === 'completed' ? 'success' : 'destructive'}>
-            {item.status === 'completed' ? 'Traité' : 'Rejeté'}
+          <Badge variant={isReceived || item.status === 'completed' ? 'success' : 'destructive'}>
+            {isReceived ? 'Reçu' : 
+             item.status === 'completed' ? 'Traité' : 'Rejeté'}
           </Badge>
         )}
       </TableCell>

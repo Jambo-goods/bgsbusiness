@@ -15,7 +15,9 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
           image,
           status,
           duration,
-          yield
+          yield,
+          category,
+          funding_progress
         )
       `)
       .eq('id', investmentId)
@@ -46,10 +48,6 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
     );
     
     const remainingDuration = Math.max(0, totalMonths - elapsedMonths);
-
-    // Get user information if needed
-    // Since user_first_name and user_last_name don't exist directly on the investment object,
-    // we need to properly structure our data without these fields
     
     return {
       ...investment,

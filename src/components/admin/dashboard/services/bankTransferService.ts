@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -159,7 +160,7 @@ export const bankTransferService = {
       const { error: updateError } = await supabase
         .from('bank_transfers')
         .update({ 
-          status: 'reçu',
+          status: 'received',  // Changed to 'received' to match your status value
           confirmed_at: new Date().toISOString()
         })
         .eq('id', item.id);
@@ -169,22 +170,52 @@ export const bankTransferService = {
         throw updateError;
       }
       
-      console.log("Bank transfer status updated to 'reçu'");
+      console.log("Bank transfer status updated to 'received'");
       
       // Increment the user's wallet balance with the transfer amount
       if (transferData.amount) {
         console.log("Incrementing wallet balance by:", transferData.amount);
-        const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
-          user_id: item.user_id,
-          increment_amount: transferData.amount
-        });
+        
+        // Get current wallet balance for debugging
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', item.user_id)
+          .single();
+          
+        console.log("Current wallet balance before update:", profileData?.wallet_balance);
+        
+        // Update the profiles table directly instead of using the RPC function
+        const { error: balanceError } = await supabase
+          .from('profiles')
+          .update({
+            wallet_balance: (profileData?.wallet_balance || 0) + transferData.amount
+          })
+          .eq('id', item.user_id);
         
         if (balanceError) {
-          console.error("Error incrementing wallet balance:", balanceError);
-          throw balanceError;
+          console.error("Error updating wallet balance directly:", balanceError);
+          
+          // Fallback to RPC function if direct update fails
+          const { error: rpcError } = await supabase.rpc('increment_wallet_balance', {
+            user_id: item.user_id,
+            increment_amount: transferData.amount
+          });
+          
+          if (rpcError) {
+            console.error("Error incrementing wallet balance:", rpcError);
+            throw rpcError;
+          }
         }
         
-        console.log("Wallet balance incremented successfully");
+        // Verify the balance was updated
+        const { data: updatedProfile } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', item.user_id)
+          .single();
+          
+        console.log("Wallet balance after update:", updatedProfile?.wallet_balance);
         
         // Create a notification for the user
         await supabase
