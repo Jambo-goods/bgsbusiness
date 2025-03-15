@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw, Wallet } from "lucide-react";
@@ -28,6 +29,15 @@ interface BankTransfer {
   processed_at: string | null;
   confirmed_at: string | null;
   notes: string | null;
+}
+
+interface WithdrawalRequest {
+  id: string;
+  amount: number;
+  status: string;
+  requested_at: string;
+  processed_at: string | null;
+  bank_info: Record<string, any>;
 }
 
 interface PostgresChangePayload {
@@ -109,8 +119,33 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         .subscribe((status) => {
           console.log("Realtime subscription status for bank transfers:", status);
         });
+
+      // Add realtime subscription for withdrawal requests
+      const withdrawalsChannel = supabase
+        .channel('withdrawal-requests-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'withdrawal_requests',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload: PostgresChangePayload) => {
+            console.log("Withdrawal request changed in real-time:", payload);
+            fetchTransactions(false);
+            
+            if (payload.new && payload.new.status === 'completed' && 
+                (!payload.old || payload.old.status !== 'completed')) {
+              toast.success("Votre demande de retrait a été traitée");
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Realtime subscription status for withdrawal requests:", status);
+        });
       
-      return [transactionsChannel, transfersChannel];
+      return [transactionsChannel, transfersChannel, withdrawalsChannel];
     };
     
     const subscriptionPromise = setupRealtimeSubscriptions();
@@ -165,19 +200,24 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         console.error("Error fetching bank transfers:", transfersError);
         throw transfersError;
       }
+
+      // Fetch withdrawal requests
+      const { data: withdrawalsData, error: withdrawalsError } = await supabase
+        .from('withdrawal_requests')
+        .select('*')
+        .eq('user_id', userId);
+        
+      if (withdrawalsError) {
+        console.error("Error fetching withdrawal requests:", withdrawalsError);
+        throw withdrawalsError;
+      }
       
       console.log("Fetched transactions:", transactionsData ? transactionsData.length : 0);
       console.log("Fetched bank transfers:", transfersData ? transfersData.length : 0);
-      console.log("Bank transfers data:", transfersData);
+      console.log("Fetched withdrawal requests:", withdrawalsData ? withdrawalsData.length : 0);
       
       const transfersAsTransactions: Transaction[] = transfersData.map(transfer => {
         let timestamp = transfer.processed_at || transfer.confirmed_at || new Date().toISOString();
-        
-        console.log(`Transfer ID: ${transfer.id}, reference: ${transfer.reference}, amount: ${transfer.amount}, processed_at: ${transfer.processed_at}, confirmed_at: ${transfer.confirmed_at}, timestamp used: ${timestamp}, processed: ${transfer.processed}, status: ${transfer.status}`);
-        
-        if (!transfer.processed_at && !transfer.confirmed_at) {
-          console.warn(`Transfer ${transfer.id} has no timestamp values in processed_at or confirmed_at!`);
-        }
         
         return {
           id: transfer.id,
@@ -186,6 +226,23 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           description: `Virement bancaire reçu (réf: ${transfer.reference})`,
           created_at: timestamp,
           status: transfer.status === 'received' || transfer.status === 'reçu' ? 'completed' : 'pending',
+          raw_timestamp: timestamp
+        };
+      });
+
+      // Convert withdrawal requests to Transaction format
+      const withdrawalsAsTransactions: Transaction[] = withdrawalsData.map(withdrawal => {
+        const timestamp = withdrawal.processed_at || withdrawal.requested_at || new Date().toISOString();
+        const bankName = withdrawal.bank_info?.bankName || '';
+        const accountNumber = withdrawal.bank_info?.accountNumber || '';
+        
+        return {
+          id: withdrawal.id,
+          amount: withdrawal.amount || 0,
+          type: 'withdrawal' as const,
+          description: `Demande de retrait vers ${bankName} (${accountNumber.slice(-4)})`,
+          created_at: timestamp,
+          status: withdrawal.status,
           raw_timestamp: timestamp
         };
       });
@@ -200,9 +257,9 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         raw_timestamp: tx.created_at
       })) : [];
       
-      const allTransactions = [...typedTransactions, ...transfersAsTransactions]
+      const allTransactions = [...typedTransactions, ...transfersAsTransactions, ...withdrawalsAsTransactions]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 10);
+        .slice(0, 15); // Increased to show more transactions
       
       setTransactions(allTransactions);
       setError(null);
@@ -256,6 +313,16 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       return transaction.status === "pending" 
         ? "Virement bancaire en attente" 
         : "Virement bancaire reçu";
+    }
+
+    if (transaction.description && transaction.description.includes("Demande de retrait")) {
+      return transaction.status === "pending"
+        ? "Demande de retrait en attente"
+        : transaction.status === "completed"
+          ? "Retrait effectué"
+          : transaction.status === "cancelled"
+            ? "Retrait annulé"
+            : "Demande de retrait";
     }
     
     if (transaction.description && transaction.description.includes("Investissement dans")) {
@@ -314,10 +381,23 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                     <p className="font-medium text-bgs-blue">
                       {getTransactionLabel(transaction)}
                     </p>
+                    {transaction.status === "pending" && (
+                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        En attente
+                      </span>
+                    )}
+                    {transaction.status === "cancelled" && (
+                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        Annulé
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-bgs-gray-medium">
                     {formatRelativeTime(transaction.raw_timestamp || transaction.created_at)}
                   </p>
+                  {transaction.description && !transaction.description.includes("Virement bancaire") && !transaction.description.includes("Demande de retrait") && (
+                    <p className="text-sm text-bgs-gray-medium">{transaction.description}</p>
+                  )}
                 </div>
               </div>
               <p className={`font-semibold ${getAmountClass(transaction.type)}`}>
