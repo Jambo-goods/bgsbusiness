@@ -171,8 +171,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
         .select('*')
-        .eq('user_id', userId)
-        .in('status', ['received', 'reçu']);
+        .eq('user_id', userId);
         
       if (transfersError) {
         console.error("Error fetching bank transfers:", transfersError);
@@ -180,14 +179,20 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       }
       
       console.log("Fetched transactions:", transactionsData ? transactionsData.length : 0);
-      console.log("Fetched received bank transfers:", transfersData ? transfersData.length : 0);
+      console.log("Fetched bank transfers:", transfersData ? transfersData.length : 0);
       console.log("Bank transfers data:", transfersData);
       
       // Convertir les virements bancaires en format de transaction
       const transfersAsTransactions: Transaction[] = transfersData.map(transfer => {
-        // Utiliser processed_at comme horodatage principal pour les virements reçus
-        const timestamp = transfer.processed_at || transfer.confirmed_at || new Date().toISOString();
-        console.log(`Transfer ID: ${transfer.id}, reference: ${transfer.reference}, amount: ${transfer.amount}, processed_at: ${transfer.processed_at}, confirmed_at: ${transfer.confirmed_at}, timestamp used: ${timestamp}, processed: ${transfer.processed}`);
+        // Utiliser processed_at, confirmed_at ou now() comme timestamp, en vérifiant que l'on a une valeur
+        let timestamp = transfer.processed_at || transfer.confirmed_at || new Date().toISOString();
+        
+        console.log(`Transfer ID: ${transfer.id}, reference: ${transfer.reference}, amount: ${transfer.amount}, processed_at: ${transfer.processed_at}, confirmed_at: ${transfer.confirmed_at}, timestamp used: ${timestamp}, processed: ${transfer.processed}, status: ${transfer.status}`);
+        
+        // Pour le debugging, loggons les valeurs nulles ou vides
+        if (!transfer.processed_at && !transfer.confirmed_at) {
+          console.warn(`Transfer ${transfer.id} has no timestamp values in processed_at or confirmed_at!`);
+        }
         
         return {
           id: transfer.id,
@@ -195,7 +200,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           type: 'deposit' as const,
           description: `Virement bancaire reçu (réf: ${transfer.reference})`,
           created_at: timestamp,
-          status: transfer.processed ? 'completed' : 'pending',
+          status: transfer.status === 'received' || transfer.status === 'reçu' ? 'completed' : 'pending',
           raw_timestamp: timestamp // Store the exact timestamp as it is in the database
         };
       });
