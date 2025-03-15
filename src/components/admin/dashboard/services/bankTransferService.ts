@@ -141,13 +141,54 @@ export const bankTransferService = {
         .eq('id', item.id);
       
       // Update the bank_transfer status to indicate receipt confirmed
-      await supabase
+      const { error: updateError } = await supabase
         .from('bank_transfers')
         .update({ 
           status: 'reçu',
           confirmed_at: new Date().toISOString()
         })
         .eq('id', item.id);
+        
+      if (updateError) {
+        console.error("Error updating bank transfer status:", updateError);
+        throw updateError;
+      }
+      
+      // After changing status to reçu, we need to update the user's wallet balance
+      // First, get the transfer amount
+      const { data: transferData, error: fetchError } = await supabase
+        .from('bank_transfers')
+        .select('amount')
+        .eq('id', item.id)
+        .single();
+        
+      if (fetchError || !transferData) {
+        console.error("Error fetching transfer amount:", fetchError);
+        throw fetchError || new Error("Transfer not found");
+      }
+      
+      // Increment the user's wallet balance with the transfer amount
+      if (transferData.amount) {
+        await supabase.rpc('increment_wallet_balance', {
+          user_id: item.user_id,
+          increment_amount: transferData.amount
+        });
+        
+        // Create a notification for the user
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: item.user_id,
+            title: "Virement reçu",
+            description: `Votre virement de ${transferData.amount}€ a été reçu et ajouté à votre portefeuille.`,
+            type: "deposit",
+            category: "success",
+            metadata: {
+              amount: transferData.amount,
+              transaction_id: item.id
+            }
+          });
+      }
       
       // Log admin action
       if (adminUser.id) {

@@ -54,47 +54,63 @@ export function useWalletBalance() {
       fetchWalletBalance(false); // Don't show loading state for automatic updates
     }, 60000);
     
-    // Subscribe to wallet_transactions table changes for real-time updates
-    const channel = supabase
-      .channel('wallet-balance-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${supabase.auth.getSession().then(({ data }) => data.session?.user.id)}`
-        },
-        (payload) => {
-          console.log("Profile updated in real-time:", payload);
-          if (payload.new && typeof payload.new.wallet_balance === 'number') {
-            setWalletBalance(payload.new.wallet_balance);
-            toast.success("Votre solde a été mis à jour");
+    // Subscribe to both profiles table and bank_transfers table changes for real-time updates
+    const setupRealtimeSubscriptions = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      
+      if (!userId) return;
+      
+      const channel = supabase
+        .channel('wallet-balance-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("Profile updated in real-time:", payload);
+            if (payload.new && typeof payload.new.wallet_balance === 'number') {
+              setWalletBalance(payload.new.wallet_balance);
+              toast.success("Votre solde a été mis à jour");
+            }
           }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'bank_transfers',
-          filter: `user_id=eq.${supabase.auth.getSession().then(({ data }) => data.session?.user.id)}`
-        },
-        (payload) => {
-          console.log("Bank transfer updated in real-time:", payload);
-          if (payload.new.status === 'reçu' || payload.new.status === 'completed') {
-            fetchWalletBalance(false);
-            toast.success("Un transfert bancaire a été confirmé");
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'bank_transfers',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("Bank transfer updated in real-time:", payload);
+            if (payload.new.status === 'reçu') {
+              console.log("Transfer status changed to 'reçu', refreshing balance...");
+              fetchWalletBalance(false);
+              toast.success("Un transfert bancaire a été confirmé");
+            }
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe((status) => {
+          console.log("Realtime subscription status:", status);
+        });
+      
+      return channel;
+    };
+    
+    const subscriptionPromise = setupRealtimeSubscriptions();
     
     // Clean up on unmount
     return () => {
       clearInterval(pollingInterval);
-      supabase.removeChannel(channel);
+      subscriptionPromise.then(channel => {
+        if (channel) supabase.removeChannel(channel);
+      });
     };
   }, [fetchWalletBalance]);
 
