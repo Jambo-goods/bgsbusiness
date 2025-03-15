@@ -161,6 +161,7 @@ export const bankTransferService = {
         .from('bank_transfers')
         .update({ 
           status: 'received',  // Changed to 'received' to match your status value
+          receipt_confirmed: true,
           confirmed_at: new Date().toISOString()
         })
         .eq('id', item.id);
@@ -185,11 +186,14 @@ export const bankTransferService = {
           
         console.log("Current wallet balance before update:", profileData?.wallet_balance);
         
-        // Update the profiles table directly instead of using the RPC function
+        // Update the profiles table directly with the new balance
+        const newBalance = (profileData?.wallet_balance || 0) + transferData.amount;
+        console.log("New balance will be:", newBalance);
+        
         const { error: balanceError } = await supabase
           .from('profiles')
           .update({
-            wallet_balance: (profileData?.wallet_balance || 0) + transferData.amount
+            wallet_balance: newBalance
           })
           .eq('id', item.user_id);
         
