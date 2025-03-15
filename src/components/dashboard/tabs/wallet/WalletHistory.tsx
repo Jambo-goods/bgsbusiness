@@ -133,12 +133,19 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           },
           (payload: PostgresChangePayload) => {
             console.log("Withdrawal request changed in real-time:", payload);
-            fetchTransactions(false);
             
-            if (payload.new && payload.new.status === 'completed' && 
-                (!payload.old || payload.old.status !== 'completed')) {
-              toast.success("Votre demande de retrait a été traitée");
+            // Check if processed_at has been filled (wasn't filled before but is now)
+            if (payload.new && payload.new.processed_at && 
+                (!payload.old || !payload.old.processed_at)) {
+              console.log("Withdrawal request processed_at updated, refreshing transactions");
+              fetchTransactions(false);
+              
+              if (payload.new.status === 'completed') {
+                toast.success("Votre demande de retrait a été traitée et confirmée");
+              }
             }
+            
+            fetchTransactions(false);
           }
         )
         .subscribe((status) => {
@@ -230,22 +237,57 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         };
       });
 
+      // Safely handle bank_info which may be a string or an object
       // Convert withdrawal requests to Transaction format
       const withdrawalsAsTransactions: Transaction[] = withdrawalsData.map(withdrawal => {
         const timestamp = withdrawal.processed_at || withdrawal.requested_at || new Date().toISOString();
-        const bankName = withdrawal.bank_info?.bankName || '';
-        const accountNumber = withdrawal.bank_info?.accountNumber || '';
         
-        return {
-          id: withdrawal.id,
+        // Safely handle bank_info which might be a string or an object
+        let bankInfo: any = {};
+        if (typeof withdrawal.bank_info === 'string') {
+          try {
+            bankInfo = JSON.parse(withdrawal.bank_info);
+          } catch (e) {
+            console.error("Error parsing bank_info string:", e);
+          }
+        } else if (withdrawal.bank_info && typeof withdrawal.bank_info === 'object') {
+          bankInfo = withdrawal.bank_info;
+        }
+        
+        const bankName = bankInfo?.bankName || 'Votre banque';
+        const accountNumber = bankInfo?.accountNumber || '****';
+        const lastFour = typeof accountNumber === 'string' ? accountNumber.slice(-4) : '****';
+        
+        // Create a transaction for the request
+        const requestTransaction: Transaction = {
+          id: `${withdrawal.id}-request`,
           amount: withdrawal.amount || 0,
           type: 'withdrawal' as const,
-          description: `Demande de retrait vers ${bankName} (${accountNumber.slice(-4)})`,
-          created_at: timestamp,
+          description: `Demande de retrait vers ${bankName} (${lastFour})`,
+          created_at: withdrawal.requested_at || timestamp,
           status: withdrawal.status,
-          raw_timestamp: timestamp
+          raw_timestamp: withdrawal.requested_at || timestamp
         };
-      });
+        
+        const transactions = [requestTransaction];
+        
+        // If the withdrawal was processed, add a confirmation transaction
+        if (withdrawal.processed_at && withdrawal.status === 'completed') {
+          const confirmationTransaction: Transaction = {
+            id: `${withdrawal.id}-confirmed`,
+            amount: withdrawal.amount || 0,
+            type: 'withdrawal' as const,
+            description: `Retrait confirmé vers ${bankName} (${lastFour})`,
+            created_at: withdrawal.processed_at,
+            status: 'completed',
+            raw_timestamp: withdrawal.processed_at
+          };
+          
+          transactions.push(confirmationTransaction);
+        }
+        
+        return transactions;
+      }).flat(); // Flatten the array of arrays
       
       const typedTransactions: Transaction[] = transactionsData ? transactionsData.map(tx => ({
         id: tx.id,
@@ -325,6 +367,10 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
             : "Demande de retrait";
     }
     
+    if (transaction.description && transaction.description.includes("Retrait confirmé")) {
+      return "Retrait confirmé";
+    }
+    
     if (transaction.description && transaction.description.includes("Investissement dans")) {
       return "Investissement effectué";
     }
@@ -395,7 +441,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                   <p className="text-sm text-bgs-gray-medium">
                     {formatRelativeTime(transaction.raw_timestamp || transaction.created_at)}
                   </p>
-                  {transaction.description && !transaction.description.includes("Virement bancaire") && !transaction.description.includes("Demande de retrait") && (
+                  {transaction.description && !transaction.description.includes("Virement bancaire") && !transaction.description.includes("Demande de retrait") && !transaction.description.includes("Retrait confirmé") && (
                     <p className="text-sm text-bgs-gray-medium">{transaction.description}</p>
                   )}
                 </div>
