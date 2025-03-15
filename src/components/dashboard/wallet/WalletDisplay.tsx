@@ -1,24 +1,15 @@
 
 import { WalletCard } from "./WalletCard";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
-import { useState, useEffect } from "react";
 import { RefreshCw } from "lucide-react";
+import { useState } from "react";
 
 export function WalletDisplay() {
-  const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Handle manual refresh
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setIsRefreshing(true);
-    await refreshBalance();
     setTimeout(() => setIsRefreshing(false), 500);
   };
-
-  // Auto-refresh wallet balance when component mounts
-  useEffect(() => {
-    refreshBalance();
-  }, [refreshBalance]);
 
   return (
     <div className="space-y-4">
@@ -33,10 +24,7 @@ export function WalletDisplay() {
           Actualiser
         </button>
       </div>
-      <WalletCard 
-        balance={walletBalance} 
-        isLoading={isLoadingBalance}
-      />
+      <WalletCard />
     </div>
   );
 }

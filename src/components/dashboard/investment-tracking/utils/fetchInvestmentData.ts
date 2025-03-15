@@ -1,76 +1,65 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Investment, Transaction } from "../types/investment";
+import { calculateRemainingDuration } from "@/utils/investmentCalculations";
 
-export const fetchInvestmentDetails = async (investmentId: string) => {
+export async function fetchInvestmentData(investmentId: string) {
   try {
-    // Fetch investment with project details
-    const { data, error } = await supabase
-      .from("investments")
+    console.log("Fetching investment data for ID:", investmentId);
+    
+    // Fetch the investment details with project data
+    const { data: investmentData, error: investmentError } = await supabase
+      .from('investments')
       .select(`
         *,
-        projects (
-          name,
-          description,
-          category,
-          status,
-          image,
-          funding_progress,
-          yield
-        )
+        projects(*)
       `)
-      .eq("id", investmentId)
+      .eq('id', investmentId)
       .single();
-      
-    if (error) throw error;
+    
+    if (investmentError) throw investmentError;
+    if (!investmentData) throw new Error('Investment not found');
+    
+    console.log("Investment data fetched:", investmentData);
     
     // Calculate remaining duration
-    if (data) {
-      const investmentData = {...data};
-      const startDate = new Date(investmentData.date);
-      const endDate = new Date(startDate.setMonth(startDate.getMonth() + investmentData.duration));
-      const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
+    const remainingDuration = calculateRemainingDuration(
+      investmentData.date,
+      investmentData.duration
+    );
+    
+    // Add calculated fields to the investment data
+    const enhancedInvestmentData = {
+      ...investmentData,
+      remainingDuration
+    };
+    
+    // Fetch user profile information
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name, email, phone')
+      .eq('id', investmentData.user_id)
+      .single();
       
-      // Add calculated fields
-      const enhancedData = {
-        ...investmentData,
-        remainingDuration: remainingMonths
-      };
-      
-      // Fetch user information
-      const { data: userData, error: userError } = await supabase
-        .from("profiles")
-        .select("first_name, last_name")
-        .eq("id", data.user_id)
-        .single();
-        
-      if (!userError && userData) {
-        enhancedData.user_first_name = userData.first_name;
-        enhancedData.user_last_name = userData.last_name;
-      }
-      
-      return enhancedData as Investment;
+    if (userError) {
+      console.error("Error fetching user data:", userError);
+      // Continue without user data
     }
     
-    return null;
+    // Combine all data
+    const fullInvestmentData = {
+      ...enhancedInvestmentData,
+      user: userData || { 
+        first_name: 'Unknown', 
+        last_name: 'User',
+        email: '', 
+        phone: ''
+      }
+    };
+    
+    console.log("Enhanced investment data:", fullInvestmentData);
+    return fullInvestmentData;
   } catch (error) {
-    console.error("Error fetching investment details:", error);
-    return null;
+    console.error("Error in fetchInvestmentData:", error);
+    throw error;
   }
-};
-
-export const fetchTransactionHistory = async (userId: string) => {
-  try {
-    const { data, error } = await supabase
-      .from("wallet_transactions")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-      
-    if (error) throw error;
-    return data || [];
-  } catch (error) {
-    console.error("Error fetching transaction history:", error);
-    return [];
-  }
-};
+}
