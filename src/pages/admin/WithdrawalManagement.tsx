@@ -89,16 +89,19 @@ export default function WithdrawalManagement() {
         return;
       }
 
-      // Deduct the amount from the user's wallet balance
+      // First, change status to "scheduled" which will trigger our DB function to deduct the balance
       const {
-        error: walletError
-      } = await supabase.from('profiles').update({
-        wallet_balance: userData.wallet_balance - withdrawal.amount
-      }).eq('id', withdrawal.user_id);
+        error: scheduledError
+      } = await supabase.from('withdrawal_requests').update({
+        status: 'scheduled',
+      }).eq('id', withdrawal.id);
       
-      if (walletError) throw walletError;
+      if (scheduledError) throw scheduledError;
 
-      // Update withdrawal status
+      // Wait a moment for the trigger to execute
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Then update to "approved" status with admin info
       const {
         error: withdrawalError
       } = await supabase.from('withdrawal_requests').update({
@@ -180,6 +183,11 @@ export default function WithdrawalManagement() {
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
             <Clock className="h-3 w-3 mr-1" />
             En attente
+          </span>;
+      case 'scheduled':
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <Clock className="h-3 w-3 mr-1" />
+            Programmé
           </span>;
       case 'approved':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">

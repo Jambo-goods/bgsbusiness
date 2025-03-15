@@ -58,7 +58,7 @@ serve(async (req) => {
       .from('withdrawal_requests')
       .select('amount')
       .eq('user_id', userId)
-      .in('status', ['approved', 'completed'])
+      .in('status', ['approved', 'completed', 'scheduled'])
       
     if (withdrawalsError) {
       console.error('Error fetching withdrawals:', withdrawalsError)
