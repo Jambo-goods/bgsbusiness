@@ -14,20 +14,20 @@ export default function AverageYieldCard({
   annualYield = 0, 
   yieldChange 
 }: AverageYieldCardProps) {
-  // Always display 12% as the monthly yield value to match ReturnProjectionSection
-  const fixedYieldPercentage = 12;
+  // Calculate based on investments - using the value from props instead of hardcoding
+  const monthlyYieldPercentage = monthlyYield;
   
   return (
     <DashboardCard
       title="Rendement mensuel moyen"
-      value={`${fixedYieldPercentage}%`}
+      value={`${monthlyYieldPercentage}%`}
       icon={<TrendingUpIcon />}
       iconBgColor="bg-green-100"
       iconColor="text-green-600"
       changePercentage={yieldChange.value || "0%"}
       changeValue={yieldChange.value || "0%"}
       changeTimeframe="le dernier mois"
-      description={`${fixedYieldPercentage * 12}% annualisé`}
+      description={`${monthlyYieldPercentage * 12}% annualisé`}
     />
   );
 }

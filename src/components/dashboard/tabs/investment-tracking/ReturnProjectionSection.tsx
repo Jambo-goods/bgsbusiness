@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { PaymentRecord } from './types';
 import { Project } from '@/types/project';
+
 interface ReturnProjectionSectionProps {
   paymentRecords: PaymentRecord[];
   cumulativeExpectedReturns: PaymentRecord[];
@@ -9,7 +10,6 @@ interface ReturnProjectionSectionProps {
   userInvestments: Project[];
 }
 
-// Status badge component for better reusability
 const PaymentStatusBadge: React.FC<{
   status: string;
 }> = ({
@@ -31,7 +31,6 @@ const PaymentStatusBadge: React.FC<{
   }
 };
 
-// Loading state component
 const LoadingState: React.FC = () => <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
     <div className="animate-pulse">
       <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
@@ -43,20 +42,18 @@ const LoadingState: React.FC = () => <div className="bg-white p-6 rounded-xl sha
       </div>
     </div>
   </div>;
+
 const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   paymentRecords,
   cumulativeExpectedReturns,
   isLoading,
   userInvestments
 }) => {
-  // Format future payments to always be on the 5th of each month
   const futurePayments = useMemo(() => {
     const payments = cumulativeExpectedReturns.filter(payment => payment.status === 'scheduled' || payment.status === 'pending').map(payment => {
-      // Create a new date set to the 5th of the same month and year
       const originalDate = new Date(payment.date);
       const adjustedDate = new Date(originalDate.getFullYear(), originalDate.getMonth(), 5);
 
-      // If we're already past the 5th of this month, move to the 5th of next month
       if (originalDate.getDate() > 5 && payment.status === 'scheduled') {
         adjustedDate.setMonth(adjustedDate.getMonth() + 1);
       }
@@ -66,25 +63,15 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
       };
     });
 
-    // Sort by date to ensure chronological order
     return payments.sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [cumulativeExpectedReturns]);
 
-  // Calculate statistics
   const stats = useMemo(() => {
-    // Total received payments
     const totalReceived = paymentRecords.filter(payment => payment.status === 'paid').reduce((sum, payment) => sum + payment.amount, 0);
-
-    // Total pending payments
     const totalPending = paymentRecords.filter(payment => payment.status === 'pending' || payment.status === 'scheduled').reduce((sum, payment) => sum + payment.amount, 0);
-
-    // Average monthly return
     const paidPayments = paymentRecords.filter(payment => payment.status === 'paid');
     const averageMonthlyReturn = paidPayments.length > 0 ? totalReceived / paidPayments.length : 0;
-
-    // Calculate the average return as a percentage
-    // Using the fixed percentage for demonstration
-    const averageReturnPercentage = 12; // Fixed 12% as per the existing code
+    const averageReturnPercentage = 12;
 
     return {
       totalReceived,
@@ -93,13 +80,14 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
       averageReturnPercentage
     };
   }, [paymentRecords]);
+
   if (isLoading) {
     return <LoadingState />;
   }
 
-  // Fixed percentage for all payments (12%)
   const fixedPercentage = 12;
-  return <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="bg-green-50 p-2.5 rounded-lg">
@@ -112,7 +100,6 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
         </div>
       </div>
       
-      {/* New stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-green-50 p-4 rounded-lg border border-green-100">
           <div className="flex items-center mb-2">
@@ -197,6 +184,8 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
             Les versements suivants sont effectués le 5 de chaque mois.
           </p>
         </div>}
-    </div>;
+    </div>
+  );
 };
+
 export default ReturnProjectionSection;
