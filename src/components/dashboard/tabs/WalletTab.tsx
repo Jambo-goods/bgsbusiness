@@ -4,70 +4,22 @@ import { toast } from "sonner";
 import WalletBalance from "./wallet/WalletBalance";
 import ActionButtons from "./wallet/ActionButtons";
 import WalletHistory from "./wallet/WalletHistory";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 export default function WalletTab() {
-  const [balance, setBalance] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
-
-  useEffect(() => {
-    fetchWalletBalance();
-    
-    // Create polling for balance updates
-    const balanceInterval = setInterval(() => {
-      fetchWalletBalance(false); // Silent refresh (no loading indicator)
-    }, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(balanceInterval);
-  }, []);
-
-  const fetchWalletBalance = async (showLoading = true) => {
-    try {
-      if (showLoading) {
-        setIsLoading(true);
-      }
-      
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        toast.error("Veuillez vous connecter pour accéder à votre portefeuille");
-        setIsLoading(false);
-        return;
-      }
-      
-      // Fetch wallet balance from profiles table
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', session.session.user.id)
-        .maybeSingle();
-        
-      if (error) {
-        console.error("Erreur lors de la récupération du solde:", error);
-        toast.error("Impossible de récupérer votre solde");
-      } else {
-        console.log('Wallet balance updated:', data?.wallet_balance);
-        setBalance(data?.wallet_balance || 0);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la récupération du solde:", error);
-      toast.error("Impossible de récupérer votre solde");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
 
   const handleDeposit = async () => {
-    await fetchWalletBalance();
+    await refreshBalance();
   };
 
   const handleWithdraw = async () => {
-    await fetchWalletBalance();
+    await refreshBalance();
   };
 
   const handleTabChange = (tab: string) => {
@@ -77,9 +29,10 @@ export default function WalletTab() {
   return (
     <div className="space-y-6">
       <WalletBalance 
-        balance={balance} 
-        isLoading={isLoading} 
+        balance={walletBalance} 
+        isLoading={isLoadingBalance} 
         onTabChange={handleTabChange}
+        onRefresh={refreshBalance}
       />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -90,8 +43,8 @@ export default function WalletTab() {
         </TabsList>
         
         <TabsContent value="overview" className="space-y-6">
-          <ActionButtons onDeposit={handleDeposit} onWithdraw={handleWithdraw} refreshBalance={fetchWalletBalance} />
-          <WalletHistory refreshBalance={fetchWalletBalance} />
+          <ActionButtons onDeposit={handleDeposit} onWithdraw={handleWithdraw} refreshBalance={refreshBalance} />
+          <WalletHistory refreshBalance={refreshBalance} />
         </TabsContent>
         
         <TabsContent value="deposit">
@@ -111,7 +64,7 @@ export default function WalletTab() {
               <CardTitle>Retirer des fonds</CardTitle>
             </CardHeader>
             <CardContent>
-              <WithdrawFundsForm balance={balance} onWithdraw={handleWithdraw} />
+              <WithdrawFundsForm balance={walletBalance} onWithdraw={handleWithdraw} />
             </CardContent>
           </Card>
         </TabsContent>

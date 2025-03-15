@@ -25,13 +25,24 @@ export const bankTransferService = {
         })
         .eq('id', item.id);
       
-      // 2. Increment the user's wallet balance
+      // 2. Update bank_transfer status to "reçu" (received)
+      await supabase
+        .from('bank_transfers')
+        .update({ 
+          status: 'reçu',
+          processed: true,
+          processed_at: new Date().toISOString(),
+          amount: amount
+        })
+        .eq('id', item.id);
+      
+      // 3. Increment the user's wallet balance
       await supabase.rpc('increment_wallet_balance', {
         user_id: item.user_id,
         increment_amount: amount
       });
       
-      // 3. Create a notification for the user
+      // 4. Create a notification for the user
       await supabase
         .from('notifications')
         .insert({
@@ -46,7 +57,7 @@ export const bankTransferService = {
           }
         });
       
-      // 4. Log admin action
+      // 5. Log admin action
       if (adminUser.id) {
         await logAdminAction(
           adminUser.id,
@@ -78,7 +89,17 @@ export const bankTransferService = {
         .update({ status: 'rejected' })
         .eq('id', item.id);
       
-      // 2. Create a notification for the user
+      // 2. Update bank_transfer status to "rejected"
+      await supabase
+        .from('bank_transfers')
+        .update({ 
+          status: 'rejected',
+          processed: true,
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', item.id);
+      
+      // 3. Create a notification for the user
       await supabase
         .from('notifications')
         .insert({
@@ -89,7 +110,7 @@ export const bankTransferService = {
           category: "error"
         });
       
-      // 3. Log admin action
+      // 4. Log admin action
       if (adminUser.id) {
         await logAdminAction(
           adminUser.id,
@@ -117,6 +138,15 @@ export const bankTransferService = {
       await supabase
         .from('wallet_transactions')
         .update({ receipt_confirmed: true })
+        .eq('id', item.id);
+      
+      // Update the bank_transfer status to indicate receipt confirmed
+      await supabase
+        .from('bank_transfers')
+        .update({ 
+          status: 'reçu',
+          confirmed_at: new Date().toISOString()
+        })
         .eq('id', item.id);
       
       // Log admin action
