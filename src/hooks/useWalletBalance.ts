@@ -27,24 +27,7 @@ export function useWalletBalance() {
       const userId = session.session.user.id;
       console.log("Fetching wallet balance for user:", userId);
       
-      // First, check if there are any confirmed transfers that should be counted
-      const { data: transfersData, error: transfersError } = await supabase
-        .from('bank_transfers')
-        .select('amount')
-        .eq('user_id', userId)
-        .in('status', ['received', 'reçu']);
-        
-      if (transfersError) {
-        console.error("Error checking bank transfers:", transfersError);
-      } else {
-        console.log(`Found ${transfersData.length} confirmed transfers for user ${userId}`);
-        
-        // Calculate expected balance
-        const expectedBalance = transfersData.reduce((sum, transfer) => sum + (transfer.amount || 0), 0);
-        console.log(`Expected balance based on transfers: ${expectedBalance}€`);
-      }
-      
-      // Get the current balance from profile
+      // Get the current balance directly from the profile
       const { data, error } = await supabase
         .from('profiles')
         .select('wallet_balance')
@@ -83,65 +66,6 @@ export function useWalletBalance() {
         return;
       }
       
-      // Call the database function to recalculate the balance
-      const userId = session.session.user.id;
-      console.log("Recalculating wallet balance for user:", userId);
-      
-      // First, log all transfers that should be counted
-      const { data: transfersData, error: transfersError } = await supabase
-        .from('bank_transfers')
-        .select('id, amount, status')
-        .eq('user_id', userId)
-        .in('status', ['received', 'reçu']);
-        
-      if (transfersError) {
-        console.error("Error checking bank transfers:", transfersError);
-      } else {
-        console.log("Transfers that should be counted in balance:", transfersData);
-      }
-      
-      // Also check wallet transactions
-      const { data: transactionsData, error: transactionsError } = await supabase
-        .from('wallet_transactions')
-        .select('id, amount, type, status, created_at')
-        .eq('user_id', userId)
-        .eq('status', 'completed');
-        
-      if (transactionsError) {
-        console.error("Error checking wallet transactions:", transactionsError);
-      } else {
-        console.log("Completed transactions found:", transactionsData);
-        
-        // Calculate expected balance from transactions
-        const deposits = transactionsData
-          .filter(t => t.type === 'deposit')
-          .reduce((sum, t) => sum + (t.amount || 0), 0);
-          
-        const withdrawals = transactionsData
-          .filter(t => t.type === 'withdrawal')
-          .reduce((sum, t) => sum + (t.amount || 0), 0);
-          
-        console.log(`Expected balance from transactions: deposits ${deposits}€, withdrawals ${withdrawals}€, net ${deposits - withdrawals}€`);
-      }
-      
-      // Check for confirmed withdrawals that need to be deducted
-      const { data: withdrawalData, error: withdrawalError } = await supabase
-        .from('withdrawal_requests')
-        .select('id, amount, status, processed_at')
-        .eq('user_id', userId)
-        .in('status', ['completed', 'approved'])
-        .not('processed_at', 'is', null);
-        
-      if (withdrawalError) {
-        console.error("Error checking withdrawal requests:", withdrawalError);
-      } else if (withdrawalData && withdrawalData.length > 0) {
-        console.log("Confirmed withdrawals found:", withdrawalData);
-        
-        // Calculate total confirmed withdrawals
-        const confirmedWithdrawals = withdrawalData.reduce((sum, w) => sum + (w.amount || 0), 0);
-        console.log(`Total confirmed withdrawals: ${confirmedWithdrawals}€`);
-      }
-      
       // Call the Supabase Edge Function to recalculate the balance
       try {
         const { data, error } = await supabase.functions.invoke('recalculate-wallet-balance');
@@ -158,61 +82,7 @@ export function useWalletBalance() {
         }
       } catch (rpcError) {
         console.error("Error recalculating balance:", rpcError);
-        
-        // Fall back to manual calculation if function fails
-        console.log("Falling back to manual balance calculation");
-        
-        try {
-          // Manually calculate balance by adding deposits and subtracting withdrawals
-          const totalDeposits = (transfersData || []).reduce((sum, t) => sum + (t.amount || 0), 0);
-          
-          // Get deposit transactions
-          const { data: depositTxs } = await supabase
-            .from('wallet_transactions')
-            .select('amount')
-            .eq('user_id', userId)
-            .eq('type', 'deposit')
-            .eq('status', 'completed');
-            
-          const depositAmount = (depositTxs || []).reduce((sum, tx) => sum + (tx.amount || 0), 0);
-          
-          // Calculate all completed withdrawals from withdrawal_requests
-          const totalWithdrawalsFromRequests = (withdrawalData || []).reduce((sum, w) => sum + (w.amount || 0), 0);
-          
-          // Get withdrawal transactions
-          const { data: withdrawalTxs } = await supabase
-            .from('wallet_transactions')
-            .select('amount')
-            .eq('user_id', userId)
-            .eq('type', 'withdrawal')
-            .eq('status', 'completed');
-            
-          const withdrawalAmount = (withdrawalTxs || []).reduce((sum, tx) => sum + (tx.amount || 0), 0);
-          
-          // Final balance
-          const totalDepositsAll = totalDeposits + depositAmount;
-          const totalWithdrawalsAll = totalWithdrawalsFromRequests + withdrawalAmount;
-          const calculatedBalance = totalDepositsAll - totalWithdrawalsAll;
-          
-          console.log(`Manual calculation: deposits ${totalDepositsAll}€, withdrawals ${totalWithdrawalsAll}€, balance ${calculatedBalance}€`);
-          
-          // Update profile with calculated balance
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({ wallet_balance: calculatedBalance })
-            .eq('id', userId);
-            
-          if (updateError) {
-            throw updateError;
-          }
-          
-          // Update local state
-          setWalletBalance(calculatedBalance);
-          toast.success("Solde recalculé manuellement avec succès");
-        } catch (manualError) {
-          console.error("Error in manual balance calculation:", manualError);
-          toast.error("Erreur lors du recalcul manuel du solde");
-        }
+        toast.error("Erreur lors du recalcul du solde");
       }
       
       // Fetch the updated balance
@@ -337,9 +207,9 @@ export function useWalletBalance() {
               });
               
               // If the status changed to approved or completed
-              if ((status === 'approved' || status === 'completed') && 
-                  (oldPayload?.status !== 'approved' && oldPayload?.status !== 'completed')) {
-                console.log("Withdrawal status changed to 'approved' or 'completed', refreshing balance...");
+              if ((status === 'approved' || status === 'completed' || status === 'scheduled') && 
+                  (oldPayload?.status !== 'approved' && oldPayload?.status !== 'completed' && oldPayload?.status !== 'scheduled')) {
+                console.log("Withdrawal status changed to 'approved', 'completed', or 'scheduled', refreshing balance...");
                 fetchWalletBalance(false);
                 toast.info("Une demande de retrait a été traitée", {
                   description: "Votre solde a été mis à jour"

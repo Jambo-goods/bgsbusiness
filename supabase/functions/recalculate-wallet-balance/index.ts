@@ -84,10 +84,21 @@ serve(async (req) => {
       throw new Error('Failed to update wallet balance')
     }
     
+    // Get the updated wallet balance to return in response
+    const { data: updatedProfile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('wallet_balance')
+      .eq('id', userId)
+      .single()
+      
+    if (profileError) {
+      console.error('Error fetching updated profile:', profileError)
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: true, 
-        balance: calculatedBalance,
+        balance: updatedProfile?.wallet_balance || calculatedBalance,
         details: {
           deposits: totalDeposits,
           withdrawals: totalWithdrawals
