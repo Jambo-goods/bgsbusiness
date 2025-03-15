@@ -1,55 +1,44 @@
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
-import { useWalletTransactionUpdates } from "@/hooks/dashboard/useWalletTransactionUpdates";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
-import { useState } from "react";
-
-export function WalletBalance() {
-  const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Set up real-time updates for wallet transactions
-  useWalletTransactionUpdates(() => {
-    console.log("Wallet transaction updated, refreshing balance");
-    refreshBalance();
-  });
-
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await refreshBalance();
-    setTimeout(() => setIsRefreshing(false), 500);
-  };
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-md font-medium">
-          Solde disponible
-        </CardTitle>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-        >
-          <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Actualiser
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {isLoadingBalance ? (
-          <div className="animate-pulse h-10 bg-gray-200 rounded-md" />
-        ) : (
-          <div className="text-3xl font-bold text-bgs-blue py-2">
-            {walletBalance.toLocaleString()} €
+import React from "react";
+import { WalletCards, Euro, TrendingUp } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+interface WalletBalanceProps {
+  balance: number;
+  isLoading?: boolean;
+  onTabChange?: (tab: string) => void;
+}
+export default function WalletBalance({
+  balance,
+  isLoading = false,
+  onTabChange
+}: WalletBalanceProps) {
+  return <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 mb-6 hover:shadow-lg transition-all duration-300">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="bg-blue-50 p-2 rounded-lg">
+            <WalletCards className="h-5 w-5 text-bgs-blue" />
           </div>
-        )}
-        <p className="text-xs text-gray-500 mt-1">
-          Dernière mise à jour: {new Date().toLocaleTimeString()}
+          <h2 className="text-lg font-semibold text-bgs-blue">Solde disponible</h2>
+        </div>
+        
+      </div>
+      
+      {isLoading ? <Skeleton className="h-9 w-32 mb-4" /> : <div className="flex items-center text-3xl font-bold text-bgs-blue mb-4">
+          
+          {balance.toLocaleString('fr-FR')} €
+        </div>}
+      
+      <div className="border-t border-gray-100 pt-4">
+        <p className="text-sm text-bgs-gray-medium mb-4">
+          Votre solde disponible peut être utilisé pour investir dans de nouveaux projets ou être retiré sur votre compte bancaire.
         </p>
-      </CardContent>
-    </Card>
-  );
+        <div className="flex justify-between items-center">
+          <button className="text-bgs-blue hover:text-bgs-blue-light text-sm font-medium transition-colors" onClick={() => onTabChange && onTabChange('deposit')}>
+            Ajouter des fonds
+          </button>
+          <button className="text-bgs-orange hover:text-bgs-orange-light text-sm font-medium transition-colors" onClick={() => onTabChange && onTabChange('withdraw')}>
+            Effectuer un retrait
+          </button>
+        </div>
+      </div>
+    </div>;
 }

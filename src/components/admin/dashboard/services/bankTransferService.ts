@@ -114,17 +114,10 @@ export const bankTransferService = {
       const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
       
       // Update the wallet transaction with receipt confirmation
-      const { error } = await supabase
+      await supabase
         .from('wallet_transactions')
         .update({ receipt_confirmed: true })
         .eq('id', item.id);
-        
-      if (error) {
-        console.error("Error updating wallet transaction:", error);
-        throw error;
-      }
-      
-      console.log("Receipt confirmed for transaction:", item.id);
       
       // Log admin action
       if (adminUser.id) {
