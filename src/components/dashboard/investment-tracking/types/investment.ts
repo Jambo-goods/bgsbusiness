@@ -17,6 +17,8 @@ export interface Investment {
     company_name: string;
     location: string;
     yield: number;
+    category?: string;
+    funding_progress?: number;
   };
   user_first_name: string;
   user_last_name: string;
@@ -46,4 +48,15 @@ export interface InvestmentSubscription {
     image: string;
     yield: number;
   };
+}
+
+export interface Transaction {
+  id: string;
+  date: string;
+  amount: number;
+  type: string;
+  status: string;
+  description?: string;
+  projectId?: string;
+  projectName?: string;
 }

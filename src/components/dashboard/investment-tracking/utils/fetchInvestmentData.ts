@@ -15,7 +15,9 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
           image,
           company_name,
           location,
-          yield
+          yield,
+          category,
+          funding_progress
         ),
         profiles:user_id (
           first_name,
@@ -58,7 +60,11 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
       duration: data.duration,
       end_date: endDate ? endDate.toISOString() : '',
       remainingDuration,
-      projects: data.projects,
+      projects: {
+        ...data.projects,
+        category: data.projects?.category || '',
+        funding_progress: data.projects?.funding_progress || 0
+      },
       // Access the profiles data if it exists
       user_first_name: data.profiles?.first_name || '',
       user_last_name: data.profiles?.last_name || ''
