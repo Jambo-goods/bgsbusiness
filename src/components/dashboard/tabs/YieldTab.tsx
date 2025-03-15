@@ -23,6 +23,7 @@ const YieldTab = () => {
     monthlyReturn: number;
   }[]>([]);
   const [userInvestments, setUserInvestments] = useState<Project[]>([]);
+  const [hasShownNoInvestmentToast, setHasShownNoInvestmentToast] = useState(false);
   
   const mockProjects: Project[] = [
     {
@@ -205,6 +206,13 @@ const YieldTab = () => {
       
       if (!investmentsData || investmentsData.length === 0) {
         setIsLoading(false);
+        if (!hasShownNoInvestmentToast) {
+          toast.info("Aucun investissement", {
+            description: "Aucun investissement trouvé pour votre compte.",
+            id: "no-investments-toast-yield"
+          });
+          setHasShownNoInvestmentToast(true);
+        }
         return;
       }
       

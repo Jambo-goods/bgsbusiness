@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/types/project";
@@ -17,6 +18,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
   const [animateRefresh, setAnimateRefresh] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [hasShownNoInvestmentToast, setHasShownNoInvestmentToast] = useState(false);
   
   const loadRealTimeData = useCallback(async () => {
     setIsLoading(true);
@@ -67,14 +69,21 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
         }
         
         setPaymentRecords(realPayments);
+        setHasShownNoInvestmentToast(false);
         console.log("Updated payment records with data:", realPayments.length);
       } else {
         // No investments found
         console.log("No investments found");
         setPaymentRecords([]);
-        toast.info("Aucun investissement", {
-          description: "Aucun investissement trouvé pour votre compte."
-        });
+        
+        // Only show the toast once per session to avoid repeated notifications
+        if (!hasShownNoInvestmentToast) {
+          toast.info("Aucun investissement", {
+            description: "Aucun investissement trouvé pour votre compte.",
+            id: "no-investments-toast" // Add an ID to prevent duplicates
+          });
+          setHasShownNoInvestmentToast(true);
+        }
       }
     } catch (error) {
       console.error("Error loading investment data:", error);
@@ -86,7 +95,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       setIsLoading(false);
       setAnimateRefresh(false);
     }
-  }, [paymentRecords]);
+  }, [paymentRecords, hasShownNoInvestmentToast]);
   
   useEffect(() => {
     loadRealTimeData();
