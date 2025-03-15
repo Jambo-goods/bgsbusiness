@@ -27,7 +27,7 @@ interface BankTransfer {
   user_id: string;
   processed: boolean;
   processed_at: string | null;
-  created_at: string;
+  confirmed_at: string | null;
   notes: string | null;
 }
 
@@ -171,8 +171,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         .from('bank_transfers')
         .select('*')
         .eq('user_id', userId)
-        .in('status', ['received', 'reçu'])
-        .order('created_at', { ascending: false });
+        .in('status', ['received', 'reçu']);
         
       if (transfersError) {
         console.error("Error fetching bank transfers:", transfersError);
@@ -184,12 +183,12 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       
       // Convertir les virements bancaires en format de transaction
       const transfersAsTransactions: Transaction[] = transfersData.map(transfer => {
-        // Use processed_at as the timestamp if available, otherwise fall back to created_at
-        const timestamp = transfer.processed_at || transfer.created_at;
+        // Use processed_at as the timestamp if available, otherwise fall back to confirmed_at
+        const timestamp = transfer.processed_at || transfer.confirmed_at || new Date().toISOString();
         
         return {
           id: transfer.id,
-          amount: transfer.amount,
+          amount: transfer.amount || 0,
           type: 'deposit' as const,
           description: `Virement bancaire reçu (réf: ${transfer.reference})`,
           created_at: timestamp,
