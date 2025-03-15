@@ -97,8 +97,10 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
             
             // If status changed to 'received' or 'reçu', refresh transactions
             if (payload.new && 
+                typeof payload.new === 'object' &&
                 (payload.new.status === 'received' || payload.new.status === 'reçu') &&
                 (!payload.old || 
+                 typeof payload.old === 'object' &&
                  (payload.old.status !== 'received' && payload.old.status !== 'reçu'))) {
               
               console.log("Bank transfer marked as received, refreshing transactions");
@@ -178,7 +180,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       console.log("Fetched received bank transfers:", transfersData ? transfersData.length : 0);
       
       // Convertir les virements bancaires en format de transaction
-      const transfersAsTransactions = transfersData.map(transfer => ({
+      const transfersAsTransactions: Transaction[] = transfersData.map(transfer => ({
         id: transfer.id,
         amount: transfer.amount,
         type: 'deposit' as const,
@@ -187,8 +189,18 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         status: 'completed'
       }));
       
+      // S'assurer que toutes les transactions sont bien typées
+      const typedTransactions: Transaction[] = transactionsData ? transactionsData.map(tx => ({
+        id: tx.id,
+        amount: tx.amount,
+        type: tx.type as 'deposit' | 'withdrawal',
+        description: tx.description,
+        created_at: tx.created_at,
+        status: tx.status
+      })) : [];
+      
       // Fusionner et trier les transactions par date
-      const allTransactions = [...(transactionsData || []), ...transfersAsTransactions]
+      const allTransactions = [...typedTransactions, ...transfersAsTransactions]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 10); // Limiter à 10 transactions
       
