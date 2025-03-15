@@ -291,23 +291,10 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   };
 
   const getStatusBadge = (transaction: Transaction) => {
-    // Check if the transaction is a bank transfer that has been received
-    const isBankTransferReceived = 
-      transaction.description && 
-      (transaction.description.includes("Virement bancaire reçu") || 
-       (transaction.description.includes("Virement bancaire confirmé") && 
-        (transaction.status === "completed")));
-    
-    if (transaction.status === "pending" && !isBankTransferReceived) {
+    if (transaction.status === "pending") {
       return (
         <span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full ml-2">
           En attente
-        </span>
-      );
-    } else if (isBankTransferReceived) {
-      return (
-        <span className="text-xs font-medium bg-green-100 text-green-800 px-2 py-0.5 rounded-full ml-2">
-          Reçu
         </span>
       );
     }
