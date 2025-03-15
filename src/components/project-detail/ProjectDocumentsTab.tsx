@@ -1,63 +1,16 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { FileText, Download } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
-interface ProjectDocument {
-  name: string;
-  type: string;
-  size: string;
-}
+// Sample project documents
+const projectDocuments = [
+  { name: "Présentation du projet", type: "PDF", size: "2.4 MB" },
+  { name: "Analyse financière", type: "PDF", size: "1.8 MB" },
+  { name: "Contrat d'investissement", type: "PDF", size: "0.5 MB" },
+  { name: "Certification des équipements", type: "PDF", size: "3.1 MB" }
+];
 
 export default function ProjectDocumentsTab() {
-  const [projectDocuments, setProjectDocuments] = useState<ProjectDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchProjectDocuments() {
-      try {
-        // Here we would ideally fetch real documents from the database
-        setLoading(true);
-        
-        // For now, just set an empty array until we have a real database source
-        setProjectDocuments([]);
-      } catch (error) {
-        console.error("Error fetching project documents:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    
-    fetchProjectDocuments();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-fade-up">
-        <h2 className="text-xl font-semibold text-bgs-blue mb-6">Documents du projet</h2>
-        <div className="space-y-4">
-          <div className="animate-pulse">
-            <div className="h-16 bg-gray-200 rounded"></div>
-          </div>
-          <div className="animate-pulse">
-            <div className="h-16 bg-gray-200 rounded"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (projectDocuments.length === 0) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-fade-up">
-        <h2 className="text-xl font-semibold text-bgs-blue mb-6">Documents du projet</h2>
-        <div className="text-center py-10">
-          <p className="text-gray-500">Aucun document disponible pour ce projet.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-fade-up">
       <h2 className="text-xl font-semibold text-bgs-blue mb-6">Documents du projet</h2>
