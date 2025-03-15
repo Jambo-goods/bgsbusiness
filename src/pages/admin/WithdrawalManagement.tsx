@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -7,6 +8,7 @@ import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+
 export default function WithdrawalManagement() {
   const {
     adminUser
@@ -17,9 +19,11 @@ export default function WithdrawalManagement() {
   const [sortField, setSortField] = useState('requested_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [userData, setUserData] = useState<Record<string, any>>({});
+  
   useEffect(() => {
     fetchWithdrawals();
   }, [sortField, sortDirection]);
+  
   const fetchWithdrawals = async () => {
     try {
       setIsLoading(true);
@@ -39,7 +43,7 @@ export default function WithdrawalManagement() {
         const {
           data: users,
           error: userError
-        } = await supabase.from('profiles').select('id, first_name, last_name, email').in('id', userIds);
+        } = await supabase.from('profiles').select('id, first_name, last_name, email, wallet_balance').in('id', userIds);
         if (userError) throw userError;
         const userMap: Record<string, any> = {};
         users?.forEach(user => {
@@ -54,6 +58,7 @@ export default function WithdrawalManagement() {
       setIsLoading(false);
     }
   };
+  
   const handleSort = (field: string) => {
     if (field === sortField) {
       // Toggle direction if same field
@@ -64,17 +69,21 @@ export default function WithdrawalManagement() {
       setSortDirection('desc');
     }
   };
+  
   const handleApproveWithdrawal = async (withdrawal: any) => {
     if (!adminUser || !window.confirm(`Êtes-vous sûr de vouloir approuver ce retrait de ${withdrawal.amount}€ ?`)) {
       return;
     }
+    
     try {
       // First check if user has enough balance
       const {
         data: userData,
         error: userError
       } = await supabase.from('profiles').select('wallet_balance').eq('id', withdrawal.user_id).single();
+      
       if (userError) throw userError;
+      
       if (userData.wallet_balance < withdrawal.amount) {
         toast.error("L'utilisateur n'a pas assez de fonds pour ce retrait");
         return;
@@ -88,6 +97,7 @@ export default function WithdrawalManagement() {
         admin_id: adminUser.id,
         processed_at: new Date().toISOString()
       }).eq('id', withdrawal.id);
+      
       if (withdrawalError) throw withdrawalError;
 
       // Create wallet transaction record
@@ -97,22 +107,28 @@ export default function WithdrawalManagement() {
         user_id: withdrawal.user_id,
         amount: withdrawal.amount,
         type: 'withdrawal',
+        status: 'completed',
         description: 'Retrait approuvé'
       });
+      
       if (transactionError) throw transactionError;
 
-      // Update user wallet balance
+      // Update user wallet balance by deducting the withdrawal amount
       const {
         error: walletError
       } = await supabase.rpc('increment_wallet_balance', {
         user_id: withdrawal.user_id,
         increment_amount: -withdrawal.amount
       });
+      
       if (walletError) throw walletError;
 
       // Log admin action
       await logAdminAction(adminUser.id, 'withdrawal_management', `Approbation d'un retrait de ${withdrawal.amount}€`, withdrawal.user_id, undefined, withdrawal.amount);
-      toast.success(`Retrait de ${withdrawal.amount}€ approuvé`);
+      
+      toast.success(`Retrait de ${withdrawal.amount}€ approuvé`, {
+        description: "Le solde de l'utilisateur a été mis à jour"
+      });
 
       // Refresh withdrawal list
       fetchWithdrawals();
@@ -121,6 +137,7 @@ export default function WithdrawalManagement() {
       toast.error("Une erreur s'est produite lors de l'approbation du retrait");
     }
   };
+  
   const handleRejectWithdrawal = async (withdrawal: any) => {
     if (!adminUser || !window.confirm(`Êtes-vous sûr de vouloir rejeter ce retrait de ${withdrawal.amount}€ ?`)) {
       return;
@@ -147,6 +164,7 @@ export default function WithdrawalManagement() {
       toast.error("Une erreur s'est produite lors du rejet du retrait");
     }
   };
+  
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -168,6 +186,7 @@ export default function WithdrawalManagement() {
         return <span>{status}</span>;
     }
   };
+  
   const filteredWithdrawals = withdrawals.filter(withdrawal => {
     const searchLower = searchTerm.toLowerCase();
     const user = userData[withdrawal.user_id] || {};
@@ -175,6 +194,7 @@ export default function WithdrawalManagement() {
     const userEmail = (user.email || '').toLowerCase();
     return userName.includes(searchLower) || userEmail.includes(searchLower);
   });
+  
   return <div>
       <h1 className="text-2xl font-semibold text-bgs-blue mb-6">Gestion des Demandes de Retrait</h1>
       
@@ -227,6 +247,7 @@ export default function WithdrawalManagement() {
                         <div>
                           <div className="font-medium">{user.first_name} {user.last_name}</div>
                           <div className="text-sm text-gray-500">{user.email}</div>
+                          <div className="text-xs text-gray-400">Solde: {user.wallet_balance || 0}€</div>
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{withdrawal.amount?.toLocaleString()} €</TableCell>

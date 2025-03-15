@@ -63,7 +63,7 @@ export function WalletCard() {
         )}
         
         <p className="text-sm text-gray-500 mt-4">
-          Votre solde est mis à jour automatiquement lorsque vos virements sont confirmés.
+          Votre solde est mis à jour automatiquement lorsque vos virements sont confirmés et vos retraits approuvés.
         </p>
       </CardContent>
     </Card>

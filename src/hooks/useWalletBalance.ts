@@ -315,6 +315,39 @@ export function useWalletBalance() {
             }
           }
         )
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'withdrawal_requests',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("Withdrawal request changed in real-time:", payload);
+            
+            if (payload.new && typeof payload.new === 'object') {
+              const newPayload = payload.new as Record<string, any>;
+              const oldPayload = payload.old as Record<string, any>;
+              const status = newPayload.status;
+              
+              console.log("Withdrawal request status change:", {
+                old: oldPayload?.status,
+                new: status,
+              });
+              
+              // If the status changed to approved or completed
+              if ((status === 'approved' || status === 'completed') && 
+                  (oldPayload?.status !== 'approved' && oldPayload?.status !== 'completed')) {
+                console.log("Withdrawal status changed to 'approved' or 'completed', refreshing balance...");
+                fetchWalletBalance(false);
+                toast.info("Une demande de retrait a été traitée", {
+                  description: "Votre solde a été mis à jour"
+                });
+              }
+            }
+          }
+        )
         .subscribe((status) => {
           console.log("Realtime subscription status for wallet balance:", status);
         });
