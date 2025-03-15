@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from "lucide-react";
@@ -16,6 +15,7 @@ interface Transaction {
   description: string | null;
   created_at: string;
   status: string;
+  raw_timestamp?: string; // Optional field to store the original timestamp
 }
 
 // Type pour les virements bancaires
@@ -194,7 +194,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           type: 'deposit' as const,
           description: `Virement bancaire reçu (réf: ${transfer.reference})`,
           created_at: timestamp,
-          status: transfer.processed ? 'completed' : 'pending'
+          status: transfer.processed ? 'completed' : 'pending',
+          raw_timestamp: transfer.confirmed_at // Store the original confirmed_at timestamp
         };
       });
       
@@ -252,22 +253,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       const date = new Date(dateString);
       const now = new Date();
       
-      // Si la transaction est récente (moins de 5 minutes), afficher "À l'instant"
-      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-      if (diffInMinutes < 5) {
-        return "À l'instant";
-      }
-      
-      // Pour les transactions de la journée, afficher l'heure exacte
-      if (date.toDateString() === now.toDateString()) {
-        return `Aujourd'hui à ${format(date, 'HH:mm', { locale: fr })}`;
-      }
-      
-      // Pour les transactions plus anciennes, utiliser le format relatif
-      return formatDistanceToNow(date, {
-        addSuffix: true,
-        locale: fr
-      });
+      // Afficher l'heure exacte pour toutes les transactions
+      return format(date, 'dd/MM/yyyy à HH:mm', { locale: fr });
     } catch (error) {
       console.error("Erreur de formatage de date:", error, "pour la date:", dateString);
       return "Date inconnue";
