@@ -120,7 +120,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           console.log("Realtime subscription status for bank transfers:", status);
         });
 
-      // Add realtime subscription for withdrawal requests with improved notification
+      // Add realtime subscription for withdrawal requests with improved notification and automatic balance deduction
       const withdrawalsChannel = supabase
         .channel('withdrawal-requests-changes')
         .on(
@@ -131,23 +131,63 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
             table: 'withdrawal_requests',
             filter: `user_id=eq.${userId}`
           },
-          (payload: PostgresChangePayload) => {
+          async (payload: PostgresChangePayload) => {
             console.log("Withdrawal request changed in real-time:", payload);
             
             // Check if processed_at has been filled (wasn't filled before but is now)
             if (payload.new && payload.new.processed_at && 
                 (!payload.old || !payload.old.processed_at)) {
               console.log("Withdrawal request processed_at updated, refreshing transactions");
-              fetchTransactions(false);
               
+              // Automatically update wallet balance when withdrawal is approved/completed
               if (payload.new.status === 'completed' || payload.new.status === 'approved') {
-                toast.success("Votre demande de retrait a été traitée et confirmée");
+                console.log(`Withdrawal of ${payload.new.amount}€ approved, deducting from wallet balance`);
+                
+                try {
+                  // Create a wallet transaction to record the withdrawal
+                  const { error: transactionError } = await supabase
+                    .from('wallet_transactions')
+                    .insert({
+                      user_id: userId,
+                      amount: payload.new.amount,
+                      type: 'withdrawal',
+                      description: 'Retrait confirmé vers votre compte bancaire',
+                      status: 'completed'
+                    });
+                    
+                  if (transactionError) {
+                    console.error("Error creating withdrawal transaction:", transactionError);
+                  }
+                  
+                  // Deduct the amount from the user's wallet balance
+                  const { error: balanceUpdateError } = await supabase.rpc(
+                    'increment_wallet_balance',
+                    { 
+                      user_id: userId,
+                      increment_amount: -payload.new.amount 
+                    }
+                  );
+                  
+                  if (balanceUpdateError) {
+                    console.error("Error updating wallet balance:", balanceUpdateError);
+                    toast.error("Erreur lors de la mise à jour de votre solde");
+                  } else {
+                    toast.success("Votre demande de retrait a été traitée et confirmée");
+                    
+                    // Refresh the balance display
+                    if (refreshBalance) {
+                      await refreshBalance();
+                    }
+                  }
+                } catch (err) {
+                  console.error("Error processing withdrawal approval:", err);
+                }
               } else if (payload.new.status === 'rejected') {
                 toast.error("Votre demande de retrait a été rejetée");
               }
+              
+              fetchTransactions(false);
             }
-            
-            fetchTransactions(false);
           }
         )
         .subscribe((status) => {
