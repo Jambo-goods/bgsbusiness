@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -240,10 +241,30 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   };
 
   const formatRelativeTime = (dateString: string) => {
-    return formatDistanceToNow(new Date(dateString), {
-      addSuffix: true,
-      locale: fr
-    });
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      
+      // Si la transaction est récente (moins de 5 minutes), afficher "À l'instant"
+      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      if (diffInMinutes < 5) {
+        return "À l'instant";
+      }
+      
+      // Pour les transactions de la journée, afficher l'heure exacte
+      if (date.toDateString() === now.toDateString()) {
+        return `Aujourd'hui à ${format(date, 'HH:mm', { locale: fr })}`;
+      }
+      
+      // Pour les transactions plus anciennes, utiliser le format relatif
+      return formatDistanceToNow(date, {
+        addSuffix: true,
+        locale: fr
+      });
+    } catch (error) {
+      console.error("Erreur de formatage de date:", error);
+      return "Date inconnue";
+    }
   };
 
   const getTransactionLabel = (transaction: Transaction) => {
