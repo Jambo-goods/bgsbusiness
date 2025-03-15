@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -15,9 +16,11 @@ export const bankTransferService = {
       // Get current admin information
       const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
       
+      console.log(`Starting confirmDeposit for item ${item.id} with amount ${amount}`);
+      
       // Update the bank_transfer status to "reçu" (received)
       // The database trigger will handle updating the wallet balance
-      await supabase
+      const { error: updateError } = await supabase
         .from('bank_transfers')
         .update({ 
           status: 'reçu',
@@ -26,6 +29,27 @@ export const bankTransferService = {
           amount: amount
         })
         .eq('id', item.id);
+        
+      if (updateError) {
+        console.error("Error updating bank transfer:", updateError);
+        toast.error("Erreur lors de la mise à jour du transfert bancaire");
+        throw updateError;
+      }
+      
+      console.log(`Bank transfer updated successfully. Status set to 'reçu' with amount ${amount}`);
+      
+      // Force recalculate the user's wallet balance to ensure it's updated
+      console.log(`Recalculating wallet balance for user ${item.user_id}`);
+      const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance', {
+        user_uuid: item.user_id
+      });
+      
+      if (rpcError) {
+        console.error("Error recalculating balance:", rpcError);
+        // Continue anyway since the trigger should have handled it
+      } else {
+        console.log(`Successfully recalculated balance for user ${item.user_id}`);
+      }
       
       // Create a notification for the user
       await supabase
@@ -160,6 +184,19 @@ export const bankTransferService = {
       }
       
       console.log("Successfully updated bank transfer status");
+      
+      // Force recalculate the user's wallet balance to ensure it's updated
+      console.log(`Recalculating wallet balance for user ${item.user_id}`);
+      const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance', {
+        user_uuid: item.user_id
+      });
+      
+      if (rpcError) {
+        console.error("Error recalculating balance:", rpcError);
+        // Continue anyway since the trigger should have handled it
+      } else {
+        console.log(`Successfully recalculated balance for user ${item.user_id}`);
+      }
       
       // Create notification for the user
       await supabase

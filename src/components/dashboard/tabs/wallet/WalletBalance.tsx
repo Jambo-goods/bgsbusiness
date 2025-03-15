@@ -1,8 +1,9 @@
 
 import React from "react";
-import { WalletCards, RefreshCw, CalculatorIcon } from "lucide-react";
+import { WalletCards, RefreshCw, CalculatorIcon, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface WalletBalanceProps {
   balance: number;
@@ -59,6 +60,15 @@ export default function WalletBalance({
         <div className="flex items-center text-3xl font-bold text-bgs-blue mb-4">
           {balance.toLocaleString('fr-FR')} €
         </div>
+      )}
+      
+      {balance === 0 && !isLoading && (
+        <Alert className="mb-4 bg-amber-50 border-amber-200">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            Votre solde est à zéro. Si vous avez effectué des dépôts, cliquez sur "Recalculer" pour mettre à jour votre solde.
+          </AlertDescription>
+        </Alert>
       )}
       
       <div className="border-t border-gray-100 pt-4">

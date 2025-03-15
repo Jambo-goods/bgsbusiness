@@ -14,6 +14,14 @@ export default function WalletTab() {
   const [activeTab, setActiveTab] = useState("overview");
   const { walletBalance, isLoadingBalance, refreshBalance, recalculateBalance } = useWalletBalance();
 
+  // Auto-recalculate when tab loads if balance is zero
+  useEffect(() => {
+    if (walletBalance === 0 && !isLoadingBalance) {
+      console.log("Wallet balance is zero, automatically recalculating...");
+      recalculateBalance();
+    }
+  }, [walletBalance, isLoadingBalance, recalculateBalance]);
+
   const handleDeposit = async () => {
     await refreshBalance();
   };

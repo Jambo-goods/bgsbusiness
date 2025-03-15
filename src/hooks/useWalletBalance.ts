@@ -18,17 +18,37 @@ export function useWalletBalance() {
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
+        console.log("No active session found, setting balance to 0");
         setWalletBalance(0);
         setIsLoadingBalance(false);
         return;
       }
       
-      console.log("Fetching wallet balance for user:", session.session.user.id);
+      const userId = session.session.user.id;
+      console.log("Fetching wallet balance for user:", userId);
       
+      // First, check if there are any confirmed transfers that should be counted
+      const { data: transfersData, error: transfersError } = await supabase
+        .from('bank_transfers')
+        .select('amount')
+        .eq('user_id', userId)
+        .in('status', ['received', 'reçu']);
+        
+      if (transfersError) {
+        console.error("Error checking bank transfers:", transfersError);
+      } else {
+        console.log(`Found ${transfersData.length} confirmed transfers for user ${userId}`);
+        
+        // Calculate expected balance
+        const expectedBalance = transfersData.reduce((sum, transfer) => sum + (transfer.amount || 0), 0);
+        console.log(`Expected balance based on transfers: ${expectedBalance}€`);
+      }
+      
+      // Get the current balance from profile
       const { data, error } = await supabase
         .from('profiles')
         .select('wallet_balance')
-        .eq('id', session.session.user.id)
+        .eq('id', userId)
         .maybeSingle();
         
       if (error) {
@@ -36,10 +56,16 @@ export function useWalletBalance() {
         setError("Erreur lors de la récupération du solde");
         setWalletBalance(0);
       } else {
-        console.log("Wallet balance fetched:", data?.wallet_balance);
+        console.log("Wallet balance fetched from profile:", data?.wallet_balance);
         // Convert null or undefined to 0
         const balance = data?.wallet_balance ?? 0;
         setWalletBalance(balance);
+        
+        // If balance is 0, try to recalculate it right away
+        if (balance === 0) {
+          console.log("Balance is 0, attempting auto-recalculation");
+          await recalculateBalance();
+        }
       }
     } catch (err) {
       console.error("Error:", err);
@@ -58,6 +84,7 @@ export function useWalletBalance() {
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
+        console.log("No active session found, cannot recalculate");
         setIsLoadingBalance(false);
         return;
       }
@@ -65,6 +92,19 @@ export function useWalletBalance() {
       // Call the database function to recalculate the balance
       const userId = session.session.user.id;
       console.log("Recalculating wallet balance for user:", userId);
+      
+      // First, log all transfers that should be counted
+      const { data: transfersData, error: transfersError } = await supabase
+        .from('bank_transfers')
+        .select('id, amount, status, created_at')
+        .eq('user_id', userId)
+        .in('status', ['received', 'reçu']);
+        
+      if (transfersError) {
+        console.error("Error checking bank transfers:", transfersError);
+      } else {
+        console.log("Transfers that should be counted in balance:", transfersData);
+      }
       
       const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance', {
         user_uuid: userId
@@ -138,12 +178,17 @@ export function useWalletBalance() {
           },
           (payload) => {
             console.log("Bank transfer changed in real-time:", payload);
-            // Fix TypeScript errors by proper type checking and type assertion
+            
             if (payload.new && typeof payload.new === 'object') {
               // Check for status changes, especially to 'reçu' or 'received'
               const newPayload = payload.new as Record<string, any>;
+              const oldPayload = payload.old as Record<string, any>;
               const status = newPayload.status;
-              console.log("New bank transfer status:", status);
+              
+              console.log("Bank transfer status change:", {
+                old: oldPayload?.status,
+                new: status,
+              });
               
               if (status === 'reçu' || status === 'received') {
                 console.log("Transfer status changed to 'received', refreshing balance...");
