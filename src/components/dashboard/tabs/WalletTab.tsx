@@ -9,12 +9,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
-import { useBankTransferStatus } from "@/hooks/useBankTransferStatus";
 
 export default function WalletTab() {
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+
+  useEffect(() => {
+    fetchWalletBalance();
+    
+    // Create polling for balance updates
+    const balanceInterval = setInterval(() => {
+      fetchWalletBalance(false); // Silent refresh (no loading indicator)
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(balanceInterval);
+  }, []);
 
   const fetchWalletBalance = async (showLoading = true) => {
     try {
@@ -52,20 +62,6 @@ export default function WalletTab() {
     }
   };
 
-  // Set up subscription to bank transfer status changes
-  const { isLoading: isProcessingTransfer } = useBankTransferStatus(fetchWalletBalance);
-
-  useEffect(() => {
-    fetchWalletBalance();
-    
-    // Create polling for balance updates
-    const balanceInterval = setInterval(() => {
-      fetchWalletBalance(false); // Silent refresh (no loading indicator)
-    }, 30000); // Check every 30 seconds
-    
-    return () => clearInterval(balanceInterval);
-  }, []);
-
   const handleDeposit = async () => {
     await fetchWalletBalance();
   };
@@ -82,7 +78,7 @@ export default function WalletTab() {
     <div className="space-y-6">
       <WalletBalance 
         balance={balance} 
-        isLoading={isLoading || isProcessingTransfer} 
+        isLoading={isLoading} 
         onTabChange={handleTabChange}
       />
       

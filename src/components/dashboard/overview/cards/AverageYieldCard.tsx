@@ -14,9 +14,8 @@ export default function AverageYieldCard({
   annualYield = 0, 
   yieldChange 
 }: AverageYieldCardProps) {
-  // Use the monthly yield directly
+  // Calculate based on investments - using the value from props instead of hardcoding
   const monthlyYieldPercentage = monthlyYield;
-  const annualYieldPercentage = annualYield || monthlyYieldPercentage * 12;
   
   return (
     <DashboardCard
@@ -28,7 +27,7 @@ export default function AverageYieldCard({
       changePercentage={yieldChange.value || "0%"}
       changeValue={yieldChange.value || "0%"}
       changeTimeframe="le dernier mois"
-      description={`${annualYieldPercentage}% annualisé`}
+      description={`${monthlyYieldPercentage * 12}% annualisé`}
     />
   );
 }

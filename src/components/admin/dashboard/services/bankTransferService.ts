@@ -119,29 +119,6 @@ export const bankTransferService = {
         .update({ receipt_confirmed: true })
         .eq('id', item.id);
       
-      // Extract reference from description if available
-      const referenceMatch = item.description.match(/\(réf: (.+?)\)/);
-      const reference = referenceMatch ? referenceMatch[1] : '';
-      
-      // Update bank_transfers table status to 'received'
-      if (reference) {
-        const { error: bankTransferError } = await supabase
-          .from('bank_transfers')
-          .update({ 
-            status: 'received',
-            amount: item.amount // Ensure the amount is also set in the bank_transfers table
-          })
-          .eq('reference', reference);
-          
-        if (bankTransferError) {
-          console.error("Erreur lors de la mise à jour du statut du virement:", bankTransferError);
-        } else {
-          console.log(`Bank transfer with reference ${reference} marked as received`);
-        }
-      } else {
-        console.warn("No reference found in description:", item.description);
-      }
-      
       // Log admin action
       if (adminUser.id) {
         await logAdminAction(

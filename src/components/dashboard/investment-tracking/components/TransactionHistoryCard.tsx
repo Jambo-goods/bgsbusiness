@@ -33,7 +33,7 @@ export default function TransactionHistoryCard({ transactions }: TransactionHist
           <TableBody>
             {transactions.map((transaction) => (
               <TableRow key={transaction.id}>
-                <TableCell>{formatDate(transaction.date)}</TableCell>
+                <TableCell>{formatDate(transaction.created_at)}</TableCell>
                 <TableCell>{transaction.type === 'yield' ? 'Gain reçu' : 'Investissement'}</TableCell>
                 <TableCell className={transaction.type === 'yield' ? 'text-green-600' : 'text-red-600'}>
                   {transaction.type === 'yield' ? '+' : '-'}{transaction.amount}€

@@ -1,13 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Investment, Transaction } from "../types/investment";
-import { fetchInvestmentData } from "../utils/fetchInvestmentData";
-
-// Mock function for transaction history until we implement the real one
-const fetchTransactionHistory = async (userId: string): Promise<Transaction[]> => {
-  // In a real implementation, this would fetch from the database
-  return [];
-};
+import { fetchInvestmentDetails, fetchTransactionHistory } from "../utils/fetchInvestmentData";
 
 export function useInvestmentTracking(investmentId: string | undefined) {
   const [investment, setInvestment] = useState<Investment | null>(null);
@@ -22,7 +16,7 @@ export function useInvestmentTracking(investmentId: string | undefined) {
       
       try {
         setLoading(true);
-        const investmentData = await fetchInvestmentData(investmentId);
+        const investmentData = await fetchInvestmentDetails(investmentId);
         
         if (investmentData) {
           setInvestment(investmentData);
@@ -47,7 +41,7 @@ export function useInvestmentTracking(investmentId: string | undefined) {
     
     try {
       setIsRefreshing(true);
-      const refreshedInvestment = await fetchInvestmentData(investmentId);
+      const refreshedInvestment = await fetchInvestmentDetails(investmentId);
       
       if (refreshedInvestment) {
         setInvestment(refreshedInvestment);

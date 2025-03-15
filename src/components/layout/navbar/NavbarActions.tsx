@@ -7,7 +7,6 @@ import DashboardMenuDropdown from "./DashboardMenuDropdown";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
-import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
@@ -22,7 +21,7 @@ export default function NavbarActions({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const { walletBalance, refreshBalance } = useWalletBalance();
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -35,6 +34,26 @@ export default function NavbarActions({
         } = await supabase.auth.getSession();
         const hasSession = !!data.session;
         setIsAuthenticated(hasSession);
+        
+        if (hasSession) {
+          try {
+            const { data: profileData, error } = await supabase
+              .from('profiles')
+              .select('wallet_balance')
+              .eq('id', data.session.user.id)
+              .maybeSingle();
+              
+            if (!error && profileData) {
+              setWalletBalance(profileData.wallet_balance || 0);
+            } else {
+              console.error("Error fetching wallet balance:", error);
+              setWalletBalance(0);
+            }
+          } catch (err) {
+            console.error("Failed to fetch wallet balance:", err);
+            setWalletBalance(0);
+          }
+        }
       } catch (error) {
         console.error("Error checking authentication:", error);
         setIsAuthenticated(false);

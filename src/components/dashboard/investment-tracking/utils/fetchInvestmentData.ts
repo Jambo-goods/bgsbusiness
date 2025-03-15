@@ -1,78 +1,76 @@
 
-import { Investment } from '../types/investment';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
+import { Investment } from "../types/investment";
 
-export async function fetchInvestmentData(investmentId: string): Promise<Investment | null> {
+export const fetchInvestmentDetails = async (investmentId: string) => {
   try {
-    // Fetch the investment details with the project information
+    // Fetch investment with project details
     const { data, error } = await supabase
-      .from('investments')
+      .from("investments")
       .select(`
         *,
-        projects:project_id (
+        projects (
           name,
           description,
-          image,
-          company_name,
-          location,
-          yield,
           category,
-          funding_progress
-        ),
-        profiles:user_id (
-          first_name,
-          last_name
+          status,
+          image,
+          funding_progress,
+          yield
         )
       `)
-      .eq('id', investmentId)
+      .eq("id", investmentId)
       .single();
-
-    if (error) {
-      console.error('Error fetching investment data:', error);
-      throw error;
-    }
-
-    if (!data) {
-      return null;
-    }
-
-    // Parse dates
-    const startDate = new Date(data.date);
-    const endDate = data.end_date ? new Date(data.end_date) : null;
+      
+    if (error) throw error;
     
-    // Calculate the remaining duration in months
-    let remainingDuration = 0;
-    if (endDate) {
-      const now = new Date();
-      const diffTime = endDate.getTime() - now.getTime();
-      remainingDuration = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30)));
+    // Calculate remaining duration
+    if (data) {
+      const investmentData = {...data};
+      const startDate = new Date(investmentData.date);
+      const endDate = new Date(startDate.setMonth(startDate.getMonth() + investmentData.duration));
+      const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
+      
+      // Add calculated fields
+      const enhancedData = {
+        ...investmentData,
+        remainingDuration: remainingMonths
+      };
+      
+      // Fetch user information
+      const { data: userData, error: userError } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", data.user_id)
+        .single();
+        
+      if (!userError && userData) {
+        enhancedData.user_first_name = userData.first_name;
+        enhancedData.user_last_name = userData.last_name;
+      }
+      
+      return enhancedData as Investment;
     }
-
-    // Create the investment object with the properly parsed and calculated data
-    const investment: Investment = {
-      id: data.id,
-      project_id: data.project_id,
-      user_id: data.user_id,
-      amount: data.amount,
-      yield_rate: data.yield_rate,
-      status: data.status,
-      date: startDate.toISOString(),
-      duration: data.duration,
-      end_date: endDate ? endDate.toISOString() : '',
-      remainingDuration,
-      projects: {
-        ...data.projects,
-        category: data.projects?.category || '',
-        funding_progress: data.projects?.funding_progress || 0
-      },
-      // Access the profiles data if it exists and safely handle it
-      user_first_name: data.profiles?.first_name || '',
-      user_last_name: data.profiles?.last_name || ''
-    };
-
-    return investment;
+    
+    return null;
   } catch (error) {
-    console.error('Error in fetchInvestmentData:', error);
+    console.error("Error fetching investment details:", error);
     return null;
   }
-}
+};
+
+export const fetchTransactionHistory = async (userId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from("wallet_transactions")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+      
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error("Error fetching transaction history:", error);
+    return [];
+  }
+};
