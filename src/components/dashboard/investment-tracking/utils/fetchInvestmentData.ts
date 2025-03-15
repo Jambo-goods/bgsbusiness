@@ -65,7 +65,7 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
         category: data.projects?.category || '',
         funding_progress: data.projects?.funding_progress || 0
       },
-      // Access the profiles data if it exists
+      // Access the profiles data if it exists and safely handle it
       user_first_name: data.profiles?.first_name || '',
       user_last_name: data.profiles?.last_name || ''
     };
