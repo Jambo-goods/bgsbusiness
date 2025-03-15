@@ -10,7 +10,6 @@ import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { supabase } from "@/integrations/supabase/client";
-import { notificationService } from "@/services/notifications";
 import { Wallet } from "lucide-react";
 
 export default function WalletTab() {
@@ -23,7 +22,7 @@ export default function WalletTab() {
     recalculateBalance();
   }, [recalculateBalance]);
 
-  // Setup notifications and wallet transaction subscriptions
+  // Setup wallet transaction subscriptions
   useEffect(() => {
     console.log("Setting up wallet tab subscriptions");
     
@@ -55,13 +54,10 @@ export default function WalletTab() {
                 (!payload.old || 
                  (payload.old.status !== 'received' && payload.old.status !== 'reçu'))) {
               
-              console.log("Bank transfer marked as received, refreshing balance and creating notification");
+              console.log("Bank transfer marked as received, refreshing balance");
               
               // Refresh wallet balance
               refreshBalance();
-              
-              // Create a notification
-              notificationService.depositSuccess(payload.new.amount);
               
               // Custom notification with the wallet icon for deposit success
               toast.custom((t) => (
@@ -88,51 +84,10 @@ export default function WalletTab() {
       return bankTransfersChannel;
     };
     
-    const setupNotificationSubscriptions = async () => {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const userId = sessionData.session?.user.id;
-      
-      if (!userId) return;
-      
-      console.log("Setting up notification subscriptions for user:", userId);
-      
-      // Subscribe to notifications table changes
-      const notificationsChannel = supabase
-        .channel('wallet-notifications-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${userId}`
-          },
-          (payload) => {
-            console.log("New notification received:", payload);
-            if (payload.new) {
-              const notification = payload.new as Record<string, any>;
-              toast.success(notification.title, {
-                description: notification.description
-              });
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log("Realtime subscription status for notifications:", status);
-        });
-      
-      return notificationsChannel;
-    };
-    
     const bankTransferPromise = setupBankTransferSubscriptions();
-    const notificationPromise = setupNotificationSubscriptions();
     
     return () => {
       bankTransferPromise.then(channel => {
-        if (channel) supabase.removeChannel(channel);
-      });
-      
-      notificationPromise.then(channel => {
         if (channel) supabase.removeChannel(channel);
       });
     };
@@ -140,8 +95,6 @@ export default function WalletTab() {
 
   const handleDeposit = async () => {
     await refreshBalance();
-    // Create a test notification on deposit
-    await notificationService.depositSuccess(500);
   };
 
   const handleWithdraw = async () => {
