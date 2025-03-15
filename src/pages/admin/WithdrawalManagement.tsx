@@ -125,6 +125,16 @@ export default function WithdrawalManagement() {
       // Log admin action
       await logAdminAction(adminUser.id, 'withdrawal_management', `Approbation d'un retrait de ${withdrawal.amount}€`, withdrawal.user_id, undefined, withdrawal.amount);
       
+      // Force a recalculation of the user's wallet balance
+      try {
+        await supabase.functions.invoke('recalculate-wallet-balance', {
+          body: { userId: withdrawal.user_id }
+        });
+      } catch (recalcError) {
+        console.error("Error recalculating wallet balance:", recalcError);
+        // Continue even if recalculation fails - we've already updated the balance directly
+      }
+      
       toast.success(`Retrait de ${withdrawal.amount}€ approuvé`, {
         description: "Le solde de l'utilisateur a été mis à jour"
       });
