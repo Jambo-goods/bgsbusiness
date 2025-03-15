@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Bell, BellRing, Settings, Info, AlertTriangle, Clock, CheckCircle, XCircle } from "lucide-react";
@@ -9,40 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 const NotificationsTab = () => {
-  const [showDemo, setShowDemo] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
   
-  // Fonction pour démontrer les différents types de notifications
-  const demonstrateNotifications = () => {
-    setShowDemo(true);
-    
-    // Délai de 1 seconde entre chaque notification pour meilleure expérience
-    setTimeout(() => {
-      notificationService.depositSuccess(1000);
-    }, 1000);
-    
-    setTimeout(() => {
-      notificationService.investmentConfirmed(5000, "Projet Exemple", "123");
-    }, 3000);
-    
-    setTimeout(() => {
-      notificationService.yieldReceived(250, "Projet Exemple");
-    }, 5000);
-    
-    setTimeout(() => {
-      notificationService.withdrawalStatus(500, "pending");
-    }, 7000);
-    
-    setTimeout(() => {
-      notificationService.newInvestmentOpportunity("Nouveau Projet", "456");
-    }, 9000);
-    
-    // Réinitialise après la démo
-    setTimeout(() => {
-      setShowDemo(false);
-    }, 12000);
-  };
-
   // État pour indiquer qu'il n'y a pas de notifications
   const emptyState = (
     <div className="text-center py-8">
@@ -109,14 +76,6 @@ const NotificationsTab = () => {
                 <CardTitle className="text-xl">Toutes les notifications</CardTitle>
                 <CardDescription>Consultez l'ensemble de vos notifications</CardDescription>
               </div>
-              <Button 
-                onClick={demonstrateNotifications} 
-                disabled={showDemo}
-                variant="outline"
-                size="sm"
-              >
-                {showDemo ? "Démo en cours..." : "Voir exemples en direct"}
-              </Button>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
