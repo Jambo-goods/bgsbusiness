@@ -14,6 +14,11 @@ export const notificationService = {
     toast.success("Investissement confirmé", {
       description: `Votre investissement de ${amount}€ dans ${projectName} a été confirmé.`,
       duration: 5000,
+      position: "top-right",
+      actionLabel: "Voir détails",
+      onActionClick: () => {
+        window.location.href = `/dashboard`;
+      }
     });
     return Promise.resolve();
   },
@@ -26,6 +31,11 @@ export const notificationService = {
     toast.info("Nouvelle opportunité", {
       description: `${projectName} est maintenant disponible pour investissement.`,
       duration: 5000,
+      position: "top-right",
+      actionLabel: "Explorer",
+      onActionClick: () => {
+        window.location.href = `/projects/${projectId}`;
+      }
     });
     return Promise.resolve();
   },
@@ -38,6 +48,11 @@ export const notificationService = {
     toast.success("Dépôt réussi", {
       description: `Votre dépôt de ${amount}€ a été crédité sur votre compte.`,
       duration: 5000,
+      position: "top-right",
+      actionLabel: "Voir wallet",
+      onActionClick: () => {
+        window.location.href = `/dashboard`;
+      }
     });
     return Promise.resolve();
   },
@@ -50,6 +65,11 @@ export const notificationService = {
     toast.success("Rendement reçu", {
       description: `Vous avez reçu ${amount}€ de rendement pour votre investissement dans ${projectName}.`,
       duration: 5000,
+      position: "top-right",
+      actionLabel: "Détails",
+      onActionClick: () => {
+        window.location.href = `/dashboard`;
+      }
     });
     return Promise.resolve();
   },
@@ -77,6 +97,11 @@ export const notificationService = {
     statusTypes[status](`Retrait de ${amount}€`, {
       description: statusMessages[status],
       duration: 5000,
+      position: "top-right",
+      actionLabel: status === 'rejected' ? "Réessayer" : "Détails",
+      onActionClick: () => {
+        window.location.href = `/dashboard`;
+      }
     });
     
     return Promise.resolve();

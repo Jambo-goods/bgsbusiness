@@ -1,9 +1,9 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/types/project";
 import { PaymentRecord } from "./types";
 import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 import { 
   fetchRealTimeInvestmentData,
   generatePaymentsFromRealData
@@ -44,6 +44,28 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       if (investments && investments.length > 0) {
         // Use investment data to generate payment records
         const realPayments = generatePaymentsFromRealData(investments);
+        
+        // Check if there are any new payments since last check
+        if (paymentRecords.length > 0) {
+          const newPayments = realPayments.filter(
+            newPayment => 
+              newPayment.status === 'paid' && 
+              !paymentRecords.some(
+                oldPayment => 
+                  oldPayment.id === newPayment.id && 
+                  oldPayment.status === 'paid'
+              )
+          );
+          
+          // Notify user of new payments
+          newPayments.forEach(payment => {
+            notificationService.yieldReceived(
+              payment.amount, 
+              payment.projectName || "votre investissement"
+            );
+          });
+        }
+        
         setPaymentRecords(realPayments);
         console.log("Updated payment records with data:", realPayments.length);
       } else {
@@ -64,7 +86,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       setIsLoading(false);
       setAnimateRefresh(false);
     }
-  }, []);
+  }, [paymentRecords]);
   
   useEffect(() => {
     loadRealTimeData();

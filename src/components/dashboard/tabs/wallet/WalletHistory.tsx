@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw, Wallet } from "lucide-react";
@@ -7,6 +6,7 @@ import { formatDistanceToNow, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 
 interface Transaction {
   id: string;
@@ -101,21 +101,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
               console.log("Bank transfer marked as received, refreshing transactions");
               fetchTransactions(false);
               
-              // Custom notification with the wallet icon for deposit success
-              toast.custom((t) => (
-                <div className="bg-blue-50 text-blue-700 p-4 rounded-lg shadow-lg border border-blue-200 flex items-start">
-                  <div className="bg-blue-100 p-2 rounded-full mr-3">
-                    <Wallet className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">Dépôt réussi</h3>
-                    <p>Votre dépôt de {payload.new.amount}€ a été crédité sur votre compte.</p>
-                  </div>
-                </div>
-              ), {
-                duration: 6000,
-                id: `deposit-success-${payload.new.id}`
-              });
+              // Utiliser le service de notification personnalisé
+              notificationService.depositSuccess(payload.new.amount);
             }
           }
         )

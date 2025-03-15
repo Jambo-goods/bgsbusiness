@@ -1,10 +1,10 @@
-
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { createProjectInDatabase } from "@/utils/projectUtils";
 import { Project } from "@/types/project";
 import { useNavigate } from "react-router-dom";
+import { notificationService } from "@/services/notifications";
 
 // Session validation function
 const validateUserSession = async () => {
@@ -216,10 +216,14 @@ export const useInvestmentConfirmation = (
         // Log successful investment
         console.log(`Investissement réussi: ${investmentAmount}€ dans ${project.name} pour ${selectedDuration} mois`);
         
+        // Notification via toast standard
         toast({
           title: "Investissement réussi !",
           description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
         });
+        
+        // Utiliser le service de notification personnalisé
+        notificationService.investmentConfirmed(investmentAmount, project.name, projectId);
         
         navigate("/dashboard");
       } catch (error) {

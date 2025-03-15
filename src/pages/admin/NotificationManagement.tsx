@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import AdminLayout from '@/layouts/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { RefreshCw, Send, Bell, LifeBuoy, Megaphone, Mail } from 'lucide-react';
+import { RefreshCw, Send, Bell, LifeBuoy, Megaphone, Mail, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
