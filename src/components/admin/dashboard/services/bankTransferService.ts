@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
 import { logAdminAction } from "@/services/adminAuthService";
-import { notificationService } from "@/services/notifications";
 
 export const bankTransferService = {
   async confirmDeposit(item: BankTransferItem, amount: number): Promise<boolean> {
@@ -54,23 +53,6 @@ export const bankTransferService = {
         console.log(`Successfully recalculated balance for user ${item.user_id}`);
       }
       
-      // Create a notification for the user
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: item.user_id,
-          title: "Dépôt réussi",
-          description: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
-          type: "deposit",
-          category: "success",
-          metadata: {
-            amount,
-            transaction_id: item.id,
-            timestamp: serverTimestamp // Add timestamp to metadata
-          },
-          created_at: serverTimestamp // Explicitly set creation time
-        });
-      
       // Log admin action
       if (adminUser.id) {
         await logAdminAction(
@@ -112,17 +94,6 @@ export const bankTransferService = {
           processed_at: new Date().toISOString()
         })
         .eq('id', item.id);
-      
-      // 3. Create a notification for the user
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: item.user_id,
-          title: "Dépôt rejeté",
-          description: "Votre demande de dépôt n'a pas pu être validée. Veuillez contacter le support pour plus d'informations.",
-          type: "deposit",
-          category: "error"
-        });
       
       // 4. Log admin action
       if (adminUser.id) {
@@ -206,23 +177,6 @@ export const bankTransferService = {
       } else {
         console.log(`Successfully recalculated balance for user ${item.user_id}`);
       }
-      
-      // Create notification for the user with the same timestamp
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: item.user_id,
-          title: "Virement reçu",
-          description: `Votre virement de ${transferData.amount}€ a été reçu et ajouté à votre portefeuille.`,
-          type: "deposit",
-          category: "success",
-          metadata: {
-            amount: transferData.amount,
-            transaction_id: item.id,
-            timestamp: serverTimestamp // Add timestamp to metadata
-          },
-          created_at: serverTimestamp // Explicitly set creation time
-        });
       
       // Also update the related wallet transaction with the correct timestamp if it exists
       const { error: walletUpdateError } = await supabase

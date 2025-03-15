@@ -2,7 +2,6 @@
 import React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { notificationService } from "@/services/notifications";
 import { Button } from "@/components/ui/button";
 import { ArrowUpRight } from "lucide-react";
 
@@ -60,10 +59,6 @@ export default function ActionButtons({
       
       console.log("Wallet balance updated");
       
-      // Create notification for deposit success - Using await to ensure it completes
-      await notificationService.depositSuccess(depositAmount);
-      console.log("Deposit notification created");
-      
       // Show immediate toast notification
       toast.success("Dépôt effectué avec succès", {
         description: `${depositAmount}€ ont été ajoutés à votre portefeuille`,
@@ -103,8 +98,6 @@ export default function ActionButtons({
       // Vérification que le solde est suffisant
       if (profileData.wallet_balance < withdrawalAmount) {
         toast.error("Vous n'avez pas assez de fonds pour effectuer ce retrait");
-        // Make sure to await this notification
-        await notificationService.insufficientFunds();
         return;
       }
 
@@ -135,10 +128,6 @@ export default function ActionButtons({
       if (walletError) throw walletError;
       
       console.log("Wallet balance updated after withdrawal");
-      
-      // Create notification for withdrawal - Using await to ensure it completes
-      await notificationService.withdrawalValidated(withdrawalAmount);
-      console.log("Withdrawal notification created");
       
       toast.success("Retrait effectué avec succès", {
         description: `${withdrawalAmount}€ ont été retirés de votre portefeuille`,
