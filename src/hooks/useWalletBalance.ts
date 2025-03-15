@@ -47,6 +47,7 @@ export function useWalletBalance() {
   }, []);
 
   useEffect(() => {
+    console.log("Setting up wallet balance subscriptions");
     fetchWalletBalance();
     
     // Set up polling to check balance every minute
@@ -60,6 +61,8 @@ export function useWalletBalance() {
       const userId = sessionData.session?.user.id;
       
       if (!userId) return;
+      
+      console.log("Setting up realtime subscriptions for user:", userId);
       
       const channel = supabase
         .channel('wallet-balance-changes')
@@ -82,14 +85,15 @@ export function useWalletBalance() {
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
             schema: 'public',
             table: 'bank_transfers',
             filter: `user_id=eq.${userId}`
           },
           (payload) => {
-            console.log("Bank transfer updated in real-time:", payload);
-            if (payload.new.status === 'reçu') {
+            console.log("Bank transfer changed in real-time:", payload);
+            // Check for status changes, especially to 'reçu'
+            if (payload.new && payload.new.status === 'reçu') {
               console.log("Transfer status changed to 'reçu', refreshing balance...");
               fetchWalletBalance(false);
               toast.success("Un transfert bancaire a été confirmé");

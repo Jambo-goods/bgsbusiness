@@ -1,8 +1,8 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { InvestmentData } from "../types/investment";
+import { Investment } from "../types/investment";
 
-export async function fetchInvestmentData(investmentId: string): Promise<InvestmentData | null> {
+export async function fetchInvestmentData(investmentId: string): Promise<Investment | null> {
   try {
     // Fetch the investment with the joined project
     const { data: investment, error } = await supabase
@@ -58,5 +58,30 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
   } catch (error) {
     console.error("Unexpected error in fetchInvestmentData:", error);
     return null;
+  }
+}
+
+// Add these functions to fix the build errors
+export async function fetchInvestmentDetails(investmentId: string): Promise<Investment | null> {
+  return fetchInvestmentData(investmentId);
+}
+
+export async function fetchTransactionHistory(userId: string): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('wallet_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (error) {
+      console.error("Error fetching transaction history:", error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error("Unexpected error in fetchTransactionHistory:", error);
+    return [];
   }
 }

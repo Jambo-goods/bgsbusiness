@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -134,11 +133,27 @@ export const bankTransferService = {
       // Get current admin information
       const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
       
+      console.log("Starting confirmReceipt for item:", item.id);
+      
       // Update the wallet transaction with receipt confirmation
       await supabase
         .from('wallet_transactions')
         .update({ receipt_confirmed: true })
         .eq('id', item.id);
+      
+      // First, get the transfer amount
+      const { data: transferData, error: fetchError } = await supabase
+        .from('bank_transfers')
+        .select('amount')
+        .eq('id', item.id)
+        .single();
+        
+      if (fetchError || !transferData) {
+        console.error("Error fetching transfer amount:", fetchError);
+        throw fetchError || new Error("Transfer not found");
+      }
+      
+      console.log("Found transfer amount:", transferData.amount);
       
       // Update the bank_transfer status to indicate receipt confirmed
       const { error: updateError } = await supabase
@@ -154,25 +169,22 @@ export const bankTransferService = {
         throw updateError;
       }
       
-      // After changing status to reçu, we need to update the user's wallet balance
-      // First, get the transfer amount
-      const { data: transferData, error: fetchError } = await supabase
-        .from('bank_transfers')
-        .select('amount')
-        .eq('id', item.id)
-        .single();
-        
-      if (fetchError || !transferData) {
-        console.error("Error fetching transfer amount:", fetchError);
-        throw fetchError || new Error("Transfer not found");
-      }
+      console.log("Bank transfer status updated to 'reçu'");
       
       // Increment the user's wallet balance with the transfer amount
       if (transferData.amount) {
-        await supabase.rpc('increment_wallet_balance', {
+        console.log("Incrementing wallet balance by:", transferData.amount);
+        const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
           user_id: item.user_id,
           increment_amount: transferData.amount
         });
+        
+        if (balanceError) {
+          console.error("Error incrementing wallet balance:", balanceError);
+          throw balanceError;
+        }
+        
+        console.log("Wallet balance incremented successfully");
         
         // Create a notification for the user
         await supabase
@@ -188,6 +200,8 @@ export const bankTransferService = {
               transaction_id: item.id
             }
           });
+          
+        console.log("Notification created for user");
       }
       
       // Log admin action
