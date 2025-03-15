@@ -72,6 +72,7 @@ export function useWalletBalance() {
         
         if (error) {
           console.error("Error calling recalculate function:", error);
+          toast.error("Erreur lors du recalcul du solde");
           throw error;
         }
         
