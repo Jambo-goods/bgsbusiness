@@ -1,155 +1,109 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+// recalculate-wallet-balance/index.ts
+
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
 
 serve(async (req) => {
-  // Handle CORS
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
   }
-
+  
   try {
-    // Create a Supabase client with the auth context of the logged in user
+    // Create a Supabase client with the Auth context of the logged in user
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
-    );
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    )
 
-    // Get the current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseClient.auth.getUser();
-
-    if (userError || !user) {
+    // Get the session to identify the user
+    const { data: { session }, error: sessionError } = await supabaseClient.auth.getSession()
+    
+    if (sessionError || !session) {
+      console.error('Error getting session:', sessionError)
       return new Response(
-        JSON.stringify({ error: "User not authenticated" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 401,
-        }
-      );
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
-
-    const userId = user.id;
-
-    // Calculate deposits (from bank transfers)
-    const { data: transfersData, error: transfersError } = await supabaseClient
-      .from("bank_transfers")
-      .select("amount, status")
-      .eq("user_id", userId)
-      .in("status", ["received", "reçu"]);
+    
+    const userId = session.user.id
+    console.log(`Recalculating wallet balance for user ${userId}`)
+    
+    // Get deposits (bank transfers with status 'received' or 'reçu')
+    const { data: transfers, error: transfersError } = await supabaseClient
+      .from('bank_transfers')
+      .select('amount')
+      .eq('user_id', userId)
+      .in('status', ['received', 'reçu'])
 
     if (transfersError) {
-      throw transfersError;
+      console.error('Error fetching transfers:', transfersError)
+      throw new Error('Failed to fetch transfers')
     }
 
-    console.log("Confirmed transfers:", transfersData);
-    const totalTransfers = transfersData.reduce(
-      (sum, transfer) => sum + (transfer.amount || 0), 
-      0
-    );
-    console.log("Total transfers amount:", totalTransfers);
+    // Calculate total deposits
+    const totalDeposits = transfers.reduce((sum, t) => sum + (t.amount || 0), 0)
+    console.log(`Total deposits: ${totalDeposits}`)
 
-    // Add deposits from wallet transactions
-    const { data: depositTransactions, error: depositError } = await supabaseClient
-      .from("wallet_transactions")
-      .select("amount")
-      .eq("user_id", userId)
-      .eq("type", "deposit")
-      .eq("status", "completed");
-
-    if (depositError) {
-      throw depositError;
+    // Get approved withdrawals 
+    const { data: withdrawals, error: withdrawalsError } = await supabaseClient
+      .from('withdrawal_requests')
+      .select('amount')
+      .eq('user_id', userId)
+      .in('status', ['approved', 'completed'])
+      
+    if (withdrawalsError) {
+      console.error('Error fetching withdrawals:', withdrawalsError)
+      throw new Error('Failed to fetch withdrawals')
     }
-
-    console.log("Deposit transactions:", depositTransactions);
-    const totalDeposits = depositTransactions.reduce(
-      (sum, transaction) => sum + (transaction.amount || 0),
-      totalTransfers
-    );
-    console.log("Total deposits (transfers + transactions):", totalDeposits);
-
-    // Calculate completed withdrawals
-    const { data: withdrawalRequests, error: withdrawalError } = await supabaseClient
-      .from("withdrawal_requests")
-      .select("amount")
-      .eq("user_id", userId)
-      .in("status", ["completed", "approved"])
-      .not("processed_at", "is", null);
-
-    if (withdrawalError) {
-      throw withdrawalError;
-    }
-
-    console.log("Withdrawal requests:", withdrawalRequests);
-    const totalWithdrawals = withdrawalRequests.reduce(
-      (sum, withdrawal) => sum + (withdrawal.amount || 0),
-      0
-    );
-    console.log("Total withdrawal requests:", totalWithdrawals);
-
-    // Add withdrawals from wallet transactions
-    const { data: withdrawalTransactions, error: withdrawalTxError } = await supabaseClient
-      .from("wallet_transactions")
-      .select("amount")
-      .eq("user_id", userId)
-      .eq("type", "withdrawal")
-      .eq("status", "completed");
-
-    if (withdrawalTxError) {
-      throw withdrawalTxError;
-    }
-
-    console.log("Withdrawal transactions:", withdrawalTransactions);
-    const totalAllWithdrawals = withdrawalTransactions.reduce(
-      (sum, transaction) => sum + (transaction.amount || 0),
-      totalWithdrawals
-    );
-    console.log("Total all withdrawals:", totalAllWithdrawals);
-
-    // Final balance calculation
-    const finalBalance = totalDeposits - totalAllWithdrawals;
-    console.log("Final calculated balance:", finalBalance);
-
-    // Update the user's wallet balance
+    
+    // Calculate total withdrawals
+    const totalWithdrawals = withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0)
+    console.log(`Total withdrawals: ${totalWithdrawals}`)
+    
+    // Calculate final balance (deposits - withdrawals)
+    const calculatedBalance = totalDeposits - totalWithdrawals
+    console.log(`Calculated balance: ${calculatedBalance}`)
+    
+    // Update user's wallet balance
     const { error: updateError } = await supabaseClient
-      .from("profiles")
-      .update({ wallet_balance: finalBalance })
-      .eq("id", userId);
-
+      .from('profiles')
+      .update({ wallet_balance: calculatedBalance })
+      .eq('id', userId)
+      
     if (updateError) {
-      throw updateError;
+      console.error('Error updating wallet balance:', updateError)
+      throw new Error('Failed to update wallet balance')
     }
-
-    // Return the result
+    
     return new Response(
-      JSON.stringify({
-        success: true,
-        balance: finalBalance,
+      JSON.stringify({ 
+        success: true, 
+        balance: calculatedBalance,
         details: {
           deposits: totalDeposits,
-          withdrawals: totalAllWithdrawals,
-        },
+          withdrawals: totalWithdrawals
+        }
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
-    );
+    )
+    
   } catch (error) {
+    console.error('Error:', error.message)
     return new Response(
-      JSON.stringify({ error: error.message || "Unknown error" }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
-    );
+      JSON.stringify({ error: error.message }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-});
+})

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -113,13 +112,12 @@ export default function WithdrawalManagement() {
       
       if (transactionError) throw transactionError;
 
-      // Update user wallet balance by deducting the withdrawal amount
+      // Directly update user wallet balance by deducting the withdrawal amount
       const {
         error: walletError
-      } = await supabase.rpc('increment_wallet_balance', {
-        user_id: withdrawal.user_id,
-        increment_amount: -withdrawal.amount
-      });
+      } = await supabase.from('profiles').update({
+        wallet_balance: userData.wallet_balance - withdrawal.amount
+      }).eq('id', withdrawal.user_id);
       
       if (walletError) throw walletError;
 
