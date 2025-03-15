@@ -23,6 +23,8 @@ export function useWalletBalance() {
         return;
       }
       
+      console.log("Fetching wallet balance for user:", session.session.user.id);
+      
       const { data, error } = await supabase
         .from('profiles')
         .select('wallet_balance')
@@ -34,8 +36,10 @@ export function useWalletBalance() {
         setError("Erreur lors de la récupération du solde");
         setWalletBalance(0);
       } else {
-        console.log("Wallet balance updated:", data?.wallet_balance);
-        setWalletBalance(data?.wallet_balance || 0);
+        console.log("Wallet balance fetched:", data?.wallet_balance);
+        // Convert null or undefined to 0
+        const balance = data?.wallet_balance ?? 0;
+        setWalletBalance(balance);
       }
     } catch (err) {
       console.error("Error:", err);
@@ -76,9 +80,13 @@ export function useWalletBalance() {
           },
           (payload) => {
             console.log("Profile updated in real-time:", payload);
-            if (payload.new && typeof payload.new.wallet_balance === 'number') {
-              setWalletBalance(payload.new.wallet_balance);
-              toast.success("Votre solde a été mis à jour");
+            if (payload.new && typeof payload.new === 'object') {
+              const newProfile = payload.new as { wallet_balance?: number };
+              if (typeof newProfile.wallet_balance === 'number') {
+                console.log("Setting new wallet balance from realtime update:", newProfile.wallet_balance);
+                setWalletBalance(newProfile.wallet_balance);
+                toast.success("Votre solde a été mis à jour");
+              }
             }
           }
         )

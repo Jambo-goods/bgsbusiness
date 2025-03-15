@@ -57,11 +57,9 @@ export default function BankTransferTableRow({
       </TableCell>
       <TableCell>
         <div className="font-mono font-medium">{reference}</div>
-        {item.amount && (
-          <div className="text-sm text-gray-500 mt-1">
-            Montant: {item.amount}€
-          </div>
-        )}
+        <div className="text-sm text-gray-500 mt-1">
+          Montant: {item.amount}€
+        </div>
       </TableCell>
       <TableCell>
         {item.receipt_confirmed || isReceived ? (
