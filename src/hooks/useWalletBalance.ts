@@ -50,6 +50,44 @@ export function useWalletBalance() {
     }
   }, []);
 
+  const recalculateBalance = useCallback(async () => {
+    try {
+      setIsLoadingBalance(true);
+      setError(null);
+      
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        setIsLoadingBalance(false);
+        return;
+      }
+      
+      // Call the database function to recalculate the balance
+      const userId = session.session.user.id;
+      console.log("Recalculating wallet balance for user:", userId);
+      
+      const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance', {
+        user_uuid: userId
+      });
+      
+      if (rpcError) {
+        console.error("Error recalculating balance:", rpcError);
+        toast.error("Erreur lors du recalcul du solde");
+        return;
+      }
+      
+      toast.success("Solde recalculé avec succès");
+      
+      // Fetch the updated balance
+      await fetchWalletBalance(false);
+    } catch (err) {
+      console.error("Error during recalculation:", err);
+      toast.error("Erreur lors du recalcul du solde");
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  }, [fetchWalletBalance]);
+
   useEffect(() => {
     console.log("Setting up wallet balance subscriptions");
     fetchWalletBalance();
@@ -142,6 +180,7 @@ export function useWalletBalance() {
     walletBalance, 
     isLoadingBalance, 
     error,
-    refreshBalance 
+    refreshBalance,
+    recalculateBalance 
   };
 }

@@ -12,7 +12,7 @@ import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 export default function WalletTab() {
   const [activeTab, setActiveTab] = useState("overview");
-  const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
+  const { walletBalance, isLoadingBalance, refreshBalance, recalculateBalance } = useWalletBalance();
 
   const handleDeposit = async () => {
     await refreshBalance();
@@ -33,6 +33,7 @@ export default function WalletTab() {
         isLoading={isLoadingBalance} 
         onTabChange={handleTabChange}
         onRefresh={refreshBalance}
+        onRecalculate={recalculateBalance}
       />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

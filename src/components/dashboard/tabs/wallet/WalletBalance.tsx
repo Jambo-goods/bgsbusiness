@@ -1,20 +1,23 @@
 
 import React from "react";
-import { WalletCards, RefreshCw } from "lucide-react";
+import { WalletCards, RefreshCw, CalculatorIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 interface WalletBalanceProps {
   balance: number;
   isLoading?: boolean;
   onTabChange?: (tab: string) => void;
   onRefresh?: () => void;
+  onRecalculate?: () => void;
 }
 
 export default function WalletBalance({
   balance,
   isLoading = false,
   onTabChange,
-  onRefresh
+  onRefresh,
+  onRecalculate
 }: WalletBalanceProps) {
   return (
     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 mb-6 hover:shadow-lg transition-all duration-300">
@@ -25,15 +28,29 @@ export default function WalletBalance({
           </div>
           <h2 className="text-lg font-semibold text-bgs-blue">Solde disponible</h2>
         </div>
-        {onRefresh && (
-          <button 
-            onClick={onRefresh}
-            className="text-bgs-blue hover:text-bgs-blue-dark p-2 rounded-full hover:bg-gray-50"
-            aria-label="Rafraîchir"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {onRecalculate && (
+            <Button 
+              onClick={onRecalculate}
+              variant="outline"
+              size="sm"
+              className="text-bgs-blue hover:text-bgs-blue-dark hover:bg-blue-50"
+              aria-label="Recalculer le solde"
+            >
+              <CalculatorIcon className="h-4 w-4 mr-1" />
+              Recalculer
+            </Button>
+          )}
+          {onRefresh && (
+            <button 
+              onClick={onRefresh}
+              className="text-bgs-blue hover:text-bgs-blue-dark p-2 rounded-full hover:bg-gray-50"
+              aria-label="Rafraîchir"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
       
       {isLoading ? (

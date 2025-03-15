@@ -1,25 +1,54 @@
 
 import React from "react";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCcw, CalculatorIcon } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function WalletCard() {
-  const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
+  const { walletBalance, isLoadingBalance, refreshBalance, recalculateBalance } = useWalletBalance();
 
   return (
     <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
       <CardContent className="pt-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-bgs-blue">Solde disponible</h3>
-          <button 
-            onClick={refreshBalance} 
-            className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-            aria-label="Rafraîchir le solde"
-          >
-            <RefreshCcw className="h-4 w-4 text-bgs-blue" />
-          </button>
+          <div className="flex space-x-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    onClick={recalculateBalance} 
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    aria-label="Recalculer le solde"
+                  >
+                    <CalculatorIcon className="h-4 w-4 text-bgs-blue" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Recalculer le solde</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button 
+                    onClick={refreshBalance} 
+                    className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+                    aria-label="Rafraîchir le solde"
+                  >
+                    <RefreshCcw className="h-4 w-4 text-bgs-blue" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Rafraîchir le solde</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
         
         {isLoadingBalance ? (

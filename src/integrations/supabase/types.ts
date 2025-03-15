@@ -464,6 +464,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      recalculate_wallet_balance: {
+        Args: {
+          user_uuid: string
+        }
+        Returns: undefined
+      }
       update_user_profile_investment: {
         Args: {
           user_id: string

@@ -15,16 +15,8 @@ export const bankTransferService = {
       // Get current admin information
       const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
       
-      // 1. Update the wallet transaction status to completed and set the amount
-      await supabase
-        .from('wallet_transactions')
-        .update({ 
-          status: 'completed',
-          amount: amount
-        })
-        .eq('id', item.id);
-      
-      // 2. Update bank_transfer status to "reçu" (received)
+      // Update the bank_transfer status to "reçu" (received)
+      // The database trigger will handle updating the wallet balance
       await supabase
         .from('bank_transfers')
         .update({ 
@@ -35,13 +27,7 @@ export const bankTransferService = {
         })
         .eq('id', item.id);
       
-      // 3. Increment the user's wallet balance
-      await supabase.rpc('increment_wallet_balance', {
-        user_id: item.user_id,
-        increment_amount: amount
-      });
-      
-      // 4. Create a notification for the user
+      // Create a notification for the user
       await supabase
         .from('notifications')
         .insert({
@@ -56,7 +42,7 @@ export const bankTransferService = {
           }
         });
       
-      // 5. Log admin action
+      // Log admin action
       if (adminUser.id) {
         await logAdminAction(
           adminUser.id,
@@ -155,24 +141,9 @@ export const bankTransferService = {
         return false;
       }
       
-      // Perform all operations in sequence for better debugging
-      console.log("Step 1: Updating wallet_transactions");
-      const { error: txError } = await supabase
-        .from('wallet_transactions')
-        .update({ 
-          receipt_confirmed: true,
-          status: 'completed',
-          amount: transferData.amount
-        })
-        .eq('id', item.id);
-        
-      if (txError) {
-        console.error("Error updating wallet transaction:", txError);
-        toast.error("Erreur lors de la mise à jour de la transaction");
-        throw txError;
-      }
-      
-      console.log("Step 2: Updating bank_transfers");
+      // Update bank transfer status to "received"
+      // This will trigger the database trigger to update the wallet balance
+      console.log("Updating bank transfer status to 'received'");
       const { error: transferError } = await supabase
         .from('bank_transfers')
         .update({ 
@@ -188,48 +159,10 @@ export const bankTransferService = {
         throw transferError;
       }
       
-      console.log("Step 3: Getting current wallet balance");
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', item.user_id)
-        .single();
-        
-      if (profileError) {
-        console.error("Error fetching user profile:", profileError);
-        toast.error("Erreur lors de la récupération du solde actuel");
-        throw profileError;
-      }
+      console.log("Successfully updated bank transfer status");
       
-      let currentBalance = 0;
-      // Handle null or undefined wallet_balance
-      if (profileData && profileData.wallet_balance !== null && profileData.wallet_balance !== undefined) {
-        currentBalance = profileData.wallet_balance;
-      }
-      
-      console.log("Current wallet balance:", currentBalance);
-      console.log("Transfer amount to be added:", transferData.amount);
-      
-      const newBalance = currentBalance + transferData.amount;
-      console.log("New balance will be:", newBalance);
-      
-      console.log("Step 4: Updating wallet balance");
-      // Directly update the profiles table with the new balance
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          wallet_balance: newBalance
-        })
-        .eq('id', item.user_id);
-      
-      if (updateError) {
-        console.error("Error updating wallet balance:", updateError);
-        toast.error("Erreur lors de la mise à jour du solde");
-        throw updateError;
-      }
-      
-      console.log("Step 5: Creating notification");
-      const { error: notifError } = await supabase
+      // Create notification for the user
+      await supabase
         .from('notifications')
         .insert({
           user_id: item.user_id,
@@ -242,32 +175,6 @@ export const bankTransferService = {
             transaction_id: item.id
           }
         });
-        
-      if (notifError) {
-        console.error("Error creating notification:", notifError);
-        // Don't throw here - notification is not critical
-      }
-      
-      // Verify the balance was updated
-      const { data: verifyProfile } = await supabase
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', item.user_id)
-        .single();
-        
-      console.log("Verified wallet balance after update:", verifyProfile?.wallet_balance);
-      
-      // Also try using the RPC function as a fallback
-      console.log("Also trying RPC function");
-      const { error: rpcError } = await supabase.rpc('increment_wallet_balance', {
-        user_id: item.user_id,
-        increment_amount: transferData.amount
-      });
-      
-      if (rpcError) {
-        console.error("Error calling RPC function:", rpcError);
-        // Don't throw - this is a fallback
-      }
       
       // Log admin action
       if (adminUser.id) {
