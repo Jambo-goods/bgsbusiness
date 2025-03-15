@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProjectsList from "../projects/ProjectsList";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { Project } from "@/types/project";
+import { toast } from "sonner";
 
 // Prefetch critical paths
 const preloadWalletTab = () => import("./tabs/WalletTab");
@@ -73,13 +74,16 @@ export default function TabContent({
         setDbProjects(projects || []);
       } catch (error) {
         console.error("Error loading database projects:", error);
+        toast.error("Erreur de chargement des projets", {
+          description: "Impossible de charger les projets depuis la base de données."
+        });
         setDbProjects([]);
       } finally {
         setLoading(false);
       }
     };
     
-    if (activeTab === "projects") {
+    if (activeTab === "projects" || activeTab === "opportunities") {
       loadProjects();
     }
   }, [activeTab]);
