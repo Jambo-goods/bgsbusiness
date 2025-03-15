@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from "lucide-react";
@@ -8,7 +7,6 @@ import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-// Type pour les transactions
 interface Transaction {
   id: string;
   amount: number;
@@ -16,10 +14,9 @@ interface Transaction {
   description: string | null;
   created_at: string;
   status: string;
-  raw_timestamp?: string; // Original timestamp from database
+  raw_timestamp?: string;
 }
 
-// Type pour les virements bancaires
 interface BankTransfer {
   id: string;
   amount: number;
@@ -32,7 +29,6 @@ interface BankTransfer {
   notes: string | null;
 }
 
-// Type pour les payloads des événements PostgreSQL
 interface PostgresChangePayload {
   new: Record<string, any>;
   old?: Record<string, any>;
@@ -48,16 +44,13 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Fetch transactions on component mount and when refreshBalance is called
   useEffect(() => {
     fetchTransactions();
     
-    // Setup polling for transactions every 30 seconds
     const pollingInterval = setInterval(() => {
-      fetchTransactions(false); // silent refresh (don't show loading state)
+      fetchTransactions(false);
     }, 30000);
     
-    // Set up realtime subscription for transaction updates
     const setupRealtimeSubscriptions = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
@@ -66,13 +59,12 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       
       console.log("Setting up realtime subscriptions for wallet transactions, user:", userId);
       
-      // Subscribe to wallet_transactions table changes
       const transactionsChannel = supabase
         .channel('wallet-transactions-changes')
         .on(
           'postgres_changes',
           {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            event: '*',
             schema: 'public',
             table: 'wallet_transactions',
             filter: `user_id=eq.${userId}`
@@ -87,13 +79,12 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           console.log("Realtime subscription status for wallet transactions:", status);
         });
       
-      // Also subscribe to bank_transfers table changes to detect received transfers
       const transfersChannel = supabase
         .channel('bank-transfers-changes')
         .on(
           'postgres_changes',
           {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            event: '*',
             schema: 'public',
             table: 'bank_transfers',
             filter: `user_id=eq.${userId}`
@@ -101,7 +92,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           (payload: PostgresChangePayload) => {
             console.log("Bank transfer changed in real-time:", payload);
             
-            // If status changed to 'received' or 'reçu', refresh transactions
             if (payload.new && 
                 (payload.new.status === 'received' || payload.new.status === 'reçu') &&
                 (!payload.old || 
@@ -155,7 +145,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       const userId = session.session.user.id;
       console.log("Fetching wallet transactions for user:", userId);
       
-      // Récupération des transactions de l'utilisateur connecté
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('wallet_transactions')
         .select('*')
@@ -167,7 +156,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         throw transactionsError;
       }
       
-      // Récupération des virements bancaires reçus
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
         .select('*')
@@ -182,14 +170,11 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       console.log("Fetched bank transfers:", transfersData ? transfersData.length : 0);
       console.log("Bank transfers data:", transfersData);
       
-      // Convertir les virements bancaires en format de transaction
       const transfersAsTransactions: Transaction[] = transfersData.map(transfer => {
-        // Utiliser processed_at, confirmed_at ou now() comme timestamp, en vérifiant que l'on a une valeur
         let timestamp = transfer.processed_at || transfer.confirmed_at || new Date().toISOString();
         
         console.log(`Transfer ID: ${transfer.id}, reference: ${transfer.reference}, amount: ${transfer.amount}, processed_at: ${transfer.processed_at}, confirmed_at: ${transfer.confirmed_at}, timestamp used: ${timestamp}, processed: ${transfer.processed}, status: ${transfer.status}`);
         
-        // Pour le debugging, loggons les valeurs nulles ou vides
         if (!transfer.processed_at && !transfer.confirmed_at) {
           console.warn(`Transfer ${transfer.id} has no timestamp values in processed_at or confirmed_at!`);
         }
@@ -201,11 +186,10 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           description: `Virement bancaire reçu (réf: ${transfer.reference})`,
           created_at: timestamp,
           status: transfer.status === 'received' || transfer.status === 'reçu' ? 'completed' : 'pending',
-          raw_timestamp: timestamp // Store the exact timestamp as it is in the database
+          raw_timestamp: timestamp
         };
       });
       
-      // S'assurer que toutes les transactions sont bien typées
       const typedTransactions: Transaction[] = transactionsData ? transactionsData.map(tx => ({
         id: tx.id,
         amount: tx.amount,
@@ -213,15 +197,12 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         description: tx.description,
         created_at: tx.created_at,
         status: tx.status,
-        raw_timestamp: tx.created_at // Store the exact timestamp
+        raw_timestamp: tx.created_at
       })) : [];
       
-      // Fusionner et trier les transactions par date
       const allTransactions = [...typedTransactions, ...transfersAsTransactions]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 10); // Limiter à 10 transactions
-      
-      console.log("All transactions after merging:", allTransactions);
+        .slice(0, 10);
       
       setTransactions(allTransactions);
       setError(null);
@@ -234,13 +215,11 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
     }
   };
 
-  // Manual refresh function
   const handleRefresh = () => {
     toast.info("Actualisation de l'historique des transactions...");
     fetchTransactions(false);
   };
 
-  // Formatting functions
   const formatAmount = (amount: number, type: string) => {
     return type === 'deposit' ? `+${amount} €` : `-${amount} €`;
   };
@@ -257,14 +236,10 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
 
   const formatRelativeTime = (dateString: string) => {
     try {
-      // Use the raw_timestamp if available for more accurate display
       const date = new Date(dateString);
       
-      // Log the date string and parsed date for debugging
       console.log(`Formatting date: ${dateString}, parsed as: ${date.toISOString()}`);
       
-      // Format as exact date and time - without any timezone transformation
-      // This will display exactly what's stored in the database
       return format(date, 'dd/MM/yyyy à HH:mm', { locale: fr });
     } catch (error) {
       console.error("Erreur de formatage de date:", error, "pour la date:", dateString);
@@ -291,13 +266,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   };
 
   const getStatusBadge = (transaction: Transaction) => {
-    if (transaction.status === "pending") {
-      return (
-        <span className="text-xs font-medium bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full ml-2">
-          En attente
-        </span>
-      );
-    }
     return null;
   };
 
@@ -346,10 +314,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                     <p className="font-medium text-bgs-blue">
                       {getTransactionLabel(transaction)}
                     </p>
-                    {getStatusBadge(transaction)}
                   </div>
                   <p className="text-sm text-bgs-gray-medium">
-                    {/* Use raw_timestamp if available for more precise display */}
                     {formatRelativeTime(transaction.raw_timestamp || transaction.created_at)}
                   </p>
                 </div>
