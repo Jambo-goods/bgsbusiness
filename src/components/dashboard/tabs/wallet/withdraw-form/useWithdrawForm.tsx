@@ -41,7 +41,7 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
       
       const { data: userData, error: userError } = await supabase
         .from('profiles')
-        .select('first_name, last_name, email')
+        .select('first_name, last_name, email, wallet_balance')
         .eq('id', session.session.user.id)
         .single();
         
@@ -50,6 +50,11 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
         throw new Error("Impossible de récupérer les données utilisateur");
       }
       
+      if (userData.wallet_balance < parseInt(amount)) {
+        toast.error("Solde insuffisant pour effectuer ce retrait");
+        return;
+      }
+
       // Insérer la demande de retrait avec toutes les informations bancaires
       const { error } = await supabase
         .from('withdrawal_requests')

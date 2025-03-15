@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -88,6 +89,15 @@ export default function WithdrawalManagement() {
         return;
       }
 
+      // Deduct the amount from the user's wallet balance
+      const {
+        error: walletError
+      } = await supabase.from('profiles').update({
+        wallet_balance: userData.wallet_balance - withdrawal.amount
+      }).eq('id', withdrawal.user_id);
+      
+      if (walletError) throw walletError;
+
       // Update withdrawal status
       const {
         error: withdrawalError
@@ -111,15 +121,6 @@ export default function WithdrawalManagement() {
       });
       
       if (transactionError) throw transactionError;
-
-      // Directly update user wallet balance by deducting the withdrawal amount
-      const {
-        error: walletError
-      } = await supabase.from('profiles').update({
-        wallet_balance: userData.wallet_balance - withdrawal.amount
-      }).eq('id', withdrawal.user_id);
-      
-      if (walletError) throw walletError;
 
       // Log admin action
       await logAdminAction(adminUser.id, 'withdrawal_management', `Approbation d'un retrait de ${withdrawal.amount}€`, withdrawal.user_id, undefined, withdrawal.amount);
