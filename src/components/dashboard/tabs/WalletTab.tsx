@@ -49,8 +49,8 @@ export default function WalletTab() {
           },
           (payload) => {
             console.log("New notification received:", payload);
-            const notification = payload.new as Record<string, any>;
-            if (notification) {
+            if (payload.new) {
+              const notification = payload.new as Record<string, any>;
               toast.success(notification.title, {
                 description: notification.description
               });
@@ -61,54 +61,17 @@ export default function WalletTab() {
           console.log("Realtime subscription status for notifications:", status);
         });
       
-      // Subscribe to bank_transfers table changes
-      const bankTransfersChannel = supabase
-        .channel('wallet-bank-transfers-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'bank_transfers',
-            filter: `user_id=eq.${userId}`
-          },
-          (payload) => {
-            console.log("Bank transfer updated:", payload);
-            const transfer = payload.new as Record<string, any>;
-            
-            // Check if status was changed to received/reçu
-            if (transfer && (transfer.status === 'received' || transfer.status === 'reçu')) {
-              console.log("Bank transfer marked as received:", transfer);
-              
-              // Show toast notification
-              toast.success("Virement bancaire reçu", {
-                description: `Votre virement de ${transfer.amount}€ a été confirmé.`
-              });
-              
-              // Refresh balance and transaction history
-              refreshBalance();
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log("Realtime subscription status for bank transfers:", status);
-        });
-      
-      return [notificationsChannel, bankTransfersChannel];
+      return notificationsChannel;
     };
     
     const subscriptionPromise = setupNotificationSubscriptions();
     
     return () => {
-      subscriptionPromise.then(channels => {
-        if (channels) {
-          channels.forEach(channel => {
-            if (channel) supabase.removeChannel(channel);
-          });
-        }
+      subscriptionPromise.then(channel => {
+        if (channel) supabase.removeChannel(channel);
       });
     };
-  }, [refreshBalance]);
+  }, []);
 
   const handleDeposit = async () => {
     await refreshBalance();

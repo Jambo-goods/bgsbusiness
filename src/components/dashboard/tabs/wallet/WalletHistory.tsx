@@ -18,17 +18,6 @@ interface Transaction {
   status: string;
 }
 
-// Type pour les virements bancaires
-interface BankTransfer {
-  id: string;
-  amount: number;
-  status: string;
-  description?: string;
-  reference: string;
-  created_at: string;
-  user_id: string;
-}
-
 interface WalletHistoryProps {
   refreshBalance?: () => Promise<void>;
 }
@@ -57,8 +46,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       
       console.log("Setting up realtime subscriptions for wallet transactions, user:", userId);
       
-      // Subscribe to wallet transactions changes
-      const transactionsChannel = supabase
+      const channel = supabase
         .channel('wallet-transactions-changes')
         .on(
           'postgres_changes',
@@ -78,49 +66,15 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           console.log("Realtime subscription status for wallet transactions:", status);
         });
       
-      // Subscribe to bank transfers changes
-      const bankTransfersChannel = supabase
-        .channel('wallet-bank-transfers-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
-            schema: 'public',
-            table: 'bank_transfers',
-            filter: `user_id=eq.${userId}`
-          },
-          (payload) => {
-            console.log("Bank transfer changed in real-time:", payload);
-            const transfer = payload.new as Record<string, any>;
-            
-            // Check if status was changed to received/reçu
-            if (transfer && (transfer.status === 'received' || transfer.status === 'reçu')) {
-              console.log("Bank transfer marked as received:", transfer);
-              fetchTransactions(false);
-              toast.success("Virement bancaire reçu", {
-                description: `Votre virement de ${transfer.amount}€ a été confirmé.`
-              });
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log("Realtime subscription status for bank transfers:", status);
-        });
-      
-      return [transactionsChannel, bankTransfersChannel];
+      return channel;
     };
     
     const subscriptionPromise = setupRealtimeSubscriptions();
     
-    // Clean up on unmount
     return () => {
       clearInterval(pollingInterval);
-      subscriptionPromise.then(channels => {
-        if (channels) {
-          channels.forEach(channel => {
-            if (channel) supabase.removeChannel(channel);
-          });
-        }
+      subscriptionPromise.then(channel => {
+        if (channel) supabase.removeChannel(channel);
       });
     };
   }, [refreshBalance]);
@@ -140,54 +94,23 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         return;
       }
 
-      const userId = session.session.user.id;
-      console.log("Fetching wallet transactions for user:", userId);
+      console.log("Fetching wallet transactions for user:", session.session.user.id);
       
       // Récupération des transactions de l'utilisateur connecté
-      const { data: transactionsData, error: transactionsError } = await supabase
+      const { data, error } = await supabase
         .from('wallet_transactions')
         .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .eq('user_id', session.session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
 
-      if (transactionsError) {
-        console.error("Error fetching transactions:", transactionsError);
-        throw transactionsError;
+      if (error) {
+        console.error("Error fetching transactions:", error);
+        throw error;
       }
       
-      // Also fetch bank transfers with status 'received' or 'reçu'
-      const { data: bankTransfersData, error: bankTransfersError } = await supabase
-        .from('bank_transfers')
-        .select('*')
-        .eq('user_id', userId)
-        .in('status', ['received', 'reçu'])
-        .order('created_at', { ascending: false });
-        
-      if (bankTransfersError) {
-        console.error("Error fetching bank transfers:", bankTransfersError);
-        throw bankTransfersError;
-      }
-      
-      // Convert bank transfers to transaction format
-      const bankTransfersAsTransactions = (bankTransfersData || []).map((transfer: BankTransfer) => ({
-        id: transfer.id,
-        amount: transfer.amount || 0,
-        type: 'deposit' as const,
-        description: 'Virement bancaire confirmé',
-        created_at: transfer.created_at,
-        status: 'completed'
-      }));
-      
-      // Combine and sort all transactions by date
-      const allTransactions = [
-        ...(transactionsData || []), 
-        ...bankTransfersAsTransactions
-      ].sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      
-      console.log("All transactions:", allTransactions);
-      setTransactions(allTransactions as Transaction[]);
+      console.log("Fetched transactions:", data ? data.length : 0);
+      setTransactions(data as Transaction[]);
       setError(null);
     } catch (err) {
       console.error("Erreur lors de la récupération des transactions:", err);
