@@ -184,8 +184,9 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       
       // Convertir les virements bancaires en format de transaction
       const transfersAsTransactions: Transaction[] = transfersData.map(transfer => {
-        // Use confirmed_at as the timestamp, or fall back to processed_at, or use current time as last resort
+        // Utiliser confirmed_at comme horodatage principal pour les virements reçus
         const timestamp = transfer.confirmed_at || transfer.processed_at || new Date().toISOString();
+        console.log(`Transfer ID: ${transfer.id}, reference: ${transfer.reference}, amount: ${transfer.amount}, confirmed_at: ${transfer.confirmed_at}, processed: ${transfer.processed}`);
         
         return {
           id: transfer.id,
@@ -211,6 +212,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       const allTransactions = [...typedTransactions, ...transfersAsTransactions]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 10); // Limiter à 10 transactions
+      
+      console.log("All transactions after merging:", allTransactions);
       
       setTransactions(allTransactions);
       setError(null);
@@ -266,7 +269,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         locale: fr
       });
     } catch (error) {
-      console.error("Erreur de formatage de date:", error);
+      console.error("Erreur de formatage de date:", error, "pour la date:", dateString);
       return "Date inconnue";
     }
   };
