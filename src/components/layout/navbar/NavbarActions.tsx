@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { Bell, Wallet, Home } from "lucide-react";
+import { Bell, Wallet, Home, BellDot } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
@@ -18,6 +18,7 @@ export default function NavbarActions({
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [hasNotifications, setHasNotifications] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -96,6 +97,25 @@ export default function NavbarActions({
     }
   };
 
+  const handleNotificationsClick = () => {
+    console.log("Notifications button clicked, navigating to notifications tab");
+    if (location.pathname.includes('/dashboard')) {
+      // Already on dashboard, just update the search params
+      const searchParams = new URLSearchParams(location.search);
+      searchParams.set('tab', 'notifications');
+      navigate({
+        pathname: '/dashboard',
+        search: searchParams.toString()
+      }, { replace: true });
+    } else {
+      // Not on dashboard, navigate to dashboard with notifications tab
+      navigate('/dashboard?tab=notifications');
+    }
+    
+    // Reset notification indicator when clicking
+    setHasNotifications(false);
+  };
+
   const isDashboardPage = location.pathname.includes('/dashboard');
 
   if (isLoading) {
@@ -108,6 +128,19 @@ export default function NavbarActions({
         <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
           <Home className="h-5 w-5 text-bgs-blue" />
         </Link>
+        
+        <button 
+          onClick={handleNotificationsClick}
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          aria-label="Voir les notifications"
+          title="Voir les notifications"
+        >
+          {hasNotifications ? (
+            <BellDot className="h-5 w-5 text-bgs-blue" />
+          ) : (
+            <Bell className="h-5 w-5 text-bgs-blue" />
+          )}
+        </button>
         
         <button 
           onClick={handleWalletClick}
