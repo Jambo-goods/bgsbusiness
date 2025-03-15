@@ -232,7 +232,37 @@ export function useWalletBalance() {
               if (status === 'reçu' || status === 'received') {
                 console.log("Transfer status changed to 'received', refreshing balance...");
                 fetchWalletBalance(false);
-                toast.success("Un transfert bancaire a été confirmé");
+                
+                const amount = newPayload.amount || 0;
+                toast.custom((t) => (
+                  <div className="bg-blue-50 text-blue-700 p-4 rounded-lg shadow-lg border border-blue-200 flex items-start">
+                    <div className="bg-blue-100 p-2 rounded-full mr-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-600">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 12m18 0v6a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 9m18 0V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v3" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Dépôt réussi</h3>
+                      <p>Votre virement de {amount}€ a été reçu et crédité sur votre compte.</p>
+                    </div>
+                  </div>
+                ), {
+                  duration: 8000,
+                  id: `deposit-success-${newPayload.id}`
+                });
+                
+                // Create a notification in the notifications table
+                supabase.from('notifications').insert({
+                  user_id: userId,
+                  title: 'Dépôt réussi',
+                  description: `Votre virement de ${amount}€ a été reçu et crédité sur votre compte.`,
+                  type: 'deposit',
+                  category: 'success',
+                  metadata: {
+                    amount: amount,
+                    transaction_id: newPayload.id
+                  }
+                });
               }
             }
           }
