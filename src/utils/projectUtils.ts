@@ -1,7 +1,7 @@
-
 import { Project } from "@/types/project";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 
 export const isUUID = (str: string): boolean => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -135,5 +135,21 @@ export const fetchProjectsFromDatabase = async () => {
   } catch (error) {
     console.error("Erreur dans fetchProjectsFromDatabase:", error);
     throw error;
+  }
+};
+
+/**
+ * Fonction pour annoncer une nouvelle opportunité d'investissement
+ */
+export const announceProjectOpportunity = async (projectId: string) => {
+  try {
+    const result = await notificationService.announceNewOpportunity(projectId);
+    return { success: true, project: result };
+  } catch (error) {
+    console.error("Erreur lors de l'annonce du projet:", error);
+    toast.error("Erreur d'annonce", {
+      description: "Impossible d'annoncer cette opportunité d'investissement."
+    });
+    return { success: false, error };
   }
 };

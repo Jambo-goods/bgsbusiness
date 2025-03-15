@@ -15,9 +15,11 @@ export const notificationService = {
       description: `Votre investissement de ${amount}€ dans ${projectName} a été confirmé.`,
       duration: 5000,
       position: "top-right",
-      actionLabel: "Voir détails",
-      onActionClick: () => {
-        window.location.href = `/dashboard`;
+      action: {
+        label: "Voir détails",
+        onClick: () => {
+          window.location.href = `/dashboard`;
+        }
       }
     });
     return Promise.resolve();
@@ -32,9 +34,11 @@ export const notificationService = {
       description: `${projectName} est maintenant disponible pour investissement.`,
       duration: 5000,
       position: "top-right",
-      actionLabel: "Explorer",
-      onActionClick: () => {
-        window.location.href = `/projects/${projectId}`;
+      action: {
+        label: "Explorer",
+        onClick: () => {
+          window.location.href = `/projects/${projectId}`;
+        }
       }
     });
     return Promise.resolve();
@@ -49,9 +53,11 @@ export const notificationService = {
       description: `Votre dépôt de ${amount}€ a été crédité sur votre compte.`,
       duration: 5000,
       position: "top-right",
-      actionLabel: "Voir wallet",
-      onActionClick: () => {
-        window.location.href = `/dashboard`;
+      action: {
+        label: "Voir wallet",
+        onClick: () => {
+          window.location.href = `/dashboard`;
+        }
       }
     });
     return Promise.resolve();
@@ -66,9 +72,11 @@ export const notificationService = {
       description: `Vous avez reçu ${amount}€ de rendement pour votre investissement dans ${projectName}.`,
       duration: 5000,
       position: "top-right",
-      actionLabel: "Détails",
-      onActionClick: () => {
-        window.location.href = `/dashboard`;
+      action: {
+        label: "Détails",
+        onClick: () => {
+          window.location.href = `/dashboard`;
+        }
       }
     });
     return Promise.resolve();
@@ -98,12 +106,58 @@ export const notificationService = {
       description: statusMessages[status],
       duration: 5000,
       position: "top-right",
-      actionLabel: status === 'rejected' ? "Réessayer" : "Détails",
-      onActionClick: () => {
-        window.location.href = `/dashboard`;
+      action: {
+        label: status === 'rejected' ? "Réessayer" : "Détails",
+        onClick: () => {
+          window.location.href = `/dashboard`;
+        }
       }
     });
     
     return Promise.resolve();
+  },
+  
+  /**
+   * Annonce une nouvelle opportunité d'investissement basée sur les données de la BD
+   */
+  announceNewOpportunity: async (projectId: string) => {
+    console.log("Annoncer une nouvelle opportunité pour le projet ID:", projectId);
+    
+    try {
+      // Récupérer les détails du projet depuis la base de données
+      const { data: project, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
+      
+      if (error) {
+        console.error("Erreur lors de la récupération des détails du projet:", error);
+        throw error;
+      }
+      
+      if (!project) {
+        console.error("Projet non trouvé:", projectId);
+        return;
+      }
+      
+      // Afficher la notification
+      toast.info("Nouvelle opportunité d'investissement", {
+        description: `${project.name} (${project.company_name}) est maintenant disponible pour investissement. Rendement: ${project.yield}%`,
+        duration: 7000,
+        position: "top-right",
+        action: {
+          label: "Voir le projet",
+          onClick: () => {
+            window.location.href = `/projects/${projectId}`;
+          }
+        }
+      });
+      
+      return Promise.resolve(project);
+    } catch (error) {
+      console.error("Erreur lors de l'annonce d'une nouvelle opportunité:", error);
+      return Promise.reject(error);
+    }
   }
 };
