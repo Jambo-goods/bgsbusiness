@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from "lucide-react";
@@ -30,6 +29,12 @@ interface BankTransfer {
   confirmed_at: string;
   created_at: string; // Ajouté pour compatibilité
   notes: string | null;
+}
+
+// Type pour les payloads des événements PostgreSQL
+interface PostgresChangePayload {
+  new: Record<string, any>;
+  old?: Record<string, any>;
 }
 
 interface WalletHistoryProps {
@@ -71,7 +76,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
             table: 'wallet_transactions',
             filter: `user_id=eq.${userId}`
           },
-          (payload) => {
+          (payload: PostgresChangePayload) => {
             console.log("Wallet transaction changed in real-time:", payload);
             fetchTransactions(false);
             toast.success("Votre historique de transactions a été mis à jour");
@@ -92,15 +97,13 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
             table: 'bank_transfers',
             filter: `user_id=eq.${userId}`
           },
-          (payload) => {
+          (payload: PostgresChangePayload) => {
             console.log("Bank transfer changed in real-time:", payload);
             
             // If status changed to 'received' or 'reçu', refresh transactions
             if (payload.new && 
-                typeof payload.new === 'object' &&
                 (payload.new.status === 'received' || payload.new.status === 'reçu') &&
                 (!payload.old || 
-                 typeof payload.old === 'object' &&
                  (payload.old.status !== 'received' && payload.old.status !== 'reçu'))) {
               
               console.log("Bank transfer marked as received, refreshing transactions");

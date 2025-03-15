@@ -1,10 +1,9 @@
-
 import React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { notificationService } from "@/services/notifications";
 import { Button } from "@/components/ui/button";
-import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 interface ActionButtonsProps {
   onDeposit: () => void;
@@ -152,14 +151,7 @@ export default function ActionButtons({
   };
   
   return (
-    <div className="grid grid-cols-2 gap-4 mb-6">
-      <Button 
-        onClick={handleDeposit}
-        className="bg-green-600 hover:bg-green-700 text-white rounded-lg py-3 flex items-center justify-center gap-2"
-      >
-        <ArrowDownLeft className="h-5 w-5" />
-        Déposer des fonds
-      </Button>
+    <div className="flex justify-end mb-6">
       <Button 
         onClick={handleWithdraw}
         className="bg-red-600 hover:bg-red-700 text-white rounded-lg py-3 flex items-center justify-center gap-2"
