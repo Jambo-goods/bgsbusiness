@@ -185,9 +185,9 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       
       // Convertir les virements bancaires en format de transaction
       const transfersAsTransactions: Transaction[] = transfersData.map(transfer => {
-        // Utiliser confirmed_at comme horodatage principal pour les virements reçus
-        const timestamp = transfer.confirmed_at || transfer.processed_at || new Date().toISOString();
-        console.log(`Transfer ID: ${transfer.id}, reference: ${transfer.reference}, amount: ${transfer.amount}, confirmed_at: ${transfer.confirmed_at}, timestamp used: ${timestamp}, processed: ${transfer.processed}`);
+        // Utiliser processed_at comme horodatage principal pour les virements reçus
+        const timestamp = transfer.processed_at || transfer.confirmed_at || new Date().toISOString();
+        console.log(`Transfer ID: ${transfer.id}, reference: ${transfer.reference}, amount: ${transfer.amount}, processed_at: ${transfer.processed_at}, confirmed_at: ${transfer.confirmed_at}, timestamp used: ${timestamp}, processed: ${transfer.processed}`);
         
         return {
           id: transfer.id,
