@@ -7,6 +7,7 @@ export function useWalletBalance() {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processedTransfers, setProcessedTransfers] = useState<Set<string>>(new Set());
 
   const fetchWalletBalance = useCallback(async (showLoading = true) => {
     try {
@@ -147,6 +148,15 @@ export function useWalletBalance() {
     }
   }, [fetchWalletBalance]);
 
+  // Helper function to check if a notification has been processed
+  const checkAndMarkProcessed = useCallback((id: string) => {
+    const hasBeenProcessed = processedTransfers.has(id);
+    if (!hasBeenProcessed) {
+      setProcessedTransfers(prev => new Set([...prev, id]));
+    }
+    return hasBeenProcessed;
+  }, [processedTransfers]);
+
   useEffect(() => {
     console.log("Setting up wallet balance subscriptions");
     fetchWalletBalance();
@@ -164,6 +174,40 @@ export function useWalletBalance() {
       if (!userId) return;
       
       console.log("Setting up realtime subscriptions for wallet balance, user:", userId);
+      
+      // First, check for any recent received transfers that might need notifications
+      const { data: recentTransfers } = await supabase
+        .from('bank_transfers')
+        .select('id, amount, status')
+        .eq('user_id', userId)
+        .in('status', ['received', 'reçu'])
+        .order('confirmed_at', { ascending: false })
+        .limit(5);
+        
+      if (recentTransfers && recentTransfers.length > 0) {
+        console.log("Found recent transfers on initial load:", recentTransfers);
+        
+        // Show notifications for recent transfers (within last hour)
+        recentTransfers.forEach(transfer => {
+          if (!checkAndMarkProcessed(transfer.id)) {
+            // Create a custom notification for this transfer
+            toast.custom((t) => (
+              <div className="bg-blue-50 text-blue-700 p-4 rounded-lg shadow-lg border border-blue-200 flex items-start">
+                <div className="bg-blue-100 p-2 rounded-full mr-3">
+                  <Wallet className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Dépôt réussi</h3>
+                  <p>Votre dépôt de {transfer.amount}€ a été crédité sur votre compte.</p>
+                </div>
+              </div>
+            ), {
+              duration: 6000,
+              id: `deposit-success-${transfer.id}`
+            });
+          }
+        });
+      }
       
       const channel = supabase
         .channel('wallet-balance-changes')
@@ -223,16 +267,32 @@ export function useWalletBalance() {
               const newPayload = payload.new as Record<string, any>;
               const oldPayload = payload.old as Record<string, any>;
               const status = newPayload.status;
+              const transferId = newPayload.id;
               
               console.log("Bank transfer status change:", {
                 old: oldPayload?.status,
                 new: status,
               });
               
-              if (status === 'reçu' || status === 'received') {
-                console.log("Transfer status changed to 'received', refreshing balance...");
+              if ((status === 'reçu' || status === 'received') && !checkAndMarkProcessed(transferId)) {
+                console.log("Transfer status changed to 'received', refreshing balance and showing notification...");
                 fetchWalletBalance(false);
-                toast.success("Un transfert bancaire a été confirmé");
+                
+                // Custom notification with the wallet icon for deposit success
+                toast.custom((t) => (
+                  <div className="bg-blue-50 text-blue-700 p-4 rounded-lg shadow-lg border border-blue-200 flex items-start">
+                    <div className="bg-blue-100 p-2 rounded-full mr-3">
+                      <Wallet className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">Dépôt réussi</h3>
+                      <p>Votre dépôt de {newPayload.amount}€ a été crédité sur votre compte.</p>
+                    </div>
+                  </div>
+                ), {
+                  duration: 6000,
+                  id: `deposit-success-${transferId}`
+                });
               }
             }
           }
@@ -253,7 +313,7 @@ export function useWalletBalance() {
         if (channel) supabase.removeChannel(channel);
       });
     };
-  }, [fetchWalletBalance]);
+  }, [fetchWalletBalance, checkAndMarkProcessed]);
 
   // Function to manually refresh the balance
   const refreshBalance = async () => {
