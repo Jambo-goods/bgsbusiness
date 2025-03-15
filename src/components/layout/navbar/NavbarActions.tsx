@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Bell, Wallet, Home, BellDot } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -130,19 +129,6 @@ export default function NavbarActions({
         </Link>
         
         <button 
-          onClick={handleNotificationsClick}
-          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-          aria-label="Voir les notifications"
-          title="Voir les notifications"
-        >
-          {hasNotifications ? (
-            <BellDot className="h-5 w-5 text-bgs-blue" />
-          ) : (
-            <Bell className="h-5 w-5 text-bgs-blue" />
-          )}
-        </button>
-        
-        <button 
           onClick={handleWalletClick}
           className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1"
           aria-label="Voir le portefeuille"
@@ -153,6 +139,19 @@ export default function NavbarActions({
             <span className="text-xs font-medium text-bgs-blue">
               {walletBalance.toLocaleString('fr-FR')}€
             </span>
+          )}
+        </button>
+        
+        <button 
+          onClick={handleNotificationsClick}
+          className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+          aria-label="Voir les notifications"
+          title="Voir les notifications"
+        >
+          {hasNotifications ? (
+            <BellDot className="h-5 w-5 text-bgs-blue" />
+          ) : (
+            <Bell className="h-5 w-5 text-bgs-blue" />
           )}
         </button>
       </div>
