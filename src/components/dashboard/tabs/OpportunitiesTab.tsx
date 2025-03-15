@@ -1,9 +1,8 @@
 
 import React, { useState, useEffect } from "react";
-import { Award, Search, Bell } from "lucide-react";
+import { Award, Search } from "lucide-react";
 import ProjectsList from "@/components/projects/ProjectsList";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { Project } from "@/types/project";
 import { toast } from "sonner";
@@ -79,11 +78,6 @@ export default function OpportunitiesTab() {
               className="pl-10 bg-gray-50"
             />
           </div>
-          
-          <Button variant="outline" size="sm" className="hidden md:flex">
-            <Bell className="h-4 w-4 mr-2" />
-            Activer les notifications
-          </Button>
         </div>
         
         {isLoading ? (
