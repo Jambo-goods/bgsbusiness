@@ -160,7 +160,7 @@ export const bankTransferService = {
       const { error: updateError } = await supabase
         .from('bank_transfers')
         .update({ 
-          status: 'received',  // Changed to 'received' to match your status value
+          status: 'received',  // Using 'received' consistently
           receipt_confirmed: true,
           confirmed_at: new Date().toISOString()
         })
@@ -186,16 +186,18 @@ export const bankTransferService = {
           
         console.log("Current wallet balance before update:", profileData?.wallet_balance);
         
-        // Update the profiles table directly with the new balance
+        // Calculate new balance
         const newBalance = (profileData?.wallet_balance || 0) + transferData.amount;
         console.log("New balance will be:", newBalance);
         
-        const { error: balanceError } = await supabase
+        // IMPORTANT: Update the profiles table directly with the new balance
+        const { error: balanceError, data: updateResult } = await supabase
           .from('profiles')
           .update({
             wallet_balance: newBalance
           })
-          .eq('id', item.user_id);
+          .eq('id', item.user_id)
+          .select();
         
         if (balanceError) {
           console.error("Error updating wallet balance directly:", balanceError);
@@ -210,6 +212,8 @@ export const bankTransferService = {
             console.error("Error incrementing wallet balance:", rpcError);
             throw rpcError;
           }
+        } else {
+          console.log("Update result:", updateResult);
         }
         
         // Verify the balance was updated

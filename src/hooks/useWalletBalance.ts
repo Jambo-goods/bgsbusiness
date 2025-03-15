@@ -92,11 +92,13 @@ export function useWalletBalance() {
           },
           (payload) => {
             console.log("Bank transfer changed in real-time:", payload);
-            // Fix TypeScript errors by checking if payload.new exists first
-            if (payload.new) {
+            // Fix TypeScript errors by proper type checking
+            if (payload.new && typeof payload.new === 'object') {
               // Check for status changes, especially to 'reçu' or 'received'
-              const newStatus = payload.new.status;
-              if (newStatus === 'reçu' || newStatus === 'received') {
+              const status = payload.new.status;
+              console.log("New bank transfer status:", status);
+              
+              if (status === 'reçu' || status === 'received') {
                 console.log("Transfer status changed to 'received', refreshing balance...");
                 fetchWalletBalance(false);
                 toast.success("Un transfert bancaire a été confirmé");
