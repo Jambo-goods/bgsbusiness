@@ -120,7 +120,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           console.log("Realtime subscription status for bank transfers:", status);
         });
 
-      // Add realtime subscription for withdrawal requests
+      // Add realtime subscription for withdrawal requests with improved notification
       const withdrawalsChannel = supabase
         .channel('withdrawal-requests-changes')
         .on(
@@ -140,8 +140,10 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
               console.log("Withdrawal request processed_at updated, refreshing transactions");
               fetchTransactions(false);
               
-              if (payload.new.status === 'completed') {
+              if (payload.new.status === 'completed' || payload.new.status === 'approved') {
                 toast.success("Votre demande de retrait a été traitée et confirmée");
+              } else if (payload.new.status === 'rejected') {
+                toast.error("Votre demande de retrait a été rejetée");
               }
             }
             
@@ -237,11 +239,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         };
       });
 
-      // Safely handle bank_info which may be a string or an object
-      // Convert withdrawal requests to Transaction format
+      // Enhanced withdrawal request handling with clearer confirmation status
       const withdrawalsAsTransactions: Transaction[] = withdrawalsData.map(withdrawal => {
-        const timestamp = withdrawal.processed_at || withdrawal.requested_at || new Date().toISOString();
-        
         // Safely handle bank_info which might be a string or an object
         let bankInfo: any = {};
         if (typeof withdrawal.bank_info === 'string') {
@@ -258,28 +257,41 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         const accountNumber = bankInfo?.accountNumber || '****';
         const lastFour = typeof accountNumber === 'string' ? accountNumber.slice(-4) : '****';
         
-        // Create a transaction for the request
+        // Create transactions array to collect all related transactions
+        const transactions: Transaction[] = [];
+        
+        // Initial request transaction (always present)
         const requestTransaction: Transaction = {
           id: `${withdrawal.id}-request`,
           amount: withdrawal.amount || 0,
           type: 'withdrawal' as const,
           description: `Demande de retrait vers ${bankName} (${lastFour})`,
-          created_at: withdrawal.requested_at || timestamp,
+          created_at: withdrawal.requested_at || new Date().toISOString(),
           status: withdrawal.status,
-          raw_timestamp: withdrawal.requested_at || timestamp
+          raw_timestamp: withdrawal.requested_at || new Date().toISOString()
         };
         
-        const transactions = [requestTransaction];
+        transactions.push(requestTransaction);
         
-        // If the withdrawal was processed, add a confirmation transaction
-        if (withdrawal.processed_at && withdrawal.status === 'completed') {
+        // Add confirmation transaction if processed
+        if (withdrawal.processed_at) {
+          let statusDesc = '';
+          
+          if (withdrawal.status === 'completed' || withdrawal.status === 'approved') {
+            statusDesc = 'Retrait confirmé';
+          } else if (withdrawal.status === 'rejected') {
+            statusDesc = 'Retrait rejeté';
+          } else {
+            statusDesc = 'Retrait traité';
+          }
+          
           const confirmationTransaction: Transaction = {
-            id: `${withdrawal.id}-confirmed`,
+            id: `${withdrawal.id}-confirmation`,
             amount: withdrawal.amount || 0,
             type: 'withdrawal' as const,
-            description: `Retrait confirmé vers ${bankName} (${lastFour})`,
+            description: `${statusDesc} vers ${bankName} (${lastFour})`,
             created_at: withdrawal.processed_at,
-            status: 'completed',
+            status: withdrawal.status,
             raw_timestamp: withdrawal.processed_at
           };
           
@@ -360,10 +372,10 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
     if (transaction.description && transaction.description.includes("Demande de retrait")) {
       return transaction.status === "pending"
         ? "Demande de retrait en attente"
-        : transaction.status === "completed"
+        : transaction.status === "completed" || transaction.status === "approved"
           ? "Retrait effectué"
-          : transaction.status === "cancelled"
-            ? "Retrait annulé"
+          : transaction.status === "rejected"
+            ? "Retrait rejeté"
             : "Demande de retrait";
     }
     
@@ -371,15 +383,15 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       return "Retrait confirmé";
     }
     
+    if (transaction.description && transaction.description.includes("Retrait rejeté")) {
+      return "Retrait rejeté";
+    }
+    
     if (transaction.description && transaction.description.includes("Investissement dans")) {
       return "Investissement effectué";
     }
     
     return transaction.type === 'deposit' ? 'Dépôt' : 'Retrait';
-  };
-
-  const getStatusBadge = (transaction: Transaction) => {
-    return null;
   };
 
   return (
@@ -432,16 +444,21 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                         En attente
                       </span>
                     )}
-                    {transaction.status === "cancelled" && (
+                    {transaction.status === "rejected" && (
                       <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        Annulé
+                        Rejeté
+                      </span>
+                    )}
+                    {transaction.status === "approved" && (
+                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        Approuvé
                       </span>
                     )}
                   </div>
                   <p className="text-sm text-bgs-gray-medium">
                     {formatRelativeTime(transaction.raw_timestamp || transaction.created_at)}
                   </p>
-                  {transaction.description && !transaction.description.includes("Virement bancaire") && !transaction.description.includes("Demande de retrait") && !transaction.description.includes("Retrait confirmé") && (
+                  {transaction.description && !transaction.description.includes("Virement bancaire") && !transaction.description.includes("Demande de retrait") && !transaction.description.includes("Retrait confirmé") && !transaction.description.includes("Retrait rejeté") && !transaction.description.includes("Retrait traité") && (
                     <p className="text-sm text-bgs-gray-medium">{transaction.description}</p>
                   )}
                 </div>
