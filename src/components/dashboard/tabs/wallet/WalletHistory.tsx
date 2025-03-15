@@ -180,13 +180,21 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                     } else {
                       // Fallback to manual recalculation if refreshBalance not available
                       try {
-                        const { error: recalcError } = await supabase.rpc(
-                          'recalculate_wallet_balance_with_withdrawals',
-                          { user_uuid: userId }
-                        );
+                        // Call the recalculate-wallet-balance edge function
+                        const { error: recalcError } = await supabase.functions.invoke('recalculate-wallet-balance');
                         
                         if (recalcError) {
                           console.error("Error recalculating balance after withdrawal:", recalcError);
+                          
+                          // Try using RPC function as fallback
+                          const { error: rpcError } = await supabase.rpc(
+                            'recalculate_wallet_balance',
+                            { user_uuid: userId }
+                          );
+                          
+                          if (rpcError) {
+                            console.error("Error with RPC recalculating balance:", rpcError);
+                          }
                         }
                       } catch (e) {
                         console.error("Error in recalculation fallback:", e);

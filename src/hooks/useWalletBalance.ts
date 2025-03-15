@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -89,7 +90,7 @@ export function useWalletBalance() {
       // First, log all transfers that should be counted
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
-        .select('id, amount, status, created_at')
+        .select('id, amount, status')
         .eq('user_id', userId)
         .in('status', ['received', 'reçu']);
         
@@ -141,27 +142,59 @@ export function useWalletBalance() {
         console.log(`Total confirmed withdrawals: ${confirmedWithdrawals}€`);
       }
       
-      // Call the database function to recalculate with proper handling of withdrawals
-      const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance_with_withdrawals', {
-        user_uuid: userId
-      });
-      
-      if (rpcError) {
+      // Call the Supabase Edge Function to recalculate the balance
+      try {
+        const { data, error } = await supabase.functions.invoke('recalculate-wallet-balance');
+        
+        if (error) {
+          console.error("Error calling recalculate function:", error);
+          throw error;
+        }
+        
+        console.log("Recalculation function returned:", data);
+        if (data && typeof data.balance === 'number') {
+          setWalletBalance(data.balance);
+          toast.success("Solde recalculé avec succès");
+        }
+      } catch (rpcError) {
         console.error("Error recalculating balance:", rpcError);
         
-        // Fall back to manual calculation if RPC fails
+        // Fall back to manual calculation if function fails
         console.log("Falling back to manual balance calculation");
         
         try {
-          // Calculate deposits (transfers + deposit transactions)
+          // Manually calculate balance by adding deposits and subtracting withdrawals
           const totalDeposits = (transfersData || []).reduce((sum, t) => sum + (t.amount || 0), 0);
           
-          // Calculate all completed withdrawals
-          const totalWithdrawals = (withdrawalData || []).reduce((sum, w) => sum + (w.amount || 0), 0);
+          // Get deposit transactions
+          const { data: depositTxs } = await supabase
+            .from('wallet_transactions')
+            .select('amount')
+            .eq('user_id', userId)
+            .eq('type', 'deposit')
+            .eq('status', 'completed');
+            
+          const depositAmount = (depositTxs || []).reduce((sum, tx) => sum + (tx.amount || 0), 0);
+          
+          // Calculate all completed withdrawals from withdrawal_requests
+          const totalWithdrawalsFromRequests = (withdrawalData || []).reduce((sum, w) => sum + (w.amount || 0), 0);
+          
+          // Get withdrawal transactions
+          const { data: withdrawalTxs } = await supabase
+            .from('wallet_transactions')
+            .select('amount')
+            .eq('user_id', userId)
+            .eq('type', 'withdrawal')
+            .eq('status', 'completed');
+            
+          const withdrawalAmount = (withdrawalTxs || []).reduce((sum, tx) => sum + (tx.amount || 0), 0);
           
           // Final balance
-          const calculatedBalance = totalDeposits - totalWithdrawals;
-          console.log(`Manual calculation: deposits ${totalDeposits}€, withdrawals ${totalWithdrawals}€, balance ${calculatedBalance}€`);
+          const totalDepositsAll = totalDeposits + depositAmount;
+          const totalWithdrawalsAll = totalWithdrawalsFromRequests + withdrawalAmount;
+          const calculatedBalance = totalDepositsAll - totalWithdrawalsAll;
+          
+          console.log(`Manual calculation: deposits ${totalDepositsAll}€, withdrawals ${totalWithdrawalsAll}€, balance ${calculatedBalance}€`);
           
           // Update profile with calculated balance
           const { error: updateError } = await supabase
@@ -180,8 +213,6 @@ export function useWalletBalance() {
           console.error("Error in manual balance calculation:", manualError);
           toast.error("Erreur lors du recalcul manuel du solde");
         }
-      } else {
-        toast.success("Solde recalculé avec succès");
       }
       
       // Fetch the updated balance

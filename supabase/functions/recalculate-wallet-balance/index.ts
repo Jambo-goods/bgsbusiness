@@ -42,7 +42,7 @@ serve(async (req) => {
     // Calculate deposits (from bank transfers)
     const { data: transfersData, error: transfersError } = await supabaseClient
       .from("bank_transfers")
-      .select("amount")
+      .select("amount, status")
       .eq("user_id", userId)
       .in("status", ["received", "reçu"]);
 
@@ -50,10 +50,12 @@ serve(async (req) => {
       throw transfersError;
     }
 
+    console.log("Confirmed transfers:", transfersData);
     const totalTransfers = transfersData.reduce(
       (sum, transfer) => sum + (transfer.amount || 0), 
       0
     );
+    console.log("Total transfers amount:", totalTransfers);
 
     // Add deposits from wallet transactions
     const { data: depositTransactions, error: depositError } = await supabaseClient
@@ -67,10 +69,12 @@ serve(async (req) => {
       throw depositError;
     }
 
+    console.log("Deposit transactions:", depositTransactions);
     const totalDeposits = depositTransactions.reduce(
       (sum, transaction) => sum + (transaction.amount || 0),
       totalTransfers
     );
+    console.log("Total deposits (transfers + transactions):", totalDeposits);
 
     // Calculate completed withdrawals
     const { data: withdrawalRequests, error: withdrawalError } = await supabaseClient
@@ -84,10 +88,12 @@ serve(async (req) => {
       throw withdrawalError;
     }
 
+    console.log("Withdrawal requests:", withdrawalRequests);
     const totalWithdrawals = withdrawalRequests.reduce(
       (sum, withdrawal) => sum + (withdrawal.amount || 0),
       0
     );
+    console.log("Total withdrawal requests:", totalWithdrawals);
 
     // Add withdrawals from wallet transactions
     const { data: withdrawalTransactions, error: withdrawalTxError } = await supabaseClient
@@ -101,13 +107,16 @@ serve(async (req) => {
       throw withdrawalTxError;
     }
 
+    console.log("Withdrawal transactions:", withdrawalTransactions);
     const totalAllWithdrawals = withdrawalTransactions.reduce(
       (sum, transaction) => sum + (transaction.amount || 0),
       totalWithdrawals
     );
+    console.log("Total all withdrawals:", totalAllWithdrawals);
 
     // Final balance calculation
     const finalBalance = totalDeposits - totalAllWithdrawals;
+    console.log("Final calculated balance:", finalBalance);
 
     // Update the user's wallet balance
     const { error: updateError } = await supabaseClient
