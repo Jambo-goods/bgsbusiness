@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow, format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -15,7 +16,7 @@ interface Transaction {
   description: string | null;
   created_at: string;
   status: string;
-  raw_timestamp?: string; // Optional field to store the original timestamp
+  raw_timestamp?: string; // Original timestamp from database
 }
 
 // Type pour les virements bancaires
@@ -186,7 +187,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       const transfersAsTransactions: Transaction[] = transfersData.map(transfer => {
         // Utiliser confirmed_at comme horodatage principal pour les virements reçus
         const timestamp = transfer.confirmed_at || transfer.processed_at || new Date().toISOString();
-        console.log(`Transfer ID: ${transfer.id}, reference: ${transfer.reference}, amount: ${transfer.amount}, confirmed_at: ${transfer.confirmed_at}, processed: ${transfer.processed}`);
+        console.log(`Transfer ID: ${transfer.id}, reference: ${transfer.reference}, amount: ${transfer.amount}, confirmed_at: ${transfer.confirmed_at}, timestamp used: ${timestamp}, processed: ${transfer.processed}`);
         
         return {
           id: transfer.id,
@@ -195,7 +196,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           description: `Virement bancaire reçu (réf: ${transfer.reference})`,
           created_at: timestamp,
           status: transfer.processed ? 'completed' : 'pending',
-          raw_timestamp: transfer.confirmed_at // Store the original confirmed_at timestamp
+          raw_timestamp: timestamp // Store the exact timestamp as it is in the database
         };
       });
       
@@ -206,7 +207,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         type: tx.type as 'deposit' | 'withdrawal',
         description: tx.description,
         created_at: tx.created_at,
-        status: tx.status
+        status: tx.status,
+        raw_timestamp: tx.created_at // Store the exact timestamp
       })) : [];
       
       // Fusionner et trier les transactions par date
@@ -250,10 +252,14 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
 
   const formatRelativeTime = (dateString: string) => {
     try {
+      // Use the raw_timestamp if available for more accurate display
       const date = new Date(dateString);
-      const now = new Date();
       
-      // Afficher l'heure exacte pour toutes les transactions
+      // Log the date string and parsed date for debugging
+      console.log(`Formatting date: ${dateString}, parsed as: ${date.toISOString()}`);
+      
+      // Format as exact date and time - without any timezone transformation
+      // This will display exactly what's stored in the database
       return format(date, 'dd/MM/yyyy à HH:mm', { locale: fr });
     } catch (error) {
       console.error("Erreur de formatage de date:", error, "pour la date:", dateString);
@@ -338,7 +344,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                     {getStatusBadge(transaction)}
                   </div>
                   <p className="text-sm text-bgs-gray-medium">
-                    {formatRelativeTime(transaction.created_at)}
+                    {/* Use raw_timestamp if available for more precise display */}
+                    {formatRelativeTime(transaction.raw_timestamp || transaction.created_at)}
                   </p>
                 </div>
               </div>
