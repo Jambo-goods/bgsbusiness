@@ -16,18 +16,13 @@ export default function WalletTab() {
   const [activeTab, setActiveTab] = useState("overview");
   const { walletBalance, isLoadingBalance, refreshBalance, recalculateBalance } = useWalletBalance();
 
-  // Auto-recalculate when tab loads
+  // Auto-recalculate when tab loads if balance is zero
   useEffect(() => {
-    console.log("WalletTab loaded, current balance:", walletBalance);
-    
-    // Force recalculation when the component loads
-    const initialRecalculation = async () => {
-      console.log("Performing initial wallet balance recalculation");
-      await recalculateBalance();
-    };
-    
-    initialRecalculation();
-  }, [recalculateBalance]);
+    if (walletBalance === 0 && !isLoadingBalance) {
+      console.log("Wallet balance is zero, automatically recalculating...");
+      recalculateBalance();
+    }
+  }, [walletBalance, isLoadingBalance, recalculateBalance]);
 
   // Setup notifications and wallet transaction subscriptions
   useEffect(() => {
@@ -59,11 +54,6 @@ export default function WalletTab() {
               toast.success(notification.title, {
                 description: notification.description
               });
-              
-              // Refresh balance when we get a deposit-related notification
-              if (notification.type === 'deposit') {
-                refreshBalance();
-              }
             }
           }
         )
@@ -71,52 +61,17 @@ export default function WalletTab() {
           console.log("Realtime subscription status for notifications:", status);
         });
       
-      // Subscribe to bank transfers table changes
-      const bankTransfersChannel = supabase
-        .channel('wallet-bank-transfers-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'bank_transfers',
-            filter: `user_id=eq.${userId}`
-          },
-          (payload) => {
-            console.log("Bank transfer changed in real-time:", payload);
-            
-            // Check for status changes to 'received' or 'reçu'
-            if (payload.new && payload.new.status && 
-                (payload.new.status === 'received' || payload.new.status === 'reçu')) {
-              console.log("Bank transfer received, refreshing balance");
-              refreshBalance();
-              
-              const amount = payload.new.amount || 0;
-              toast.success("Virement bancaire reçu!", {
-                description: `${amount}€ ont été ajoutés à votre portefeuille.`
-              });
-            }
-          }
-        )
-        .subscribe((status) => {
-          console.log("Realtime subscription status for bank transfers:", status);
-        });
-      
-      return [notificationsChannel, bankTransfersChannel];
+      return notificationsChannel;
     };
     
     const subscriptionPromise = setupNotificationSubscriptions();
     
     return () => {
-      subscriptionPromise.then(channels => {
-        if (channels) {
-          channels.forEach(channel => {
-            if (channel) supabase.removeChannel(channel);
-          });
-        }
+      subscriptionPromise.then(channel => {
+        if (channel) supabase.removeChannel(channel);
       });
     };
-  }, [refreshBalance]);
+  }, []);
 
   const handleDeposit = async () => {
     await refreshBalance();
