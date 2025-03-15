@@ -18,6 +18,9 @@ export const bankTransferService = {
       
       console.log(`Starting confirmDeposit for item ${item.id} with amount ${amount}`);
       
+      // Use server timestamp for accuracy
+      const serverTimestamp = new Date().toISOString();
+      
       // Update the bank_transfer status to "reçu" (received)
       // The database trigger will handle updating the wallet balance
       const { error: updateError } = await supabase
@@ -25,7 +28,7 @@ export const bankTransferService = {
         .update({ 
           status: 'reçu',
           processed: true,
-          processed_at: new Date().toISOString(),
+          processed_at: serverTimestamp,
           amount: amount
         })
         .eq('id', item.id);
@@ -63,7 +66,8 @@ export const bankTransferService = {
           metadata: {
             amount,
             transaction_id: item.id
-          }
+          },
+          created_at: serverTimestamp // Explicitly set creation time
         });
       
       // Log admin action
@@ -165,6 +169,9 @@ export const bankTransferService = {
         return false;
       }
       
+      // Use consistent server timestamp
+      const serverTimestamp = new Date().toISOString();
+      
       // Update bank transfer status to "received"
       // This will trigger the database trigger to update the wallet balance
       console.log("Updating bank transfer status to 'received'");
@@ -173,7 +180,7 @@ export const bankTransferService = {
         .update({ 
           status: 'received',
           receipt_confirmed: true,
-          confirmed_at: new Date().toISOString()
+          confirmed_at: serverTimestamp
         })
         .eq('id', item.id);
         
@@ -198,7 +205,7 @@ export const bankTransferService = {
         console.log(`Successfully recalculated balance for user ${item.user_id}`);
       }
       
-      // Create notification for the user
+      // Create notification for the user with the same timestamp
       await supabase
         .from('notifications')
         .insert({
@@ -210,8 +217,22 @@ export const bankTransferService = {
           metadata: {
             amount: transferData.amount,
             transaction_id: item.id
-          }
+          },
+          created_at: serverTimestamp // Explicitly set creation time
         });
+      
+      // Also update the related wallet transaction with the correct timestamp if it exists
+      const { error: walletUpdateError } = await supabase
+        .from('wallet_transactions')
+        .update({ 
+          created_at: serverTimestamp
+        })
+        .eq('id', item.id);
+
+      if (walletUpdateError) {
+        console.error("Error updating wallet transaction timestamp:", walletUpdateError);
+        // Continue anyway as this is not critical
+      }
       
       // Log admin action
       if (adminUser.id) {

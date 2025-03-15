@@ -184,12 +184,13 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       console.log("Fetched received bank transfers:", transfersData ? transfersData.length : 0);
       
       // Convertir les virements bancaires en format de transaction
+      // Utiliser confirmed_at comme date pour les virements bancaires plutôt que created_at
       const transfersAsTransactions: Transaction[] = transfersData.map(transfer => ({
         id: transfer.id,
         amount: transfer.amount,
         type: 'deposit' as const,
         description: `Virement bancaire reçu (réf: ${transfer.reference})`,
-        created_at: transfer.confirmed_at,
+        created_at: transfer.confirmed_at, // Utiliser confirmed_at comme timestamp principal
         status: 'completed'
       }));
       
