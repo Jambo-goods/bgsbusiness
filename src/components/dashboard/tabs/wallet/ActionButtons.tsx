@@ -3,6 +3,8 @@ import React from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { notificationService } from "@/services/notifications";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, MinusCircle, RefreshCw } from "lucide-react";
 
 interface ActionButtonsProps {
   onDeposit: () => void;
@@ -149,6 +151,44 @@ export default function ActionButtons({
     }
   };
   
-  // Return an empty fragment as we've removed the button
-  return <></>;
+  const handleRefreshBalance = async () => {
+    if (refreshBalance) {
+      toast.info("Actualisation du solde en cours...");
+      await refreshBalance();
+    }
+  };
+  
+  return (
+    <div className="grid grid-cols-3 gap-4">
+      <Button 
+        variant="outline" 
+        size="lg" 
+        className="bg-green-50 hover:bg-green-100 text-green-600 border-green-200 flex items-center justify-center gap-2"
+        onClick={handleDeposit}
+      >
+        <PlusCircle className="h-5 w-5" />
+        Dépôt (test)
+      </Button>
+      
+      <Button 
+        variant="outline" 
+        size="lg" 
+        className="bg-amber-50 hover:bg-amber-100 text-amber-600 border-amber-200 flex items-center justify-center gap-2"
+        onClick={handleRefreshBalance}
+      >
+        <RefreshCw className="h-5 w-5" />
+        Actualiser
+      </Button>
+      
+      <Button 
+        variant="outline" 
+        size="lg" 
+        className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200 flex items-center justify-center gap-2"
+        onClick={handleWithdraw}
+      >
+        <MinusCircle className="h-5 w-5" />
+        Retrait (test)
+      </Button>
+    </div>
+  );
 }

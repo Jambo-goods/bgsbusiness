@@ -32,21 +32,22 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   useEffect(() => {
     fetchTransactions();
     
-    // Setup polling for transactions every 30 seconds
+    // Setup polling for transactions every 15 seconds (increased frequency)
     const pollingInterval = setInterval(() => {
       fetchTransactions(false); // silent refresh (don't show loading state)
-    }, 30000);
+    }, 15000);
     
-    // Set up realtime subscription for transaction updates
+    // Set up realtime subscription for transaction and bank transfer updates
     const setupRealtimeSubscriptions = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
       
       if (!userId) return;
       
-      console.log("Setting up realtime subscriptions for wallet transactions, user:", userId);
+      console.log("Setting up realtime subscriptions for wallet transactions and bank transfers, user:", userId);
       
-      const channel = supabase
+      // Listen for wallet transactions changes
+      const transactionsChannel = supabase
         .channel('wallet-transactions-changes')
         .on(
           'postgres_changes',
@@ -66,15 +67,69 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           console.log("Realtime subscription status for wallet transactions:", status);
         });
       
-      return channel;
+      // Listen specifically for bank_transfers changes
+      const bankTransfersChannel = supabase
+        .channel('bank-transfers-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'bank_transfers',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("Bank transfer changed in real-time:", payload);
+            if (payload.new && payload.new.status && 
+                (payload.new.status === 'received' || payload.new.status === 'reçu')) {
+              console.log("Bank transfer received, refreshing transactions");
+              fetchTransactions(false);
+              toast.success("Votre virement bancaire a été reçu!", {
+                description: "Votre historique des transactions a été mis à jour."
+              });
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Realtime subscription status for bank transfers:", status);
+        });
+      
+      // Listen for notifications
+      const notificationsChannel = supabase
+        .channel('notifications-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("New notification received:", payload);
+            // Refresh transactions when we get a deposit-related notification
+            if (payload.new && payload.new.type === 'deposit') {
+              fetchTransactions(false);
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Realtime subscription status for notifications:", status);
+        });
+      
+      return [transactionsChannel, bankTransfersChannel, notificationsChannel];
     };
     
     const subscriptionPromise = setupRealtimeSubscriptions();
     
     return () => {
       clearInterval(pollingInterval);
-      subscriptionPromise.then(channel => {
-        if (channel) supabase.removeChannel(channel);
+      subscriptionPromise.then(channels => {
+        if (channels) {
+          channels.forEach(channel => {
+            if (channel) supabase.removeChannel(channel);
+          });
+        }
       });
     };
   }, [refreshBalance]);
@@ -109,9 +164,39 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         throw error;
       }
       
-      console.log("Fetched transactions:", data ? data.length : 0);
+      console.log("Fetched transactions:", data ? data.length : 0, data);
       setTransactions(data as Transaction[]);
       setError(null);
+      
+      // Check if we need to also check for bank transfers that might not be in wallet_transactions yet
+      const { data: bankTransfers, error: bankTransfersError } = await supabase
+        .from('bank_transfers')
+        .select('*')
+        .eq('user_id', session.session.user.id)
+        .in('status', ['received', 'reçu'])
+        .order('created_at', { ascending: false });
+        
+      if (bankTransfersError) {
+        console.error("Error fetching bank transfers:", bankTransfersError);
+      } else if (bankTransfers && bankTransfers.length > 0) {
+        console.log("Fetched bank transfers:", bankTransfers.length, bankTransfers);
+        
+        // Check if we have corresponding wallet transactions for each received bank transfer
+        for (const transfer of bankTransfers) {
+          const existingTransaction = data?.find(t => 
+            t.description?.includes(transfer.id) || 
+            (t.amount === transfer.amount && Math.abs(new Date(t.created_at).getTime() - new Date(transfer.created_at).getTime()) < 60000)
+          );
+          
+          if (!existingTransaction && (transfer.status === 'received' || transfer.status === 'reçu')) {
+            console.log("Found bank transfer without corresponding transaction:", transfer);
+            if (refreshBalance) {
+              toast.info("Actualisation du solde en cours...");
+              await refreshBalance();
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error("Erreur lors de la récupération des transactions:", err);
       setError("Erreur lors du chargement de l'historique des transactions");
@@ -122,9 +207,12 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   };
 
   // Manual refresh function
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     toast.info("Actualisation de l'historique des transactions...");
-    fetchTransactions(false);
+    await fetchTransactions(false);
+    if (refreshBalance) {
+      await refreshBalance();
+    }
   };
 
   // Formatting functions
