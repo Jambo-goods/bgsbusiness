@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Bell, BellRing, Settings, Info, AlertTriangle, Clock, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -43,34 +43,13 @@ const NotificationsTab = () => {
     }, 12000);
   };
 
-  // Données de démonstration pour les notifications
-  const demoNotifications = {
-    investments: [
-      { id: 1, title: "Investissement confirmé", description: "Votre investissement de 5000€ dans Projet Alpha a été confirmé.", date: "Aujourd'hui", status: "success" },
-      { id: 2, title: "Investissement en attente", description: "Votre investissement de 3200€ dans Projet Beta est en attente de confirmation.", date: "Hier", status: "pending" }
-    ],
-    deposits: [
-      { id: 3, title: "Dépôt réussi", description: "Votre dépôt de 1000€ a été crédité sur votre compte.", date: "Aujourd'hui", status: "success" },
-      { id: 4, title: "Retrait en cours", description: "Votre demande de retrait de 500€ est en cours de traitement.", date: "Il y a 2 jours", status: "processing" }
-    ],
-    yields: [
-      { id: 5, title: "Rendement reçu", description: "Vous avez reçu 250€ de rendement pour votre investissement dans Projet Alpha.", date: "Aujourd'hui", status: "success" },
-      { id: 6, title: "Rendement prévu", description: "Un rendement de 180€ est prévu pour le 15 du mois prochain.", date: "Il y a 1 semaine", status: "info" }
-    ],
-    opportunities: [
-      { id: 7, title: "Nouvelle opportunité", description: "Projet Gamma est maintenant disponible pour investissement.", date: "Aujourd'hui", status: "info" },
-      { id: 8, title: "Offre limitée", description: "Projet Delta offre un rendement exceptionnel de 8% pour une durée limitée.", date: "Il y a 3 jours", status: "info" }
-    ]
-  };
-
-  const getAllNotifications = () => {
-    return [
-      ...demoNotifications.investments,
-      ...demoNotifications.deposits,
-      ...demoNotifications.yields,
-      ...demoNotifications.opportunities
-    ].sort((a, b) => (a.date === "Aujourd'hui" ? -1 : 1));
-  };
+  // État pour indiquer qu'il n'y a pas de notifications
+  const emptyState = (
+    <div className="text-center py-8">
+      <BellRing className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+      <p className="text-gray-500">Aucune notification pour le moment</p>
+    </div>
+  );
 
   const getNotificationIcon = (status) => {
     switch (status) {
@@ -141,26 +120,7 @@ const NotificationsTab = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {getAllNotifications().length > 0 ? (
-                  getAllNotifications().map(notification => (
-                    <div key={notification.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="mt-1">{getNotificationIcon(notification.status)}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-medium">{notification.title}</h3>
-                          {getStatusBadge(notification.status)}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">{notification.description}</p>
-                        <p className="text-xs text-gray-500">{notification.date}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <BellRing className="h-10 w-10 text-gray-300 mx-auto mb-2" />
-                    <p className="text-gray-500">Aucune notification pour le moment</p>
-                  </div>
-                )}
+                {emptyState}
               </div>
             </CardContent>
           </Card>
@@ -174,25 +134,7 @@ const NotificationsTab = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {demoNotifications.investments.length > 0 ? (
-                  demoNotifications.investments.map(notification => (
-                    <div key={notification.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="mt-1">{getNotificationIcon(notification.status)}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-medium">{notification.title}</h3>
-                          {getStatusBadge(notification.status)}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">{notification.description}</p>
-                        <p className="text-xs text-gray-500">{notification.date}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Aucune notification d'investissement</p>
-                  </div>
-                )}
+                {emptyState}
               </div>
             </CardContent>
           </Card>
@@ -206,25 +148,7 @@ const NotificationsTab = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {demoNotifications.deposits.length > 0 ? (
-                  demoNotifications.deposits.map(notification => (
-                    <div key={notification.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="mt-1">{getNotificationIcon(notification.status)}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-medium">{notification.title}</h3>
-                          {getStatusBadge(notification.status)}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">{notification.description}</p>
-                        <p className="text-xs text-gray-500">{notification.date}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Aucune notification de dépôt ou retrait</p>
-                  </div>
-                )}
+                {emptyState}
               </div>
             </CardContent>
           </Card>
@@ -238,25 +162,7 @@ const NotificationsTab = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {demoNotifications.yields.length > 0 ? (
-                  demoNotifications.yields.map(notification => (
-                    <div key={notification.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="mt-1">{getNotificationIcon(notification.status)}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-medium">{notification.title}</h3>
-                          {getStatusBadge(notification.status)}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">{notification.description}</p>
-                        <p className="text-xs text-gray-500">{notification.date}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Aucune notification de rendement</p>
-                  </div>
-                )}
+                {emptyState}
               </div>
             </CardContent>
           </Card>
@@ -270,25 +176,7 @@ const NotificationsTab = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {demoNotifications.opportunities.length > 0 ? (
-                  demoNotifications.opportunities.map(notification => (
-                    <div key={notification.id} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="mt-1">{getNotificationIcon(notification.status)}</div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <h3 className="font-medium">{notification.title}</h3>
-                          {getStatusBadge(notification.status)}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-1">{notification.description}</p>
-                        <p className="text-xs text-gray-500">{notification.date}</p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Aucune nouvelle opportunité pour le moment</p>
-                  </div>
-                )}
+                {emptyState}
               </div>
             </CardContent>
           </Card>
