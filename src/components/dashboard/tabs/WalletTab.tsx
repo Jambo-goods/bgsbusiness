@@ -11,6 +11,7 @@ import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
+import { Wallet } from "lucide-react";
 
 export default function WalletTab() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -62,8 +63,20 @@ export default function WalletTab() {
               // Create a notification
               notificationService.depositSuccess(payload.new.amount);
               
-              toast.success("Virement bancaire reçu", {
-                description: `Un virement de ${payload.new.amount}€ a été confirmé et ajouté à votre solde`
+              // Custom notification with the wallet icon for deposit success
+              toast.custom((t) => (
+                <div className="bg-blue-50 text-blue-700 p-4 rounded-lg shadow-lg border border-blue-200 flex items-start">
+                  <div className="bg-blue-100 p-2 rounded-full mr-3">
+                    <Wallet className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Dépôt réussi</h3>
+                    <p>Votre dépôt de {payload.new.amount}€ a été crédité sur votre compte.</p>
+                  </div>
+                </div>
+              ), {
+                duration: 6000,
+                id: `deposit-success-${payload.new.id}`
               });
             }
           }

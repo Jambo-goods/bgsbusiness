@@ -59,7 +59,7 @@ export const bankTransferService = {
         .from('notifications')
         .insert({
           user_id: item.user_id,
-          title: "Dépôt confirmé",
+          title: "Dépôt réussi",
           description: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
           type: "deposit",
           category: "success",
