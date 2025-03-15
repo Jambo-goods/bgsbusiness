@@ -134,13 +134,7 @@ export const bankTransferService = {
       // Get current admin information
       const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
       
-      console.log("Starting confirmReceipt for item:", item.id);
-      
-      // Update the wallet transaction with receipt confirmation
-      await supabase
-        .from('wallet_transactions')
-        .update({ receipt_confirmed: true })
-        .eq('id', item.id);
+      console.log("Starting confirmReceipt for item:", item);
       
       // First, get the transfer amount
       const { data: transferData, error: fetchError } = await supabase
@@ -151,82 +145,82 @@ export const bankTransferService = {
         
       if (fetchError || !transferData) {
         console.error("Error fetching transfer amount:", fetchError);
+        toast.error("Impossible de récupérer le montant du transfert");
         throw fetchError || new Error("Transfer not found");
       }
       
-      console.log("Found transfer amount:", transferData.amount);
+      console.log("Found transfer with amount:", transferData.amount);
       
-      // Update the bank_transfer status to indicate receipt confirmed
-      const { error: updateError } = await supabase
-        .from('bank_transfers')
-        .update({ 
-          status: 'received',  // Using 'received' consistently
-          receipt_confirmed: true,
-          confirmed_at: new Date().toISOString()
-        })
-        .eq('id', item.id);
-        
-      if (updateError) {
-        console.error("Error updating bank transfer status:", updateError);
-        throw updateError;
+      if (!transferData.amount || transferData.amount <= 0) {
+        toast.error("Le transfert n'a pas de montant valide");
+        return false;
       }
       
-      console.log("Bank transfer status updated to 'received'");
-      
-      // Increment the user's wallet balance with the transfer amount
-      if (transferData.amount) {
-        console.log("Incrementing wallet balance by:", transferData.amount);
+      // Use a transaction to ensure all updates are consistent
+      const transaction = async () => {
+        // 1. Update the wallet_transactions table
+        const { error: txError } = await supabase
+          .from('wallet_transactions')
+          .update({ 
+            receipt_confirmed: true,
+            status: 'completed',
+            amount: transferData.amount
+          })
+          .eq('id', item.id);
+          
+        if (txError) {
+          console.error("Error updating wallet transaction:", txError);
+          throw txError;
+        }
         
-        // Get current wallet balance for debugging
-        const { data: profileData } = await supabase
+        // 2. Update the bank_transfers table
+        const { error: transferError } = await supabase
+          .from('bank_transfers')
+          .update({ 
+            status: 'received',  // Using 'received' consistently
+            receipt_confirmed: true,
+            confirmed_at: new Date().toISOString()
+          })
+          .eq('id', item.id);
+          
+        if (transferError) {
+          console.error("Error updating bank transfer:", transferError);
+          throw transferError;
+        }
+        
+        // 3. Get the current wallet balance
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('wallet_balance')
           .eq('id', item.user_id)
           .single();
           
-        console.log("Current wallet balance before update:", profileData?.wallet_balance);
+        if (profileError) {
+          console.error("Error fetching user profile:", profileError);
+          throw profileError;
+        }
         
-        // Calculate new balance
-        const newBalance = (profileData?.wallet_balance || 0) + transferData.amount;
+        const currentBalance = profileData?.wallet_balance || 0;
+        console.log("Current wallet balance:", currentBalance);
+        
+        const newBalance = currentBalance + transferData.amount;
         console.log("New balance will be:", newBalance);
         
-        // IMPORTANT: Update the profiles table directly with the new balance
-        const { error: balanceError, data: updateResult } = await supabase
+        // 4. Update the profiles table with the new balance
+        const { error: updateError } = await supabase
           .from('profiles')
           .update({
             wallet_balance: newBalance
           })
-          .eq('id', item.user_id)
-          .select();
+          .eq('id', item.user_id);
         
-        if (balanceError) {
-          console.error("Error updating wallet balance directly:", balanceError);
-          
-          // Fallback to RPC function if direct update fails
-          const { error: rpcError } = await supabase.rpc('increment_wallet_balance', {
-            user_id: item.user_id,
-            increment_amount: transferData.amount
-          });
-          
-          if (rpcError) {
-            console.error("Error incrementing wallet balance:", rpcError);
-            throw rpcError;
-          }
-        } else {
-          console.log("Update result:", updateResult);
+        if (updateError) {
+          console.error("Error updating wallet balance:", updateError);
+          throw updateError;
         }
         
-        // Verify the balance was updated
-        const { data: updatedProfile } = await supabase
-          .from('profiles')
-          .select('wallet_balance')
-          .eq('id', item.user_id)
-          .single();
-          
-        console.log("Wallet balance after update:", updatedProfile?.wallet_balance);
-        
-        // Create a notification for the user
-        await supabase
+        // 5. Create a notification
+        const { error: notifError } = await supabase
           .from('notifications')
           .insert({
             user_id: item.user_id,
@@ -240,20 +234,37 @@ export const bankTransferService = {
             }
           });
           
-        console.log("Notification created for user");
-      }
+        if (notifError) {
+          console.error("Error creating notification:", notifError);
+          // Don't throw here - notification is not critical
+        }
+      };
+      
+      // Execute all operations
+      await transaction();
+      
+      // Verify the balance was updated
+      const { data: verifyProfile } = await supabase
+        .from('profiles')
+        .select('wallet_balance')
+        .eq('id', item.user_id)
+        .single();
+        
+      console.log("Verified wallet balance after update:", verifyProfile?.wallet_balance);
       
       // Log admin action
       if (adminUser.id) {
         await logAdminAction(
           adminUser.id,
           'wallet_management',
-          `Confirmation de réception de virement - Réf: ${item.description}`,
-          item.user_id
+          `Confirmation de réception de virement - Montant: ${transferData.amount}€`,
+          item.user_id,
+          undefined,
+          transferData.amount
         );
       }
       
-      toast.success("Réception de virement confirmée");
+      toast.success("Réception de virement confirmée et solde mis à jour");
       return true;
     } catch (error) {
       console.error("Erreur lors de la confirmation de réception:", error);

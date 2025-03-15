@@ -92,10 +92,11 @@ export function useWalletBalance() {
           },
           (payload) => {
             console.log("Bank transfer changed in real-time:", payload);
-            // Fix TypeScript errors by proper type checking
+            // Fix TypeScript errors by proper type checking and type assertion
             if (payload.new && typeof payload.new === 'object') {
               // Check for status changes, especially to 'reçu' or 'received'
-              const status = payload.new.status;
+              const newPayload = payload.new as Record<string, any>;
+              const status = newPayload.status;
               console.log("New bank transfer status:", status);
               
               if (status === 'reçu' || status === 'received') {
