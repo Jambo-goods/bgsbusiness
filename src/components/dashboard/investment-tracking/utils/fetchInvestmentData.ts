@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Investment } from "../types/investment";
+import { Investment, Transaction } from "../types/investment";
 
 export const fetchInvestmentDetails = async (investmentId: string) => {
   try {
