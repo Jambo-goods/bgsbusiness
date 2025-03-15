@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { PaymentRecord } from './types';

@@ -119,6 +119,16 @@ export const bankTransferService = {
         .update({ receipt_confirmed: true })
         .eq('id', item.id);
       
+      // Update bank_transfers table status to 'received'
+      const { error: bankTransferError } = await supabase
+        .from('bank_transfers')
+        .update({ status: 'received' })
+        .eq('reference', item.description.match(/\(réf: (.+?)\)/)?.[1] || '');
+        
+      if (bankTransferError) {
+        console.error("Erreur lors de la mise à jour du statut du virement:", bankTransferError);
+      }
+      
       // Log admin action
       if (adminUser.id) {
         await logAdminAction(
