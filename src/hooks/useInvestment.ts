@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { useToast } from "@/hooks/use-toast";
-import { notificationService } from "@/services/notifications";
 import { calculateReturns } from "@/utils/investmentCalculations";
 import { useUserBalance } from "@/hooks/useUserBalance";
 import { useInvestmentConfirmation } from "@/hooks/useInvestmentConfirmation";
@@ -45,8 +44,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
         variant: "destructive"
       });
       
-      // Create insufficient funds notification
-      notificationService.insufficientFunds();
       return;
     }
     

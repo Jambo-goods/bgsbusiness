@@ -4,9 +4,7 @@ import { Bell, Wallet, Home } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
-import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
-import { notificationService } from "@/services/notifications";
 
 interface NavbarActionsProps {
   isActive: (path: string) => boolean;
@@ -15,12 +13,10 @@ interface NavbarActionsProps {
 export default function NavbarActions({
   isActive
 }: NavbarActionsProps) {
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
@@ -71,31 +67,10 @@ export default function NavbarActions({
   }, [location.pathname]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      fetchUnreadCount();
-      
-      const notificationCheckInterval = setInterval(fetchUnreadCount, 30000);
-      return () => {
-        clearInterval(notificationCheckInterval);
-      };
-    }
-  }, [isAuthenticated]);
-
-  const fetchUnreadCount = async () => {
-    try {
-      const count = await notificationService.getUnreadCount();
-      setUnreadNotificationCount(count);
-    } catch (error) {
-      console.error("Error fetching unread count:", error);
-    }
-  };
-
-  useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
-      if (isNotificationOpen || isUserMenuOpen || isDashboardMenuOpen) {
+      if (isUserMenuOpen || isDashboardMenuOpen) {
         const target = event.target as HTMLElement;
-        if (!target.closest('.notification-dropdown') && !target.closest('.user-dropdown') && !target.closest('.dashboard-menu-dropdown')) {
-          setIsNotificationOpen(false);
+        if (!target.closest('.user-dropdown') && !target.closest('.dashboard-menu-dropdown')) {
           setIsUserMenuOpen(false);
           setIsDashboardMenuOpen(false);
         }
@@ -103,11 +78,7 @@ export default function NavbarActions({
     };
     document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
-
-  const handleCloseNotifications = () => {
-    setIsNotificationOpen(false);
-  };
+  }, [isUserMenuOpen, isDashboardMenuOpen]);
 
   const handleWalletClick = () => {
     console.log("Wallet button clicked, navigating to wallet tab");
@@ -151,24 +122,6 @@ export default function NavbarActions({
             </span>
           )}
         </button>
-
-        <div className="relative notification-dropdown">
-          <button onClick={() => {
-            setIsNotificationOpen(!isNotificationOpen);
-            if (isUserMenuOpen) setIsUserMenuOpen(false);
-            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-          }} className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
-            <Bell className="h-5 w-5 text-bgs-blue" />
-            {unreadNotificationCount > 0 && (
-              <span className="absolute top-1 right-1 h-2 w-2 bg-bgs-orange rounded-full"></span>
-            )}
-          </button>
-          
-          <NotificationDropdown 
-            isOpen={isNotificationOpen} 
-            onClose={handleCloseNotifications}
-          />
-        </div>
       </div>
     );
   }
