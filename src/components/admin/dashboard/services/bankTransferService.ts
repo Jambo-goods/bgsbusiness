@@ -65,7 +65,8 @@ export const bankTransferService = {
           category: "success",
           metadata: {
             amount,
-            transaction_id: item.id
+            transaction_id: item.id,
+            timestamp: serverTimestamp // Add timestamp to metadata
           },
           created_at: serverTimestamp // Explicitly set creation time
         });
@@ -180,7 +181,8 @@ export const bankTransferService = {
         .update({ 
           status: 'received',
           receipt_confirmed: true,
-          confirmed_at: serverTimestamp
+          processed: true,
+          processed_at: serverTimestamp
         })
         .eq('id', item.id);
         
@@ -216,7 +218,8 @@ export const bankTransferService = {
           category: "success",
           metadata: {
             amount: transferData.amount,
-            transaction_id: item.id
+            transaction_id: item.id,
+            timestamp: serverTimestamp // Add timestamp to metadata
           },
           created_at: serverTimestamp // Explicitly set creation time
         });

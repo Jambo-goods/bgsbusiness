@@ -43,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
         <p><strong>ID utilisateur:</strong> ${userId}</p>
         <p><strong>Email:</strong> ${userEmail}</p>
         <p><strong>Montant:</strong> ${amount}€</p>
-        <p><strong>Date et heure:</strong> ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}</p>
+        <p><strong>Date et heure exacte:</strong> ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}</p>
         <p>${userName} a confirmé avoir effectué un virement bancaire de ${amount}€ avec la référence ${reference}</p>
         <p>Veuillez vérifier la réception du virement avant de créditer le compte.</p>
       `,

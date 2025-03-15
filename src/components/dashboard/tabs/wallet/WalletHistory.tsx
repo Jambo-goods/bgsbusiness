@@ -27,8 +27,7 @@ interface BankTransfer {
   user_id: string;
   processed: boolean;
   processed_at: string | null;
-  confirmed_at: string;
-  created_at: string; // Ajouté pour compatibilité
+  created_at: string;
   notes: string | null;
 }
 
@@ -173,7 +172,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         .select('*')
         .eq('user_id', userId)
         .in('status', ['received', 'reçu'])
-        .order('confirmed_at', { ascending: false });
+        .order('processed_at', { ascending: false });
         
       if (transfersError) {
         console.error("Error fetching bank transfers:", transfersError);
@@ -184,15 +183,17 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       console.log("Fetched received bank transfers:", transfersData ? transfersData.length : 0);
       
       // Convertir les virements bancaires en format de transaction
-      // Utiliser confirmed_at comme date pour les virements bancaires plutôt que created_at
-      const transfersAsTransactions: Transaction[] = transfersData.map(transfer => ({
-        id: transfer.id,
-        amount: transfer.amount,
-        type: 'deposit' as const,
-        description: `Virement bancaire reçu (réf: ${transfer.reference})`,
-        created_at: transfer.confirmed_at, // Utiliser confirmed_at comme timestamp principal
-        status: 'completed'
-      }));
+      // Utiliser processed_at comme date pour les virements bancaires
+      const transfersAsTransactions: Transaction[] = transfersData
+        .filter(transfer => transfer.processed_at) // Only include transfers with processed_at timestamp
+        .map(transfer => ({
+          id: transfer.id,
+          amount: transfer.amount,
+          type: 'deposit' as const,
+          description: `Virement bancaire reçu (réf: ${transfer.reference})`,
+          created_at: transfer.processed_at!, // Use processed_at as timestamp
+          status: 'completed'
+        }));
       
       // S'assurer que toutes les transactions sont bien typées
       const typedTransactions: Transaction[] = transactionsData ? transactionsData.map(tx => ({
