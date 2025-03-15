@@ -16,17 +16,64 @@ export default function WalletTab() {
   const [activeTab, setActiveTab] = useState("overview");
   const { walletBalance, isLoadingBalance, refreshBalance, recalculateBalance } = useWalletBalance();
 
-  // Auto-recalculate when tab loads if balance is zero
+  // Auto-recalculate when tab loads
   useEffect(() => {
-    if (walletBalance === 0 && !isLoadingBalance) {
-      console.log("Wallet balance is zero, automatically recalculating...");
-      recalculateBalance();
-    }
-  }, [walletBalance, isLoadingBalance, recalculateBalance]);
+    console.log("Wallet tab mounted, recalculating balance...");
+    recalculateBalance();
+  }, [recalculateBalance]);
 
   // Setup notifications and wallet transaction subscriptions
   useEffect(() => {
     console.log("Setting up wallet tab subscriptions");
+    
+    const setupBankTransferSubscriptions = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      
+      if (!userId) return;
+      
+      console.log("Setting up bank transfer subscriptions for user:", userId);
+      
+      // Subscribe to bank_transfers table changes
+      const bankTransfersChannel = supabase
+        .channel('wallet-bank-transfers-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'bank_transfers',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("Bank transfer updated:", payload);
+            
+            // Check if status was changed to 'received' or 'reçu'
+            if (payload.new && 
+                (payload.new.status === 'received' || payload.new.status === 'reçu') &&
+                (!payload.old || 
+                 (payload.old.status !== 'received' && payload.old.status !== 'reçu'))) {
+              
+              console.log("Bank transfer marked as received, refreshing balance and creating notification");
+              
+              // Refresh wallet balance
+              refreshBalance();
+              
+              // Create a notification
+              notificationService.depositSuccess(payload.new.amount);
+              
+              toast.success("Virement bancaire reçu", {
+                description: `Un virement de ${payload.new.amount}€ a été confirmé et ajouté à votre solde`
+              });
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Realtime subscription status for bank transfers:", status);
+        });
+      
+      return bankTransfersChannel;
+    };
     
     const setupNotificationSubscriptions = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -64,14 +111,19 @@ export default function WalletTab() {
       return notificationsChannel;
     };
     
-    const subscriptionPromise = setupNotificationSubscriptions();
+    const bankTransferPromise = setupBankTransferSubscriptions();
+    const notificationPromise = setupNotificationSubscriptions();
     
     return () => {
-      subscriptionPromise.then(channel => {
+      bankTransferPromise.then(channel => {
+        if (channel) supabase.removeChannel(channel);
+      });
+      
+      notificationPromise.then(channel => {
         if (channel) supabase.removeChannel(channel);
       });
     };
-  }, []);
+  }, [refreshBalance]);
 
   const handleDeposit = async () => {
     await refreshBalance();
