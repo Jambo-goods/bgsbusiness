@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { supabase } from "@/integrations/supabase/client";
+import { notificationService } from "@/services/notifications";
 
 export default function WalletTab() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -22,8 +24,59 @@ export default function WalletTab() {
     }
   }, [walletBalance, isLoadingBalance, recalculateBalance]);
 
+  // Setup notifications and wallet transaction subscriptions
+  useEffect(() => {
+    console.log("Setting up wallet tab subscriptions");
+    
+    const setupNotificationSubscriptions = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      
+      if (!userId) return;
+      
+      console.log("Setting up notification subscriptions for user:", userId);
+      
+      // Subscribe to notifications table changes
+      const notificationsChannel = supabase
+        .channel('wallet-notifications-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("New notification received:", payload);
+            if (payload.new) {
+              const notification = payload.new as Record<string, any>;
+              toast.success(notification.title, {
+                description: notification.description
+              });
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Realtime subscription status for notifications:", status);
+        });
+      
+      return notificationsChannel;
+    };
+    
+    const subscriptionPromise = setupNotificationSubscriptions();
+    
+    return () => {
+      subscriptionPromise.then(channel => {
+        if (channel) supabase.removeChannel(channel);
+      });
+    };
+  }, []);
+
   const handleDeposit = async () => {
     await refreshBalance();
+    // Create a test notification on deposit
+    await notificationService.depositSuccess(500);
   };
 
   const handleWithdraw = async () => {

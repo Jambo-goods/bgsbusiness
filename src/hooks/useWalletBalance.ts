@@ -60,12 +60,6 @@ export function useWalletBalance() {
         // Convert null or undefined to 0
         const balance = data?.wallet_balance ?? 0;
         setWalletBalance(balance);
-        
-        // If balance is 0, try to recalculate it right away
-        if (balance === 0) {
-          console.log("Balance is 0, attempting auto-recalculation");
-          await recalculateBalance();
-        }
       }
     } catch (err) {
       console.error("Error:", err);
@@ -106,6 +100,31 @@ export function useWalletBalance() {
         console.log("Transfers that should be counted in balance:", transfersData);
       }
       
+      // Also check wallet transactions
+      const { data: transactionsData, error: transactionsError } = await supabase
+        .from('wallet_transactions')
+        .select('id, amount, type, status, created_at')
+        .eq('user_id', userId)
+        .eq('status', 'completed');
+        
+      if (transactionsError) {
+        console.error("Error checking wallet transactions:", transactionsError);
+      } else {
+        console.log("Completed transactions found:", transactionsData);
+        
+        // Calculate expected balance from transactions
+        const deposits = transactionsData
+          .filter(t => t.type === 'deposit')
+          .reduce((sum, t) => sum + (t.amount || 0), 0);
+          
+        const withdrawals = transactionsData
+          .filter(t => t.type === 'withdrawal')
+          .reduce((sum, t) => sum + (t.amount || 0), 0);
+          
+        console.log(`Expected balance from transactions: deposits ${deposits}€, withdrawals ${withdrawals}€, net ${deposits - withdrawals}€`);
+      }
+      
+      // Call the database function to recalculate
       const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance', {
         user_uuid: userId
       });
@@ -137,14 +156,14 @@ export function useWalletBalance() {
       fetchWalletBalance(false); // Don't show loading state for automatic updates
     }, 60000);
     
-    // Subscribe to both profiles table and bank_transfers table changes for real-time updates
+    // Subscribe to both profiles table and wallet_transactions table changes for real-time updates
     const setupRealtimeSubscriptions = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
       
       if (!userId) return;
       
-      console.log("Setting up realtime subscriptions for user:", userId);
+      console.log("Setting up realtime subscriptions for wallet balance, user:", userId);
       
       const channel = supabase
         .channel('wallet-balance-changes')
@@ -163,9 +182,29 @@ export function useWalletBalance() {
               if (typeof newProfile.wallet_balance === 'number') {
                 console.log("Setting new wallet balance from realtime update:", newProfile.wallet_balance);
                 setWalletBalance(newProfile.wallet_balance);
-                toast.success("Votre solde a été mis à jour");
+                
+                if (newProfile.wallet_balance > 0) {
+                  toast.success("Votre solde a été mis à jour", {
+                    description: `Nouveau solde: ${newProfile.wallet_balance}€`
+                  });
+                }
               }
             }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'wallet_transactions',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("Wallet transaction changed in real-time:", payload);
+            
+            // Refresh balance to make sure it's up-to-date
+            fetchWalletBalance(false);
           }
         )
         .on(
@@ -199,7 +238,7 @@ export function useWalletBalance() {
           }
         )
         .subscribe((status) => {
-          console.log("Realtime subscription status:", status);
+          console.log("Realtime subscription status for wallet balance:", status);
         });
       
       return channel;

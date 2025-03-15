@@ -25,19 +25,26 @@ export default function ActionButtons({
         return;
       }
 
+      console.log("Creating simulated deposit transaction");
+      
       // Ajout d'une transaction de dépôt (simulée pour le test)
       const depositAmount = 1000; // 1000€ pour test
 
       // Création de la transaction
       const {
+        data: transactionData,
         error: transactionError
       } = await supabase.from('wallet_transactions').insert({
         user_id: session.session.user.id,
         amount: depositAmount,
         type: 'deposit',
-        description: 'Dépôt de fonds'
-      });
+        description: 'Dépôt de fonds (test)',
+        status: 'completed'
+      }).select().single();
+      
       if (transactionError) throw transactionError;
+      
+      console.log("Transaction created:", transactionData);
 
       // Mise à jour du solde du portefeuille
       const {
@@ -46,10 +53,18 @@ export default function ActionButtons({
         user_id: session.session.user.id,
         increment_amount: depositAmount
       });
+      
       if (walletError) throw walletError;
+      
+      console.log("Wallet balance updated");
       
       // Create notification for deposit success
       await notificationService.depositSuccess(depositAmount);
+      console.log("Deposit notification created");
+      
+      toast.success("Dépôt effectué avec succès", {
+        description: `${depositAmount}€ ont été ajoutés à votre portefeuille`,
+      });
       
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();
@@ -75,8 +90,12 @@ export default function ActionButtons({
         data: profileData,
         error: profileError
       } = await supabase.from('profiles').select('wallet_balance').eq('id', session.session.user.id).single();
+      
       if (profileError) throw profileError;
+      
       const withdrawalAmount = 500; // 500€ pour test
+      
+      console.log("Current balance:", profileData.wallet_balance, "Withdrawal amount:", withdrawalAmount);
 
       // Vérification que le solde est suffisant
       if (profileData.wallet_balance < withdrawalAmount) {
@@ -87,14 +106,19 @@ export default function ActionButtons({
 
       // Création de la transaction
       const {
+        data: transactionData,
         error: transactionError
       } = await supabase.from('wallet_transactions').insert({
         user_id: session.session.user.id,
         amount: withdrawalAmount,
         type: 'withdrawal',
-        description: 'Retrait de fonds'
-      });
+        description: 'Retrait de fonds (test)',
+        status: 'completed'
+      }).select().single();
+      
       if (transactionError) throw transactionError;
+      
+      console.log("Withdrawal transaction created:", transactionData);
 
       // Mise à jour du solde du portefeuille (soustraction)
       const {
@@ -103,10 +127,18 @@ export default function ActionButtons({
         user_id: session.session.user.id,
         increment_amount: -withdrawalAmount
       });
+      
       if (walletError) throw walletError;
+      
+      console.log("Wallet balance updated after withdrawal");
       
       // Create notification for withdrawal
       await notificationService.withdrawalValidated(withdrawalAmount);
+      console.log("Withdrawal notification created");
+      
+      toast.success("Retrait effectué avec succès", {
+        description: `${withdrawalAmount}€ ont été retirés de votre portefeuille`,
+      });
       
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();

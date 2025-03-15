@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 // Type pour les transactions
 interface Transaction {
@@ -31,13 +32,50 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   useEffect(() => {
     fetchTransactions();
     
-    // Setup polling for transactions every 60 seconds
+    // Setup polling for transactions every 30 seconds
     const pollingInterval = setInterval(() => {
       fetchTransactions(false); // silent refresh (don't show loading state)
-    }, 60000);
+    }, 30000);
+    
+    // Set up realtime subscription for transaction updates
+    const setupRealtimeSubscriptions = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      
+      if (!userId) return;
+      
+      console.log("Setting up realtime subscriptions for wallet transactions, user:", userId);
+      
+      const channel = supabase
+        .channel('wallet-transactions-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            schema: 'public',
+            table: 'wallet_transactions',
+            filter: `user_id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("Wallet transaction changed in real-time:", payload);
+            fetchTransactions(false);
+            toast.success("Votre historique de transactions a été mis à jour");
+          }
+        )
+        .subscribe((status) => {
+          console.log("Realtime subscription status for wallet transactions:", status);
+        });
+      
+      return channel;
+    };
+    
+    const subscriptionPromise = setupRealtimeSubscriptions();
     
     return () => {
       clearInterval(pollingInterval);
+      subscriptionPromise.then(channel => {
+        if (channel) supabase.removeChannel(channel);
+      });
     };
   }, [refreshBalance]);
 
@@ -56,6 +94,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         return;
       }
 
+      console.log("Fetching wallet transactions for user:", session.session.user.id);
+      
       // Récupération des transactions de l'utilisateur connecté
       const { data, error } = await supabase
         .from('wallet_transactions')
@@ -64,8 +104,12 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching transactions:", error);
+        throw error;
+      }
       
+      console.log("Fetched transactions:", data ? data.length : 0);
       setTransactions(data as Transaction[]);
       setError(null);
     } catch (err) {
@@ -79,6 +123,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
 
   // Manual refresh function
   const handleRefresh = () => {
+    toast.info("Actualisation de l'historique des transactions...");
     fetchTransactions(false);
   };
 
