@@ -177,6 +177,20 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                     // Refresh the balance display
                     if (refreshBalance) {
                       await refreshBalance();
+                    } else {
+                      // Fallback to manual recalculation if refreshBalance not available
+                      try {
+                        const { error: recalcError } = await supabase.rpc(
+                          'recalculate_wallet_balance_with_withdrawals',
+                          { user_uuid: userId }
+                        );
+                        
+                        if (recalcError) {
+                          console.error("Error recalculating balance after withdrawal:", recalcError);
+                        }
+                      } catch (e) {
+                        console.error("Error in recalculation fallback:", e);
+                      }
                     }
                   }
                 } catch (err) {

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -124,18 +123,66 @@ export function useWalletBalance() {
         console.log(`Expected balance from transactions: deposits ${deposits}€, withdrawals ${withdrawals}€, net ${deposits - withdrawals}€`);
       }
       
-      // Call the database function to recalculate
-      const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance', {
+      // Check for confirmed withdrawals that need to be deducted
+      const { data: withdrawalData, error: withdrawalError } = await supabase
+        .from('withdrawal_requests')
+        .select('id, amount, status, processed_at')
+        .eq('user_id', userId)
+        .in('status', ['completed', 'approved'])
+        .not('processed_at', 'is', null);
+        
+      if (withdrawalError) {
+        console.error("Error checking withdrawal requests:", withdrawalError);
+      } else if (withdrawalData && withdrawalData.length > 0) {
+        console.log("Confirmed withdrawals found:", withdrawalData);
+        
+        // Calculate total confirmed withdrawals
+        const confirmedWithdrawals = withdrawalData.reduce((sum, w) => sum + (w.amount || 0), 0);
+        console.log(`Total confirmed withdrawals: ${confirmedWithdrawals}€`);
+      }
+      
+      // Call the database function to recalculate with proper handling of withdrawals
+      const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance_with_withdrawals', {
         user_uuid: userId
       });
       
       if (rpcError) {
         console.error("Error recalculating balance:", rpcError);
-        toast.error("Erreur lors du recalcul du solde");
-        return;
+        
+        // Fall back to manual calculation if RPC fails
+        console.log("Falling back to manual balance calculation");
+        
+        try {
+          // Calculate deposits (transfers + deposit transactions)
+          const totalDeposits = (transfersData || []).reduce((sum, t) => sum + (t.amount || 0), 0);
+          
+          // Calculate all completed withdrawals
+          const totalWithdrawals = (withdrawalData || []).reduce((sum, w) => sum + (w.amount || 0), 0);
+          
+          // Final balance
+          const calculatedBalance = totalDeposits - totalWithdrawals;
+          console.log(`Manual calculation: deposits ${totalDeposits}€, withdrawals ${totalWithdrawals}€, balance ${calculatedBalance}€`);
+          
+          // Update profile with calculated balance
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ wallet_balance: calculatedBalance })
+            .eq('id', userId);
+            
+          if (updateError) {
+            throw updateError;
+          }
+          
+          // Update local state
+          setWalletBalance(calculatedBalance);
+          toast.success("Solde recalculé manuellement avec succès");
+        } catch (manualError) {
+          console.error("Error in manual balance calculation:", manualError);
+          toast.error("Erreur lors du recalcul manuel du solde");
+        }
+      } else {
+        toast.success("Solde recalculé avec succès");
       }
-      
-      toast.success("Solde recalculé avec succès");
       
       // Fetch the updated balance
       await fetchWalletBalance(false);
