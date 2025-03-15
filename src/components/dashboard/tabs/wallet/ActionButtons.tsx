@@ -152,13 +152,7 @@ export default function ActionButtons({
   
   return (
     <div className="flex justify-end mb-6">
-      <Button 
-        onClick={handleWithdraw}
-        className="bg-red-600 hover:bg-red-700 text-white rounded-lg py-3 flex items-center justify-center gap-2"
-      >
-        <ArrowUpRight className="h-5 w-5" />
-        Retirer des fonds
-      </Button>
+      {/* Withdraw button removed as requested */}
     </div>
   );
 }
