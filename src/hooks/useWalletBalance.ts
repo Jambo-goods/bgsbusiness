@@ -58,11 +58,14 @@ export function useWalletBalance() {
       setIsLoadingBalance(true);
       setError(null);
       
+      toast.loading("Recalcul du solde en cours...");
+      
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
         console.log("No active session found, cannot recalculate");
         setIsLoadingBalance(false);
+        toast.error("Aucune session active trouvée");
         return;
       }
       
@@ -207,7 +210,7 @@ export function useWalletBalance() {
                 new: status,
               });
               
-              // If the status changed to approved or completed
+              // If the status changed to approved, completed or scheduled
               if ((status === 'approved' || status === 'completed' || status === 'scheduled') && 
                   (oldPayload?.status !== 'approved' && oldPayload?.status !== 'completed' && oldPayload?.status !== 'scheduled')) {
                 console.log("Withdrawal status changed to 'approved', 'completed', or 'scheduled', refreshing balance...");
