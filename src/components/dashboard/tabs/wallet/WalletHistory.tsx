@@ -180,11 +180,12 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       
       console.log("Fetched transactions:", transactionsData ? transactionsData.length : 0);
       console.log("Fetched received bank transfers:", transfersData ? transfersData.length : 0);
+      console.log("Bank transfers data:", transfersData);
       
       // Convertir les virements bancaires en format de transaction
       const transfersAsTransactions: Transaction[] = transfersData.map(transfer => {
-        // Use processed_at as the timestamp if available, otherwise fall back to confirmed_at
-        const timestamp = transfer.processed_at || transfer.confirmed_at || new Date().toISOString();
+        // Use confirmed_at as the timestamp, or fall back to processed_at, or use current time as last resort
+        const timestamp = transfer.confirmed_at || transfer.processed_at || new Date().toISOString();
         
         return {
           id: transfer.id,
@@ -192,7 +193,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           type: 'deposit' as const,
           description: `Virement bancaire reçu (réf: ${transfer.reference})`,
           created_at: timestamp,
-          status: 'completed'
+          status: transfer.processed ? 'completed' : 'pending'
         };
       });
       
