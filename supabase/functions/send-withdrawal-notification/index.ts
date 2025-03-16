@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
   }
   
   try {
-    const { userId, amount, status, type = "withdrawal", reason = "" } = await req.json()
+    const { userId, amount, status, type = "withdrawal", reason = "", processed = false } = await req.json()
     
     if (!userId || !amount || !status) {
       return new Response(
@@ -41,7 +41,11 @@ Deno.serve(async (req) => {
     
     let title, message, category
     
-    if (status === 'submitted') {
+    if (processed) {
+      title = 'Demande de retrait traitée'
+      message = `Votre demande de retrait de ${amount}€ a été traitée. Statut: ${status}.`
+      category = status === 'rejected' ? 'error' : 'success'
+    } else if (status === 'submitted') {
       title = 'Demande de retrait soumise'
       message = `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`
       category = 'info'
@@ -76,7 +80,7 @@ Deno.serve(async (req) => {
         message,
         type,
         seen: false,
-        data: { amount, status, category }
+        data: { amount, status, category, processed }
       })
     
     if (error) {

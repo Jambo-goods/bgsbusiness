@@ -39,23 +39,31 @@ export default function WithdrawalRequestsTable() {
         console.log('Withdrawal request change detected:', payload);
         
         // If a withdrawal status is changed, send appropriate notification
-        if (payload.eventType === 'UPDATE' && payload.old.status !== payload.new.status) {
+        if (payload.eventType === 'UPDATE') {
           const amount = payload.new.amount;
           
-          switch (payload.new.status) {
-            case 'scheduled':
-            case 'sheduled':
-              notificationService.withdrawalScheduled(amount);
-              break;
-            case 'approved':
-              notificationService.withdrawalValidated(amount);
-              break;
-            case 'completed':
-              notificationService.withdrawalCompleted(amount);
-              break;
-            case 'rejected':
-              notificationService.withdrawalRejected(amount);
-              break;
+          // Check if processed_at was just filled (null -> value)
+          if (payload.new.processed_at && !payload.old.processed_at) {
+            console.log("Withdrawal request processed notification");
+            notificationService.withdrawalProcessed(amount, payload.new.status);
+          }
+          // Check if status changed
+          else if (payload.old.status !== payload.new.status) {
+            switch (payload.new.status) {
+              case 'scheduled':
+              case 'sheduled':
+                notificationService.withdrawalScheduled(amount);
+                break;
+              case 'approved':
+                notificationService.withdrawalValidated(amount);
+                break;
+              case 'completed':
+                notificationService.withdrawalCompleted(amount);
+                break;
+              case 'rejected':
+                notificationService.withdrawalRejected(amount);
+                break;
+            }
           }
         }
         

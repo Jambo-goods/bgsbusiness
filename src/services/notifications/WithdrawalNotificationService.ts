@@ -67,4 +67,17 @@ export class WithdrawalNotificationService extends BaseNotificationService {
       metadata: { amount, status: 'rejected', reason }
     });
   }
+  
+  /**
+   * Notification when a withdrawal request is processed
+   */
+  withdrawalProcessed(amount: number, status: string): Promise<void> {
+    return this.createNotification({
+      title: "Demande de retrait traitée",
+      description: `Votre demande de retrait de ${amount}€ a été traitée. Statut: ${status}.`,
+      type: 'withdrawal',
+      category: status === 'rejected' ? 'error' : 'success',
+      metadata: { amount, status, processed: true }
+    });
+  }
 }

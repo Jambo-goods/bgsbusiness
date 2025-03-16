@@ -17,9 +17,11 @@ interface WebhookPayload {
     user_id: string
     amount: number
     status: string
+    processed_at: string | null
   }
   old_record: {
     status: string
+    processed_at: string | null
   }
 }
 
@@ -53,6 +55,42 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Check if processed_at was just filled (changed from null to a value)
+    if (payload.record.processed_at && !payload.old_record.processed_at) {
+      console.log('Processing withdrawal request that was just processed:', payload.record)
+      
+      const userId = payload.record.user_id
+      const amount = payload.record.amount
+      const status = payload.record.status
+      
+      try {
+        // Create notification for processing
+        const { error: notificationError } = await supabaseAdmin
+          .from('notifications')
+          .insert({
+            user_id: userId,
+            title: 'Demande de retrait traitée',
+            message: `Votre demande de retrait de ${amount}€ a été traitée. Statut: ${status}.`,
+            type: 'withdrawal',
+            seen: false,
+            data: { 
+              amount, 
+              status, 
+              category: status === 'rejected' ? 'error' : 'success',
+              processed: true
+            }
+          })
+        
+        if (notificationError) {
+          console.error("Error sending processing notification:", notificationError)
+        } else {
+          console.log(`Processing notification sent to user ${userId} for amount ${amount}€`)
+        }
+      } catch (notifError) {
+        console.error("Error creating processing notification:", notifError)
+      }
+    }
+    
     // Check if the status changed to "scheduled" - cover both possible spellings
     const isScheduled = status => status === 'scheduled' || status === 'sheduled'
     const oldStatus = payload.old_record.status
