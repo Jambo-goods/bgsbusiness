@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDownIcon, ArrowUpIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from "lucide-react";
@@ -51,6 +50,7 @@ export default function HistoryItem({ item }: HistoryItemProps) {
         event: 'UPDATE',
         schema: 'public',
         table: 'withdrawal_requests',
+        // Fixed filter: we should listen for when status CHANGES TO 'confirmed', not filter existing records
         filter: `status=eq.confirmed`,
       }, (payload) => {
         console.log('Withdrawal request status changed to confirmed:', payload);
