@@ -42,7 +42,7 @@ export function WalletCard() {
                     aria-label="Recalculer le solde"
                     disabled={isLoadingBalance}
                   >
-                    <CalculatorIcon className="h-4 w-4 text-bgs-blue" />
+                    <CalculatorIcon className={`h-4 w-4 text-bgs-blue ${isLoadingBalance ? 'animate-spin' : ''}`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
