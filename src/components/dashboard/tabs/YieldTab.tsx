@@ -1,337 +1,425 @@
+import React, { useState, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { BarChart3, TrendingUp, DollarSign, RefreshCw, AlertCircle, Clock, Check } from "lucide-react";
+import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracking";
+import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
+import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
+import { Project } from "@/types/project";
+import { calculateExpectedCumulativeReturns } from "./investment-tracking/utils";
+import ReturnProjectionSection from "./investment-tracking/ReturnProjectionSection";
 
-import React, { useState } from "react";
-import { Card } from "@/components/ui/card";
-import { ArrowUpRight, Calendar, DollarSign, TrendingUp, PercentIcon, ChevronRight, BarChart3 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import LoadingIndicator from "./investment-tracking/LoadingIndicator";
-
-interface YieldTabProps {
-  userInvestments?: any[];
-}
-
-export default function YieldTab({ userInvestments = [] }: YieldTabProps) {
-  const [timeRange, setTimeRange] = useState<"3months" | "6months" | "12months">("12months");
+const YieldTab = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [monthlyYield, setMonthlyYield] = useState(0);
+  const [annualYield, setAnnualYield] = useState(0);
+  const [annualPercent, setAnnualPercent] = useState(0);
+  const [investments, setInvestments] = useState<{
+    projectId: string;
+    projectName: string;
+    monthlyRate: number;
+    amount: number;
+    monthlyReturn: number;
+  }[]>([]);
+  const [userInvestments, setUserInvestments] = useState<Project[]>([]);
   
-  // Sample data for yield projection
-  const yieldData = [
-    { month: 'Jan', expected: 250, received: 245 },
-    { month: 'Feb', expected: 300, received: 290 },
-    { month: 'Mar', expected: 280, received: 275 },
-    { month: 'Apr', expected: 310, received: 305 },
-    { month: 'May', expected: 350, received: 340 },
-    { month: 'Jun', expected: 370, received: 0 }, // Future month
-    { month: 'Jul', expected: 390, received: 0 }, // Future month
-    { month: 'Aug', expected: 410, received: 0 }, // Future month
-    { month: 'Sep', expected: 430, received: 0 }, // Future month
-    { month: 'Oct', expected: 425, received: 0 }, // Future month
-    { month: 'Nov', expected: 440, received: 0 }, // Future month
-    { month: 'Dec', expected: 460, received: 0 }, // Future month
-  ];
-  
-  // Filter data based on selected time range
-  const filterDataByTimeRange = () => {
-    switch (timeRange) {
-      case "3months":
-        return yieldData.slice(0, 3);
-      case "6months":
-        return yieldData.slice(0, 6);
-      case "12months":
-      default:
-        return yieldData;
+  const mockProjects: Project[] = [
+    {
+      id: '1',
+      name: 'Project Alpha',
+      image: '/placeholder.svg',
+      companyName: 'Alpha Corporation',
+      status: 'active',
+      investedAmount: 5000,
+      yield: 8,
+      description: 'A sustainable energy project',
+      location: 'Paris, France',
+      minInvestment: 1000,
+      maxInvestment: 50000,
+      price: 100000,
+      profitability: 8,
+      duration: '12 months',
+      category: 'energy',
+      fundingProgress: 75
+    },
+    {
+      id: '2',
+      name: 'Project Beta',
+      image: '/placeholder.svg',
+      companyName: 'Beta Corporation',
+      status: 'active',
+      investedAmount: 3000,
+      yield: 6,
+      description: 'A renewable energy project',
+      location: 'London, UK',
+      minInvestment: 500,
+      maxInvestment: 20000,
+      price: 80000,
+      profitability: 6,
+      duration: '24 months',
+      category: 'renewable',
+      fundingProgress: 90
+    },
+    {
+      id: '3',
+      name: 'Project Gamma',
+      image: '/placeholder.svg',
+      companyName: 'Gamma Corporation',
+      status: 'active',
+      investedAmount: 1000,
+      yield: 4,
+      description: 'A green building project',
+      location: 'New York, USA',
+      minInvestment: 200,
+      maxInvestment: 10000,
+      price: 50000,
+      profitability: 4,
+      duration: '36 months',
+      category: 'green',
+      fundingProgress: 50
     }
-  };
-  
-  const filteredData = filterDataByTimeRange();
-  
-  // Calculate totals
-  const totalExpected = yieldData.reduce((sum, item) => sum + item.expected, 0);
-  const totalReceived = yieldData.reduce((sum, item) => sum + item.received, 0);
-  const totalPending = totalExpected - totalReceived;
-  
-  // Sample data for upcoming payments
-  const upcomingPayments = [
-    { 
-      id: 1, 
-      projectName: "Immeuble Résidentiel Paris", 
-      date: "2023-06-15", 
-      amount: 370, 
-      status: "scheduled" 
-    },
-    { 
-      id: 2, 
-      projectName: "Centre Commercial Lyon", 
-      date: "2023-07-01", 
-      amount: 390, 
-      status: "scheduled" 
-    },
-    { 
-      id: 3, 
-      projectName: "Complexe de Bureaux Bordeaux", 
-      date: "2023-08-10", 
-      amount: 410, 
-      status: "scheduled" 
-    },
-    { 
-      id: 4, 
-      projectName: "Résidence Étudiante Toulouse", 
-      date: "2023-09-05", 
-      amount: 430, 
-      status: "scheduled" 
-    },
   ];
 
-  // Safe access to userInvestments with default values
-  const currentInvestments = userInvestments && userInvestments.length > 0 
-    ? userInvestments.map(inv => ({
-        id: inv.id || Math.random().toString(36),
-        projects: {
-          name: inv.projects?.name || "Projet sans nom",
-          location: inv.projects?.location || "Localisation inconnue",
-          yield: inv.projects?.expected_yield || 7.0,
-          status: inv.status || "active"
-        },
-        amount: inv.amount || 0,
-        duration: inv.duration || 36,
-        startDate: inv.created_at || new Date().toISOString()
-      }))
-    : [
-      {
-        id: 1,
-        projects: {
-          name: "Immeuble Résidentiel Paris",
-          location: "Paris",
-          yield: 8.5,
-          status: "active"
-        },
-        amount: 10000,
-        duration: 36,
-        startDate: "2023-01-15"
-      },
-      {
-        id: 2,
-        projects: {
-          name: "Centre Commercial Lyon",
-          location: "Lyon",
-          yield: 7.2,
-          status: "active"
-        },
-        amount: 15000,
-        duration: 48,
-        startDate: "2023-02-20"
-      },
-      {
-        id: 3,
-        projects: {
-          name: "Complexe de Bureaux Bordeaux",
-          location: "Bordeaux",
-          yield: 6.8,
-          status: "active"
-        },
-        amount: 8000,
-        duration: 24,
-        startDate: "2023-03-10"
-      }
-    ];
+  const {
+    sortColumn,
+    sortDirection,
+    filterStatus,
+    setFilterStatus,
+    isLoading: trackingLoading,
+    paymentRecords,
+    animateRefresh: trackingRefresh,
+    userId,
+    handleSort,
+    handleRefresh: refreshTracking
+  } = useInvestmentTracking(userInvestments);
+  
+  const { statistics, isLoading: statsLoading } = useReturnsStatistics();
+  
+  useInvestmentSubscriptions(userId, refreshTracking);
+  
+  const isTrackingLoading = trackingLoading || statsLoading;
+  const hasTrackingData = paymentRecords && paymentRecords.length > 0;
 
-  // Format date
-  const formatDate = (dateString: string) => {
+  const cumulativeExpectedReturns = React.useMemo(() => {
+    if (!paymentRecords || paymentRecords.length === 0) return [];
+    return calculateExpectedCumulativeReturns(paymentRecords);
+  }, [paymentRecords]);
+
+  useEffect(() => {
+    fetchInvestmentYields();
+    fetchUserInvestments();
+    
+    const channel = supabase
+      .channel('public:investments')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'investments'
+      }, () => {
+        fetchInvestmentYields();
+        fetchUserInvestments();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchUserInvestments = async () => {
     try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('fr-FR', { 
-        day: 'numeric', 
-        month: 'long', 
-        year: 'numeric' 
-      }).format(date);
-    } catch (e) {
-      return "Date invalide";
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session?.user?.id) {
+        console.log("No active session found");
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('investments')
+        .select(`
+          *,
+          projects:project_id (
+            id,
+            name,
+            image,
+            company_name,
+            status,
+            yield
+          )
+        `)
+        .eq('user_id', sessionData.session.user.id)
+        .eq('status', 'active');
+        
+      if (error) {
+        console.error("Error fetching user investments:", error);
+        return;
+      }
+      
+      const projects: Project[] = data.map(inv => ({
+        id: inv.projects.id,
+        name: inv.projects.name,
+        image: inv.projects.image,
+        companyName: inv.projects.company_name,
+        status: 'active' as 'active' | 'upcoming' | 'completed',
+        investedAmount: inv.amount,
+        yield: inv.projects.yield,
+        description: '',
+        location: '',
+        minInvestment: 0,
+        maxInvestment: 0,
+        price: 0,
+        profitability: 0,
+        duration: '12 months',
+        category: '',
+        fundingProgress: 0
+      }));
+      
+      setUserInvestments(projects);
+    } catch (error) {
+      console.error("Error in fetchUserInvestments:", error);
     }
   };
 
-  // Status badge color
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-600";
-      case "scheduled":
-        return "bg-blue-100 text-blue-600";
-      case "pending":
-        return "bg-yellow-100 text-yellow-600";
-      default:
-        return "bg-gray-100 text-gray-600";
+  const fetchInvestmentYields = async () => {
+    try {
+      setIsLoading(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      
+      if (!sessionData.session) {
+        toast.error("Veuillez vous connecter pour accéder à vos rendements");
+        return;
+      }
+      
+      const { data: investmentsData, error: investmentsError } = await supabase
+        .from('investments')
+        .select('amount, yield_rate, project_id')
+        .eq('user_id', sessionData.session.user.id)
+        .eq('status', 'active');
+        
+      if (investmentsError) {
+        console.error("Erreur lors de la récupération des investissements:", investmentsError);
+        throw investmentsError;
+      }
+      
+      if (!investmentsData || investmentsData.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+      
+      const projectIds = investmentsData.map(inv => inv.project_id);
+      
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('id, name, yield')
+        .in('id', projectIds);
+        
+      if (projectsError) {
+        console.error("Erreur lors de la récupération des projets:", projectsError);
+        throw projectsError;
+      }
+      
+      const investmentsByProject = new Map();
+      
+      investmentsData.forEach(investment => {
+        const project = projectsData?.find(p => p.id === investment.project_id);
+        const projectId = investment.project_id;
+        const monthlyRate = project?.yield || investment.yield_rate;
+        
+        if (investmentsByProject.has(projectId)) {
+          const existingProject = investmentsByProject.get(projectId);
+          existingProject.amount += investment.amount;
+          existingProject.monthlyReturn += (monthlyRate / 100) * investment.amount;
+        } else {
+          investmentsByProject.set(projectId, {
+            projectId: projectId,
+            projectName: project?.name || 'Projet inconnu',
+            monthlyRate: monthlyRate,
+            amount: investment.amount,
+            monthlyReturn: (monthlyRate / 100) * investment.amount
+          });
+        }
+      });
+      
+      const groupedInvestments = Array.from(investmentsByProject.values());
+      
+      let totalMonthlyYield = 0;
+      let weightedAnnualPercent = 0;
+      let totalInvestment = 0;
+      
+      groupedInvestments.forEach(investment => {
+        totalMonthlyYield += investment.monthlyReturn;
+        weightedAnnualPercent += (investment.monthlyRate * 12) * investment.amount;
+        totalInvestment += investment.amount;
+      });
+      
+      const calculatedAnnualYield = totalMonthlyYield * 12;
+      const calculatedAnnualPercent = totalInvestment > 0 
+        ? (weightedAnnualPercent / totalInvestment) 
+        : 0;
+      
+      setMonthlyYield(Math.round(totalMonthlyYield));
+      setAnnualYield(Math.round(calculatedAnnualYield));
+      setAnnualPercent(parseFloat(calculatedAnnualPercent.toFixed(2)));
+      setInvestments(groupedInvestments);
+      
+    } catch (error) {
+      console.error("Erreur lors du calcul des rendements:", error);
+      toast.error("Impossible de calculer vos rendements");
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+  
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    fetchInvestmentYields();
+    fetchUserInvestments();
+    refreshTracking();
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-800">Projections de Rendement</h1>
-          <p className="text-gray-500 mt-1">Suivi et projection des rendements de vos investissements</p>
-        </div>
-        
-        <div className="flex space-x-2 mt-4 md:mt-0">
-          <Button 
-            size="sm" 
-            variant={timeRange === "3months" ? "default" : "outline"}
-            onClick={() => setTimeRange("3months")}
-          >
-            3 mois
-          </Button>
-          <Button 
-            size="sm" 
-            variant={timeRange === "6months" ? "default" : "outline"}
-            onClick={() => setTimeRange("6months")}
-          >
-            6 mois
-          </Button>
-          <Button 
-            size="sm" 
-            variant={timeRange === "12months" ? "default" : "outline"}
-            onClick={() => setTimeRange("12months")}
-          >
-            12 mois
-          </Button>
-        </div>
-      </div>
-      
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="p-5 border-l-4 border-blue-500">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm text-gray-500 flex items-center">
-                <ArrowUpRight className="mr-1 h-4 w-4 text-blue-500" />
-                Rendement Total Attendu
-              </p>
-              <p className="text-2xl font-semibold mt-1">{totalExpected} €</p>
+    <div className="space-y-6">
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-50 p-2.5 rounded-lg">
+              <BarChart3 className="h-5 w-5 text-bgs-blue" />
             </div>
-            <div className="bg-blue-50 p-3 rounded-full">
-              <TrendingUp className="h-6 w-6 text-blue-500" />
+            <div>
+              <h2 className="text-lg font-semibold text-bgs-blue">Rendement mensuel estimé</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Basé sur vos investissements actifs</p>
             </div>
           </div>
-        </Card>
-        
-        <Card className="p-5 border-l-4 border-green-500">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm text-gray-500 flex items-center">
-                <DollarSign className="mr-1 h-4 w-4 text-green-500" />
-                Rendement Perçu
-              </p>
-              <p className="text-2xl font-semibold mt-1">{totalReceived} €</p>
-            </div>
-            <div className="bg-green-50 p-3 rounded-full">
-              <PercentIcon className="h-6 w-6 text-green-500" />
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-5 border-l-4 border-yellow-500">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-sm text-gray-500 flex items-center">
-                <Calendar className="mr-1 h-4 w-4 text-yellow-500" />
-                Rendement En Attente
-              </p>
-              <p className="text-2xl font-semibold mt-1">{totalPending} €</p>
-            </div>
-            <div className="bg-yellow-50 p-3 rounded-full">
-              <BarChart3 className="h-6 w-6 text-yellow-500" />
-            </div>
-          </div>
-        </Card>
-      </div>
-      
-      {/* Chart Section has been removed */}
-      
-      {/* Current Investments Section */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Investissements Actuels</h2>
-          <Button variant="outline" size="sm" className="flex items-center">
-            Voir tout <ChevronRight className="h-4 w-4 ml-1" />
-          </Button>
+          <button 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Actualiser
+          </button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {currentInvestments.map((investment) => (
-            <Card key={investment.id} className="overflow-hidden">
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-medium text-gray-800 line-clamp-1">{investment.projects.name}</h3>
-                  <Badge className={`${
-                    investment.projects.status === "active" 
-                      ? "bg-green-100 text-green-600" 
-                      : "bg-blue-100 text-blue-600"
-                  }`}>
-                    {investment.projects.status === "active" ? "Actif" : "En cours"}
-                  </Badge>
+        {isLoading ? (
+          <div className="animate-pulse">
+            <div className="h-12 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div className="h-4 bg-gray-200 rounded w-2/3 mb-6"></div>
+            <div className="space-y-4">
+              <div className="h-8 bg-gray-200 rounded w-full"></div>
+              <div className="h-8 bg-gray-200 rounded w-full"></div>
+              <div className="h-8 bg-gray-200 rounded w-full"></div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="bg-gradient-to-r from-bgs-blue to-bgs-blue-light p-5 rounded-lg text-white">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-white/80">Rendement mensuel</span>
+                  <div className="bg-white/10 p-1.5 rounded-full">
+                    <TrendingUp className="h-4 w-4 text-white" />
+                  </div>
                 </div>
-                
-                <p className="text-sm text-gray-500 mb-3">{investment.projects.location}</p>
-                
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Montant investi</span>
-                    <span className="font-medium">{investment.amount} €</span>
-                  </div>
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Rendement</span>
-                    <span className="font-medium text-green-600">{investment.projects.yield}%</span>
-                  </div>
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Date de début</span>
-                    <span className="font-medium">{formatDate(investment.startDate)}</span>
-                  </div>
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Durée</span>
-                    <span className="font-medium">{investment.duration} mois</span>
-                  </div>
+                <div className="text-2xl font-bold mb-1 flex items-center">
+                  {monthlyYield} €
+                </div>
+                <div className="text-xs text-white/70">
+                  {(annualPercent / 12).toFixed(2)}% par mois
                 </div>
               </div>
-            </Card>
-          ))}
-        </div>
+              
+              <div className="bg-gray-50 p-5 rounded-lg border border-gray-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-500">Rendement annuel</span>
+                  <div className="bg-gray-200 p-1.5 rounded-full">
+                    <BarChart3 className="h-4 w-4 text-gray-600" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-bgs-blue mb-1">
+                  {annualYield} €
+                </div>
+                <div className="text-xs text-gray-500">
+                  {annualPercent.toFixed(2)}% par an
+                </div>
+              </div>
+              
+              <div className="bg-green-50 p-5 rounded-lg border border-green-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-green-700">Performance</span>
+                  <div className="bg-green-100 p-1.5 rounded-full">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-green-700 mb-1">
+                  +{annualPercent.toFixed(2)}%
+                </div>
+                <div className="text-xs text-green-600">
+                  Sur l'investissement total
+                </div>
+              </div>
+            </div>
+            
+            <div className="border-t border-gray-100 pt-5 mt-4">
+              <h3 className="text-sm font-semibold text-bgs-blue mb-4">Détail par projet</h3>
+              
+              <div className="overflow-hidden border border-gray-100 rounded-lg">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projet</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant investi</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Taux mensuel</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rendement</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {investments.length > 0 ? (
+                      investments.map((investment, index) => (
+                        <tr key={investment.projectId} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-bgs-blue">
+                            {investment.projectName}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">
+                            {investment.amount.toLocaleString()} €
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {investment.monthlyRate}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                            {Math.round(investment.monthlyReturn)} €/mois
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500">
+                          Vous n'avez pas encore d'investissements actifs.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
       
-      {/* Upcoming Payments Table */}
-      <Card className="overflow-hidden">
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Prochains Versements</h2>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Projet</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Date</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Montant</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Statut</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {upcomingPayments.map((payment) => (
-                <tr key={payment.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-800">{payment.projectName}</td>
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(payment.date)}</td>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-800">{payment.amount} €</td>
-                  <td className="px-4 py-3 text-sm">
-                    <Badge className={getStatusColor(payment.status)}>
-                      {payment.status === "completed" ? "Complété" : 
-                       payment.status === "scheduled" ? "Prévu" : "En attente"}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      {paymentRecords && paymentRecords.length > 0 && (
+        <ReturnProjectionSection
+          paymentRecords={paymentRecords}
+          cumulativeExpectedReturns={cumulativeExpectedReturns}
+          isLoading={isTrackingLoading}
+          userInvestments={userInvestments}
+        />
+      )}
     </div>
   );
-}
+};
+
+export default YieldTab;

@@ -5,10 +5,8 @@ import { toast } from "sonner";
 
 export function useUserSession() {
   const [userId, setUserId] = useState<string | null>(null);
-  const [sessionChecked, setSessionChecked] = useState(false);
   
   useEffect(() => {
-    // Only fetch once on mount to prevent infinite loops
     const fetchUserId = async () => {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
@@ -19,17 +17,12 @@ export function useUserSession() {
           setUserId(null);
           console.log("No session or user ID found");
         }
-        setSessionChecked(true);
       } catch (error) {
         console.error("Error fetching user session:", error);
-        setSessionChecked(true);
       }
     };
     
-    // Only fetch on mount, not on every render
-    if (!sessionChecked) {
-      fetchUserId();
-    }
+    fetchUserId();
     
     // Set up an auth state change listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -47,7 +40,7 @@ export function useUserSession() {
       // Clean up the auth listener when component unmounts
       authListener.subscription.unsubscribe();
     };
-  }, [sessionChecked]);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -86,7 +79,6 @@ export function useUserSession() {
 
   return {
     userId,
-    sessionChecked,
     handleLogout
   };
 }

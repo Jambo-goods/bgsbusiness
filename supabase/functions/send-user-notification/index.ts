@@ -36,10 +36,10 @@ const handler = async (req: Request): Promise<Response> => {
     switch (eventType) {
       case 'deposit':
         emailContent = `
-          <h1 style="color: #0051cc;">Dépôt réussi</h1>
+          <h1>Confirmation de dépôt</h1>
           <p>Bonjour ${userName},</p>
-          <p>Votre dépôt de <strong>${data.amount}€</strong> a été ${data.status === 'completed' ? 'confirmé et crédité sur votre compte' : 'reçu et est en cours de traitement'}.</p>
-          <p>Vous pouvez consulter votre historique de transactions dans votre espace personnel.</p>
+          <p>Votre dépôt de ${data.amount}€ a été ${data.status === 'completed' ? 'confirmé' : 'reçu et est en cours de traitement'}.</p>
+          <p>Nous vous notifierons dès que les fonds seront disponibles dans votre portefeuille.</p>
         `;
         break;
         

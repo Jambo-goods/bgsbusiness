@@ -28,9 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Received bank transfer notification request");
     const { userName, userId, userEmail, reference, amount }: BankTransferNotificationRequest = await req.json();
     
-    // Use consistent timestamp for notification
-    const timestamp = new Date().toISOString();
-    console.log(`Preparing to send notification for user: ${userName} (${userId}), reference: ${reference}, amount: ${amount}€ at ${timestamp}`);
+    console.log(`Preparing to send notification for user: ${userName} (${userId}), reference: ${reference}, amount: ${amount}€`);
     console.log(`Sending email to: ${adminEmail}`);
 
     const emailResponse = await resend.emails.send({
@@ -43,7 +41,6 @@ const handler = async (req: Request): Promise<Response> => {
         <p><strong>ID utilisateur:</strong> ${userId}</p>
         <p><strong>Email:</strong> ${userEmail}</p>
         <p><strong>Montant:</strong> ${amount}€</p>
-        <p><strong>Date et heure exacte:</strong> ${new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}</p>
         <p>${userName} a confirmé avoir effectué un virement bancaire de ${amount}€ avec la référence ${reference}</p>
         <p>Veuillez vérifier la réception du virement avant de créditer le compte.</p>
       `,
@@ -51,10 +48,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email notification sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify({
-      ...emailResponse,
-      timestamp
-    }), {
+    return new Response(JSON.stringify(emailResponse), {
       status: 200,
       headers: {
         "Content-Type": "application/json",

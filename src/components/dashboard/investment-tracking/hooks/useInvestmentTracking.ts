@@ -1,38 +1,34 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Investment, Transaction } from "../types/investment";
 import { fetchInvestmentDetails, fetchTransactionHistory } from "../utils/fetchInvestmentData";
 
 export function useInvestmentTracking(investmentId: string | undefined) {
   const [investment, setInvestment] = useState<Investment | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Initial data loading
   useEffect(() => {
     const loadData = async () => {
-      if (!investmentId) {
-        return;
-      }
+      if (!investmentId) return;
       
       try {
-        // Fetch investment details directly
+        setLoading(true);
         const investmentData = await fetchInvestmentDetails(investmentId);
         
         if (investmentData) {
           setInvestment(investmentData);
           
           // Once we have the investment data, fetch transactions for this user
-          try {
-            const transactionsData = await fetchTransactionHistory(investmentData.user_id);
-            setTransactions(transactionsData);
-          } catch (transactionError) {
-            console.error("Error loading transaction history:", transactionError);
-            setTransactions([]);
-          }
+          const transactionsData = await fetchTransactionHistory(investmentData.user_id);
+          setTransactions(transactionsData);
         }
       } catch (error) {
         console.error("Error loading investment tracking data:", error);
+      } finally {
+        setLoading(false);
       }
     };
     
@@ -45,7 +41,6 @@ export function useInvestmentTracking(investmentId: string | undefined) {
     
     try {
       setIsRefreshing(true);
-      
       const refreshedInvestment = await fetchInvestmentDetails(investmentId);
       
       if (refreshedInvestment) {
@@ -65,6 +60,7 @@ export function useInvestmentTracking(investmentId: string | undefined) {
   return {
     investment,
     transactions,
+    loading,
     isRefreshing,
     refreshData
   };

@@ -2,59 +2,38 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
-import { PaymentRecord, PaymentStatistics } from "./types";
+import { Investment, PaymentRecord, PaymentStatistics, ScheduledPayment } from "./types";
 import { calculateCumulativeReturns, filterAndSortPayments } from "./utils";
 
 export const useReturnsStatistics = () => {
-  const { data: scheduledPayments, isLoading, isError, error } = useQuery({
+  const { data: scheduledPayments, isLoading } = useQuery({
     queryKey: ["scheduled-payments"],
     queryFn: async () => {
-      try {
-        const { data, error } = await supabase
-          .from("scheduled_payments")
-          .select(`
-            *,
-            projects:project_id (
-              name,
-              image,
-              company_name,
-              status
-            )
-          `)
-          .order("payment_date", { ascending: true });
+      const { data, error } = await supabase
+        .from("scheduled_payments")
+        .select(`
+          *,
+          projects:project_id (
+            name,
+            image,
+            company_name,
+            status
+          )
+        `)
+        .order("payment_date", { ascending: true });
 
-        if (error) {
-          console.error("Error fetching scheduled payments:", error);
-          throw error;
-        }
-
-        console.log("Scheduled payments data fetched successfully:", data?.length || 0);
-        return data || [];
-      } catch (err) {
-        console.error("Failed to fetch scheduled payments:", err);
-        return []; // Return empty array instead of throwing to prevent infinite loading
+      if (error) {
+        console.error("Error fetching scheduled payments:", error);
+        throw error;
       }
+
+      console.log("Scheduled payments with percentage:", data);
+      return data || [];
     },
-    retry: 3,
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000 // 5 minutes
   });
 
   const statistics = useMemo(() => {
-    if (!scheduledPayments || scheduledPayments.length === 0) {
-      // Return default statistics when no data
-      return {
-        totalScheduledAmount: 0,
-        paymentsReceived: 0,
-        paymentsWithCumulative: [],
-        percentageReceived: 0,
-        totalPaid: 0,
-        totalPending: 0,
-        averageMonthlyReturn: 0,
-        filteredAndSortedPayments: [],
-        cumulativeReturns: []
-      } as PaymentStatistics;
-    }
+    if (!scheduledPayments) return null;
 
     const totalScheduledAmount = scheduledPayments.reduce(
       (sum, payment) => sum + (payment.total_scheduled_amount || 0),
@@ -85,6 +64,7 @@ export const useReturnsStatistics = () => {
 
     // Convert scheduled payments to PaymentRecord format for consistent processing
     const paymentRecords: PaymentRecord[] = scheduledPayments.map(payment => {
+      console.log(`Payment record with percentage: ${payment.id}, percentage: ${payment.percentage}`);
       return {
         id: payment.id,
         projectId: payment.project_id,
@@ -93,7 +73,7 @@ export const useReturnsStatistics = () => {
         date: new Date(payment.payment_date),
         type: 'yield' as const,
         status: payment.status as "paid" | "pending" | "scheduled",
-        percentage: payment.percentage || 12 // Provide default percentage
+        percentage: payment.percentage // Direct from database, no calculation needed
       };
     });
 
@@ -137,14 +117,9 @@ export const useReturnsStatistics = () => {
     } as PaymentStatistics;
   }, [scheduledPayments]);
 
-  if (isError) {
-    console.error("Error in useReturnsStatistics:", error);
-  }
-
   return {
     statistics,
     isLoading,
     scheduledPayments,
-    hasError: isError
   };
 };

@@ -1,7 +1,8 @@
+
 import { Project } from "@/types/project";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { notificationService } from "@/services/notifications";
+import { toast } from "sonner";
 
 export const isUUID = (str: string): boolean => {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -64,8 +65,15 @@ export const createProjectInDatabase = async (project: Project, toast: any) => {
       description: `Le projet ${project.name} a été créé avec succès dans la base de données.`
     });
     
-    // Log new project creation
-    console.log(`Nouveau projet créé: ${project.name} (${newProject.id})`);
+    // Déclencher la notification pour tous les utilisateurs
+    try {
+      console.log("Création de la notification pour le nouveau projet");
+      await notificationService.newInvestmentOpportunity(project.name, newProject.id);
+      console.log("Notification créée avec succès");
+    } catch (notifError) {
+      console.error("Erreur lors de la création de la notification:", notifError);
+      // Continue execution even if notification creation fails
+    }
     
     return newProject.id;
   } catch (error) {
@@ -135,21 +143,5 @@ export const fetchProjectsFromDatabase = async () => {
   } catch (error) {
     console.error("Erreur dans fetchProjectsFromDatabase:", error);
     throw error;
-  }
-};
-
-/**
- * Fonction pour annoncer une nouvelle opportunité d'investissement
- */
-export const announceProjectOpportunity = async (projectId: string) => {
-  try {
-    const result = await notificationService.announceNewOpportunity(projectId);
-    return { success: true, project: result };
-  } catch (error) {
-    console.error("Erreur lors de l'annonce du projet:", error);
-    toast.error("Erreur d'annonce", {
-      description: "Impossible d'annoncer cette opportunité d'investissement."
-    });
-    return { success: false, error };
   }
 };

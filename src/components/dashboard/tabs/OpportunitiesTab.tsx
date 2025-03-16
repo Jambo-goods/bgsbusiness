@@ -5,13 +5,14 @@ import ProjectsList from "@/components/projects/ProjectsList";
 import { Input } from "@/components/ui/input";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { Project } from "@/types/project";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OpportunitiesTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   // Load projects from database only
   useEffect(() => {
@@ -23,8 +24,10 @@ export default function OpportunitiesTab() {
         setFilteredProjects(dbProjects || []);
       } catch (error) {
         console.error("Error loading database projects:", error);
-        toast.error("Erreur de chargement", {
-          description: "Impossible de charger les projets depuis la base de données."
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les projets depuis la base de données.",
+          variant: "destructive"
         });
         setProjects([]);
         setFilteredProjects([]);
@@ -34,7 +37,7 @@ export default function OpportunitiesTab() {
     };
     
     loadProjects();
-  }, []);
+  }, [toast]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value.toLowerCase();
@@ -68,16 +71,14 @@ export default function OpportunitiesTab() {
       </p>
       
       <div className="bg-white p-4 rounded-lg shadow-sm">
-        <div className="flex justify-between items-center mb-6">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Rechercher une opportunité..."
-              value={searchQuery}
-              onChange={handleSearch}
-              className="pl-10 bg-gray-50"
-            />
-          </div>
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            placeholder="Rechercher une opportunité..."
+            value={searchQuery}
+            onChange={handleSearch}
+            className="pl-10 bg-gray-50"
+          />
         </div>
         
         {isLoading ? (

@@ -1,14 +1,11 @@
 
 import React from "react";
+import { Loader2 } from "lucide-react";
 
-interface LoadingStateProps {
-  onRetry?: () => void;
-}
-
-export default function LoadingState({ onRetry }: LoadingStateProps) {
+export default function LoadingState() {
   return (
-    <div className="flex flex-col items-center justify-center py-8">
-      <p className="text-sm text-bgs-blue">Transactions</p>
+    <div className="flex justify-center py-8">
+      <Loader2 className="h-8 w-8 text-bgs-blue animate-spin" />
     </div>
   );
 }

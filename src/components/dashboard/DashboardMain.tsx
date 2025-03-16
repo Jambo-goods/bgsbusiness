@@ -16,7 +16,6 @@ interface DashboardMainProps {
     investmentTotal: number;
     projectsCount: number;
     walletBalance?: number;
-    userId?: string;
   };
   activeTab: string;
   userInvestments: Project[];
@@ -38,8 +37,8 @@ export default function DashboardMain({
       activeTab={activeTab} 
       userData={userData} 
       userInvestments={userInvestments} 
+      setActiveTab={setActiveTab} 
       refreshData={refreshData}
-      setActiveTab={setActiveTab}
     />
   ), [activeTab, userData, userInvestments, setActiveTab, refreshData]);
 

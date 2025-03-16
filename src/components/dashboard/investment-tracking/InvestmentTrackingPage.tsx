@@ -13,20 +13,24 @@ import ContactActionsCard from "./components/ContactActionsCard";
 
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
-  const { 
-    investment, 
-    transactions
-  } = useInvestmentTracking(investmentId);
+  const { investment, transactions, loading, isRefreshing, refreshData } = useInvestmentTracking(investmentId);
   
-  // If no investment found yet, still show structure
+  // Loading state
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+  
+  // No investment found state
   if (!investment) {
     return (
       <DashboardLayout>
-        <div className="flex flex-col py-8">
-          <Link to="/dashboard" className="text-bgs-blue hover:text-bgs-blue-light underline">
-            Retour au tableau de bord
-          </Link>
-        </div>
+        <div className="text-center py-8">Investissement non trouvé</div>
       </DashboardLayout>
     );
   }
@@ -41,6 +45,8 @@ export default function InvestmentTrackingPage() {
     <DashboardLayout>
       <DashboardHeader 
         userData={userData}
+        refreshData={refreshData}
+        isRefreshing={isRefreshing}
       />
       
       <div className="space-y-8">

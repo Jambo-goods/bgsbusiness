@@ -1,4 +1,3 @@
-
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -40,21 +39,4 @@
 
 .read-the-docs {
   color: #888;
-}
-
-/* Improved visibility for skeleton loading elements */
-.animate-pulse div {
-  background-color: #E5E7EB !important; /* Light gray that's more visible */
-  border: 1px solid #D1D5DB; /* Adding a subtle border */
-}
-
-/* Fix for gray divs in transaction history */
-.bg-gray-100 {
-  background-color: #F3F4F6 !important;
-  border: 1px solid #E5E7EB;
-}
-
-.bg-gray-50 {
-  background-color: #F9FAFB !important;
-  border: 1px solid #F3F4F6;
 }

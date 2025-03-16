@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -12,13 +12,11 @@ import { useDashboardState } from "@/hooks/dashboard/useDashboardState";
 import { useUserSession } from "@/hooks/dashboard/useUserSession";
 import { useDataRefresh } from "@/hooks/dashboard/useDataRefresh";
 import DashboardStatusMapper from "@/components/dashboard/DashboardStatusMapper";
-import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
   const { activeTab, setActiveTab } = useDashboardState();
-  const { userId, sessionChecked, handleLogout } = useUserSession();
+  const { userId, handleLogout } = useUserSession();
   const { isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useSidebarState();
-  const [hasShownNoSession, setHasShownNoSession] = useState(false);
   
   const { 
     userData, 
@@ -36,8 +34,7 @@ export default function Dashboard() {
     userId: userId || '',
     onProfileUpdate: refreshProfileData,
     onInvestmentUpdate: refreshInvestmentsData,
-    onTransactionUpdate: refreshProfileData,
-    pollingInterval: 30000 // Reduce polling interval to 30 seconds
+    onTransactionUpdate: refreshProfileData
   });
   
   const {
@@ -49,74 +46,20 @@ export default function Dashboard() {
   });
   
   useEffect(() => {
-    // Set up direct wallet balance subscription only once when userId is available
-    if (userId) {
-      console.log("Setting up dashboard wallet balance subscription");
-      
-      const walletBalanceChannel = supabase
-        .channel('dashboard-wallet-balance')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'profiles',
-            filter: `id=eq.${userId}`
-          },
-          (payload) => {
-            if (payload.new && typeof payload.new.wallet_balance === 'number') {
-              console.log("Dashboard detected wallet balance change:", payload.new.wallet_balance);
-              
-              // Force refresh profile data
-              refreshProfileData();
-            }
-          }
-        )
-        .subscribe();
-        
-      return () => {
-        supabase.removeChannel(walletBalanceChannel);
-      };
-    }
-  }, [userId, refreshProfileData]);
-
-  useEffect(() => {
-    // Only refresh data periodically when we have a userId
-    if (userId) {
-      const dataRefreshInterval = setInterval(() => {
-        refreshAllData();
-      }, 5 * 60 * 1000); // Refresh every 5 minutes
-      
-      return () => {
-        clearInterval(dataRefreshInterval);
-      };
-    }
-  }, [userId, refreshAllData]);
-
-  // Show no session message only once after session check completes
-  useEffect(() => {
-    if (sessionChecked && !userId && !hasShownNoSession) {
-      setHasShownNoSession(true);
-    }
-  }, [sessionChecked, userId, hasShownNoSession]);
+    console.log("Dashboard polling status:", pollingStatus);
+    
+    const dataRefreshInterval = setInterval(() => {
+      refreshAllData();
+    }, 10 * 60 * 1000); // Refresh every 10 minutes
+    
+    return () => {
+      clearInterval(dataRefreshInterval);
+    };
+  }, [pollingStatus, refreshAllData]);
 
   console.log("Current active tab (Dashboard.tsx):", activeTab);
   
   const mappedStatus = DashboardStatusMapper({ pollingStatus });
-
-  // Prepare user data with userId for transaction history
-  const enhancedUserData = userData ? {
-    ...userData,
-    userId: userId || ''
-  } : {
-    firstName: "",
-    lastName: "",
-    email: "",
-    investmentTotal: 0,
-    projectsCount: 0,
-    walletBalance: 0,
-    userId: userId || ''
-  };
 
   return (
     <>
@@ -136,7 +79,14 @@ export default function Dashboard() {
       >
         <DashboardMain 
           isSidebarOpen={isSidebarOpen} 
-          userData={enhancedUserData}
+          userData={userData || {
+            firstName: "",
+            lastName: "",
+            email: "",
+            investmentTotal: 0,
+            projectsCount: 0,
+            walletBalance: 0
+          }} 
           activeTab={activeTab} 
           userInvestments={userInvestments}
           setActiveTab={setActiveTab}

@@ -1,14 +1,11 @@
 
-import React from "react";
-import { useUserBalance } from "@/hooks/useUserBalance";
-import { WalletCard } from "./WalletCard"; 
+import { WalletCard } from "./WalletCard";
 
-interface WalletDisplayProps {
-  onRefresh?: () => void;
-}
-
-export default function WalletDisplay({ onRefresh }: WalletDisplayProps) {
-  const { userBalance } = useUserBalance();
-  
-  return <WalletCard balance={userBalance} />;
+export function WalletDisplay() {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold">Votre portefeuille</h2>
+      <WalletCard />
+    </div>
+  );
 }

@@ -1,18 +1,10 @@
 
 import React from "react";
 
-interface DashboardLoadingProps {
-  message?: string;
-}
-
-export default function DashboardLoading({ 
-  message = "Tableau de bord" 
-}: DashboardLoadingProps) {
+export default function DashboardLoading() {
   return (
-    <div className="flex items-center justify-center min-h-[300px] w-full bg-white bg-opacity-90">
-      <div className="flex flex-col items-center">
-        <div className="text-bgs-blue font-medium">{message}</div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-pulse text-bgs-blue">Chargement...</div>
     </div>
   );
 }
