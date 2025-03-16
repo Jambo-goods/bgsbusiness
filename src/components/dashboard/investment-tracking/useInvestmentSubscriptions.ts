@@ -28,11 +28,26 @@ export const useInvestmentSubscriptions = (
         if (payload.eventType === 'INSERT') {
           try {
             console.log('Creating new investment notification for:', userId);
+            
+            // Get project details
+            const { data: projectData, error: projectError } = await supabase
+              .from('projects')
+              .select('name')
+              .eq('id', payload.new.project_id)
+              .single();
+              
+            if (projectError) {
+              console.error('Error fetching project details:', projectError);
+            }
+            
+            const projectName = projectData?.name || payload.new.project_name || "votre projet";
+            
+            // Create notification in database
             await supabase.from('notifications').insert({
               user_id: userId,
               type: 'investment',
               title: 'Nouvel investissement',
-              message: `Votre investissement a été enregistré avec succès.`,
+              message: `Votre investissement de ${payload.new.amount}€ dans ${projectName} a été enregistré avec succès.`,
               seen: false,
               data: payload.new
             });
@@ -40,7 +55,7 @@ export const useInvestmentSubscriptions = (
             // Show toast notification immediately
             notificationService.investmentConfirmed(
               payload.new.amount,
-              payload.new.project_name || "votre projet", 
+              projectName, 
               payload.new.project_id
             );
             
@@ -124,13 +139,19 @@ export const useInvestmentSubscriptions = (
         event: 'INSERT',
         schema: 'public',
         table: 'notifications',
-        filter: `user_id=eq.${userId}`
+        filter: `user_id=eq.${userId} AND seen=eq.false`
       }, (payload) => {
         console.log('New notification received:', payload.new);
         
         // Show toast notification
         toast.info(payload.new.title, {
-          description: payload.new.message
+          description: payload.new.message,
+          action: {
+            label: "Voir détails",
+            onClick: () => {
+              window.location.href = `/dashboard?tab=notifications`;
+            }
+          }
         });
       })
       .subscribe();

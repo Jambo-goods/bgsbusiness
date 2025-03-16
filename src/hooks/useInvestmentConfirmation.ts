@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -225,8 +226,9 @@ export const useInvestmentConfirmation = (
           description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
         });
         
+        // Create notification for the investment
         try {
-          console.log('Creating direct investment notification from confirmation hook');
+          console.log('Creating investment confirmation notification');
           await supabase.from('notifications').insert({
             user_id: userId,
             type: 'investment',
@@ -240,11 +242,14 @@ export const useInvestmentConfirmation = (
               duration: selectedDuration
             }
           });
+          
+          // Also use the notification service to show the toast
+          await notificationService.investmentConfirmed(investmentAmount, project.name, projectId);
+          
+          console.log('Investment notification created successfully');
         } catch (error) {
-          console.error('Error creating direct investment notification:', error);
+          console.error('Error creating investment notification:', error);
         }
-        
-        notificationService.investmentConfirmed(investmentAmount, project.name, projectId);
         
         navigate("/dashboard");
       } catch (error) {
