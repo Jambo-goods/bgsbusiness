@@ -103,8 +103,14 @@ export async function fetchTransactionHistory(userId: string): Promise<Transacti
       }
       
       return {
-        ...tx,
-        type: type
+        id: tx.id,
+        user_id: tx.user_id,
+        created_at: tx.created_at,
+        amount: tx.amount,
+        type: type,
+        description: tx.description || '',
+        status: tx.status || 'completed',
+        receipt_confirmed: tx.receipt_confirmed || false
       };
     });
     
@@ -126,11 +132,13 @@ export async function fetchTransactionHistory(userId: string): Promise<Transacti
         if (!investmentMap.has(projectName)) {
           formattedTransactions.push({
             id: `inv-${inv.id}`,
+            user_id: userId,
             created_at: inv.date || new Date().toISOString(),
             amount: inv.amount || 0,
             type: 'investment',
             description: `Investissement dans ${projectName || 'un projet'}`,
-            status: 'completed'
+            status: 'completed',
+            receipt_confirmed: true
           });
         }
       });

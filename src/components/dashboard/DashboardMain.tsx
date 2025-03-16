@@ -16,7 +16,7 @@ interface DashboardMainProps {
     investmentTotal: number;
     projectsCount: number;
     walletBalance?: number;
-    userId?: string; // Add userId field
+    userId?: string;
   };
   activeTab: string;
   userInvestments: Project[];

@@ -45,7 +45,50 @@ export default function HistoryTab() {
           console.error("Error fetching wallet transactions:", walletError);
         }
         
-        // Fetch investments
+        // Create a map to track unique investment project references
+        const investmentProjectReferences = new Map();
+        
+        // First process wallet transactions to prioritize them
+        const processedTransactions = (walletTransactions || []).map(tx => {
+          // Determine transaction type
+          let type = tx.type;
+          let projectName = null;
+          
+          // Check for investments in description
+          if (tx.description && tx.description.toLowerCase().includes('investissement')) {
+            type = 'investment';
+            
+            // Extract project name if available
+            const projectNameMatch = tx.description.match(/Investissement dans (.+)/);
+            if (projectNameMatch && projectNameMatch[1]) {
+              projectName = projectNameMatch[1].trim();
+              // Track this project for deduplication
+              investmentProjectReferences.set(projectName, true);
+            }
+          }
+          
+          // Check for yield payments
+          if (tx.type === 'deposit' && tx.description && tx.description.toLowerCase().includes('rendement')) {
+            type = 'yield';
+          }
+          
+          return {
+            id: tx.id,
+            date: tx.created_at,
+            description: tx.description || (
+              type === 'deposit' ? 'Dépôt' : 
+              type === 'withdrawal' ? 'Retrait' : 
+              type === 'investment' ? 'Investissement' : 
+              type === 'yield' ? 'Rendement' : 'Transaction'
+            ),
+            amount: tx.amount,
+            type: type,
+            status: tx.status,
+            projectName: projectName
+          };
+        });
+        
+        // Fetch investments (for backup in case some are missing in wallet_transactions)
         const { data: investments, error: investmentsError } = await supabase
           .from('investments')
           .select(`
@@ -59,60 +102,32 @@ export default function HistoryTab() {
           console.error("Error fetching investments:", investmentsError);
         }
         
-        // Transform wallet transactions
-        const walletItems = (walletTransactions || []).map(tx => {
-          // Determine transaction type
-          let type = tx.type;
-          
-          // Check for investments in description
-          if (tx.description && tx.description.toLowerCase().includes('investissement')) {
-            type = 'investment';
-          }
-          
-          // Check for yield payments
-          if (tx.type === 'deposit' && tx.description && tx.description.toLowerCase().includes('rendement')) {
-            type = 'yield';
-          }
-          
-          return {
-            id: tx.id,
-            date: tx.created_at,
-            description: tx.description || (type === 'deposit' ? 'Dépôt' : type === 'withdrawal' ? 'Retrait' : type === 'investment' ? 'Investissement' : type === 'yield' ? 'Rendement' : 'Transaction'),
-            amount: tx.amount,
-            type: type,
-            status: tx.status
-          };
-        });
-        
-        // Generate a map of existing investment references
-        const investmentReferences = new Map();
-        walletItems.forEach(item => {
-          if (item.type === 'investment' && item.description) {
-            // Extract project name if possible
-            const projectNameMatch = item.description.match(/Investissement dans (.+)/);
-            if (projectNameMatch && projectNameMatch[1]) {
-              investmentReferences.set(projectNameMatch[1].trim(), true);
-            }
-          }
-        });
-        
-        // Only include investments that don't already exist in wallet transactions
-        const investmentItems = (investments || [])
-          .filter(inv => {
+        // Only add investments that aren't already tracked
+        const additionalInvestments = [];
+        if (investments && investments.length > 0) {
+          investments.forEach(inv => {
             const projectName = inv.projects?.name || '';
-            return !investmentReferences.has(projectName);
-          })
-          .map(inv => ({
-            id: `inv-${inv.id}`,
-            date: inv.date,
-            description: `Investissement dans ${inv.projects?.name || 'un projet'}`,
-            amount: inv.amount,
-            type: 'investment',
-            status: inv.status
-          }));
+            
+            // Skip if already in wallet_transactions
+            if (!investmentProjectReferences.has(projectName)) {
+              additionalInvestments.push({
+                id: `inv-${inv.id}`,
+                date: inv.date,
+                description: `Investissement dans ${projectName || 'un projet'}`,
+                amount: inv.amount,
+                type: 'investment',
+                status: inv.status || 'completed',
+                projectName: projectName
+              });
+              
+              // Add to tracked projects to avoid future duplicates
+              investmentProjectReferences.set(projectName, true);
+            }
+          });
+        }
         
-        // Combine and sort by date
-        const allTransactions = [...walletItems, ...investmentItems]
+        // Combine all transactions and sort by date
+        const allTransactions = [...processedTransactions, ...additionalInvestments]
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         
         setTransactions(allTransactions);
@@ -134,12 +149,27 @@ export default function HistoryTab() {
               if (payload.new) {
                 const newTx = payload.new;
                 let type = newTx.type;
+                let skipAddingToList = false;
                 
-                // Check for investments in description
+                // Check for investments in description for deduplication
                 if (newTx.description && newTx.description.toLowerCase().includes('investissement')) {
                   type = 'investment';
-                  // Skip showing duplicate notification for investments
-                  console.log('Skipping duplicate investment notification in history tab');
+                  
+                  // Extract project name if available
+                  const projectNameMatch = newTx.description.match(/Investissement dans (.+)/);
+                  if (projectNameMatch && projectNameMatch[1]) {
+                    const projectName = projectNameMatch[1].trim();
+                    
+                    // Skip if this project investment is already shown
+                    skipAddingToList = transactions.some(tx => 
+                      tx.type === 'investment' && 
+                      tx.description.includes(projectName)
+                    );
+                    
+                    if (skipAddingToList) {
+                      console.log(`Skipping duplicate investment notification for ${projectName}`);
+                    }
+                  }
                 } else if (type === 'deposit') {
                   notificationService.depositSuccess(newTx.amount);
                 } else if (type === 'withdrawal') {
@@ -147,18 +177,19 @@ export default function HistoryTab() {
                 }
                 
                 // Add the new transaction to the list, avoiding duplicates for investments
-                if (type !== 'investment' || !transactions.some(tx => 
-                    tx.type === 'investment' && 
-                    tx.description === `Investissement dans ${newTx.description?.split('dans ')[1] || 'un projet'}`
-                )) {
+                if (!skipAddingToList) {
                   setTransactions(prev => [
                     {
                       id: newTx.id,
                       date: newTx.created_at,
-                      description: newTx.description || (type === 'deposit' ? 'Dépôt' : type === 'withdrawal' ? 'Retrait' : 'Transaction'),
+                      description: newTx.description || (
+                        type === 'deposit' ? 'Dépôt' : 
+                        type === 'withdrawal' ? 'Retrait' : 'Transaction'
+                      ),
                       amount: newTx.amount,
                       type: type,
-                      status: newTx.status
+                      status: newTx.status,
+                      projectName: null
                     },
                     ...prev
                   ]);

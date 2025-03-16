@@ -39,10 +39,15 @@ export const notificationService = {
             data: { amount, projectName, projectId }
           }).then(() => {
             console.log('Successfully created database notification from service');
+            return Promise.resolve();
           }).catch(error => {
             console.error('Error creating database notification from service:', error);
+            return Promise.resolve();
           });
         }
+        return Promise.resolve();
+      }).catch(error => {
+        console.error('Error in session check during notification:', error);
         return Promise.resolve();
       });
     } catch (error) {
