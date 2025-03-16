@@ -91,15 +91,23 @@ export const useInvestmentConfirmation = ({
         .from("profiles")
         .update({ 
           wallet_balance: newBalance,
-          // Use increment functions for these values
-          investment_total: supabase.rpc("increment_wallet_balance", { user_id: userId, increment_amount: amount }),
-          projects_count: supabase.rpc("increment_wallet_balance", { user_id: userId, increment_amount: 1 })
         })
         .eq("id", userId);
         
       if (updateBalanceError) {
         throw new Error("Erreur lors de la mise à jour du solde");
       }
+      
+      // Also update investment_total and projects_count
+      await supabase.rpc("increment_wallet_balance", { 
+        user_id: userId, 
+        increment_amount: amount 
+      });
+      
+      await supabase.rpc("increment_wallet_balance", { 
+        user_id: userId, 
+        increment_amount: 1 
+      });
       
       // Create transaction record
       const { error: transactionError } = await supabase
@@ -119,7 +127,7 @@ export const useInvestmentConfirmation = ({
       
       // Send notification using the notification service
       if (typeof notificationService?.investmentConfirmed === 'function') {
-        notificationService.investmentConfirmed(amount, projectData.name, projectId);
+        notificationService.investmentConfirmed(amount, projectData.name);
       }
       
       // Send success toast
