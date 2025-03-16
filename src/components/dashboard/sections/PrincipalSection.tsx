@@ -1,7 +1,7 @@
 
 import React from "react";
-import SidebarNavItem from "../SidebarNavItem";
-import { LayoutDashboard, Wallet, TrendingUp, Briefcase, Award, UserPlus } from "lucide-react";
+import SidebarNavItem from "@/components/dashboard/SidebarNavItem";
+import { BarChart3, Wallet, TrendingUp, Briefcase, Award } from "lucide-react";
 
 interface PrincipalSectionProps {
   activeTab: string;
@@ -14,11 +14,12 @@ export default function PrincipalSection({
   setActiveTab,
   expanded
 }: PrincipalSectionProps) {
+  
   return (
-    <>
+    <div className="space-y-1">
       <SidebarNavItem
-        icon={LayoutDashboard}
-        label="Tableau de bord"
+        icon={BarChart3}
+        label="Vue d'ensemble"
         value="overview"
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -56,14 +57,6 @@ export default function PrincipalSection({
         setActiveTab={setActiveTab}
         expanded={expanded}
       />
-      <SidebarNavItem
-        icon={UserPlus}
-        label="Parrainage"
-        value="parrainage"
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        expanded={expanded}
-      />
-    </>
+    </div>
   );
 }
