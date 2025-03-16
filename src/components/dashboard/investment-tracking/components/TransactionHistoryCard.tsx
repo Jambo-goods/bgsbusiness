@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -17,7 +16,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Fetch scheduled payments for this project
   useEffect(() => {
     const fetchScheduledPayments = async () => {
       if (!investmentId) {
@@ -29,7 +27,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         setIsLoading(true);
         console.log("Fetching scheduled payments for investment ID:", investmentId);
         
-        // First, get the project_id from the investment
         const { data: investment, error: investmentError } = await supabase
           .from('investments')
           .select('project_id, amount, yield_rate')
@@ -44,7 +41,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         
         console.log("Found investment with project_id:", investment.project_id);
         
-        // Then fetch scheduled payments for this project
         const { data: payments, error: paymentsError } = await supabase
           .from('scheduled_payments')
           .select(`
@@ -68,12 +64,10 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         console.log("Scheduled payments fetched:", payments?.length || 0, payments);
         
         if (!payments || payments.length === 0) {
-          // If no scheduled payments found, create some mock data based on investment
           console.log("No scheduled payments found, creating mock data based on investment");
           const mockScheduledPayments = createMockScheduledPayments(investment);
           setScheduledPayments(mockScheduledPayments);
         } else {
-          // Add calculated cumulative amounts for each payment
           let cumulativeAmount = 0;
           const paymentsWithCumulative = payments?.map(payment => {
             const calculatedAmount = payment.total_scheduled_amount || 0;
@@ -101,13 +95,11 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     fetchScheduledPayments();
   }, [investmentId]);
 
-  // Helper function to create mock scheduled payments if none exist in the database
   const createMockScheduledPayments = (investment: any): ScheduledPayment[] => {
     const mockPayments: ScheduledPayment[] = [];
     const currentDate = new Date();
     const monthlyYield = investment.amount * (fixedYieldPercentage / 100) / 12;
     
-    // Create 12 monthly payments starting from now
     for (let i = 0; i < 12; i++) {
       const paymentDate = new Date(currentDate);
       paymentDate.setMonth(currentDate.getMonth() + i);
@@ -116,7 +108,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         id: `mock-${i}`,
         project_id: investment.project_id,
         payment_date: paymentDate.toISOString(),
-        percentage: fixedYieldPercentage / 12, // Monthly percentage
+        percentage: fixedYieldPercentage / 12,
         status: i === 0 ? 'pending' : 'scheduled',
         total_scheduled_amount: monthlyYield,
         investors_count: 1,
@@ -135,32 +127,27 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
   };
   
-  // Filter transactions related to this investment
   const filteredTransactions = investmentId 
     ? transactions.filter(tx => tx.investment_id === investmentId)
     : transactions;
   
-  // Calculate total yield received
   const totalYieldReceived = useMemo(() => {
     return filteredTransactions
       .filter(tx => tx.type === 'yield' && tx.status === 'completed')
       .reduce((total, tx) => total + tx.amount, 0);
   }, [filteredTransactions]);
   
-  // Get investment amount
   const investmentAmount = useMemo(() => {
     const investmentTx = filteredTransactions.find(tx => tx.type === 'investment');
     return investmentTx ? investmentTx.amount : 0;
   }, [filteredTransactions]);
   
-  // Calculate total pending yields
   const pendingYields = useMemo(() => {
     return filteredTransactions
       .filter(tx => tx.type === 'yield' && tx.status === 'pending')
       .reduce((total, tx) => total + tx.amount, 0);
   }, [filteredTransactions]);
   
-  // Prepare transactions for table format
   const tableData = useMemo(() => {
     const sorted = [...filteredTransactions]
       .filter(tx => tx.type === 'yield')
@@ -176,24 +163,18 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     });
   }, [filteredTransactions]);
   
-  // Fixed yield percentage (12%)
   const fixedYieldPercentage = 12;
 
-  // Format scheduled payments
   const formattedScheduledPayments = useMemo(() => {
     if (!scheduledPayments?.length || !investmentAmount) return [];
     
-    // Initialize cumulative for scheduled payments
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    // Calculate monthly amount based on fixed percentage
     const monthlyYield = investmentAmount * (fixedYieldPercentage / 100) / 12;
     
     return scheduledPayments.map(payment => {
-      // Use the payment amount from the database or calculate it if not available
       const paymentAmount = payment.total_scheduled_amount || monthlyYield;
       
-      // Only increase cumulative for future payments if they're not already processed
       if (payment.status !== 'processed') {
         cumulativeScheduledAmount += paymentAmount;
       }
@@ -203,7 +184,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         date: payment.payment_date,
         amount: paymentAmount,
         cumulativeAmount: cumulativeScheduledAmount,
-        percentage: payment.percentage || (fixedYieldPercentage / 12), // Monthly percentage
+        percentage: payment.percentage || (fixedYieldPercentage / 12),
         status: payment.status,
         projectName: payment.projects?.name || 'Projet inconnu'
       };
@@ -260,81 +241,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           </div>
         </div>
 
-        {/* Rendements programmés - Version tableau comme dans projection des rendements */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">
-            <span className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-bgs-blue" />
-              Versements programmés
-            </span>
-          </h3>
-          
-          {isLoading ? (
-            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-              Chargement des versements programmés...
-            </div>
-          ) : formattedScheduledPayments.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projet</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pourcentage</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cumul</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {formattedScheduledPayments.map((payment) => {
-                    let statusDisplay = "Programmé";
-                    let statusClass = "bg-blue-100 text-blue-800";
-                    
-                    if (payment.status === 'processed') {
-                      statusDisplay = "✓ Traité";
-                      statusClass = "bg-green-100 text-green-800";
-                    } else if (payment.status === 'pending') {
-                      statusDisplay = "En attente";
-                      statusClass = "bg-yellow-100 text-yellow-800";
-                    }
-                    
-                    return (
-                      <tr key={payment.id} className="hover:bg-gray-50">
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {formatDate(payment.date)}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
-                          {payment.projectName}
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                          {payment.percentage.toFixed(2)}%
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {payment.amount.toFixed(2)} €
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
-                          {payment.cumulativeAmount.toFixed(2)} €
-                        </td>
-                        <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
-                            {statusDisplay}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-              {!isLoading ? "Aucun versement programmé pour cet investissement" : ""}
-            </div>
-          )}
-        </div>
-
-        {/* Transaction History */}
         <div>
           <h3 className="text-lg font-semibold mb-4 text-gray-800">
             <span className="flex items-center gap-2">
@@ -406,4 +312,3 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     </Card>
   );
 }
-
