@@ -121,10 +121,10 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
     console.log(`Investment ${index}: First payment delay: ${firstPaymentDelayMonths} months`);
     
-    // Create first payment date on the 5th of the month after delay period
+    // Create first payment date based on investment date plus delay, keeping the original day
     const firstPaymentDate = new Date(investmentDate);
     firstPaymentDate.setMonth(investmentDate.getMonth() + firstPaymentDelayMonths);
-    firstPaymentDate.setDate(5); // Set to the 5th of the month
+    // Keep the original day of the month instead of setting to 5th
     
     console.log(`Investment ${index}: Investment date=${investmentDate.toISOString()}, First payment date=${firstPaymentDate.toISOString()}`);
     
@@ -143,8 +143,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       for (let i = 0; i <= monthsSinceFirstPayment; i++) {
         const paymentDate = new Date(firstPaymentDate);
         paymentDate.setMonth(firstPaymentDate.getMonth() + i);
-        // Keep the 5th day of the month for all payments
-        paymentDate.setDate(5);
+        // Keep the original day of the month
         
         if (paymentDate < now) {
           payments.push({
@@ -163,8 +162,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       
       let nextPaymentDate = new Date(firstPaymentDate);
       nextPaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment);
-      // Ensure it's on the 5th
-      nextPaymentDate.setDate(5);
+      // Keep the original day
       
       if (nextPaymentDate <= now) {
         nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
@@ -186,8 +184,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       for (let i = 1; i <= 2; i++) {
         const futureDate = new Date(nextPaymentDate);
         futureDate.setMonth(nextPaymentDate.getMonth() + i);
-        // Keep the 5th day of the month
-        futureDate.setDate(5);
+        // Keep the original day
         
         payments.push({
           id: `payment-${investment.id}-future-${i}`,

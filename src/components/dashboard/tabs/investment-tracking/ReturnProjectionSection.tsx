@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from 'react';
 import { TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { PaymentRecord } from './types';
@@ -171,7 +170,6 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   }, [paymentRecords, cumulativeExpectedReturns]);
 
   const futurePayments = useMemo(() => {
-    // Utiliser les dates réelles sans ajustement
     const payments = localExpectedReturns.filter(payment => payment.status === 'scheduled' || payment.status === 'pending');
     
     return payments.sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -198,9 +196,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
 
   const fixedPercentage = 12;
   
-  // Format date to match the scheduled_payments format
   const formatDate = (date: Date) => {
-    // Format the date to be displayed as "5 janvier 2024" instead of MM/DD/YYYY
     return date.toLocaleDateString('fr-FR', {
       day: 'numeric',
       month: 'long',
