@@ -53,7 +53,7 @@ serve(async (req) => {
     const totalDeposits = transfers.reduce((sum, t) => sum + (t.amount || 0), 0)
     console.log(`Total deposits: ${totalDeposits}`)
 
-    // Get approved, completed, and scheduled withdrawals 
+    // Get ALL withdrawals that affect the balance (approved, completed, and scheduled)
     const { data: withdrawals, error: withdrawalsError } = await supabaseClient
       .from('withdrawal_requests')
       .select('amount, status')
