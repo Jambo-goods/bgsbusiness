@@ -156,7 +156,35 @@ export default function WithdrawalManagement() {
         return;
       }
       
-      // First schedule the withdrawal
+      // First mark the withdrawal as confirmed
+      const { error: confirmationError } = await supabase
+        .from('withdrawal_requests')
+        .update({
+          status: 'confirmed',
+          admin_id: adminUser.id,
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', withdrawal.id);
+        
+      if (confirmationError) throw confirmationError;
+      
+      // Create a notification for the user
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: withdrawal.user_id,
+            title: 'Demande de retrait confirmée',
+            message: `Votre demande de retrait de ${withdrawal.amount}€ a été confirmée et est en cours de traitement.`,
+            type: 'withdrawal',
+            seen: false,
+            data: { amount: withdrawal.amount, status: 'confirmed', category: 'success' }
+          });
+      } catch (notifError) {
+        console.error("Error creating confirmation notification:", notifError);
+      }
+      
+      // Then schedule the withdrawal
       const { error: schedulingError } = await supabase
         .from('withdrawal_requests')
         .update({
@@ -249,6 +277,67 @@ export default function WithdrawalManagement() {
     } catch (error) {
       console.error("Erreur lors de l'approbation du retrait:", error);
       toast.error("Une erreur s'est produite lors de l'approbation du retrait");
+    }
+  };
+
+  const handleConfirmWithdrawal = async (withdrawal: any) => {
+    if (!adminUser || !window.confirm(`Êtes-vous sûr de vouloir confirmer ce retrait de ${withdrawal.amount}€ ?`)) {
+      return;
+    }
+    
+    try {
+      // Check if withdrawal is already confirmed or in a later state
+      if (withdrawal.status === 'confirmed' || 
+          withdrawal.status === 'scheduled' || 
+          withdrawal.status === 'sheduled' || 
+          withdrawal.status === 'approved' || 
+          withdrawal.status === 'paid') {
+        toast.error("Ce retrait est déjà confirmé ou dans un état ultérieur");
+        return;
+      }
+      
+      // Mark the withdrawal as confirmed
+      const { error: confirmationError } = await supabase
+        .from('withdrawal_requests')
+        .update({
+          status: 'confirmed',
+          admin_id: adminUser.id,
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', withdrawal.id);
+        
+      if (confirmationError) throw confirmationError;
+
+      await logAdminAction(
+        adminUser.id, 
+        'withdrawal_management', 
+        `Confirmation d'un retrait de ${withdrawal.amount}€`, 
+        withdrawal.user_id, 
+        undefined, 
+        withdrawal.amount
+      );
+      
+      // Create a notification for the user
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: withdrawal.user_id,
+            title: 'Demande de retrait confirmée',
+            message: `Votre demande de retrait de ${withdrawal.amount}€ a été confirmée et est en cours de traitement.`,
+            type: 'withdrawal',
+            seen: false,
+            data: { amount: withdrawal.amount, status: 'confirmed', category: 'success' }
+          });
+      } catch (notifError) {
+        console.error("Error creating notification:", notifError);
+      }
+      
+      toast.success(`Retrait de ${withdrawal.amount}€ confirmé`);
+      fetchWithdrawals();
+    } catch (error) {
+      console.error("Erreur lors de la confirmation du retrait:", error);
+      toast.error("Une erreur s'est produite lors de la confirmation du retrait");
     }
   };
 
@@ -507,6 +596,21 @@ export default function WithdrawalManagement() {
                       </TableCell>
                       <TableCell className="text-right">
                         {withdrawal.status === 'pending' ? (
+                          <div className="flex justify-end items-center space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => handleConfirmWithdrawal(withdrawal)} className="text-blue-600 hover:text-blue-800 hover:bg-blue-50">
+                              <Clock className="h-4 w-4 mr-1" />
+                              Confirmer
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleApproveWithdrawal(withdrawal)} className="text-green-600 hover:text-green-800 hover:bg-green-50">
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approuver
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => handleRejectWithdrawal(withdrawal)} className="text-red-600 hover:text-red-800 hover:bg-red-50">
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Rejeter
+                            </Button>
+                          </div>
+                        ) : withdrawal.status === 'confirmed' ? (
                           <div className="flex justify-end items-center space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleApproveWithdrawal(withdrawal)} className="text-green-600 hover:text-green-800 hover:bg-green-50">
                               <CheckCircle className="h-4 w-4 mr-1" />

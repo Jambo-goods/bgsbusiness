@@ -70,7 +70,7 @@ export default function WithdrawalRequestsTable() {
                 });
                 break;
               case 'confirmed':
-                // Add special case for confirmed status
+                // Handle confirmed status notification
                 console.log("Withdrawal confirmed notification");
                 notificationService.withdrawalConfirmed(amount);
                 toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
@@ -78,7 +78,7 @@ export default function WithdrawalRequestsTable() {
                 });
                 break;
               case 'paid':
-                // Add special case for paid status
+                // Handle paid status notification
                 console.log("Withdrawal paid notification");
                 notificationService.withdrawalPaid(amount);
                 toast.success(`Votre retrait de ${amount}€ a été payé`, {
