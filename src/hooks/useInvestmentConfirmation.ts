@@ -254,10 +254,10 @@ export const useInvestmentConfirmation = (
           durationMonths, 
           firstPaymentDelay
         );
-        
-        // Create confirmation notification - non-critical
-        await createConfirmationNotification(investmentAmount, project.name, projectId);
       }
+      
+      // Create confirmation notification - always create notification
+      await createConfirmationNotification(investmentAmount, project.name, projectId);
       
       toast({
         title: "Investissement réussi !",
