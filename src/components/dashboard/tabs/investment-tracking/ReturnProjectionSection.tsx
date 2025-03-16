@@ -58,6 +58,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
 
   // Set up real-time subscription to scheduled_payments table
   useEffect(() => {
+    // Initialize with props
     setLocalPaymentRecords(paymentRecords);
     setLocalExpectedReturns(cumulativeExpectedReturns);
     
@@ -88,7 +89,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
                 company_name
               )
             `)
-            .eq('id', payload.new.id)
+            .eq('id', payload.new?.id || payload.old?.id)
             .single();
             
           if (error) throw error;
@@ -108,6 +109,10 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
             
             // Update local state with new data
             setLocalPaymentRecords(current => {
+              if (payload.eventType === 'DELETE') {
+                return current.filter(r => r.id !== payload.old.id);
+              }
+              
               const updatedRecords = [...current];
               const index = updatedRecords.findIndex(r => r.id === updatedPayment.id);
               
@@ -121,19 +126,39 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
             });
             
             // Update cumulative returns
-            setLocalExpectedReturns(current => {
-              const updatedReturns = [...current];
-              const index = updatedReturns.findIndex(r => r.id === updatedPayment.id);
-              
-              if (index >= 0) {
-                updatedReturns[index] = {
-                  ...updatedRecord,
-                  expectedCumulativeReturn: updatedReturns[index].expectedCumulativeReturn
-                };
-              }
-              
-              return updatedReturns;
-            });
+            if (payload.eventType !== 'DELETE') {
+              setLocalExpectedReturns(current => {
+                const updatedReturns = [...current];
+                const index = updatedReturns.findIndex(r => r.id === updatedPayment.id);
+                
+                if (index >= 0) {
+                  updatedReturns[index] = {
+                    ...updatedRecord,
+                    expectedCumulativeReturn: updatedReturns[index].expectedCumulativeReturn
+                  };
+                } else {
+                  // Calculate expected cumulative return for new payment
+                  const totalBefore = updatedReturns.reduce((sum, record) => {
+                    return record.date < updatedRecord.date ? sum + record.amount : sum;
+                  }, 0);
+                  updatedReturns.push({
+                    ...updatedRecord,
+                    expectedCumulativeReturn: totalBefore + updatedRecord.amount
+                  });
+                }
+                
+                return updatedReturns.sort((a, b) => a.date.getTime() - b.date.getTime());
+              });
+            }
+          } else if (payload.eventType === 'DELETE') {
+            // Handle deletion
+            setLocalPaymentRecords(current => 
+              current.filter(r => r.id !== payload.old.id)
+            );
+            
+            setLocalExpectedReturns(current => 
+              current.filter(r => r.id !== payload.old.id)
+            );
           }
         } catch (error) {
           console.error('Error handling scheduled payment update:', error);
@@ -186,6 +211,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   }
 
   const fixedPercentage = 12;
+  
   return (
     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
       <div className="flex items-center justify-between mb-6">
