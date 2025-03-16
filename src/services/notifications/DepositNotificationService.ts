@@ -22,6 +22,26 @@ export class DepositNotificationService extends BaseNotificationService {
     });
   }
   
+  depositRequested(amount: number, reference: string): Promise<void> {
+    return this.createNotification({
+      title: "Demande de dépôt envoyée",
+      description: `Votre demande de dépôt de ${amount}€ (réf: ${reference}) a été enregistrée.`,
+      type: 'deposit',
+      category: 'info',
+      metadata: { amount, reference }
+    });
+  }
+  
+  depositConfirmed(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Dépôt confirmé",
+      description: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
+      type: 'deposit',
+      category: 'success',
+      metadata: { amount }
+    });
+  }
+  
   insufficientFunds(): Promise<void> {
     return this.createNotification({
       title: "Solde insuffisant",

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Notification, NotificationCreateParams, NotificationCategory } from "./types";
@@ -21,8 +20,7 @@ export class BaseNotificationService {
           message: notification.description,
           type: notification.type,
           category: notification.category || 'info',
-          data: notification.metadata || {},
-          seen: false
+          data: notification.metadata || {}
         });
       
       if (error) {
@@ -88,7 +86,7 @@ export class BaseNotificationService {
         date: new Date(notification.created_at),
         read: notification.seen === true,
         type: notification.type as Notification['type'],
-        category: (notification.category as NotificationCategory) || 'info',
+        category: (notification.data?.category as NotificationCategory) || 'info',
         metadata: notification.data || {}
       }));
       

@@ -37,16 +37,38 @@ export const bankTransferService = {
         .insert({
           user_id: item.user_id,
           title: "Dépôt confirmé",
-          description: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
+          message: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
           type: "deposit",
-          category: "success",
-          metadata: {
+          data: {
+            category: "success",
             amount,
             transaction_id: item.id
           }
         });
       
-      // 4. Log admin action
+      // 4. Send notification via Edge Function
+      try {
+        const { error: notificationError } = await supabase.functions.invoke('send-user-notification', {
+          body: {
+            userEmail: item.profile?.email,
+            userName: `${item.profile?.first_name} ${item.profile?.last_name}`,
+            subject: 'Dépôt confirmé sur BGS Invest',
+            eventType: 'deposit',
+            data: {
+              amount: amount,
+              status: 'completed'
+            }
+          }
+        });
+        
+        if (notificationError) {
+          console.error("Erreur lors de l'envoi de la notification par email:", notificationError);
+        }
+      } catch (emailError) {
+        console.error("Erreur lors de l'envoi du mail de confirmation:", emailError);
+      }
+      
+      // 5. Log admin action
       if (adminUser.id) {
         await logAdminAction(
           adminUser.id,
@@ -84,9 +106,11 @@ export const bankTransferService = {
         .insert({
           user_id: item.user_id,
           title: "Dépôt rejeté",
-          description: "Votre demande de dépôt n'a pas pu être validée. Veuillez contacter le support pour plus d'informations.",
+          message: "Votre demande de dépôt n'a pas pu être validée. Veuillez contacter le support pour plus d'informations.",
           type: "deposit",
-          category: "error"
+          data: {
+            category: "error"
+          }
         });
       
       // 3. Log admin action

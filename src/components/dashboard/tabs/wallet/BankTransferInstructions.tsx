@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -8,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 
 export default function BankTransferInstructions() {
   const [copied, setCopied] = useState(false);
@@ -54,19 +54,22 @@ export default function BankTransferInstructions() {
         return;
       }
       
-      // Create a notification for the admin about the bank transfer
+      // Create a notification in the database
       await supabase.from('notifications').insert({
         user_id: userId,
         title: "Virement bancaire confirmé",
-        description: `Vous avez confirmé avoir effectué un virement bancaire de ${transferAmount}€ avec la référence ${bankDetails.reference}`,
+        message: `Vous avez confirmé avoir effectué un virement bancaire de ${transferAmount}€ avec la référence ${bankDetails.reference}`,
         type: "deposit",
-        category: "finance",
-        metadata: {
+        data: {
+          category: "info",
           reference: bankDetails.reference,
           amount: parseInt(transferAmount),
           timestamp: new Date().toISOString()
         }
       });
+      
+      // Send a notification using the notification service
+      await notificationService.deposit.depositRequested(parseInt(transferAmount), bankDetails.reference);
       
       // Enregistrer le virement bancaire dans la nouvelle table bank_transfers
       await supabase.from('bank_transfers').insert({

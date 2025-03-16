@@ -3,8 +3,10 @@ import React from "react";
 
 export default function EmptyState() {
   return (
-    <p className="text-center py-6 text-bgs-gray-medium">
-      Aucune transaction récente à afficher
-    </p>
+    <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-100">
+      <p className="text-bgs-gray-medium">
+        Aucune transaction récente à afficher
+      </p>
+    </div>
   );
 }
