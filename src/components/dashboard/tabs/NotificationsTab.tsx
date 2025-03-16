@@ -69,6 +69,8 @@ const NotificationsTab = () => {
         return;
       }
       
+      console.log('Fetching notifications for user:', userId);
+      
       // Fetch notifications for the current user
       const { data, error } = await supabase
         .from('notifications')
@@ -82,6 +84,7 @@ const NotificationsTab = () => {
         return;
       }
       
+      console.log('Fetched notifications:', data);
       setNotifications(data || []);
       
       // Mark notifications as seen

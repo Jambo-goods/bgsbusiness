@@ -35,14 +35,15 @@ export const useInvestmentSubscriptions = (
               seen: false,
               data: payload.new
             });
+            
+            toast.info("Nouvel investissement", {
+              description: "Votre investissement a été enregistré avec succès."
+            });
           } catch (error) {
             console.error('Error creating investment notification:', error);
           }
         }
         
-        toast.info("Mise à jour des investissements", {
-          description: "Les données de suivi sont en cours d'actualisation."
-        });
         refreshCallback();
       })
       .subscribe();
@@ -93,14 +94,15 @@ export const useInvestmentSubscriptions = (
               seen: false,
               data: transaction
             });
+            
+            toast.info(notificationTitle, {
+              description: notificationMessage
+            });
           } catch (error) {
             console.error('Error creating transaction notification:', error);
           }
         }
         
-        toast.info("Transaction détectée", {
-          description: "Les données de rendement sont en cours d'actualisation."
-        });
         refreshCallback();
       })
       .subscribe();
