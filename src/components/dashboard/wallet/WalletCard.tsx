@@ -19,15 +19,16 @@ export function WalletCard() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button 
-                    onClick={recalculateBalance} 
+                    onClick={refreshBalance} 
                     className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                    aria-label="Recalculer le solde"
+                    aria-label="Rafraîchir le solde"
+                    disabled={isLoadingBalance}
                   >
-                    <CalculatorIcon className="h-4 w-4 text-bgs-blue" />
+                    <RefreshCcw className={`h-4 w-4 text-bgs-blue ${isLoadingBalance ? 'animate-spin' : ''}`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Recalculer le solde</p>
+                  <p>Rafraîchir le solde</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -36,15 +37,16 @@ export function WalletCard() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button 
-                    onClick={refreshBalance} 
+                    onClick={recalculateBalance} 
                     className="p-2 rounded-full hover:bg-gray-100 transition-colors"
-                    aria-label="Rafraîchir le solde"
+                    aria-label="Recalculer le solde"
+                    disabled={isLoadingBalance}
                   >
-                    <RefreshCcw className="h-4 w-4 text-bgs-blue" />
+                    <CalculatorIcon className="h-4 w-4 text-bgs-blue" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Rafraîchir le solde</p>
+                  <p>Recalculer le solde</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -55,10 +57,10 @@ export function WalletCard() {
           <Skeleton className="h-10 w-32 mt-2" />
         ) : (
           <div className="flex items-baseline">
-            <span className="text-3xl font-bold text-bgs-blue">
+            <span className={`text-3xl font-bold ${walletBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>
               {walletBalance.toLocaleString('fr-FR')}
             </span>
-            <span className="ml-1 text-xl text-bgs-blue">€</span>
+            <span className={`ml-1 text-xl ${walletBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>€</span>
           </div>
         )}
         

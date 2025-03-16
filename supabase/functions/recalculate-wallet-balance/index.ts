@@ -56,7 +56,7 @@ serve(async (req) => {
     // Get approved, completed, and scheduled withdrawals 
     const { data: withdrawals, error: withdrawalsError } = await supabaseClient
       .from('withdrawal_requests')
-      .select('amount')
+      .select('amount, status')
       .eq('user_id', userId)
       .in('status', ['approved', 'completed', 'scheduled'])
       
@@ -64,6 +64,8 @@ serve(async (req) => {
       console.error('Error fetching withdrawals:', withdrawalsError)
       throw new Error('Failed to fetch withdrawals')
     }
+    
+    console.log('Withdrawals data:', withdrawals)
     
     // Calculate total withdrawals
     const totalWithdrawals = withdrawals.reduce((sum, w) => sum + (w.amount || 0), 0)

@@ -58,7 +58,7 @@ export function useWalletBalance() {
       setIsLoadingBalance(true);
       setError(null);
       
-      toast.loading("Recalcul du solde en cours...");
+      const toastId = toast.loading("Recalcul du solde en cours...");
       
       const { data: session } = await supabase.auth.getSession();
       
@@ -71,22 +71,38 @@ export function useWalletBalance() {
       
       // Call the Supabase Edge Function to recalculate the balance
       try {
-        const { data, error } = await supabase.functions.invoke('recalculate-wallet-balance');
+        const response = await supabase.functions.invoke('recalculate-wallet-balance');
         
-        if (error) {
-          console.error("Error calling recalculate function:", error);
-          toast.error("Erreur lors du recalcul du solde");
-          throw error;
+        console.log("Function response:", response);
+        
+        if (response.error) {
+          console.error("Error calling recalculate function:", response.error);
+          toast.error("Erreur lors du recalcul du solde", {
+            id: toastId,
+            description: "Veuillez réessayer plus tard"
+          });
+          throw response.error;
         }
         
+        const data = response.data;
         console.log("Recalculation function returned:", data);
+        
         if (data && typeof data.balance === 'number') {
           setWalletBalance(data.balance);
-          toast.success("Solde recalculé avec succès");
+          toast.success("Solde recalculé avec succès", {
+            id: toastId,
+            description: `Nouveau solde: ${data.balance}€`
+          });
+        } else {
+          toast.error("Erreur lors du recalcul du solde", {
+            id: toastId
+          });
         }
       } catch (rpcError) {
         console.error("Error recalculating balance:", rpcError);
-        toast.error("Erreur lors du recalcul du solde");
+        toast.error("Erreur lors du recalcul du solde", {
+          id: toastId
+        });
       }
       
       // Fetch the updated balance
