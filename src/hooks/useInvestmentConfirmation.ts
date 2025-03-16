@@ -41,7 +41,7 @@ const saveInvestment = async (
   }
 };
 
-// Update project stats (removing investors_count as it doesn't exist)
+// Update project stats (using the correct column name in database)
 const updateProjectStats = async (
   projectId: string, 
   totalRaised: number,
@@ -51,7 +51,7 @@ const updateProjectStats = async (
     const { error } = await supabase
       .from("projects")
       .update({
-        total_raised: totalRaised + investmentAmount
+        raised: totalRaised + investmentAmount  // Using 'raised' instead of 'total_raised'
       })
       .eq("id", projectId);
 
@@ -213,10 +213,10 @@ export const useInvestmentConfirmation = (
       );
       if (!saveSuccess || saveError) throw new Error("Erreur lors de l'enregistrement de l'investissement");
 
-      // Step 2: Update project stats (removed investorCount parameter)
+      // Step 2: Update project stats (using the correct property name)
       const { success: statsSuccess, error: statsError } = await updateProjectStats(
         projectId,
-        totalRaised,
+        project.raised || 0, // Use project.raised instead of totalRaised
         investmentAmount
       );
       if (!statsSuccess || statsError) throw new Error("Erreur lors de la mise à jour des statistiques du projet");
