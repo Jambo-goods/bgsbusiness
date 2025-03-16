@@ -141,4 +141,17 @@ export class WithdrawalNotificationService extends BaseNotificationService {
       metadata: { amount, status: 'balance_deducted' }
     });
   }
+  
+  /**
+   * Notification when a withdrawal request is confirmed (processed_at field is filled)
+   */
+  withdrawalConfirmed(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Demande de retrait confirmée",
+      description: `Votre demande de retrait de ${amount}€ a été confirmée et est en cours de traitement.`,
+      type: 'withdrawal',
+      category: 'success',
+      metadata: { amount, status: 'confirmed' }
+    });
+  }
 }

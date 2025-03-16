@@ -48,6 +48,10 @@ Deno.serve(async (req) => {
       title = 'Retrait débité'
       message = `Le montant de ${amount}€ a été débité de votre solde pour votre demande de retrait.`
       category = 'info'
+    } else if (status === 'confirmed') {
+      title = 'Demande de retrait confirmée'
+      message = `Votre demande de retrait de ${amount}€ a été confirmée et est en cours de traitement.`
+      category = 'success'
     } else if (processed) {
       title = 'Demande de retrait traitée'
       message = `Votre demande de retrait de ${amount}€ a été traitée. Statut: ${status}.`

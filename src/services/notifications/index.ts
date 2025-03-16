@@ -82,6 +82,10 @@ class NotificationService extends BaseNotificationService {
   withdrawalBalanceDeducted(amount: number): Promise<void> {
     return this.withdrawalService.withdrawalBalanceDeducted(amount);
   }
+  
+  withdrawalConfirmed(amount: number): Promise<void> {
+    return this.withdrawalService.withdrawalConfirmed(amount);
+  }
 
   // Investment Notifications
   newInvestmentOpportunity(projectName: string, projectId: string): Promise<void> {

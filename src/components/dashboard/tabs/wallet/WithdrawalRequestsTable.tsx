@@ -46,6 +46,8 @@ export default function WithdrawalRequestsTable() {
           if (payload.new.processed_at && !payload.old.processed_at) {
             console.log("Withdrawal request processed notification");
             notificationService.withdrawalProcessed(amount, payload.new.status);
+            // Also send a confirmation notification
+            notificationService.withdrawalConfirmed(amount);
           }
           // Check if status changed
           else if (payload.old.status !== payload.new.status) {

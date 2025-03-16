@@ -92,6 +92,30 @@ Deno.serve(async (req) => {
         } else {
           console.log(`Processing notification sent to user ${userId} for amount ${amount}€`)
         }
+        
+        // Also send a confirmation notification
+        const confirmationResponse = await fetch(
+          `${supabaseUrl}/functions/v1/send-withdrawal-notification`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${supabaseServiceRoleKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              amount,
+              status: 'confirmed'
+            }),
+          }
+        )
+        
+        if (!confirmationResponse.ok) {
+          const errorData = await confirmationResponse.json()
+          console.error("Error sending confirmation notification via Edge Function:", errorData)
+        } else {
+          console.log(`Confirmation notification sent to user ${userId} for amount ${amount}€`)
+        }
       } catch (notifError) {
         console.error("Error creating processing notification:", notifError)
       }
