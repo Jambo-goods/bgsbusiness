@@ -1,3 +1,4 @@
+
 export interface Investment {
   id: string;
   user_id: string;
@@ -25,9 +26,10 @@ export interface Investment {
 export interface Transaction {
   id: string;
   user_id: string;
-  investment_id?: string; // ID de l'investissement lié à cette transaction
+  investment_id?: string;
   amount: number;
   type: 'investment' | 'yield';
   created_at: string;
   status: 'pending' | 'completed';
+  cumulativeAmount?: number;
 }

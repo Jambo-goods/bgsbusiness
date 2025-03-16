@@ -33,7 +33,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         // First, get the project_id from the investment
         const { data: investment, error: investmentError } = await supabase
           .from('investments')
-          .select('project_id')
+          .select('project_id, amount, yield_rate')
           .eq('id', investmentId)
           .single();
           
@@ -113,16 +113,28 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
 
   // Formater les versements programmés
   const formattedScheduledPayments = useMemo(() => {
-    if (!scheduledPayments.length) return [];
+    if (!scheduledPayments.length || !investmentAmount) return [];
     
-    return scheduledPayments.map(payment => ({
-      id: payment.id,
-      date: payment.payment_date,
-      amount: investmentAmount * (payment.percentage || fixedYieldPercentage) / 100 / 12,
-      percentage: payment.percentage || fixedYieldPercentage,
-      status: payment.status
-    }));
-  }, [scheduledPayments, investmentAmount, fixedYieldPercentage]);
+    // Initialisation du cumul pour les versements programmés
+    let cumulativeScheduledAmount = totalYieldReceived;
+    
+    // Calculer le montant mensuel basé sur le pourcentage fixe
+    const monthlyYield = investmentAmount * (fixedYieldPercentage / 100) / 12;
+    
+    return scheduledPayments.map((payment, index) => {
+      const paymentAmount = monthlyYield;
+      cumulativeScheduledAmount += paymentAmount;
+      
+      return {
+        id: payment.id,
+        date: payment.payment_date,
+        amount: paymentAmount,
+        cumulativeAmount: cumulativeScheduledAmount,
+        percentage: fixedYieldPercentage,
+        status: payment.status
+      };
+    });
+  }, [scheduledPayments, investmentAmount, fixedYieldPercentage, totalYieldReceived]);
 
   return (
     <Card>
@@ -191,6 +203,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pourcentage</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant estimé</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cumul</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                   </tr>
                 </thead>
@@ -205,6 +218,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {payment.amount.toFixed(2)} €
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                        {payment.cumulativeAmount.toFixed(2)} €
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
