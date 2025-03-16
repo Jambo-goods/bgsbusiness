@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -19,6 +20,23 @@ export default function WithdrawalManagement() {
 
   useEffect(() => {
     fetchWithdrawals();
+
+    // Set up real-time listener for withdrawal requests
+    const withdrawalChannel = supabase
+      .channel('admin_withdrawal_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'withdrawal_requests'
+      }, (payload) => {
+        console.log('Withdrawal change detected in admin:', payload);
+        fetchWithdrawals();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(withdrawalChannel);
+    };
   }, [sortField, sortDirection]);
 
   const fetchWithdrawals = async () => {
@@ -70,26 +88,75 @@ export default function WithdrawalManagement() {
     }
     
     try {
-      if (withdrawal.status === 'scheduled') {
+      // Check if withdrawal is already scheduled or approved
+      if (withdrawal.status === 'scheduled' || withdrawal.status === 'sheduled') {
         toast.error("Ce retrait est déjà programmé");
         return;
       }
       
-      if (withdrawal.status === 'pending') {
-        const { error: schedulingError } = await supabase
+      if (withdrawal.status === 'approved') {
+        toast.error("Ce retrait est déjà approuvé");
+        return;
+      }
+      
+      // Verify user has sufficient balance before scheduling
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('wallet_balance')
+        .eq('id', withdrawal.user_id)
+        .single();
+        
+      if (profileError) {
+        console.error("Erreur lors de la vérification du solde:", profileError);
+        toast.error("Impossible de vérifier le solde de l'utilisateur");
+        return;
+      }
+      
+      if (userProfile.wallet_balance < withdrawal.amount) {
+        toast.error(`Solde insuffisant. L'utilisateur dispose de ${userProfile.wallet_balance}€ mais souhaite retirer ${withdrawal.amount}€`);
+        
+        // Mark withdrawal as rejected due to insufficient funds
+        const { error: rejectionError } = await supabase
           .from('withdrawal_requests')
           .update({
-            status: 'scheduled',
+            status: 'rejected',
             admin_id: adminUser.id,
-            processed_at: new Date().toISOString()
+            processed_at: new Date().toISOString(),
+            notes: "Solde insuffisant"
           })
           .eq('id', withdrawal.id);
           
-        if (schedulingError) throw schedulingError;
+        if (rejectionError) throw rejectionError;
         
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await logAdminAction(
+          adminUser.id, 
+          'withdrawal_management', 
+          `Rejet d'un retrait de ${withdrawal.amount}€ pour solde insuffisant`, 
+          withdrawal.user_id, 
+          undefined, 
+          withdrawal.amount
+        );
+        
+        fetchWithdrawals();
+        return;
       }
       
+      // First schedule the withdrawal
+      const { error: schedulingError } = await supabase
+        .from('withdrawal_requests')
+        .update({
+          status: 'scheduled',
+          admin_id: adminUser.id,
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', withdrawal.id);
+        
+      if (schedulingError) throw schedulingError;
+      
+      // Wait for Edge Function to process the change (reduce wallet balance)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Then approve it
       const { error: approvalError } = await supabase
         .from('withdrawal_requests')
         .update({
@@ -110,8 +177,18 @@ export default function WithdrawalManagement() {
         withdrawal.amount
       );
       
+      // Create a notification for the user
+      await supabase.from('notifications').insert({
+        user_id: withdrawal.user_id,
+        title: 'Retrait approuvé',
+        description: `Votre retrait de ${withdrawal.amount}€ a été approuvé et sera traité prochainement.`,
+        type: 'withdrawal',
+        category: 'success',
+        metadata: { amount: withdrawal.amount },
+        read: false
+      });
+      
       toast.success(`Retrait de ${withdrawal.amount}€ approuvé`);
-
       fetchWithdrawals();
     } catch (error) {
       console.error("Erreur lors de l'approbation du retrait:", error);
@@ -125,14 +202,27 @@ export default function WithdrawalManagement() {
     }
     
     try {
-      if (withdrawal.status === 'scheduled') {
-        const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
-          user_id: withdrawal.user_id,
-          increment_amount: withdrawal.amount
-        });
+      // If the withdrawal was scheduled, return the funds to the user's wallet
+      if (withdrawal.status === 'scheduled' || withdrawal.status === 'sheduled') {
+        // Add the amount back to the user's wallet
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', withdrawal.user_id)
+          .single();
+          
+        if (userError) throw userError;
+        
+        const { error: walletError } = await supabase
+          .from('profiles')
+          .update({ 
+            wallet_balance: userData.wallet_balance + withdrawal.amount 
+          })
+          .eq('id', withdrawal.user_id);
         
         if (walletError) throw walletError;
         
+        // Create a refund transaction
         const { error: transactionError } = await supabase
           .from('wallet_transactions')
           .insert({
@@ -144,8 +234,11 @@ export default function WithdrawalManagement() {
           });
           
         if (transactionError) throw transactionError;
+        
+        console.log(`Funds returned to user ${withdrawal.user_id}: ${withdrawal.amount}€`);
       }
       
+      // Mark the withdrawal as rejected
       const { error: withdrawalError } = await supabase
         .from('withdrawal_requests')
         .update({
@@ -166,8 +259,18 @@ export default function WithdrawalManagement() {
         withdrawal.amount
       );
       
+      // Create a notification for the user
+      await supabase.from('notifications').insert({
+        user_id: withdrawal.user_id,
+        title: 'Retrait rejeté',
+        description: `Votre demande de retrait de ${withdrawal.amount}€ a été rejetée. Le montant a été recrédité sur votre solde.`,
+        type: 'withdrawal',
+        category: 'error',
+        metadata: { amount: withdrawal.amount },
+        read: false
+      });
+      
       toast.success(`Retrait de ${withdrawal.amount}€ rejeté`);
-
       fetchWithdrawals();
     } catch (error) {
       console.error("Erreur lors du rejet du retrait:", error);
@@ -181,6 +284,12 @@ export default function WithdrawalManagement() {
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
             <Clock className="h-3 w-3 mr-1" />
             En attente
+          </span>;
+      case 'scheduled':
+      case 'sheduled':
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            <ArrowLeftRight className="h-3 w-3 mr-1" />
+            Programmé
           </span>;
       case 'approved':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -213,8 +322,6 @@ export default function WithdrawalManagement() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <Input type="text" placeholder="Rechercher un utilisateur..." className="pl-10 w-full md:w-80" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
-        
-        
       </div>
       
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
