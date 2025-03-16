@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -46,7 +45,10 @@ export const bankTransferService = {
           }
         });
       
-      // 4. Send notification via Edge Function
+      // 4. Send notification via the notification service
+      await notificationService.depositConfirmed(amount);
+      
+      // 5. Send notification via Edge Function
       try {
         const { error: notificationError } = await supabase.functions.invoke('send-user-notification', {
           body: {
@@ -68,7 +70,7 @@ export const bankTransferService = {
         console.error("Erreur lors de l'envoi du mail de confirmation:", emailError);
       }
       
-      // 5. Log admin action
+      // 6. Log admin action
       if (adminUser.id) {
         await logAdminAction(
           adminUser.id,

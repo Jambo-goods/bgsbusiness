@@ -1,4 +1,3 @@
-
 import { Json } from "@/integrations/supabase/types";
 
 export type NotificationType = 
@@ -32,3 +31,23 @@ export const NotificationCategories = {
   security: { icon: 'shield', title: 'Sécurité' },
   marketing: { icon: 'megaphone', title: 'Actualités' },
 };
+
+export type NotificationData = {
+  category?: NotificationCategory;
+  amount?: number;
+  reference?: string;
+  transaction_id?: string;
+  status?: string;
+  [key: string]: any;
+}
+
+export interface DatabaseNotification {
+  id: string;
+  title: string;
+  message: string;  // Used in DB instead of description
+  type: string;
+  user_id: string;
+  created_at: string;
+  seen: boolean;    // Used in DB instead of read
+  data: NotificationData; // JSON in database
+}

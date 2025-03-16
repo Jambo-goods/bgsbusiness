@@ -1,188 +1,125 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Notification, NotificationCreateParams, NotificationCategory } from "./types";
+import { Notification, NotificationCategory, NotificationType, NotificationData } from "./types";
+
+interface CreateNotificationParams {
+  title: string;
+  description: string;
+  type: NotificationType;
+  category: NotificationCategory;
+  metadata?: Record<string, any>;
+}
 
 export class BaseNotificationService {
-  async createNotification(notification: NotificationCreateParams): Promise<void> {
+  /**
+   * Base method for creating notifications
+   */
+  async createNotification({
+    title,
+    description,
+    type,
+    category,
+    metadata = {}
+  }: CreateNotificationParams): Promise<void> {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        console.error("Cannot create notification: User not authenticated");
+      // Get the current user
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        console.warn("No active session found, skipping notification");
         return;
       }
       
-      const { error } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: session.session.user.id,
-          title: notification.title,
-          message: notification.description,
-          type: notification.type,
-          category: notification.category || 'info',
-          data: notification.metadata || {}
-        });
+      const userId = sessionData.session.user.id;
+      
+      // Create notification data object with proper structure for database
+      const notificationData: NotificationData = {
+        category,
+        ...metadata
+      };
+      
+      // Insert notification into database
+      const { error } = await supabase.from('notifications').insert({
+        user_id: userId,
+        title: title,
+        message: description, // Database uses 'message' instead of 'description'
+        type: type,
+        data: notificationData,
+        seen: false
+      });
       
       if (error) {
         console.error("Error creating notification:", error);
-        throw error;
       }
       
-      // Also show a toast notification
-      this.showToast(notification);
-      
+      // Show toast notification
+      this.showToast(title, description, category);
     } catch (error) {
-      console.error("Error creating notification:", error);
+      console.error("Error in notification service:", error);
     }
   }
   
-  showToast(notification: Pick<Notification, 'title' | 'description' | 'category'>): void {
-    const { title, description, category } = notification;
-    
-    switch(category) {
+  /**
+   * Display a toast notification
+   */
+  private showToast(title: string, description: string, category: NotificationCategory): void {
+    switch (category) {
       case 'success':
-        toast.success(title, { description });
-        break;
-      case 'warning':
-        toast.warning(title, { description });
+        toast.success(description, { id: title });
         break;
       case 'error':
-        toast.error(title, { description });
+        toast.error(description, { id: title });
+        break;
+      case 'warning':
+        toast.warning(description, { id: title });
         break;
       case 'info':
       default:
-        toast.info(title, { description });
+        toast.info(description, { id: title });
         break;
     }
   }
   
-  async getNotifications(limit: number = 10): Promise<Notification[]> {
+  /**
+   * Get all notifications for the current user
+   */
+  async fetchNotifications(): Promise<Notification[]> {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        console.error("Cannot get notifications: User not authenticated");
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
         return [];
       }
+      
+      const userId = sessionData.session.user.id;
       
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('user_id', session.session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(limit);
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
       
       if (error) {
         console.error("Error fetching notifications:", error);
-        throw error;
+        return [];
       }
       
-      if (!data) return [];
-      
-      return data.map(notification => ({
-        id: notification.id,
-        title: notification.title,
-        description: notification.message || '',
-        date: new Date(notification.created_at),
-        read: notification.seen === true,
-        type: notification.type as Notification['type'],
-        category: (notification.data?.category as NotificationCategory) || 'info',
-        metadata: notification.data || {}
-      }));
-      
+      // Convert database format to application format
+      return (data || []).map(item => {
+        const notificationData = item.data as NotificationData || {};
+        return {
+          id: item.id,
+          title: item.title,
+          description: item.message,
+          date: new Date(item.created_at),
+          read: item.seen,
+          type: item.type as NotificationType,
+          category: notificationData.category || 'info',
+          metadata: notificationData || {}
+        };
+      });
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      throw error;
+      return [];
     }
-  }
-  
-  async getUnreadCount(): Promise<number> {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        return 0;
-      }
-      
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', session.session.user.id)
-        .eq('seen', false);
-      
-      if (error) {
-        console.error("Error getting unread notification count:", error);
-        throw error;
-      }
-      
-      return count || 0;
-      
-    } catch (error) {
-      console.error("Error getting unread notification count:", error);
-      return 0;
-    }
-  }
-  
-  async markAsRead(notificationId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ seen: true })
-        .eq('id', notificationId);
-      
-      if (error) {
-        console.error("Error marking notification as read:", error);
-        throw error;
-      }
-      
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-      throw error;
-    }
-  }
-  
-  async markAllAsRead(): Promise<void> {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        return;
-      }
-      
-      const { error } = await supabase
-        .from('notifications')
-        .update({ seen: true })
-        .eq('user_id', session.session.user.id)
-        .eq('seen', false);
-      
-      if (error) {
-        console.error("Error marking all notifications as read:", error);
-        throw error;
-      }
-      
-    } catch (error) {
-      console.error("Error marking all notifications as read:", error);
-      throw error;
-    }
-  }
-  
-  setupRealtimeSubscription(callback: () => void): () => void {
-    const channel = supabase
-      .channel('notification_changes')
-      .on('postgres_changes', 
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications'
-        }, 
-        () => {
-          callback();
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }
 }
