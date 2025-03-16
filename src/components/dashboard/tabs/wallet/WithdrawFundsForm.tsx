@@ -16,14 +16,14 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
   const {
     amount,
     setAmount,
-    accountHolder,
-    setAccountHolder,
+    accountOwner,
+    setAccountOwner,
     bankName,
     setBankName,
-    accountNumber,
-    setAccountNumber,
+    iban,
+    setIban,
     isSubmitting,
-    isValidForm,
+    isFormValid,
     handleSubmit
   } = useWithdrawForm(balance, onWithdraw);
   
@@ -36,17 +36,17 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
           <FormFields
             amount={amount}
             setAmount={setAmount}
-            accountHolder={accountHolder}
-            setAccountHolder={setAccountHolder}
+            accountOwner={accountOwner}
+            setAccountOwner={setAccountOwner}
             bankName={bankName}
             setBankName={setBankName}
-            accountNumber={accountNumber}
-            setAccountNumber={setAccountNumber}
+            iban={iban}
+            setIban={setIban}
             balance={balance}
           />
           
           <WithdrawButton 
-            isFormValid={isValidForm()} 
+            isFormValid={isFormValid()} 
             isSubmitting={isSubmitting} 
           />
         </form>

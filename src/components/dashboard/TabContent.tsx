@@ -41,7 +41,7 @@ const TabContent: React.FC<TabContentProps> = ({
         {activeTab === "parrainage" && <ParrainageTab />}
         {activeTab === "profile" && <ProfileTab userData={userData} />}
         {activeTab === "settings" && <SettingsTab />}
-        {activeTab === "wallet" && <WalletTab userData={userData} refreshWalletData={refreshData} />}
+        {activeTab === "wallet" && <WalletTab />}
       </div>
     </div>
   );

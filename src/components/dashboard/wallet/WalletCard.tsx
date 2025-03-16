@@ -1,76 +1,31 @@
 
-import React from 'react';
-import { ArrowDown, ArrowUp, Clock } from 'lucide-react';
-import { formatCurrency } from '@/utils/formatters';
+import React from "react";
+import { Card } from "@/components/ui/card";
+import { Wallet } from "lucide-react";
 
 interface WalletCardProps {
   balance: number;
-  pendingDeposits?: number;
-  pendingWithdrawals?: number;
 }
 
-export function WalletCard({ 
-  balance = 0, 
-  pendingDeposits = 0, 
-  pendingWithdrawals = 0 
-}: WalletCardProps) {
-  // Calculate available balance
-  const availableBalance = balance;
-  
-  // Format the values for display
-  const formattedBalance = balance.toString();
-  const formattedAvailableBalance = availableBalance.toString();
-  const formattedPendingDeposits = pendingDeposits.toString();
-  const formattedPendingWithdrawals = pendingWithdrawals.toString();
-  
+export const WalletCard = ({ balance }: WalletCardProps) => {
+  // Format balance with euro symbol and thousands separator
+  const formattedBalance = new Intl.NumberFormat('fr-FR', { 
+    style: 'currency', 
+    currency: 'EUR',
+    maximumFractionDigits: 2
+  }).format(balance);
+
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden">
-      <div className="p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-bgs-blue">Votre portefeuille</h3>
-          <span className="bg-green-50 text-green-600 px-3 py-1 rounded-full text-sm font-medium">
-            Actif
-          </span>
+    <Card className="p-4 shadow-sm bg-white">
+      <div className="flex items-center space-x-3">
+        <div className="bg-blue-100 p-2 rounded-full">
+          <Wallet className="h-5 w-5 text-blue-600" />
         </div>
-        
-        <div className="space-y-6">
-          {/* Balance */}
-          <div>
-            <p className="text-sm text-bgs-gray-medium mb-1">Solde total</p>
-            <p className="text-3xl font-bold text-bgs-blue">{formattedBalance} €</p>
-          </div>
-          
-          {/* Available Balance */}
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center mb-1">
-              <ArrowUp className="h-4 w-4 text-green-500 mr-1" />
-              <p className="text-sm text-bgs-blue">Solde disponible</p>
-            </div>
-            <p className="text-xl font-semibold text-bgs-blue">{formattedAvailableBalance} €</p>
-          </div>
-          
-          {/* Pending Transactions */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Pending Deposits */}
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="flex items-center mb-1">
-                <ArrowDown className="h-4 w-4 text-blue-500 mr-1" />
-                <p className="text-xs text-bgs-gray-medium">Dépôts en attente</p>
-              </div>
-              <p className="text-lg font-medium text-bgs-blue">{formattedPendingDeposits} €</p>
-            </div>
-            
-            {/* Pending Withdrawals */}
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <div className="flex items-center mb-1">
-                <Clock className="h-4 w-4 text-orange-500 mr-1" />
-                <p className="text-xs text-bgs-gray-medium">Retraits en attente</p>
-              </div>
-              <p className="text-lg font-medium text-bgs-blue">{formattedPendingWithdrawals} €</p>
-            </div>
-          </div>
+        <div>
+          <p className="text-sm text-gray-500">Solde portefeuille</p>
+          <p className="text-2xl font-semibold text-gray-900">{formattedBalance}</p>
         </div>
       </div>
-    </div>
+    </Card>
   );
-}
+};

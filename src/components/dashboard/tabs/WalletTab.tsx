@@ -69,7 +69,7 @@ export default function WalletTab() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">Dépôt réussi</h3>
-                    <p>Votre dépôt de {payload.new.amount}€ a été crédité sur votre compte.</p>
+                    <p>Votre dépôt a été crédité sur votre compte.</p>
                   </div>
                 </div>
               ), {

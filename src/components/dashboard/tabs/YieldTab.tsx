@@ -82,54 +82,71 @@ export default function YieldTab({ userInvestments = [] }: YieldTabProps) {
     },
   ];
 
-  // Sample data for current investments
-  const currentInvestments = userInvestments.length > 0 ? userInvestments : [
-    {
-      id: 1,
-      projects: {
-        name: "Immeuble Résidentiel Paris",
-        location: "Paris",
-        yield: 8.5,
-        status: "active"
+  // Safe access to userInvestments with default values
+  const currentInvestments = userInvestments && userInvestments.length > 0 
+    ? userInvestments.map(inv => ({
+        id: inv.id || Math.random().toString(36),
+        projects: {
+          name: inv.projects?.name || "Projet sans nom",
+          location: inv.projects?.location || "Localisation inconnue",
+          yield: inv.projects?.expected_yield || 7.0,
+          status: inv.status || "active"
+        },
+        amount: inv.amount || 0,
+        duration: inv.duration || 36,
+        startDate: inv.created_at || new Date().toISOString()
+      }))
+    : [
+      {
+        id: 1,
+        projects: {
+          name: "Immeuble Résidentiel Paris",
+          location: "Paris",
+          yield: 8.5,
+          status: "active"
+        },
+        amount: 10000,
+        duration: 36,
+        startDate: "2023-01-15"
       },
-      amount: 10000,
-      duration: 36,
-      startDate: "2023-01-15"
-    },
-    {
-      id: 2,
-      projects: {
-        name: "Centre Commercial Lyon",
-        location: "Lyon",
-        yield: 7.2,
-        status: "active"
+      {
+        id: 2,
+        projects: {
+          name: "Centre Commercial Lyon",
+          location: "Lyon",
+          yield: 7.2,
+          status: "active"
+        },
+        amount: 15000,
+        duration: 48,
+        startDate: "2023-02-20"
       },
-      amount: 15000,
-      duration: 48,
-      startDate: "2023-02-20"
-    },
-    {
-      id: 3,
-      projects: {
-        name: "Complexe de Bureaux Bordeaux",
-        location: "Bordeaux",
-        yield: 6.8,
-        status: "active"
-      },
-      amount: 8000,
-      duration: 24,
-      startDate: "2023-03-10"
-    }
-  ];
+      {
+        id: 3,
+        projects: {
+          name: "Complexe de Bureaux Bordeaux",
+          location: "Bordeaux",
+          yield: 6.8,
+          status: "active"
+        },
+        amount: 8000,
+        duration: 24,
+        startDate: "2023-03-10"
+      }
+    ];
 
   // Format date
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', { 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
-    }).format(date);
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('fr-FR', { 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      }).format(date);
+    } catch (e) {
+      return "Date invalide";
+    }
   };
 
   // Status badge color
@@ -238,7 +255,6 @@ export default function YieldTab({ userInvestments = [] }: YieldTabProps) {
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
-              <YAxis />
               <YAxis />
               <Tooltip 
                 formatter={(value) => [`${value} €`, '']}
