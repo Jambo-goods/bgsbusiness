@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect } from "react";
-import WalletCard from "./WalletCard";
-import { useUserBalance } from "@/hooks/useUserBalance";
 import { Loader2, RefreshCw } from "lucide-react";
+import { useUserBalance } from "@/hooks/useUserBalance";
+import { WalletCard } from "./WalletCard"; // Changed from default import to named import
 
 interface WalletDisplayProps {
   onRefresh?: () => void;

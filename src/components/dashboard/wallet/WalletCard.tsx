@@ -9,7 +9,11 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
 
-export function WalletCard() {
+interface WalletCardProps {
+  balance?: number;
+}
+
+export function WalletCard({ balance: propBalance }: WalletCardProps = {}) {
   const { 
     walletBalance, 
     isLoadingBalance, 
@@ -17,6 +21,9 @@ export function WalletCard() {
     recalculateBalance,
     updateBalanceOnWithdrawal
   } = useWalletBalance();
+  
+  // Use the prop balance if provided, otherwise use the one from the hook
+  const displayBalance = propBalance !== undefined ? propBalance : walletBalance;
   
   const [showRefreshAlert, setShowRefreshAlert] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
@@ -53,14 +60,14 @@ export function WalletCard() {
               
               if (payload.new?.amount && newStatus !== oldStatus) {
                 notificationService.withdrawalStatus(
-                  payload.new.amount, 
+                  Number(payload.new.amount), // Convert to number
                   newStatus === 'scheduled' ? 'processing' : newStatus
                 );
                 setShowRefreshAlert(true);
               }
             } else if (payload.eventType === 'INSERT') {
               if (payload.new?.amount) {
-                notificationService.withdrawalStatus(payload.new.amount, 'pending');
+                notificationService.withdrawalStatus(Number(payload.new.amount), 'pending');
                 setShowRefreshAlert(true);
               }
             }
@@ -68,6 +75,7 @@ export function WalletCard() {
         )
         .subscribe();
         
+      // Listen for bank transfer changes
       const bankTransferChannel = supabase
         .channel('wallet-card-bank-transfer-changes')
         .on(
@@ -278,10 +286,10 @@ export function WalletCard() {
           <Skeleton className="h-10 w-32 mt-2" />
         ) : (
           <div className="flex items-baseline">
-            <span className={`text-3xl font-bold ${walletBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>
-              {walletBalance.toLocaleString('fr-FR')}
+            <span className={`text-3xl font-bold ${displayBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>
+              {displayBalance.toLocaleString('fr-FR')}
             </span>
-            <span className={`ml-1 text-xl ${walletBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>€</span>
+            <span className={`ml-1 text-xl ${displayBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>€</span>
           </div>
         )}
         

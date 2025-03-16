@@ -28,12 +28,12 @@ export default function LoadingState({ onRetry }: LoadingStateProps) {
         </p>
       )}
       
-      {loadingTime > 30 && onRetry && (
+      {loadingTime > 20 && onRetry && (
         <button 
           onClick={onRetry}
-          className="mt-4 flex items-center text-sm text-bgs-blue hover:underline"
+          className="mt-4 flex items-center gap-2 px-3 py-1.5 rounded border border-bgs-blue text-sm text-bgs-blue hover:bg-blue-50"
         >
-          <RefreshCw className="h-3 w-3 mr-1" />
+          <RefreshCw className="h-3 w-3" />
           Réessayer
         </button>
       )}
