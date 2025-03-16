@@ -27,9 +27,22 @@ export default function ParrainageTab() {
   const [totalCommission, setTotalCommission] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchReferralData();
+    // First get user session
+    const getUserSession = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        setUserId(session.session.user.id);
+        fetchReferralData();
+      } else {
+        toast.error("Vous devez être connecté pour accéder à cette page");
+        setIsLoading(false);
+      }
+    };
+
+    getUserSession();
 
     // Set up real-time listener for referrals table
     const channel = supabase
@@ -50,68 +63,88 @@ export default function ParrainageTab() {
 
   const fetchReferralData = async (showLoading = true) => {
     try {
+      if (!userId) return;
+      
       if (showLoading) {
         setIsLoading(true);
       } else {
         setIsRefreshing(true);
       }
 
-      // Get current user session
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast.error("Vous devez être connecté pour accéder à cette page");
-        setIsLoading(false);
-        setIsRefreshing(false);
-        return;
-      }
+      console.log("Fetching referral data for user ID:", userId);
 
       // Get user's referral code
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('referral_code')
-        .eq('id', session.session.user.id)
+        .eq('id', userId)
         .single();
 
-      if (profileData) {
+      if (profileError) {
+        console.error('Error fetching profile data:', profileError);
+        toast.error("Erreur lors de la récupération de votre code de parrainage");
+      } else if (profileData) {
+        console.log("Found referral code:", profileData.referral_code);
         setReferralCode(profileData.referral_code);
       }
 
       // Get user's referrals 
-      const { data: referralsData, error } = await supabase
+      const { data: referralsData, error: referralsError } = await supabase
         .from('referrals')
         .select('*')
-        .eq('referrer_id', session.session.user.id);
+        .eq('referrer_id', userId);
 
-      if (error) {
-        console.error('Error fetching referrals:', error);
+      if (referralsError) {
+        console.error('Error fetching referrals:', referralsError);
         toast.error("Erreur lors de la récupération des parrainages");
       } else {
+        console.log("Fetched referrals:", referralsData);
+        
         // For each referral, fetch the referred user details
-        const referralsWithUserDetails = await Promise.all(
-          (referralsData || []).map(async (referral) => {
-            const { data: userData } = await supabase
-              .from('profiles')
-              .select('first_name, last_name, email')
-              .eq('id', referral.referred_id)
-              .single();
-            
-            return {
-              ...referral,
-              referred_user: {
-                first_name: userData?.first_name || 'Utilisateur',
-                last_name: userData?.last_name || 'Inconnu',
-                email: userData?.email || 'email@inconnu.com',
+        if (referralsData && referralsData.length > 0) {
+          const referralsWithUserDetails = await Promise.all(
+            referralsData.map(async (referral) => {
+              const { data: userData, error: userError } = await supabase
+                .from('profiles')
+                .select('first_name, last_name, email')
+                .eq('id', referral.referred_id)
+                .single();
+              
+              if (userError) {
+                console.error(`Error fetching user details for ${referral.referred_id}:`, userError);
+                return {
+                  ...referral,
+                  referred_user: {
+                    first_name: 'Utilisateur',
+                    last_name: 'Inconnu',
+                    email: 'email@inconnu.com',
+                  }
+                } as Referral;
               }
-            } as Referral;
-          })
-        );
-        
-        setReferrals(referralsWithUserDetails);
-        
-        // Calculate total commission (assuming we have a commission amount somewhere)
-        // For now, just count the number of successful referrals and multiply by 25
-        const completedReferrals = referralsWithUserDetails.filter(r => r.status === 'completed').length;
-        setTotalCommission(completedReferrals * 25);
+              
+              return {
+                ...referral,
+                referred_user: {
+                  first_name: userData?.first_name || 'Utilisateur',
+                  last_name: userData?.last_name || 'Inconnu',
+                  email: userData?.email || 'email@inconnu.com',
+                }
+              } as Referral;
+            })
+          );
+          
+          console.log("Referrals with user details:", referralsWithUserDetails);
+          setReferrals(referralsWithUserDetails);
+          
+          // Calculate total commission (assuming we have a commission amount somewhere)
+          // For now, just count the number of successful referrals and multiply by 25
+          const completedReferrals = referralsWithUserDetails.filter(r => r.status === 'completed').length;
+          setTotalCommission(completedReferrals * 25);
+        } else {
+          console.log("No referrals found");
+          setReferrals([]);
+          setTotalCommission(0);
+        }
       }
     } catch (err) {
       console.error('Error in fetchReferralData:', err);
