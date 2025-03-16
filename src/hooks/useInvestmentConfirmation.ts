@@ -75,6 +75,28 @@ const createInvestmentRecord = async (userId: string, projectId: string, investm
   return investment.id;
 };
 
+// Create wallet transaction for investment
+const createInvestmentTransaction = async (userId: string, projectId: string, projectName: string, investmentAmount: number) => {
+  const { data: transaction, error: transactionError } = await supabase
+    .from('wallet_transactions')
+    .insert({
+      user_id: userId,
+      amount: investmentAmount,
+      type: 'withdrawal',
+      status: 'completed',
+      description: `Investissement dans ${projectName}`
+    })
+    .select('id')
+    .single();
+    
+  if (transactionError) {
+    console.error("Erreur lors de la création de la transaction:", transactionError);
+    // Non-critical error, continue execution
+  }
+  
+  return transaction?.id;
+};
+
 // Update user wallet balance
 const updateUserWalletBalance = async (userId: string, investmentAmount: number) => {
   const { error: walletError } = await supabase.rpc(
@@ -192,6 +214,9 @@ export const useInvestmentConfirmation = (
       const investmentId = await createInvestmentRecord(userId, projectId, investmentAmount, selectedDuration, project.yield);
       
       try {
+        // Create wallet transaction for the investment
+        await createInvestmentTransaction(userId, projectId, project.name, investmentAmount);
+        
         // Update the user's wallet balance
         await updateUserWalletBalance(userId, investmentAmount);
         

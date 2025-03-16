@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { Investment } from "../types/investment";
+import { Investment, Transaction } from "../types/investment";
 
 export async function fetchInvestmentData(investmentId: string): Promise<Investment | null> {
   try {
@@ -66,18 +65,47 @@ export async function fetchInvestmentDetails(investmentId: string): Promise<Inve
 
 export async function fetchTransactionHistory(userId: string): Promise<any[]> {
   try {
-    const { data, error } = await supabase
+    // First fetch wallet transactions related to investments
+    const { data: walletData, error: walletError } = await supabase
       .from('wallet_transactions')
       .select('*')
       .eq('user_id', userId)
+      .ilike('description', '%Investissement%')
       .order('created_at', { ascending: false });
       
-    if (error) {
-      console.error("Error fetching transaction history:", error);
+    if (walletError) {
+      console.error("Error fetching wallet transactions:", walletError);
       return [];
     }
     
-    return data || [];
+    // Fetch yield payments
+    const { data: yieldData, error: yieldError } = await supabase
+      .from('wallet_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('type', 'deposit')
+      .ilike('description', '%rendement%')
+      .order('created_at', { ascending: false });
+      
+    if (yieldError) {
+      console.error("Error fetching yield transactions:", yieldError);
+    }
+    
+    // Combine all transactions
+    const allTransactions = [
+      ...(walletData || []).map(tx => ({
+        ...tx,
+        type: 'investment'
+      })),
+      ...(yieldData || []).map(tx => ({
+        ...tx,
+        type: 'yield'
+      }))
+    ].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    
+    return allTransactions;
   } catch (error) {
     console.error("Unexpected error in fetchTransactionHistory:", error);
     return [];

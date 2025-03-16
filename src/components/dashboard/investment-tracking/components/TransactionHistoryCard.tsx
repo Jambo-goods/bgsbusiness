@@ -15,6 +15,17 @@ export default function TransactionHistoryCard({ transactions }: TransactionHist
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
   };
   
+  const getTransactionTypeLabel = (type: string) => {
+    switch (type) {
+      case 'yield':
+        return 'Gain reçu';
+      case 'investment':
+        return 'Investissement';
+      default:
+        return type;
+    }
+  };
+  
   return (
     <Card>
       <CardHeader>
@@ -31,22 +42,28 @@ export default function TransactionHistoryCard({ transactions }: TransactionHist
             </TableRow>
           </TableHeader>
           <TableBody>
-            {transactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell>{formatDate(transaction.created_at)}</TableCell>
-                <TableCell>{transaction.type === 'yield' ? 'Gain reçu' : 'Investissement'}</TableCell>
-                <TableCell className={transaction.type === 'yield' ? 'text-green-600' : 'text-red-600'}>
-                  {transaction.type === 'yield' ? '+' : '-'}{transaction.amount}€
-                </TableCell>
-                <TableCell>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {transaction.status === 'completed' ? '✓ Confirmé' : '⏳ En attente'}
-                  </span>
-                </TableCell>
+            {transactions.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-gray-500">Aucune transaction trouvée</TableCell>
               </TableRow>
-            ))}
+            ) : (
+              transactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell>{formatDate(transaction.created_at)}</TableCell>
+                  <TableCell>{getTransactionTypeLabel(transaction.type)}</TableCell>
+                  <TableCell className={transaction.type === 'yield' ? 'text-green-600' : 'text-red-600'}>
+                    {transaction.type === 'yield' ? '+' : '-'}{transaction.amount}€
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {transaction.status === 'completed' ? '✓ Confirmé' : '⏳ En attente'}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>

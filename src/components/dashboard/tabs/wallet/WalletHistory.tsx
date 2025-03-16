@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Separator } from "@/components/ui/separator";
-import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw } from "lucide-react";
+import { History, ArrowUpRight, ArrowDownLeft, Loader2, RefreshCw, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -36,20 +36,15 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   const isMountedRef = useRef(true);
 
   useEffect(() => {
-    // Set isMounted to true when component mounts
     isMountedRef.current = true;
     
-    // Initial fetch
     fetchTransactions();
     
-    // Setup subscriptions only once
     setupRealtimeSubscriptions();
     
     return () => {
-      // Set isMounted to false when component unmounts
       isMountedRef.current = false;
       
-      // Clean up subscriptions
       if (subscriptionsRef.current.length > 0) {
         subscriptionsRef.current.forEach(channel => {
           if (channel) supabase.removeChannel(channel);
@@ -57,10 +52,9 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         subscriptionsRef.current = [];
       }
     };
-  }, []); // Empty dependency array means this runs once on mount
+  }, []);
 
   const fetchTransactions = async (showLoading = true) => {
-    // If component is unmounted, don't proceed
     if (!isMountedRef.current) return;
     
     try {
@@ -91,6 +85,19 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         throw transactionsError;
       }
       
+      const { data: investmentsData, error: investmentsError } = await supabase
+        .from('investments')
+        .select(`
+          *,
+          projects (name)
+        `)
+        .eq('user_id', userId)
+        .order('date', { ascending: false });
+      
+      if (investmentsError) {
+        console.error("Error fetching investments:", investmentsError);
+      }
+      
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
         .select('*')
@@ -111,7 +118,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         throw withdrawalsError;
       }
       
-      // Only set state if component is still mounted
       if (!isMountedRef.current) return;
       
       console.log("Fetched transactions:", transactionsData ? transactionsData.length : 0);
@@ -133,7 +139,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       }) : [];
 
       const withdrawalsAsTransactions: Transaction[] = withdrawalsData ? withdrawalsData.map(withdrawal => {
-        // Safely handle bank_info which might be a string or an object
         let bankInfo: any = {};
         if (typeof withdrawal.bank_info === 'string') {
           try {
@@ -149,10 +154,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         const accountNumber = bankInfo?.accountNumber || '****';
         const lastFour = typeof accountNumber === 'string' ? accountNumber.slice(-4) : '****';
         
-        // Create transactions array to collect all related transactions
         const transactions: Transaction[] = [];
         
-        // Initial request transaction (always present)
         const requestTransaction: Transaction = {
           id: `${withdrawal.id}-request`,
           amount: withdrawal.amount || 0,
@@ -165,7 +168,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         
         transactions.push(requestTransaction);
         
-        // Add confirmation transaction if processed
         if (withdrawal.processed_at) {
           let statusDesc = '';
           
@@ -191,7 +193,19 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         }
         
         return transactions;
-      }).flat() : []; // Flatten the array of arrays
+      }).flat() : [];
+      
+      const investmentsAsTransactions: Transaction[] = investmentsData ? investmentsData.map(investment => {
+        return {
+          id: `inv-${investment.id}`,
+          amount: investment.amount || 0,
+          type: 'withdrawal' as const,
+          description: `Investissement dans ${investment.projects?.name || 'un projet'}`,
+          created_at: investment.date || new Date().toISOString(),
+          status: 'completed',
+          raw_timestamp: investment.date || new Date().toISOString()
+        };
+      }) : [];
       
       const typedTransactions: Transaction[] = transactionsData ? transactionsData.map(tx => ({
         id: tx.id,
@@ -203,9 +217,9 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         raw_timestamp: tx.created_at
       })) : [];
       
-      const allTransactions = [...typedTransactions, ...transfersAsTransactions, ...withdrawalsAsTransactions]
+      const allTransactions = [...typedTransactions, ...transfersAsTransactions, ...withdrawalsAsTransactions, ...investmentsAsTransactions]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 15); // Increased to show more transactions
+        .slice(0, 15);
       
       if (isMountedRef.current) {
         setTransactions(allTransactions);
@@ -233,7 +247,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       
       console.log("Setting up realtime subscriptions for wallet transactions, user:", userId);
       
-      // Clean up any existing subscriptions first
       if (subscriptionsRef.current.length > 0) {
         subscriptionsRef.current.forEach(channel => {
           if (channel) supabase.removeChannel(channel);
@@ -286,7 +299,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
               console.log("Bank transfer marked as received, refreshing transactions");
               fetchTransactions(false);
               
-              // Utiliser le service de notification personnalisé
               notificationService.depositSuccess(payload.new.amount);
             }
           }
@@ -310,19 +322,16 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
             
             console.log("Withdrawal request changed in real-time:", payload);
             
-            // Check if processed_at has been filled (wasn't filled before but is now)
             if (payload.new && payload.new.processed_at && 
                 (!payload.old || !payload.old.processed_at)) {
               console.log("Withdrawal request processed_at updated, refreshing transactions");
               
-              // Automatically update wallet balance when withdrawal is approved/completed
               if (payload.new.status === 'completed' || payload.new.status === 'approved') {
                 console.log(`Withdrawal of ${payload.new.amount}€ approved, deducting from wallet balance`);
                 
                 try {
                   fetchTransactions(false);
                   
-                  // Refresh the balance display
                   if (refreshBalance) {
                     await refreshBalance();
                   }
@@ -340,7 +349,6 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
           console.log("Realtime subscription status for withdrawal requests:", status);
         });
       
-      // Store references to channels for cleanup
       subscriptionsRef.current = [transactionsChannel, transfersChannel, withdrawalsChannel];
     } catch (error) {
       console.error("Error setting up realtime subscriptions:", error);
@@ -360,7 +368,11 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
     return type === 'deposit' ? 'text-green-600' : 'text-red-600';
   };
 
-  const getTransactionIcon = (type: string) => {
+  const getTransactionIcon = (type: string, description?: string | null) => {
+    if (description && description.includes("Investissement dans")) {
+      return <TrendingUp className="h-4 w-4 text-blue-600" />;
+    }
+    
     return type === 'deposit' 
       ? <ArrowDownLeft className="h-4 w-4 text-green-600" /> 
       : <ArrowUpRight className="h-4 w-4 text-red-600" />;
@@ -377,6 +389,10 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
   };
 
   const getTransactionLabel = (transaction: Transaction) => {
+    if (transaction.description && transaction.description.includes("Investissement dans")) {
+      return "Investissement effectué";
+    }
+    
     if (transaction.description && transaction.description.includes("Virement bancaire reçu")) {
       return "Virement bancaire reçu";
     }
@@ -405,14 +421,9 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
       return "Retrait rejeté";
     }
     
-    if (transaction.description && transaction.description.includes("Investissement dans")) {
-      return "Investissement effectué";
-    }
-    
     return transaction.type === 'deposit' ? 'Dépôt' : 'Retrait';
   };
 
-  
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm mt-6">
       <div className="flex items-center justify-between mb-4">
@@ -451,7 +462,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
             <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-full bg-gray-100">
-                  {getTransactionIcon(transaction.type)}
+                  {getTransactionIcon(transaction.type, transaction.description)}
                 </div>
                 <div>
                   <div className="flex items-center">
@@ -477,7 +488,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
                   <p className="text-sm text-bgs-gray-medium">
                     {formatRelativeTime(transaction.raw_timestamp || transaction.created_at)}
                   </p>
-                  {transaction.description && !transaction.description.includes("Virement bancaire") && !transaction.description.includes("Demande de retrait") && !transaction.description.includes("Retrait confirmé") && !transaction.description.includes("Retrait rejeté") && !transaction.description.includes("Retrait traité") && (
+                  {transaction.description && (
                     <p className="text-sm text-bgs-gray-medium">{transaction.description}</p>
                   )}
                 </div>
