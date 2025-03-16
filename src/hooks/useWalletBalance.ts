@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -68,42 +69,62 @@ export function useWalletBalance() {
         return;
       }
       
-      // Call the Supabase Edge Function to recalculate the balance
       try {
-        const response = await supabase.functions.invoke('recalculate-wallet-balance');
+        // Try to call the RPC function directly first as it's more reliable
+        const { data: rpcData, error: rpcError } = await supabase.rpc(
+          'recalculate_wallet_balance',
+          { user_uuid: session.session.user.id }
+        );
         
-        console.log("Function response:", response);
-        
-        if (response.error) {
-          console.error("Error calling recalculate function:", response.error);
-          toast.error("Erreur lors du recalcul du solde", {
-            id: toastId,
-            description: "Veuillez réessayer plus tard"
-          });
-          throw response.error;
-        }
-        
-        const data = response.data;
-        console.log("Recalculation function returned:", data);
-        
-        if (data && typeof data.balance === 'number') {
-          setWalletBalance(data.balance);
+        if (rpcError) {
+          console.error("Error calling RPC function:", rpcError);
           
-          // Determine appropriate toast based on balance
-          if (data.balance < 0) {
-            toast.warning("Solde recalculé avec succès", {
+          // Fall back to the Edge Function if RPC fails
+          const response = await supabase.functions.invoke('recalculate-wallet-balance');
+          
+          console.log("Function response:", response);
+          
+          if (response.error) {
+            console.error("Error calling recalculate function:", response.error);
+            toast.error("Erreur lors du recalcul du solde", {
               id: toastId,
-              description: `Attention: Votre solde est négatif (${data.balance}€)`
+              description: "Veuillez réessayer plus tard"
             });
+            throw response.error;
+          }
+          
+          const data = response.data;
+          console.log("Recalculation function returned:", data);
+          
+          if (data && typeof data.balance === 'number') {
+            setWalletBalance(data.balance);
+            
+            // Determine appropriate toast based on balance
+            if (data.balance < 0) {
+              toast.warning("Solde recalculé avec succès", {
+                id: toastId,
+                description: `Attention: Votre solde est négatif (${data.balance}€)`
+              });
+            } else {
+              toast.success("Solde recalculé avec succès", {
+                id: toastId,
+                description: `Nouveau solde: ${data.balance}€`
+              });
+            }
           } else {
-            toast.success("Solde recalculé avec succès", {
-              id: toastId,
-              description: `Nouveau solde: ${data.balance}€`
+            toast.error("Erreur lors du recalcul du solde", {
+              id: toastId
             });
           }
         } else {
-          toast.error("Erreur lors du recalcul du solde", {
-            id: toastId
+          console.log("RPC recalculation successful");
+          
+          // Fetch the updated balance after RPC recalculation
+          await fetchWalletBalance(false);
+          
+          toast.success("Solde recalculé avec succès", {
+            id: toastId,
+            description: `Nouveau solde: ${walletBalance}€`
           });
         }
       } catch (rpcError) {
@@ -121,11 +142,13 @@ export function useWalletBalance() {
     } finally {
       setIsLoadingBalance(false);
     }
-  }, [fetchWalletBalance]);
+  }, [fetchWalletBalance, walletBalance]);
 
   const updateBalanceOnWithdrawal = useCallback(async (withdrawalId: string) => {
     try {
       console.log("Updating balance for withdrawal:", withdrawalId);
+      
+      const toastId = toast.loading("Mise à jour du solde en cours...");
       
       const response = await supabase.functions.invoke('update-wallet-on-withdrawal', {
         body: { withdrawal_id: withdrawalId }
@@ -133,6 +156,7 @@ export function useWalletBalance() {
       
       if (response.error) {
         console.error("Error updating balance on withdrawal:", response.error);
+        toast.error("Erreur lors de la mise à jour du solde", { id: toastId });
         return;
       }
       
@@ -141,14 +165,18 @@ export function useWalletBalance() {
       // Refresh the balance
       await fetchWalletBalance(false);
       
-      if (response.data && response.data.new_balance) {
+      if (response.data && response.data.new_balance !== undefined) {
         // Show toast notification with the new balance
         toast.success("Solde mis à jour", {
+          id: toastId,
           description: `Nouveau solde: ${response.data.new_balance}€`
         });
+      } else {
+        toast.success("Opération terminée", { id: toastId });
       }
     } catch (err) {
       console.error("Error during withdrawal balance update:", err);
+      toast.error("Erreur lors de la mise à jour du solde");
     }
   }, [fetchWalletBalance]);
 
@@ -170,8 +198,9 @@ export function useWalletBalance() {
       
       console.log("Setting up realtime subscriptions for wallet balance, user:", userId);
       
+      // Listen for direct changes to the user's profile (wallet_balance column)
       const profileChannel = supabase
-        .channel('wallet-balance-changes')
+        .channel('wallet-balance-profile-changes')
         .on(
           'postgres_changes',
           {
@@ -188,20 +217,28 @@ export function useWalletBalance() {
                 console.log("Setting new wallet balance from realtime update:", newProfile.wallet_balance);
                 setWalletBalance(newProfile.wallet_balance);
                 
-                if (newProfile.wallet_balance > 0) {
-                  toast.success("Votre solde a été mis à jour", {
-                    description: `Nouveau solde: ${newProfile.wallet_balance}€`
-                  });
-                } else if (newProfile.wallet_balance < 0) {
-                  toast.warning("Votre solde a été mis à jour", {
-                    description: `Attention: Votre solde est négatif (${newProfile.wallet_balance}€)`
-                  });
+                // Check if balance has actually changed
+                if (payload.old && typeof payload.old === 'object') {
+                  const oldProfile = payload.old as { wallet_balance?: number };
+                  if (newProfile.wallet_balance !== oldProfile.wallet_balance) {
+                    if (newProfile.wallet_balance > 0) {
+                      toast.success("Votre solde a été mis à jour", {
+                        description: `Nouveau solde: ${newProfile.wallet_balance}€`
+                      });
+                    } else if (newProfile.wallet_balance < 0) {
+                      toast.warning("Votre solde a été mis à jour", {
+                        description: `Attention: Votre solde est négatif (${newProfile.wallet_balance}€)`
+                      });
+                    }
+                  }
                 }
               }
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("Realtime subscription status for profiles:", status);
+        });
       
       // Listen for changes to wallet transactions
       const transactionChannel = supabase
@@ -239,7 +276,9 @@ export function useWalletBalance() {
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("Realtime subscription status for wallet transactions:", status);
+        });
       
       // Listen for changes to bank transfers
       const bankTransferChannel = supabase
@@ -266,15 +305,23 @@ export function useWalletBalance() {
                 new: status,
               });
               
-              if (status === 'reçu' || status === 'received') {
+              if ((status === 'reçu' || status === 'received') && 
+                  oldPayload?.status !== 'reçu' && oldPayload?.status !== 'received') {
                 console.log("Transfer status changed to 'received', refreshing balance...");
+                
+                // Force immediate balance refresh
                 fetchWalletBalance(false);
-                toast.success("Un transfert bancaire a été confirmé");
+                
+                toast.success("Virement bancaire confirmé", {
+                  description: `${newPayload.amount}€ ont été ajoutés à votre solde`
+                });
               }
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("Realtime subscription status for bank transfers:", status);
+        });
       
       // Listen for changes to withdrawal requests
       const withdrawalChannel = supabase
@@ -309,14 +356,16 @@ export function useWalletBalance() {
                 // Update the balance immediately via the edge function
                 updateBalanceOnWithdrawal(newPayload.id);
                 
-                toast.info("Une demande de retrait a été traitée", {
-                  description: "Votre solde a été mis à jour"
+                toast.info(`Votre demande de retrait a été ${status === 'approved' ? 'approuvée' : status === 'completed' ? 'complétée' : 'planifiée'}`, {
+                  description: `Le montant de ${newPayload.amount}€ a été déduit de votre solde`
                 });
               }
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("Realtime subscription status for withdrawal requests:", status);
+        });
       
       return [profileChannel, transactionChannel, bankTransferChannel, withdrawalChannel];
     };
@@ -344,6 +393,7 @@ export function useWalletBalance() {
     isLoadingBalance, 
     error,
     refreshBalance,
-    recalculateBalance 
+    recalculateBalance,
+    updateBalanceOnWithdrawal
   };
 }

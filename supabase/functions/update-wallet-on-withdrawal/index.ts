@@ -12,6 +12,8 @@ serve(async (req) => {
   }
   
   try {
+    console.log('Update wallet on withdrawal function called')
+    
     // Create a Supabase client with the Auth context of the logged in user
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -21,6 +23,8 @@ serve(async (req) => {
 
     // Get the request body
     const { withdrawal_id } = await req.json()
+    
+    console.log('Processing withdrawal_id:', withdrawal_id)
     
     if (!withdrawal_id) {
       return handleError({ message: 'Withdrawal ID is required' }, 400)
@@ -38,8 +42,11 @@ serve(async (req) => {
       return handleError({ message: 'Failed to fetch withdrawal request' }, 404)
     }
     
+    console.log('Withdrawal found:', withdrawal)
+    
     // Only proceed if the status is one that should affect the balance
     if (!['approved', 'completed', 'scheduled'].includes(withdrawal.status)) {
+      console.log(`No balance update needed: withdrawal status is ${withdrawal.status}`)
       return handleSuccess({ 
         message: `No balance update needed: withdrawal status is ${withdrawal.status}` 
       })
@@ -73,6 +80,8 @@ serve(async (req) => {
       return handleError({ message: 'Failed to update wallet balance' }, 500)
     }
     
+    console.log('Wallet balance updated successfully, now creating transaction record')
+    
     // Create wallet transaction record if it doesn't exist yet
     const { data: existingTransaction } = await supabaseClient
       .from('wallet_transactions')
@@ -81,10 +90,12 @@ serve(async (req) => {
       .eq('type', 'withdrawal')
       .eq('amount', withdrawal.amount)
       .eq('status', 'completed')
+      .eq('description', `Retrait ${withdrawal.status}`)
       .order('created_at', { ascending: false })
       .limit(1)
       
     if (!existingTransaction || existingTransaction.length === 0) {
+      console.log('No existing transaction found, creating new one')
       const { error: transactionError } = await supabaseClient
         .from('wallet_transactions')
         .insert({
@@ -98,7 +109,11 @@ serve(async (req) => {
       if (transactionError) {
         console.error('Error creating transaction record:', transactionError)
         // Continue even if transaction creation fails
+      } else {
+        console.log('Transaction record created successfully')
       }
+    } else {
+      console.log('Existing transaction found, skipping creation')
     }
     
     return handleSuccess({ 
@@ -110,6 +125,7 @@ serve(async (req) => {
     })
     
   } catch (error) {
+    console.error('Unexpected error:', error)
     return handleError(error)
   }
 })

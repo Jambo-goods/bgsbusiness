@@ -1,13 +1,44 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { RefreshCcw, CalculatorIcon } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 
 export function WalletCard() {
-  const { walletBalance, isLoadingBalance, refreshBalance, recalculateBalance } = useWalletBalance();
+  const { 
+    walletBalance, 
+    isLoadingBalance, 
+    refreshBalance, 
+    recalculateBalance 
+  } = useWalletBalance();
+
+  // When component mounts, make sure balance is up to date
+  useEffect(() => {
+    const updateBalanceOnLoad = async () => {
+      try {
+        await refreshBalance();
+        console.log("Balance refreshed on component mount");
+      } catch (error) {
+        console.error("Error refreshing balance on mount:", error);
+      }
+    };
+    
+    updateBalanceOnLoad();
+  }, [refreshBalance]);
+
+  const handleForceRecalculate = async () => {
+    toast.loading("Recalcul forcé du solde en cours...");
+    try {
+      await recalculateBalance();
+      toast.success("Recalcul du solde terminé");
+    } catch (error) {
+      console.error("Force recalculate error:", error);
+      toast.error("Erreur lors du recalcul du solde");
+    }
+  };
 
   return (
     <Card className="bg-white shadow-sm hover:shadow-md transition-shadow duration-200">
@@ -37,7 +68,7 @@ export function WalletCard() {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button 
-                    onClick={recalculateBalance} 
+                    onClick={handleForceRecalculate} 
                     className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                     aria-label="Recalculer le solde"
                     disabled={isLoadingBalance}
