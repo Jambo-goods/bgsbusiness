@@ -244,10 +244,10 @@ export default function YieldTab({ userInvestments = [] }: YieldTabProps) {
         </Card>
       </div>
       
-      {/* Chart Section */}
-      <Card className="p-6">
-        <h2 className="text-lg font-semibold mb-4">Projection des Rendements sur {timeRange === "3months" ? "3" : timeRange === "6months" ? "6" : "12"} mois</h2>
-        <div className="h-80">
+      {/* Chart Section - Removed the div with className="p-6" as requested */}
+      <Card>
+        <h2 className="text-lg font-semibold mb-4 p-4">Projection des Rendements sur {timeRange === "3months" ? "3" : timeRange === "6months" ? "6" : "12"} mois</h2>
+        <div className="h-80 px-4 pb-4">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={filteredData}

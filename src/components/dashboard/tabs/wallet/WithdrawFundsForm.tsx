@@ -22,6 +22,8 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
     setBankName,
     iban,
     setIban,
+    bic,
+    setBic,
     isSubmitting,
     isFormValid,
     handleSubmit
@@ -42,11 +44,13 @@ export default function WithdrawFundsForm({ balance, onWithdraw }: WithdrawFunds
             setBankName={setBankName}
             iban={iban}
             setIban={setIban}
+            bic={bic}
+            setBic={setBic}
             balance={balance}
           />
           
           <WithdrawButton 
-            isFormValid={isFormValid()} 
+            isFormValid={isFormValid}
             isSubmitting={isSubmitting} 
           />
         </form>
