@@ -13,6 +13,16 @@ export class InvestmentNotificationService extends BaseNotificationService {
     });
   }
   
+  investmentConfirmed(amount: number, projectName: string, projectId: string): Promise<void> {
+    return this.createNotification({
+      title: "Investissement confirmé",
+      description: `Votre investissement de ${amount}€ dans ${projectName} a été confirmé.`,
+      type: 'investment',
+      category: 'success',
+      metadata: { amount, projectName, projectId }
+    });
+  }
+  
   profitReceived(amount: number, projectName: string, projectId: string): Promise<void> {
     return this.createNotification({
       title: "Rentabilité reçue",
