@@ -62,7 +62,7 @@ export default function InvestmentTrackingPage() {
         <InvestmentSummaryCards investment={investment} transactions={transactions} />
         
         {/* Section 3: Transaction History */}
-        <TransactionHistoryCard transactions={transactions} />
+        <TransactionHistoryCard transactions={transactions} investmentId={investmentId} />
         
         {/* Section 4: Project Updates */}
         <ProjectUpdatesCard />
