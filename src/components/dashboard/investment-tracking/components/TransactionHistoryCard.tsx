@@ -1,18 +1,68 @@
 
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { TrendingUp, CheckCircle, Clock } from "lucide-react";
+import { TrendingUp, CheckCircle, Clock, Calendar } from "lucide-react";
 import { Transaction } from "../types/investment";
 import { calculateReturns } from "@/utils/investmentCalculations";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TransactionHistoryCardProps {
   transactions: Transaction[];
   investmentId?: string;
 }
 
+interface ScheduledPayment {
+  id: string;
+  project_id: string;
+  payment_date: string;
+  percentage: number;
+  status: string;
+}
+
 export default function TransactionHistoryCard({ transactions, investmentId }: TransactionHistoryCardProps) {
+  const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
+  
+  // Fetch scheduled payments for this project
+  useEffect(() => {
+    const fetchScheduledPayments = async () => {
+      if (!investmentId) return;
+      
+      try {
+        // First, get the project_id from the investment
+        const { data: investment, error: investmentError } = await supabase
+          .from('investments')
+          .select('project_id')
+          .eq('id', investmentId)
+          .single();
+          
+        if (investmentError || !investment) {
+          console.error("Error fetching investment:", investmentError);
+          return;
+        }
+        
+        // Then fetch scheduled payments for this project
+        const { data: payments, error: paymentsError } = await supabase
+          .from('scheduled_payments')
+          .select('*')
+          .eq('project_id', investment.project_id)
+          .order('payment_date', { ascending: true });
+          
+        if (paymentsError) {
+          console.error("Error fetching scheduled payments:", paymentsError);
+          return;
+        }
+        
+        setScheduledPayments(payments || []);
+      } catch (error) {
+        console.error("Error in fetchScheduledPayments:", error);
+      }
+    };
+    
+    fetchScheduledPayments();
+  }, [investmentId]);
+
   const formatDate = (date: string) => {
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
   };
@@ -60,6 +110,19 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   
   // Rendement mensuel fixe (12%)
   const fixedYieldPercentage = 12;
+
+  // Formater les versements programmés
+  const formattedScheduledPayments = useMemo(() => {
+    if (!scheduledPayments.length) return [];
+    
+    return scheduledPayments.map(payment => ({
+      id: payment.id,
+      date: payment.payment_date,
+      amount: investmentAmount * (payment.percentage || fixedYieldPercentage) / 100 / 12,
+      percentage: payment.percentage || fixedYieldPercentage,
+      status: payment.status
+    }));
+  }, [scheduledPayments, investmentAmount, fixedYieldPercentage]);
 
   return (
     <Card>
@@ -111,54 +174,119 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           </div>
         </div>
 
-        {tableData.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projet</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pourcentage</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cumul</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {tableData.map((tx, index) => (
-                  <tr key={tx.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(tx.created_at)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
-                      {investmentId ? "Investissement actuel" : `Projet #${index + 1}`}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                      {fixedYieldPercentage}%
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {tx.amount.toFixed(2)} €
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
-                      {tx.cumulativeAmount.toFixed(2)} €
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        tx.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {tx.status === 'completed' ? '✓ Confirmé' : 'Programmé'}
-                      </span>
-                    </td>
+        {/* Versements programmés */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">
+            <span className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-bgs-blue" />
+              Versements programmés
+            </span>
+          </h3>
+          
+          {formattedScheduledPayments.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pourcentage</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant estimé</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            Aucune transaction de rendement trouvée pour cet investissement
-          </div>
-        )}
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {formattedScheduledPayments.map((payment) => (
+                    <tr key={payment.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(payment.date)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600">
+                        {payment.percentage}%
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {payment.amount.toFixed(2)} €
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          payment.status === 'processed' ? 'bg-green-100 text-green-800' : 
+                          payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {payment.status === 'processed' ? '✓ Traité' : 
+                           payment.status === 'pending' ? 'En attente' : 
+                           'Programmé'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+              Aucun versement programmé trouvé pour cet investissement
+            </div>
+          )}
+        </div>
+
+        {/* Historique des transactions */}
+        <div>
+          <h3 className="text-lg font-semibold mb-4 text-gray-800">
+            <span className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              Historique des versements
+            </span>
+          </h3>
+          
+          {tableData.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projet</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pourcentage</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cumul</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {tableData.map((tx, index) => (
+                    <tr key={tx.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {formatDate(tx.created_at)}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
+                        {investmentId ? "Investissement actuel" : `Projet #${index + 1}`}
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                        {fixedYieldPercentage}%
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {tx.amount.toFixed(2)} €
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                        {tx.cumulativeAmount.toFixed(2)} €
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          tx.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {tx.status === 'completed' ? '✓ Confirmé' : 'Programmé'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+              Aucune transaction de rendement trouvée pour cet investissement
+            </div>
+          )}
+        </div>
         
         {investmentAmount > 0 && (
           <div className="mt-6 pt-4 border-t border-gray-100">
