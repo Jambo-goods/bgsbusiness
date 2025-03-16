@@ -310,36 +310,6 @@ export type Database = {
         }
         Relationships: []
       }
-      referrals: {
-        Row: {
-          commission_percentage: number
-          created_at: string | null
-          id: string
-          referred_id: string
-          referrer_id: string
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          commission_percentage?: number
-          created_at?: string | null
-          id?: string
-          referred_id: string
-          referrer_id: string
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          commission_percentage?: number
-          created_at?: string | null
-          id?: string
-          referred_id?: string
-          referrer_id?: string
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       scheduled_payments: {
         Row: {
           created_at: string

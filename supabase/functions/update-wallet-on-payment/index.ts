@@ -1,3 +1,4 @@
+
 // Fonction pour mettre à jour le solde du portefeuille quand un paiement programmé est marqué comme payé
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
@@ -42,7 +43,6 @@ serve(async (req) => {
 
       const projectName = projectData?.name || 'Projet';
 
-      // Si le paiement a été effectué, mettre à jour le solde du portefeuille de chaque investisseur
       // Récupérer tous les investissements pour ce projet
       const { data: investments, error: investmentsError } = await supabase
         .from('investments')
@@ -57,8 +57,11 @@ serve(async (req) => {
 
       // Calculer le montant à ajouter au portefeuille de chaque investisseur
       const totalInvestedAmount = record.total_invested_amount || 0;
-      const totalScheduledAmount = record.total_scheduled_amount || 0;
-
+      
+      // Utiliser directement le pourcentage stocké dans la colonne percentage
+      const percentageToDistribute = record.percentage || 0;
+      console.log(`Distribution percentage: ${percentageToDistribute}%`);
+      
       // Pour chaque investisseur, mettre à jour son solde de portefeuille
       for (const investment of investments || []) {
         // Calculer le pourcentage de l'investissement par rapport au total
@@ -67,9 +70,10 @@ serve(async (req) => {
           : 0;
         
         // Calculer le montant à ajouter au portefeuille de l'investisseur
-        const amountToAdd = Math.round(totalScheduledAmount * investmentPercentage);
+        // Basé sur le pourcentage spécifié dans le scheduled_payment
+        const amountToAdd = Math.round((totalInvestedAmount * (percentageToDistribute / 100)) * investmentPercentage);
         
-        console.log(`Adding ${amountToAdd} to user ${investment.user_id} wallet`);
+        console.log(`Adding ${amountToAdd} to user ${investment.user_id} wallet (${investmentPercentage * 100}% of distribution)`);
 
         if (amountToAdd > 0) {
           // Mettre à jour le solde du portefeuille
@@ -93,7 +97,7 @@ serve(async (req) => {
               user_id: investment.user_id,
               amount: amountToAdd,
               type: 'yield',
-              description: `Rendement reçu de ${projectName} - ${new Date(record.payment_date).toLocaleDateString('fr-FR')}`
+              description: `Rendement reçu de ${projectName} - ${new Date(record.payment_date).toLocaleDateString('fr-FR')} (${percentageToDistribute}%)`
             });
 
           if (transactionError) {
@@ -112,7 +116,8 @@ serve(async (req) => {
                 amount: amountToAdd,
                 projectId: record.project_id,
                 projectName: projectName,
-                paymentDate: record.payment_date
+                paymentDate: record.payment_date,
+                percentage: percentageToDistribute
               }
             });
 
@@ -141,35 +146,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Update the trigger function to handle renamed field for referral code
-
-/*
--- This SQL migration will be needed to fix the referral function:
-
-CREATE OR REPLACE FUNCTION public.process_referral_on_signup()
-RETURNS trigger
-LANGUAGE plpgsql
-AS $function$
-DECLARE
-    referrer_id UUID;
-    referral_code_used TEXT;
-BEGIN
-    -- Extract referral code from user metadata if it exists
-    referral_code_used := NEW.raw_user_meta_data->>'referral_code_used';
-    
-    IF referral_code_used IS NOT NULL AND referral_code_used != '' THEN
-        -- Find the referrer from the referral code
-        SELECT id INTO referrer_id FROM public.profiles WHERE referral_code = referral_code_used;
-        
-        -- If referrer exists, create a new referral record
-        IF referrer_id IS NOT NULL THEN
-            INSERT INTO public.referrals (referrer_id, referred_id)
-            VALUES (referrer_id, NEW.id);
-        END IF;
-    END IF;
-    
-    RETURN NEW;
-END;
-$function$;
-*/
