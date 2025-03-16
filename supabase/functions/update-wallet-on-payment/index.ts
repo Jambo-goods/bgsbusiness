@@ -1,4 +1,3 @@
-
 // Fonction pour mettre à jour le solde du portefeuille quand un paiement programmé est marqué comme payé
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
@@ -142,3 +141,35 @@ serve(async (req) => {
     );
   }
 });
+
+// Update the trigger function to handle renamed field for referral code
+
+/*
+-- This SQL migration will be needed to fix the referral function:
+
+CREATE OR REPLACE FUNCTION public.process_referral_on_signup()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+DECLARE
+    referrer_id UUID;
+    referral_code_used TEXT;
+BEGIN
+    -- Extract referral code from user metadata if it exists
+    referral_code_used := NEW.raw_user_meta_data->>'referral_code_used';
+    
+    IF referral_code_used IS NOT NULL AND referral_code_used != '' THEN
+        -- Find the referrer from the referral code
+        SELECT id INTO referrer_id FROM public.profiles WHERE referral_code = referral_code_used;
+        
+        -- If referrer exists, create a new referral record
+        IF referrer_id IS NOT NULL THEN
+            INSERT INTO public.referrals (referrer_id, referred_id)
+            VALUES (referrer_id, NEW.id);
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$function$;
+*/

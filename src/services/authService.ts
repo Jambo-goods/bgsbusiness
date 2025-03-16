@@ -22,7 +22,7 @@ export const registerUser = async (userData: UserRegistrationData) => {
         data: {
           first_name: userData.firstName,
           last_name: userData.lastName,
-          referral_code: userData.referralCode || null,
+          referral_code_used: userData.referralCode || null, // Changed name to avoid column ambiguity
         },
       },
     });
@@ -64,7 +64,7 @@ export const registerUser = async (userData: UserRegistrationData) => {
               data: {
                 amount: 25,
                 category: 'success',
-                referral_code: userData.referralCode
+                referral_code_used: userData.referralCode
               }
             });
           } catch (notificationError) {

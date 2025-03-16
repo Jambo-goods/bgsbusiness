@@ -78,17 +78,27 @@ export const useScheduledPayments = () => {
         (payload) => {
           console.log('Scheduled payment change detected:', payload);
           
-          // If a payment status changed to "paid", show a notification
-          if (payload.new && payload.old && 
-              payload.new.status === 'paid' && 
-              payload.old.status !== 'paid') {
-            // Get project name if available
-            const projectName = scheduledPayments.find(p => p.id === payload.new.id)?.projects?.name || 'votre projet';
+          // Fix the TypeScript errors by properly typing and checking payload
+          if (payload.new && 
+              typeof payload.new === 'object' && 
+              'status' in payload.new && 
+              payload.old && 
+              typeof payload.old === 'object' && 
+              'status' in payload.old) {
             
-            toast.success(`Rendement reçu !`, {
-              description: `Vous avez reçu un rendement pour ${projectName}.`,
-              duration: 5000
-            });
+            // If a payment status changed to "paid", show a notification
+            if (payload.new.status === 'paid' && payload.old.status !== 'paid') {
+              // We need to ensure 'id' exists in payload.new
+              if ('id' in payload.new) {
+                // Get project name if available
+                const projectName = scheduledPayments.find(p => p.id === payload.new.id)?.projects?.name || 'votre projet';
+                
+                toast.success(`Rendement reçu !`, {
+                  description: `Vous avez reçu un rendement pour ${projectName}.`,
+                  duration: 5000
+                });
+              }
+            }
           }
           
           fetchScheduledPayments();
