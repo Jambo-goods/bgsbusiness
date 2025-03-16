@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
   }
   
   try {
-    const { userId, amount, status, type = "withdrawal" } = await req.json()
+    const { userId, amount, status, type = "withdrawal", reason = "" } = await req.json()
     
     if (!userId || !amount || !status) {
       return new Response(
@@ -45,6 +45,10 @@ Deno.serve(async (req) => {
       title = 'Demande de retrait soumise'
       message = `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`
       category = 'info'
+    } else if (status === 'validated') {
+      title = 'Retrait validé'
+      message = `Votre demande de retrait de ${amount}€ est en cours de traitement.`
+      category = 'info'
     } else if (status === 'scheduled') {
       title = 'Retrait programmé'
       message = `Votre retrait de ${amount}€ a été programmé et sera traité prochainement.`
@@ -55,7 +59,7 @@ Deno.serve(async (req) => {
       category = 'success'
     } else if (status === 'rejected') {
       title = 'Retrait refusé'
-      message = `Votre demande de retrait de ${amount}€ a été refusée. Veuillez contacter le support pour plus d'informations.`
+      message = `Votre demande de retrait de ${amount}€ a été refusée.${reason ? ` Raison: ${reason}` : ''}`
       category = 'error'
     } else {
       title = 'Mise à jour du retrait'

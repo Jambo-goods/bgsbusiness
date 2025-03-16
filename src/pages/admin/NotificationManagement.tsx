@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import AdminLayout from '@/layouts/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -22,39 +22,42 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Loader2, RefreshCw, Send, Trash } from 'lucide-react';
+import AdminLayout from '@/layouts/AdminLayout';
+import { NotificationType, NotificationCategory } from '@/services/notifications/types';
 
-interface Notification {
+interface DatabaseNotification {
   id: string;
   title: string;
-  description: string;
+  message: string;
   type: string;
-  category: string;
+  category?: string;
   created_at: string;
   user_id: string;
-  read: boolean;
+  seen: boolean;
+  data?: any;
 }
 
 export default function NotificationManagement() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<DatabaseNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<DatabaseNotification | null>(null);
   const [newNotification, setNewNotification] = useState({
     title: '',
-    description: '',
-    type: 'info',
-    category: 'system',
+    message: '',
+    type: 'info' as NotificationType,
+    category: 'info' as NotificationCategory,
     user_id: '',
   });
   const [bulkNotification, setBulkNotification] = useState({
     title: '',
-    description: '',
-    type: 'info',
-    category: 'system',
+    message: '',
+    type: 'info' as NotificationType,
+    category: 'info' as NotificationCategory,
   });
   const [isSending, setIsSending] = useState(false);
 
@@ -92,42 +95,35 @@ export default function NotificationManagement() {
     try {
       setIsSending(true);
       
-      if (!newNotification.title || !newNotification.description || !newNotification.user_id) {
+      if (!newNotification.title || !newNotification.message || !newNotification.user_id) {
         toast.error('Veuillez remplir tous les champs obligatoires');
         return;
       }
+      
+      const notificationData = {
+        category: newNotification.category
+      };
       
       const { error } = await supabase
         .from('notifications')
         .insert({
           title: newNotification.title,
-          description: newNotification.description,
+          message: newNotification.message,
           type: newNotification.type,
-          category: newNotification.category,
           user_id: newNotification.user_id,
-          read: false
+          seen: false,
+          data: notificationData
         });
       
       if (error) throw error;
-      
-      // Log admin action
-      // Note: This is commented out because admin_logs table doesn't exist yet
-      /*
-      await supabase
-        .from('admin_logs')
-        .insert({
-          action_type: 'notification_management',
-          description: `Notification créée pour l'utilisateur ${newNotification.user_id}`
-        });
-      */
       
       toast.success('Notification créée avec succès');
       setIsCreateDialogOpen(false);
       setNewNotification({
         title: '',
-        description: '',
-        type: 'info',
-        category: 'system',
+        message: '',
+        type: 'info' as NotificationType,
+        category: 'info' as NotificationCategory,
         user_id: '',
       });
       fetchNotifications();
@@ -143,7 +139,7 @@ export default function NotificationManagement() {
     try {
       setIsSending(true);
       
-      if (!bulkNotification.title || !bulkNotification.description) {
+      if (!bulkNotification.title || !bulkNotification.message) {
         toast.error('Veuillez remplir tous les champs obligatoires');
         return;
       }
@@ -160,14 +156,18 @@ export default function NotificationManagement() {
         return;
       }
       
+      const notificationData = {
+        category: bulkNotification.category
+      };
+      
       // Create notifications for all users
       const notificationsToInsert = users.map(user => ({
         title: bulkNotification.title,
-        description: bulkNotification.description,
+        message: bulkNotification.message,
         type: bulkNotification.type,
-        category: bulkNotification.category,
         user_id: user.id,
-        read: false
+        seen: false,
+        data: notificationData
       }));
       
       const { error } = await supabase
@@ -176,24 +176,13 @@ export default function NotificationManagement() {
       
       if (error) throw error;
       
-      // Log admin action
-      // Note: This is commented out because admin_logs table doesn't exist yet
-      /*
-      await supabase
-        .from('admin_logs')
-        .insert({
-          action_type: 'notification_management',
-          description: `Notification en masse envoyée à ${users.length} utilisateurs`
-        });
-      */
-      
       toast.success(`Notifications envoyées à ${users.length} utilisateurs`);
       setIsBulkDialogOpen(false);
       setBulkNotification({
         title: '',
-        description: '',
-        type: 'info',
-        category: 'system',
+        message: '',
+        type: 'info' as NotificationType,
+        category: 'info' as NotificationCategory,
       });
       fetchNotifications();
     } catch (error) {
@@ -220,17 +209,6 @@ export default function NotificationManagement() {
       
       if (error) throw error;
       
-      // Log admin action
-      // Note: This is commented out because admin_logs table doesn't exist yet
-      /*
-      await supabase
-        .from('admin_logs')
-        .insert({
-          action_type: 'notification_management',
-          description: `Notification supprimée: ${selectedNotification.title}`
-        });
-      */
-      
       toast.success('Notification supprimée avec succès');
       setIsDeleteDialogOpen(false);
       setSelectedNotification(null);
@@ -249,7 +227,7 @@ export default function NotificationManagement() {
     const searchLower = searchTerm.toLowerCase();
     return (
       notification.title.toLowerCase().includes(searchLower) ||
-      notification.description.toLowerCase().includes(searchLower) ||
+      notification.message.toLowerCase().includes(searchLower) ||
       notification.user_id.toLowerCase().includes(searchLower)
     );
   });
@@ -328,12 +306,12 @@ export default function NotificationManagement() {
                             {new Date(notification.created_at).toLocaleString()}
                           </span>
                         </div>
-                        <p className="text-gray-600 mt-1">{notification.description}</p>
+                        <p className="text-gray-600 mt-1">{notification.message}</p>
                         <div className="mt-2 text-xs text-gray-500">
                           <span>Utilisateur: {notification.user_id}</span>
-                          <span className="ml-4">Catégorie: {notification.category}</span>
+                          <span className="ml-4">Catégorie: {notification.data?.category || 'N/A'}</span>
                           <span className="ml-4">
-                            Statut: {notification.read ? 'Lue' : 'Non lue'}
+                            Statut: {notification.seen ? 'Lue' : 'Non lue'}
                           </span>
                         </div>
                       </div>
@@ -389,8 +367,8 @@ export default function NotificationManagement() {
               <label className="text-sm font-medium">Description</label>
               <Textarea
                 placeholder="Description de la notification"
-                value={newNotification.description}
-                onChange={(e) => setNewNotification({...newNotification, description: e.target.value})}
+                value={newNotification.message}
+                onChange={(e) => setNewNotification({...newNotification, message: e.target.value})}
                 rows={3}
               />
             </div>
@@ -400,16 +378,18 @@ export default function NotificationManagement() {
                 <label className="text-sm font-medium">Type</label>
                 <Select
                   value={newNotification.type}
-                  onValueChange={(value) => setNewNotification({...newNotification, type: value})}
+                  onValueChange={(value) => setNewNotification({...newNotification, type: value as NotificationType})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="info">Information</SelectItem>
-                    <SelectItem value="success">Succès</SelectItem>
-                    <SelectItem value="warning">Avertissement</SelectItem>
-                    <SelectItem value="error">Erreur</SelectItem>
+                    <SelectItem value="deposit">Dépôt</SelectItem>
+                    <SelectItem value="withdrawal">Retrait</SelectItem>
+                    <SelectItem value="investment">Investissement</SelectItem>
+                    <SelectItem value="security">Sécurité</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -418,16 +398,16 @@ export default function NotificationManagement() {
                 <label className="text-sm font-medium">Catégorie</label>
                 <Select
                   value={newNotification.category}
-                  onValueChange={(value) => setNewNotification({...newNotification, category: value})}
+                  onValueChange={(value) => setNewNotification({...newNotification, category: value as NotificationCategory})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Catégorie" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="system">Système</SelectItem>
-                    <SelectItem value="account">Compte</SelectItem>
-                    <SelectItem value="investment">Investissement</SelectItem>
-                    <SelectItem value="transaction">Transaction</SelectItem>
+                    <SelectItem value="info">Information</SelectItem>
+                    <SelectItem value="success">Succès</SelectItem>
+                    <SelectItem value="warning">Avertissement</SelectItem>
+                    <SelectItem value="error">Erreur</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -479,8 +459,8 @@ export default function NotificationManagement() {
               <label className="text-sm font-medium">Description</label>
               <Textarea
                 placeholder="Description de la notification"
-                value={bulkNotification.description}
-                onChange={(e) => setBulkNotification({...bulkNotification, description: e.target.value})}
+                value={bulkNotification.message}
+                onChange={(e) => setBulkNotification({...bulkNotification, message: e.target.value})}
                 rows={3}
               />
             </div>
@@ -490,16 +470,18 @@ export default function NotificationManagement() {
                 <label className="text-sm font-medium">Type</label>
                 <Select
                   value={bulkNotification.type}
-                  onValueChange={(value) => setBulkNotification({...bulkNotification, type: value})}
+                  onValueChange={(value) => setBulkNotification({...bulkNotification, type: value as NotificationType})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="info">Information</SelectItem>
-                    <SelectItem value="success">Succès</SelectItem>
-                    <SelectItem value="warning">Avertissement</SelectItem>
-                    <SelectItem value="error">Erreur</SelectItem>
+                    <SelectItem value="deposit">Dépôt</SelectItem>
+                    <SelectItem value="withdrawal">Retrait</SelectItem>
+                    <SelectItem value="investment">Investissement</SelectItem>
+                    <SelectItem value="security">Sécurité</SelectItem>
+                    <SelectItem value="marketing">Marketing</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -508,16 +490,16 @@ export default function NotificationManagement() {
                 <label className="text-sm font-medium">Catégorie</label>
                 <Select
                   value={bulkNotification.category}
-                  onValueChange={(value) => setBulkNotification({...bulkNotification, category: value})}
+                  onValueChange={(value) => setBulkNotification({...bulkNotification, category: value as NotificationCategory})}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Catégorie" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="system">Système</SelectItem>
-                    <SelectItem value="account">Compte</SelectItem>
-                    <SelectItem value="investment">Investissement</SelectItem>
-                    <SelectItem value="transaction">Transaction</SelectItem>
+                    <SelectItem value="info">Information</SelectItem>
+                    <SelectItem value="success">Succès</SelectItem>
+                    <SelectItem value="warning">Avertissement</SelectItem>
+                    <SelectItem value="error">Erreur</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -558,7 +540,7 @@ export default function NotificationManagement() {
           {selectedNotification && (
             <div className="py-4">
               <p className="font-medium">{selectedNotification.title}</p>
-              <p className="text-sm text-gray-500 mt-1">{selectedNotification.description}</p>
+              <p className="text-sm text-gray-500 mt-1">{selectedNotification.message}</p>
             </div>
           )}
           

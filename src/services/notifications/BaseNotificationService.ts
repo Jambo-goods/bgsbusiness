@@ -24,13 +24,13 @@ export class BaseNotificationService {
   }: CreateNotificationParams): Promise<void> {
     try {
       // Get the current user
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const sessionData = await supabase.auth.getSession();
+      if (!sessionData.data.session) {
         console.warn("No active session found, skipping notification");
         return;
       }
       
-      const userId = sessionData.session.user.id;
+      const userId = sessionData.data.session.user.id;
       
       // Create notification data object with proper structure for database
       const notificationData: NotificationData = {
@@ -85,12 +85,12 @@ export class BaseNotificationService {
    */
   async fetchNotifications(limit: number = 20): Promise<Notification[]> {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const sessionData = await supabase.auth.getSession();
+      if (!sessionData.data.session) {
         return [];
       }
       
-      const userId = sessionData.session.user.id;
+      const userId = sessionData.data.session.user.id;
       
       const { data, error } = await supabase
         .from('notifications')
@@ -136,12 +136,12 @@ export class BaseNotificationService {
    */
   async getUnreadCount(): Promise<number> {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const sessionData = await supabase.auth.getSession();
+      if (!sessionData.data.session) {
         return 0;
       }
       
-      const userId = sessionData.session.user.id;
+      const userId = sessionData.data.session.user.id;
       
       const { count, error } = await supabase
         .from('notifications')
@@ -184,12 +184,12 @@ export class BaseNotificationService {
    */
   async markAllAsRead(): Promise<void> {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
+      const sessionData = await supabase.auth.getSession();
+      if (!sessionData.data.session) {
         return;
       }
       
-      const userId = sessionData.session.user.id;
+      const userId = sessionData.data.session.user.id;
       
       const { error } = await supabase
         .from('notifications')
@@ -208,20 +208,13 @@ export class BaseNotificationService {
    * Set up realtime subscription for new notifications
    */
   setupRealtimeSubscription(callback: () => void): () => void {
-    const { data: { session } } = supabase.auth.getSession();
-    
-    if (!session) {
-      console.warn("No active session for realtime subscription");
-      return () => {};
-    }
-    
     const channel = supabase
       .channel('public:notifications')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'notifications',
-        filter: `user_id=eq.${session.user.id}`
+        filter: `user_id=eq.${supabase.auth.getSession().then(({ data }) => data.session?.user.id)}`
       }, () => {
         if (callback) callback();
       })
