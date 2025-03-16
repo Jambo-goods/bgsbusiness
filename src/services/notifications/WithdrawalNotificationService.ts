@@ -128,4 +128,17 @@ export class WithdrawalNotificationService extends BaseNotificationService {
       metadata: { amount, status, reason }
     });
   }
+
+  /**
+   * Notification when withdrawal amount is deducted from wallet balance
+   */
+  withdrawalBalanceDeducted(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait débité",
+      description: `Le montant de ${amount}€ a été débité de votre solde pour votre demande de retrait.`,
+      type: 'withdrawal',
+      category: 'info',
+      metadata: { amount, status: 'balance_deducted' }
+    });
+  }
 }

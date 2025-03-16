@@ -44,7 +44,11 @@ Deno.serve(async (req) => {
     
     let title, message, category
     
-    if (processed) {
+    if (status === 'balance_deducted') {
+      title = 'Retrait débité'
+      message = `Le montant de ${amount}€ a été débité de votre solde pour votre demande de retrait.`
+      category = 'info'
+    } else if (processed) {
       title = 'Demande de retrait traitée'
       message = `Votre demande de retrait de ${amount}€ a été traitée. Statut: ${status}.`
       category = status === 'rejected' ? 'error' : 'success'

@@ -1,3 +1,4 @@
+
 // This Supabase Edge Function monitors withdrawal_requests status changes
 // and updates wallet balance when a withdrawal is scheduled
 
@@ -177,7 +178,35 @@ Deno.serve(async (req) => {
         
         if (transactionError) throw transactionError
         
-        // Send notification to user
+        // Send notification for balance deduction
+        try {
+          const balanceDeductionResponse = await fetch(
+            `${supabaseUrl}/functions/v1/send-withdrawal-notification`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${supabaseServiceRoleKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId,
+                amount,
+                status: 'balance_deducted',
+              }),
+            }
+          )
+          
+          if (!balanceDeductionResponse.ok) {
+            const errorData = await balanceDeductionResponse.json()
+            console.error("Error sending balance deduction notification via Edge Function:", errorData)
+          } else {
+            console.log(`Balance deduction notification sent to user ${userId} for amount ${amount}€`)
+          }
+        } catch (notifError) {
+          console.error("Error sending balance deduction notification:", notifError)
+        }
+        
+        // Send notification to user for scheduled withdrawal
         const { error: notificationError } = await supabaseAdmin
           .from('notifications')
           .insert({
