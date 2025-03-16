@@ -1,10 +1,9 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDownIcon, ArrowUpIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { supabase } from "@/integrations/supabase/client";
 
 // Base item properties shared between transactions and notifications
 export interface HistoryBaseItem {
@@ -41,33 +40,6 @@ interface HistoryItemProps {
 }
 
 export default function HistoryItem({ item }: HistoryItemProps) {
-  const [showConfirmedPayment, setShowConfirmedPayment] = useState(false);
-  
-  useEffect(() => {
-    // Subscribe to changes in scheduled_payments table where status changes to "confirmed"
-    const channel = supabase
-      .channel('scheduled_payment_confirmed')
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'scheduled_payments',
-        filter: 'status=eq.confirmed'
-      }, (payload) => {
-        console.log('Scheduled payment confirmed:', payload);
-        setShowConfirmedPayment(true);
-        
-        // Hide the notification after 10 seconds
-        setTimeout(() => {
-          setShowConfirmedPayment(false);
-        }, 10000);
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
   const formattedDate = formatDistanceToNow(
     new Date(item.created_at),
     { addSuffix: true, locale: fr }
@@ -97,18 +69,6 @@ export default function HistoryItem({ item }: HistoryItemProps) {
             <StatusBadge status={item.status} />
           </div>
         </div>
-        
-        {showConfirmedPayment && (
-          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
-            <div className="flex items-center">
-              <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" />
-              <div>
-                <p className="font-medium text-green-800">Demande de retrait soumis</p>
-                <p className="text-sm text-green-600">Le paiement programmé a été confirmé</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   } else {
@@ -132,18 +92,6 @@ export default function HistoryItem({ item }: HistoryItemProps) {
             </div>
           )}
         </div>
-        
-        {showConfirmedPayment && (
-          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
-            <div className="flex items-center">
-              <CheckCircleIcon className="h-5 w-5 text-green-600 mr-2" />
-              <div>
-                <p className="font-medium text-green-800">Demande de retrait soumis</p>
-                <p className="text-sm text-green-600">Le paiement programmé a été confirmé</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
