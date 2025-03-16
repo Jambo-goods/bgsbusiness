@@ -47,6 +47,7 @@ export default function ProfileManagement() {
             profiles={profiles}
             isLoading={isLoading}
             filteredProfiles={filteredProfiles}
+            onProfileUpdated={handleRefresh}
           />
         )}
       </div>

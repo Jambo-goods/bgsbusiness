@@ -67,7 +67,7 @@ export function WalletCard() {
                 );
               }
               
-              await refreshBalance(false);
+              await refreshBalance();
               setLastUpdate(new Date());
             }
           }
@@ -94,7 +94,7 @@ export function WalletCard() {
                 notificationService.depositSuccess(payload.new.amount);
               }
               
-              await refreshBalance(false);
+              await refreshBalance();
               setLastUpdate(new Date());
             }
           }
@@ -110,7 +110,7 @@ export function WalletCard() {
     const subscriptionPromise = setupWithdrawalSubscriptions();
     
     // Initial balance fetch
-    refreshBalance(false);
+    refreshBalance();
     setLastUpdate(new Date());
     
     return () => {
