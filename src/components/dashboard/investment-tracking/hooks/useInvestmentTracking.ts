@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Investment, Transaction } from "../types/investment";
 import { fetchInvestmentDetails, fetchTransactionHistory } from "../utils/fetchInvestmentData";
 
@@ -24,7 +24,7 @@ export function useInvestmentTracking(investmentId: string | undefined) {
       // Delay setting loading to false to prevent flickering
       const timer = setTimeout(() => {
         setLoading(false);
-      }, 300); // 300ms debounce
+      }, 800); // 800ms debounce for better stability
       setLoadingTimer(timer);
     }
   };
@@ -48,7 +48,10 @@ export function useInvestmentTracking(investmentId: string | undefined) {
       } catch (error) {
         console.error("Error loading investment tracking data:", error);
       } finally {
-        setLoadingWithDebounce(false);
+        // Add a slight delay before turning off loading state to prevent UI flicker
+        setTimeout(() => {
+          setLoadingWithDebounce(false);
+        }, 300);
       }
     };
     

@@ -10,6 +10,7 @@ import InvestmentSummaryCards from "./components/InvestmentSummaryCards";
 import TransactionHistoryCard from "./components/TransactionHistoryCard";
 import ProjectUpdatesCard from "./components/ProjectUpdatesCard";
 import ContactActionsCard from "./components/ContactActionsCard";
+import LoadingIndicator from "../tabs/investment-tracking/LoadingIndicator";
 
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
@@ -20,7 +21,7 @@ export default function InvestmentTrackingPage() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
+          <LoadingIndicator message="Chargement des données d'investissement..." />
         </div>
       </DashboardLayout>
     );

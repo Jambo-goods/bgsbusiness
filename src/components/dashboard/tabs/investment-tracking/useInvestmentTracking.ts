@@ -36,7 +36,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       // Delay setting loading to false to prevent flickering
       loadingTimerRef.current = setTimeout(() => {
         setIsLoading(false);
-      }, 600); // 600ms debounce to ensure stability
+      }, 800); // 800ms debounce to ensure stability
     }
   };
   
@@ -81,10 +81,14 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
           
           // Notify user of new payments
           newPayments.forEach(payment => {
-            notificationService.yieldReceived(
-              payment.amount, 
-              payment.projectName || "votre investissement"
-            );
+            try {
+              notificationService.yieldReceived(
+                payment.amount, 
+                payment.projectName || "votre investissement"
+              );
+            } catch (error) {
+              console.error("Error sending notification:", error);
+            }
           });
         }
         
@@ -112,8 +116,10 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       });
       setPaymentRecords([]);
     } finally {
-      setLoadingWithDebounce(false);
-      setAnimateRefresh(false);
+      setTimeout(() => {
+        setLoadingWithDebounce(false);
+        setAnimateRefresh(false);
+      }, 500); // Add a small delay before setting loading to false
     }
   }, [paymentRecords, hasShownNoInvestmentToast]);
   

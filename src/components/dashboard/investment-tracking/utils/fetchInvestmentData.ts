@@ -35,11 +35,11 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
 
     // Calculate remaining duration in months
     const startDate = new Date(investment.date);
-    const endDate = new Date(investment.end_date);
+    const endDate = new Date(investment.end_date || startDate); // Provide fallback
     const today = new Date();
     
     // Calculate total duration and remaining duration in months
-    const totalMonths = investment.duration;
+    const totalMonths = investment.duration || 12; // Provide fallback
     
     // Calculate elapsed months (capped at total duration)
     const elapsedMonths = Math.min(
@@ -52,6 +52,10 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
     return {
       ...investment,
       remainingDuration,
+      user_first_name: investment.user_first_name || '',
+      user_last_name: investment.user_last_name || '',
+      user_id: investment.user_id || '',
+      duration: investment.duration || 12
     };
   } catch (error) {
     console.error("Unexpected error in fetchInvestmentData:", error);
