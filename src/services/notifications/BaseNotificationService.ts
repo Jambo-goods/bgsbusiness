@@ -18,11 +18,11 @@ export class BaseNotificationService {
         .insert({
           user_id: session.session.user.id,
           title: notification.title,
-          description: notification.description,
+          message: notification.description,
           type: notification.type,
           category: notification.category || 'info',
-          metadata: notification.metadata || {},
-          read: false
+          data: notification.metadata || {},
+          seen: false
         });
       
       if (error) {
@@ -84,12 +84,12 @@ export class BaseNotificationService {
       return data.map(notification => ({
         id: notification.id,
         title: notification.title,
-        description: notification.description || notification.message,
+        description: notification.message || '',
         date: new Date(notification.created_at),
-        read: notification.read === true,
+        read: notification.seen === true,
         type: notification.type as Notification['type'],
-        category: notification.category as NotificationCategory,
-        metadata: notification.metadata || {}
+        category: (notification.category as NotificationCategory) || 'info',
+        metadata: notification.data || {}
       }));
       
     } catch (error) {
@@ -110,7 +110,7 @@ export class BaseNotificationService {
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', session.session.user.id)
-        .eq('read', false);
+        .eq('seen', false);
       
       if (error) {
         console.error("Error getting unread notification count:", error);
@@ -129,7 +129,7 @@ export class BaseNotificationService {
     try {
       const { error } = await supabase
         .from('notifications')
-        .update({ read: true })
+        .update({ seen: true })
         .eq('id', notificationId);
       
       if (error) {
@@ -153,9 +153,9 @@ export class BaseNotificationService {
       
       const { error } = await supabase
         .from('notifications')
-        .update({ read: true })
+        .update({ seen: true })
         .eq('user_id', session.session.user.id)
-        .eq('read', false);
+        .eq('seen', false);
       
       if (error) {
         console.error("Error marking all notifications as read:", error);

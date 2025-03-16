@@ -8,7 +8,7 @@ export class WithdrawalNotificationService extends BaseNotificationService {
       description: `Votre demande de retrait de ${amount}€ est en cours de traitement.`,
       type: 'withdrawal',
       category: 'info',
-      metadata: { amount }
+      metadata: { amount, status: 'validated' }
     });
   }
   
@@ -18,7 +18,7 @@ export class WithdrawalNotificationService extends BaseNotificationService {
       description: `Votre retrait de ${amount}€ a été effectué avec succès.`,
       type: 'withdrawal',
       category: 'success',
-      metadata: { amount }
+      metadata: { amount, status: 'completed' }
     });
   }
 }
