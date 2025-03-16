@@ -1,8 +1,8 @@
+
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
-import { createProjectInDatabase } from "@/utils/projectUtils";
 import { Project } from "@/types/project";
 import { useNavigate } from "react-router-dom";
 
@@ -17,7 +17,8 @@ const saveInvestment = async (
   projectId: string, 
   investmentAmount: number, 
   project: Project,
-  userId: string
+  userId: string,
+  duration: number
 ) => {
   try {
     const { error } = await supabase
@@ -28,6 +29,7 @@ const saveInvestment = async (
         amount: investmentAmount,
         status: "active",
         yield_rate: project.yield,
+        duration: duration // Add the duration field
       });
 
     if (error) throw error;
@@ -155,7 +157,7 @@ export const useInvestmentConfirmation = (
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const confirmInvestment = async (investmentAmount: number) => {
+  const confirmInvestment = async (investmentAmount: number, selectedDuration: number = 24) => {
     if (!investmentAmount || investmentAmount <= 0) {
       toast({
         title: "Montant invalide",
@@ -199,8 +201,8 @@ export const useInvestmentConfirmation = (
 
     const currentBalance = profileData.wallet_balance || 0;
     const projectId = project.id;
-    const durationMonths = parseInt(project.duration.replace(" mois", ""));
-    const firstPaymentDelay = project.first_payment_delay_months || 1;
+    const durationMonths = selectedDuration;
+    const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
 
     try {
       // Step 1: Save investment
@@ -208,7 +210,8 @@ export const useInvestmentConfirmation = (
         projectId,
         investmentAmount,
         project,
-        user.id
+        user.id,
+        durationMonths // Pass the duration to saveInvestment
       );
       if (!saveSuccess || saveError) throw new Error("Erreur lors de l'enregistrement de l'investissement");
 

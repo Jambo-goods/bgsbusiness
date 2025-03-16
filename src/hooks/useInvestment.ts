@@ -57,16 +57,12 @@ export const useInvestment = (project: Project, investorCount: number) => {
     setShowConfirmation(false);
   };
 
-  // Use the confirmation hook
-  const { isProcessing, confirmInvestment } = useInvestmentConfirmation(
+  // Use the confirmation hook - with corrected parameters
+  const { isLoading: isProcessing, confirmInvestment } = useInvestmentConfirmation(
     project, 
     investorCount,
-    investmentAmount,
-    selectedDuration,
-    monthlyReturn,
-    totalReturn,
-    userBalance,
-    firstPaymentDelay
+    project.fundingProgress || 0,
+    () => setShowConfirmation(false)
   );
 
   return {

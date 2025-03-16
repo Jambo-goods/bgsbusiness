@@ -7,7 +7,7 @@ interface InvestmentConfirmationProps {
   investmentAmount: number;
   selectedDuration: number;
   isProcessing: boolean;
-  onConfirm: () => void;
+  onConfirm: (amount: number, duration: number) => void; // Updated type signature
   onCancel: () => void;
   monthlyReturn: number;
   totalReturn: number;
@@ -73,7 +73,7 @@ export default function InvestmentConfirmation({
           Annuler
         </button>
         <button 
-          onClick={onConfirm}
+          onClick={() => onConfirm(investmentAmount, selectedDuration)} // Pass the required parameters
           className="w-1/2 btn-primary flex items-center justify-center gap-2" 
           disabled={isProcessing}
         >
