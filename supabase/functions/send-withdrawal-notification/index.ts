@@ -18,7 +18,6 @@ Deno.serve(async (req) => {
   }
   
   try {
-    console.log("Received withdrawal notification request");
     const { userId, amount, status, type = "withdrawal" } = await req.json()
     
     if (!userId || !amount || !status) {
@@ -66,9 +65,6 @@ Deno.serve(async (req) => {
       category = 'info'
     }
     
-    // Log for debugging
-    console.log(`Creating withdrawal notification for user ${userId}: ${title}`);
-    
     const { data, error } = await supabase
       .from('notifications')
       .insert({
@@ -82,7 +78,6 @@ Deno.serve(async (req) => {
       })
     
     if (error) {
-      console.error('Error creating notification:', error)
       return new Response(
         JSON.stringify({ error: 'Failed to create notification', details: error }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -100,7 +95,6 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error processing request:', error)
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }),
       { 

@@ -44,7 +44,6 @@ Deno.serve(async (req) => {
 
   try {
     const payload: WebhookPayload = await req.json()
-    console.log('Webhook payload:', JSON.stringify(payload))
 
     // Only process withdrawal_requests table events
     if (payload.table !== 'withdrawal_requests') {
@@ -63,8 +62,6 @@ Deno.serve(async (req) => {
       const userId = payload.record.user_id
       const amount = payload.record.amount
       
-      console.log(`Withdrawal scheduled for user ${userId}, amount: ${amount}`)
-      
       try {
         // Update the user's wallet balance directly
         const { data: balanceData, error: balanceError } = await supabaseAdmin
@@ -75,12 +72,8 @@ Deno.serve(async (req) => {
         
         if (balanceError) throw balanceError
         
-        console.log(`Current wallet balance for user ${userId}: ${balanceData.wallet_balance}`)
-        
         // Ensure the user has enough balance
         if (balanceData.wallet_balance < amount) {
-          console.error(`Insufficient balance: user ${userId} has ${balanceData.wallet_balance} but withdrawal is ${amount}`)
-          
           // Reject the withdrawal request due to insufficient funds
           await supabaseAdmin
             .from('withdrawal_requests')
@@ -112,8 +105,6 @@ Deno.serve(async (req) => {
         
         if (updateError) throw updateError
         
-        console.log(`Successfully reduced wallet balance for user ${userId} by ${amount}`)
-        
         // Create wallet transaction record
         const { error: transactionError } = await supabaseAdmin
           .from('wallet_transactions')
@@ -126,8 +117,6 @@ Deno.serve(async (req) => {
           })
         
         if (transactionError) throw transactionError
-        
-        console.log(`Successfully created wallet transaction record for withdrawal`)
         
         // Send notification to user
         const { error: notificationError } = await supabaseAdmin
@@ -142,10 +131,6 @@ Deno.serve(async (req) => {
             read: false
           })
         
-        if (notificationError) {
-          console.error('Error sending notification:', notificationError)
-        }
-        
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -159,7 +144,6 @@ Deno.serve(async (req) => {
           }
         )
       } catch (innerError) {
-        console.error('Error processing withdrawal:', innerError)
         return new Response(
           JSON.stringify({ 
             success: false, 
@@ -184,8 +168,6 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
-    console.error('Error processing webhook:', error)
-    
     return new Response(
       JSON.stringify({ 
         success: false, 
