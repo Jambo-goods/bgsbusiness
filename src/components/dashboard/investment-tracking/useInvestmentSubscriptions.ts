@@ -24,48 +24,15 @@ export const useInvestmentSubscriptions = (
       }, async (payload) => {
         console.log('Investment data changed, refreshing tracking tab...', payload);
         
-        // Create a notification in the database
+        // Only create notification for inserts if it comes from a real-time event
+        // and not from the confirmation hook
         if (payload.eventType === 'INSERT') {
-          try {
-            console.log('Creating new investment notification for:', userId);
-            
-            // Get project details
-            const { data: projectData, error: projectError } = await supabase
-              .from('projects')
-              .select('name')
-              .eq('id', payload.new.project_id)
-              .single();
-              
-            if (projectError) {
-              console.error('Error fetching project details:', projectError);
-            }
-            
-            const projectName = projectData?.name || payload.new.project_name || "votre projet";
-            
-            // Create notification in database
-            await supabase.from('notifications').insert({
-              user_id: userId,
-              type: 'investment',
-              title: 'Nouvel investissement',
-              message: `Votre investissement de ${payload.new.amount}€ dans ${projectName} a été enregistré avec succès.`,
-              seen: false,
-              data: payload.new
-            });
-            
-            // Show toast notification immediately
-            notificationService.investmentConfirmed(
-              payload.new.amount,
-              projectName, 
-              payload.new.project_id
-            );
-            
-            console.log('Investment notification created successfully');
-          } catch (error) {
-            console.error('Error creating investment notification:', error);
-          }
+          console.log('Investment insert detected via realtime subscription');
+          refreshCallback();
+        } else {
+          // For other events (UPDATE, DELETE), just refresh
+          refreshCallback();
         }
-        
-        refreshCallback();
       })
       .subscribe();
       
@@ -96,9 +63,10 @@ export const useInvestmentSubscriptions = (
             notificationTitle = 'Nouveau retrait';
             notificationMessage = `Votre demande de retrait de ${transaction.amount}€ a été enregistrée.`;
           } else if (transaction.type === 'investment') {
-            notificationType = 'investment';
-            notificationTitle = 'Nouvel investissement';
-            notificationMessage = `Votre investissement de ${transaction.amount}€ a été enregistré.`;
+            // Skip investment notifications here - they're handled by the confirmation hook
+            console.log('Skipping duplicate investment notification in subscription');
+            refreshCallback();
+            return;
           } else if (transaction.type === 'yield') {
             notificationType = 'yield';
             notificationTitle = 'Rendement reçu';
