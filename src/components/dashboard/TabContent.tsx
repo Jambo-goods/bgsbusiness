@@ -7,6 +7,8 @@ import ProjectsList from "../projects/ProjectsList";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { Project } from "@/types/project";
 import { toast } from "sonner";
+import { fetchTransactionHistory } from "./investment-tracking/utils/fetchInvestmentData";
+import TransactionHistoryCard from "./investment-tracking/components/TransactionHistoryCard";
 
 // Prefetch critical paths
 const preloadWalletTab = () => import("./tabs/WalletTab");
@@ -62,6 +64,7 @@ export default function TabContent({
 }: TabContentProps) {
   const [dbProjects, setDbProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<any[]>([]);
   
   console.log("TabContent rendering with active tab:", activeTab);
   
@@ -88,6 +91,24 @@ export default function TabContent({
     }
   }, [activeTab]);
   
+  // Load transaction history
+  useEffect(() => {
+    const loadTransactions = async () => {
+      try {
+        if (userData && userData.userId) {
+          const transactionData = await fetchTransactionHistory(userData.userId);
+          setTransactions(transactionData || []);
+        }
+      } catch (error) {
+        console.error("Error loading transaction history:", error);
+      }
+    };
+    
+    if (activeTab === "overview") {
+      loadTransactions();
+    }
+  }, [activeTab, userData]);
+  
   // Add debug logging when tab content changes
   useEffect(() => {
     console.log(`TabContent mounted/updated with active tab: ${activeTab}`);
@@ -96,11 +117,18 @@ export default function TabContent({
   return (
     <div className="w-full mt-4">
       {activeTab === "overview" && (
-        <Overview 
-          userData={userData} 
-          userInvestments={userInvestments}
-          setActiveTab={setActiveTab}
-        />
+        <>
+          <Overview 
+            userData={userData} 
+            userInvestments={userInvestments}
+            setActiveTab={setActiveTab}
+          />
+          
+          {/* Display transaction history in overview */}
+          <div className="mt-8">
+            <TransactionHistoryCard transactions={transactions} />
+          </div>
+        </>
       )}
       
       {activeTab !== "overview" && (

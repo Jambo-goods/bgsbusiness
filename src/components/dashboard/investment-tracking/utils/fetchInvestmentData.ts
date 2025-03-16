@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Investment, Transaction } from "../types/investment";
 
@@ -63,7 +64,7 @@ export async function fetchInvestmentDetails(investmentId: string): Promise<Inve
   return fetchInvestmentData(investmentId);
 }
 
-export async function fetchTransactionHistory(userId: string): Promise<any[]> {
+export async function fetchTransactionHistory(userId: string): Promise<Transaction[]> {
   try {
     // Fetch all wallet transactions with investment, deposit, and withdrawal operations
     const { data: walletTransactions, error: walletError } = await supabase

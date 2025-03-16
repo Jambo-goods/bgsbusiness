@@ -94,6 +94,20 @@ export default function Dashboard() {
   
   const mappedStatus = DashboardStatusMapper({ pollingStatus });
 
+  // Prepare user data with userId for transaction history
+  const enhancedUserData = userData ? {
+    ...userData,
+    userId: userId || ''
+  } : {
+    firstName: "",
+    lastName: "",
+    email: "",
+    investmentTotal: 0,
+    projectsCount: 0,
+    walletBalance: 0,
+    userId: userId || ''
+  };
+
   return (
     <>
       <Helmet>
@@ -112,14 +126,7 @@ export default function Dashboard() {
       >
         <DashboardMain 
           isSidebarOpen={isSidebarOpen} 
-          userData={userData || {
-            firstName: "",
-            lastName: "",
-            email: "",
-            investmentTotal: 0,
-            projectsCount: 0,
-            walletBalance: 0
-          }} 
+          userData={enhancedUserData}
           activeTab={activeTab} 
           userInvestments={userInvestments}
           setActiveTab={setActiveTab}
