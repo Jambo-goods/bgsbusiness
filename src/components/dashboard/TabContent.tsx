@@ -34,7 +34,7 @@ const TabContent: React.FC<TabContentProps> = ({
         {activeTab === "overview" && <Overview userData={userData} userInvestments={userInvestments} setActiveTab={setActiveTab} />}
         {activeTab === "active-list" && <ActiveListTab userInvestments={userInvestments} />}
         {activeTab === "history" && <HistoryTab />}
-        {activeTab === "yield" && <YieldTab />}
+        {activeTab === "yield" && <YieldTab userInvestments={userInvestments} />}
         {activeTab === "capital" && <CapitalTab investmentTotal={userData?.investmentTotal || 0} />}
         {activeTab === "notifications" && <NotificationsTab />}
         {activeTab === "opportunities" && <OpportunitiesTab />}
