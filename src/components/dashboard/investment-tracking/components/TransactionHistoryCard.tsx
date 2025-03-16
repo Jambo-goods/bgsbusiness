@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useMemo } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,12 +22,40 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     ? transactions.filter(tx => tx.investment_id === investmentId)
     : transactions;
   
+  // Calculer le rendement total reçu
+  const totalYieldReceived = useMemo(() => {
+    return filteredTransactions
+      .filter(tx => tx.type === 'yield' && tx.status === 'completed')
+      .reduce((total, tx) => total + tx.amount, 0);
+  }, [filteredTransactions]);
+  
+  // Obtenir le montant de l'investissement
+  const investmentAmount = useMemo(() => {
+    const investmentTx = filteredTransactions.find(tx => tx.type === 'investment');
+    return investmentTx ? investmentTx.amount : 0;
+  }, [filteredTransactions]);
+  
   return (
     <Card>
       <CardHeader>
         <CardTitle>Historique des transactions</CardTitle>
       </CardHeader>
       <CardContent>
+        {investmentAmount > 0 && (
+          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <h4 className="text-sm font-medium text-blue-800 mb-2">Programme de rendement mensuel</h4>
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-blue-700">Montant investi: <span className="font-medium">{investmentAmount}€</span></p>
+                <p className="text-sm text-blue-700">Rendement mensuel prévu: <span className="font-medium">{(investmentAmount * 0.08 / 12).toFixed(2)}€</span></p>
+              </div>
+              <div>
+                <p className="text-sm text-green-700">Rendement déjà reçu: <span className="font-medium">{totalYieldReceived}€</span></p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <Table>
           <TableHeader>
             <TableRow>
