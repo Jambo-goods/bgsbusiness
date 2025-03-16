@@ -68,7 +68,7 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
             bankName: bankName,
             accountNumber: accountNumber
           },
-          status: 'pending', // Ensure correct status spelling
+          status: 'pending',
           requested_at: new Date().toISOString()
         })
         .select('id')
@@ -80,6 +80,37 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
       }
       
       console.log("Withdrawal request created successfully:", withdrawal);
+      
+      // Immediately update the user's wallet balance
+      // This ensures we deduct the amount right away to prevent double withdrawals
+      const { error: balanceError } = await supabase.rpc(
+        'increment_wallet_balance',
+        { 
+          user_id: session.session.user.id,
+          increment_amount: -parseInt(amount) 
+        }
+      );
+      
+      if (balanceError) {
+        console.error("Error updating balance:", balanceError);
+        throw new Error("Impossible de mettre à jour votre solde");
+      }
+      
+      // Create a transaction record
+      const { error: transactionError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: session.session.user.id,
+          amount: parseInt(amount),
+          type: 'withdrawal',
+          description: `Retrait en attente - ID: ${withdrawal.id}`,
+          status: 'completed'
+        });
+      
+      if (transactionError) {
+        console.error("Error creating transaction:", transactionError);
+        // Continue even if there's an error (the withdrawal was created)
+      }
       
       // Notify about the withdrawal request
       try {

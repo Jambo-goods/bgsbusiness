@@ -23,15 +23,16 @@ export function WalletCard() {
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
 
-  // When component mounts, make sure balance is up to date
+  // When component mounts, make sure balance is up to date with a full recalculation
   useEffect(() => {
     const updateBalanceOnLoad = async () => {
       try {
-        await refreshBalance();
+        // On component mount, do a full recalculation to ensure accuracy
+        await recalculateBalance();
         setLastUpdate(new Date());
-        console.log("Balance refreshed on component mount");
+        console.log("Balance recalculated on component mount");
       } catch (error) {
-        console.error("Error refreshing balance on mount:", error);
+        console.error("Error recalculating balance on mount:", error);
         setShowRefreshAlert(true);
       }
     };
@@ -47,40 +48,36 @@ export function WalletCard() {
       
       console.log("Setting up withdrawal subscriptions for WalletCard");
       
+      // Listen to both INSERTs and UPDATEs
       const withdrawalChannel = supabase
         .channel('wallet-card-withdrawal-changes')
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',
+            event: '*', // All events
             schema: 'public',
             table: 'withdrawal_requests',
             filter: `user_id=eq.${userId}`
           },
           async (payload) => {
-            console.log("Withdrawal request updated, WalletCard notified:", payload);
+            console.log("Withdrawal request changed, WalletCard notified:", payload);
             
-            const oldStatus = payload.old?.status;
-            const newStatus = payload.new?.status;
+            // For new withdrawals, refresh immediately as balance should already be updated
+            if (payload.eventType === 'INSERT') {
+              await refreshBalance();
+              return;
+            }
             
-            // Status changed to one that affects balance
-            if ((newStatus === 'approved' || newStatus === 'completed' || newStatus === 'scheduled') && 
-                oldStatus !== newStatus) {
+            // For updates, check if we need to handle status changes
+            if (payload.eventType === 'UPDATE') {
+              const oldStatus = payload.old?.status;
+              const newStatus = payload.new?.status;
               
-              try {
-                console.log("Processing withdrawal update for balance...");
-                
-                if (payload.new?.id) {
-                  // Use the dedicated function to update balance
-                  await updateBalanceOnWithdrawal(payload.new.id);
-                  setLastUpdate(new Date());
-                  console.log("Withdrawal processed and balance updated");
-                }
-              } catch (err) {
-                console.error("Error during withdrawal balance update:", err);
-                setShowRefreshAlert(true);
-                toast.error("Erreur lors de la mise à jour du solde. Essayez de recalculer manuellement.");
-              }
+              console.log(`Withdrawal status changed from ${oldStatus} to ${newStatus}`);
+              
+              // Force recalculation to ensure accuracy regardless of status
+              await recalculateBalance();
+              setLastUpdate(new Date());
             }
           }
         )
@@ -98,7 +95,7 @@ export function WalletCard() {
         if (channel) supabase.removeChannel(channel);
       });
     };
-  }, [refreshBalance, updateBalanceOnWithdrawal]);
+  }, [refreshBalance, updateBalanceOnWithdrawal, recalculateBalance]);
 
   const handleRefresh = async () => {
     setIsManualRefreshing(true);

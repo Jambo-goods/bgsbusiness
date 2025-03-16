@@ -89,38 +89,30 @@ export default function WalletTab() {
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',
+            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
             schema: 'public',
             table: 'withdrawal_requests',
             filter: `user_id=eq.${userId}`
           },
           async (payload) => {
-            console.log("Withdrawal request updated:", payload);
+            console.log("Withdrawal request change detected:", payload);
             
-            const oldStatus = payload.old?.status;
-            const newStatus = payload.new?.status;
+            // For INSERT events, we've already deducted the balance in the form
+            if (payload.eventType === 'INSERT') {
+              console.log("New withdrawal request created, balance already updated in form");
+              refreshBalance();
+              return;
+            }
             
-            // Handle status changes that affect balance
-            if ((newStatus === 'approved' || newStatus === 'completed' || newStatus === 'scheduled') &&
-                oldStatus !== newStatus) {
+            // For UPDATE events, check if we need to update the balance
+            if (payload.eventType === 'UPDATE') {
+              const oldStatus = payload.old?.status;
+              const newStatus = payload.new?.status;
               
-              console.log(`Withdrawal status changed to ${newStatus}, updating balance...`);
+              console.log(`Withdrawal status changed from ${oldStatus} to ${newStatus}`);
               
-              try {
-                if (payload.new?.id) {
-                  // Call the edge function to process the withdrawal
-                  await updateBalanceOnWithdrawal(payload.new.id);
-                  toast.success(`Retrait ${newStatus === 'approved' ? 'approuvé' : 'complété'}`, {
-                    description: `Votre solde a été mis à jour.`
-                  });
-                }
-              } catch (err) {
-                console.error("Error processing withdrawal:", err);
-                setShowWithdrawalAlert(true);
-                toast.error("Erreur lors du traitement du retrait", {
-                  description: "Veuillez cliquer sur le bouton 'Recalculer' pour mettre à jour votre solde."
-                });
-              }
+              // Force a balance recalculation to ensure accuracy
+              await recalculateBalance();
             }
           }
         )
@@ -128,7 +120,30 @@ export default function WalletTab() {
           console.log("Realtime subscription status for withdrawals:", status);
         });
       
-      return [bankTransfersChannel, withdrawalChannel];
+      // Also subscribe to direct wallet_balance changes in profiles table
+      const profileChannel = supabase
+        .channel('wallet-profile-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${userId}`
+          },
+          (payload) => {
+            console.log("Profile updated:", payload);
+            
+            if (payload.new && payload.old && 
+                payload.new.wallet_balance !== payload.old.wallet_balance) {
+              console.log(`Wallet balance changed from ${payload.old.wallet_balance} to ${payload.new.wallet_balance}`);
+              refreshBalance();
+            }
+          }
+        )
+        .subscribe();
+      
+      return [bankTransfersChannel, withdrawalChannel, profileChannel];
     };
     
     const subscriptionPromise = setupBankTransferSubscriptions();
@@ -140,15 +155,15 @@ export default function WalletTab() {
         });
       });
     };
-  }, [refreshBalance, updateBalanceOnWithdrawal]);
+  }, [refreshBalance, updateBalanceOnWithdrawal, recalculateBalance]);
 
   const handleDeposit = async () => {
     await refreshBalance();
   };
 
   const handleWithdraw = async () => {
-    await refreshBalance();
-    await recalculateBalance(); // Force recalculation after withdrawal
+    // Force immediate recalculation after withdrawal
+    await recalculateBalance();
   };
 
   const handleTabChange = (tab: string) => {
