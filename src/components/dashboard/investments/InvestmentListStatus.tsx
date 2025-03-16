@@ -17,7 +17,7 @@ export default function InvestmentListStatus({ isLoading, isEmpty }: InvestmentL
   
   if (isEmpty) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8 border border-gray-200 rounded-lg bg-white shadow-sm">
         <p className="text-sm text-bgs-gray-medium">Aucun investissement trouvé</p>
       </div>
     );

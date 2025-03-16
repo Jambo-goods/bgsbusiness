@@ -104,7 +104,7 @@ export async function fetchTransactionHistory(userId: string): Promise<Transacti
       
       return {
         id: tx.id,
-        user_id: tx.user_id,
+        user_id: tx.user_id || userId,
         created_at: tx.created_at,
         amount: tx.amount,
         type: type,
@@ -144,9 +144,14 @@ export async function fetchTransactionHistory(userId: string): Promise<Transacti
       });
     }
     
-    return formattedTransactions.sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    // Sort transactions by date (newest first) and remove any potential duplicates
+    return formattedTransactions
+      .filter((transaction, index, self) => 
+        index === self.findIndex((t) => t.id === transaction.id)
+      )
+      .sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
   } catch (error) {
     console.error("Unexpected error in fetchTransactionHistory:", error);
     return [];
