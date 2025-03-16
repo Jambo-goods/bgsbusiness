@@ -76,6 +76,13 @@ export default function WithdrawalRequestsTable() {
               case 'rejected':
                 notificationService.withdrawalRejected(amount);
                 break;
+              case 'received':
+                console.log("Withdrawal request received notification");
+                notificationService.withdrawalReceived(amount);
+                toast.info(`Votre demande de retrait de ${amount}€ a été reçue`, {
+                  description: "Elle est en cours d'examen."
+                });
+                break;
             }
           }
         }

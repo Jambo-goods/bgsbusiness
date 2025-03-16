@@ -1,4 +1,3 @@
-
 import { BaseNotificationService } from "./BaseNotificationService";
 
 export class WithdrawalNotificationService extends BaseNotificationService {
@@ -152,6 +151,19 @@ export class WithdrawalNotificationService extends BaseNotificationService {
       type: 'withdrawal',
       category: 'success',
       metadata: { amount, status: 'confirmed' }
+    });
+  }
+  
+  /**
+   * Notification when a withdrawal request is received
+   */
+  withdrawalReceived(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Demande de retrait reçue",
+      description: `Votre demande de retrait de ${amount}€ a bien été reçue et est en cours d'examen.`,
+      type: 'withdrawal',
+      category: 'info',
+      metadata: { amount, status: 'received' }
     });
   }
 }

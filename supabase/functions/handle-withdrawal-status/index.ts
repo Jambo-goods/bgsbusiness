@@ -1,4 +1,3 @@
-
 // This Supabase Edge Function monitors withdrawal_requests status changes
 // and updates wallet balance when a withdrawal is scheduled
 
@@ -269,6 +268,53 @@ Deno.serve(async (req) => {
             status: 500,
           }
         )
+      }
+    }
+    
+    // Handle "received" status change specifically
+    if (newStatus === 'received' && oldStatus !== 'received') {
+      const userId = payload.record.user_id
+      const amount = payload.record.amount
+      
+      try {
+        // Send notification via the Edge Function
+        const receivedResponse = await fetch(
+          `${supabaseUrl}/functions/v1/send-withdrawal-notification`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${supabaseServiceRoleKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              amount,
+              status: 'received'
+            }),
+          }
+        )
+        
+        if (!receivedResponse.ok) {
+          const errorData = await receivedResponse.json()
+          console.error("Error sending received notification via Edge Function:", errorData)
+        } else {
+          console.log(`Received status notification sent to user ${userId} for amount ${amount}€`)
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Received status notification sent successfully',
+            user_id: userId,
+            amount: amount
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        )
+      } catch (notifError) {
+        console.error("Error sending received notification:", notifError)
       }
     }
     
