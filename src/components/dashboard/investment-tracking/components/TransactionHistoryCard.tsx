@@ -204,7 +204,8 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         amount: paymentAmount,
         cumulativeAmount: cumulativeScheduledAmount,
         percentage: payment.percentage || (fixedYieldPercentage / 12), // Monthly percentage
-        status: payment.status
+        status: payment.status,
+        projectName: payment.projects?.name || 'Projet inconnu'
       };
     });
   }, [scheduledPayments, investmentAmount, fixedYieldPercentage, totalYieldReceived]);
@@ -259,7 +260,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           </div>
         </div>
 
-        {/* Scheduled Payments */}
+        {/* Rendements programmés - Version tableau comme dans projection des rendements */}
         <div className="mb-8">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">
             <span className="flex items-center gap-2">
@@ -278,40 +279,51 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projet</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pourcentage</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant estimé</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cumul</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {formattedScheduledPayments.map((payment) => (
-                    <tr key={payment.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {formatDate(payment.date)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600">
-                        {payment.percentage.toFixed(2)}%
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {payment.amount.toFixed(2)} €
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
-                        {payment.cumulativeAmount.toFixed(2)} €
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          payment.status === 'processed' ? 'bg-green-100 text-green-800' : 
-                          payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {payment.status === 'processed' ? '✓ Traité' : 
-                           payment.status === 'pending' ? 'En attente' : 
-                           'Programmé'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {formattedScheduledPayments.map((payment) => {
+                    let statusDisplay = "Programmé";
+                    let statusClass = "bg-blue-100 text-blue-800";
+                    
+                    if (payment.status === 'processed') {
+                      statusDisplay = "✓ Traité";
+                      statusClass = "bg-green-100 text-green-800";
+                    } else if (payment.status === 'pending') {
+                      statusDisplay = "En attente";
+                      statusClass = "bg-yellow-100 text-yellow-800";
+                    }
+                    
+                    return (
+                      <tr key={payment.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {formatDate(payment.date)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
+                          {payment.projectName}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                          {payment.percentage.toFixed(2)}%
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {payment.amount.toFixed(2)} €
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                          {payment.cumulativeAmount.toFixed(2)} €
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+                            {statusDisplay}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -394,3 +406,4 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     </Card>
   );
 }
+

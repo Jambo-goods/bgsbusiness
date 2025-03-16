@@ -32,7 +32,7 @@ export const fetchInvestmentDetails = async (investmentId: string) => {
       const remainingMonths = Math.max(0, Math.floor((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24 * 30.44)));
       
       // Add calculated fields
-      const enhancedData = {
+      const enhancedData: any = {
         ...investmentData,
         remainingDuration: remainingMonths
       };
