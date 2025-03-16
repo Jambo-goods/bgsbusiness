@@ -65,7 +65,7 @@ export function useWalletBalance() {
       if (!session.session) {
         console.log("No active session found, cannot recalculate");
         setIsLoadingBalance(false);
-        toast.error("Aucune session active trouvée");
+        toast.error("Aucune session active trouvée", { id: toastId });
         return;
       }
       
@@ -89,10 +89,19 @@ export function useWalletBalance() {
         
         if (data && typeof data.balance === 'number') {
           setWalletBalance(data.balance);
-          toast.success("Solde recalculé avec succès", {
-            id: toastId,
-            description: `Nouveau solde: ${data.balance}€`
-          });
+          
+          // Determine appropriate toast based on balance
+          if (data.balance < 0) {
+            toast.warning("Solde recalculé avec succès", {
+              id: toastId,
+              description: `Attention: Votre solde est négatif (${data.balance}€)`
+            });
+          } else {
+            toast.success("Solde recalculé avec succès", {
+              id: toastId,
+              description: `Nouveau solde: ${data.balance}€`
+            });
+          }
         } else {
           toast.error("Erreur lors du recalcul du solde", {
             id: toastId
@@ -115,6 +124,28 @@ export function useWalletBalance() {
     }
   }, [fetchWalletBalance]);
 
+  const updateBalanceOnWithdrawal = useCallback(async (withdrawalId: string) => {
+    try {
+      console.log("Updating balance for withdrawal:", withdrawalId);
+      
+      const response = await supabase.functions.invoke('update-wallet-on-withdrawal', {
+        body: { withdrawal_id: withdrawalId }
+      });
+      
+      if (response.error) {
+        console.error("Error updating balance on withdrawal:", response.error);
+        return;
+      }
+      
+      console.log("Balance updated successfully:", response.data);
+      
+      // Refresh the balance
+      await fetchWalletBalance(false);
+    } catch (err) {
+      console.error("Error during withdrawal balance update:", err);
+    }
+  }, [fetchWalletBalance]);
+
   useEffect(() => {
     console.log("Setting up wallet balance subscriptions");
     fetchWalletBalance();
@@ -133,7 +164,7 @@ export function useWalletBalance() {
       
       console.log("Setting up realtime subscriptions for wallet balance, user:", userId);
       
-      const channel = supabase
+      const profileChannel = supabase
         .channel('wallet-balance-changes')
         .on(
           'postgres_changes',
@@ -155,11 +186,20 @@ export function useWalletBalance() {
                   toast.success("Votre solde a été mis à jour", {
                     description: `Nouveau solde: ${newProfile.wallet_balance}€`
                   });
+                } else if (newProfile.wallet_balance < 0) {
+                  toast.warning("Votre solde a été mis à jour", {
+                    description: `Attention: Votre solde est négatif (${newProfile.wallet_balance}€)`
+                  });
                 }
               }
             }
           }
         )
+        .subscribe();
+      
+      // Listen for changes to wallet transactions
+      const transactionChannel = supabase
+        .channel('wallet-transactions-changes')
         .on(
           'postgres_changes',
           {
@@ -175,6 +215,11 @@ export function useWalletBalance() {
             fetchWalletBalance(false);
           }
         )
+        .subscribe();
+      
+      // Listen for changes to bank transfers
+      const bankTransferChannel = supabase
+        .channel('bank-transfers-changes')
         .on(
           'postgres_changes',
           {
@@ -205,6 +250,11 @@ export function useWalletBalance() {
             }
           }
         )
+        .subscribe();
+      
+      // Listen for changes to withdrawal requests
+      const withdrawalChannel = supabase
+        .channel('withdrawal-requests-changes')
         .on(
           'postgres_changes',
           {
@@ -228,9 +278,13 @@ export function useWalletBalance() {
               
               // If the status changed to approved, completed or scheduled
               if ((status === 'approved' || status === 'completed' || status === 'scheduled') && 
-                  (oldPayload?.status !== 'approved' && oldPayload?.status !== 'completed' && oldPayload?.status !== 'scheduled')) {
-                console.log("Withdrawal status changed to 'approved', 'completed', or 'scheduled', refreshing balance...");
-                fetchWalletBalance(false);
+                  oldPayload?.status !== status) {
+                
+                console.log(`Withdrawal status changed to '${status}', updating balance...`);
+                
+                // Update the balance immediately via the edge function
+                updateBalanceOnWithdrawal(newPayload.id);
+                
                 toast.info("Une demande de retrait a été traitée", {
                   description: "Votre solde a été mis à jour"
                 });
@@ -238,11 +292,9 @@ export function useWalletBalance() {
             }
           }
         )
-        .subscribe((status) => {
-          console.log("Realtime subscription status for wallet balance:", status);
-        });
+        .subscribe();
       
-      return channel;
+      return [profileChannel, transactionChannel, bankTransferChannel, withdrawalChannel];
     };
     
     const subscriptionPromise = setupRealtimeSubscriptions();
@@ -250,11 +302,13 @@ export function useWalletBalance() {
     // Clean up on unmount
     return () => {
       clearInterval(pollingInterval);
-      subscriptionPromise.then(channel => {
-        if (channel) supabase.removeChannel(channel);
+      subscriptionPromise.then(channels => {
+        channels.forEach(channel => {
+          if (channel) supabase.removeChannel(channel);
+        });
       });
     };
-  }, [fetchWalletBalance]);
+  }, [fetchWalletBalance, updateBalanceOnWithdrawal]);
 
   // Function to manually refresh the balance
   const refreshBalance = async () => {
