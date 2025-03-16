@@ -55,9 +55,10 @@ Deno.serve(async (req) => {
     }
 
     // Check if the status changed to "scheduled"
+    // Note: Fix typo in status check - check for both "scheduled" and possible misspelling "sheduled"
     if (
-      payload.record.status === 'scheduled' && 
-      payload.old_record.status !== 'scheduled'
+      (payload.record.status === 'scheduled' || payload.record.status === 'sheduled') && 
+      (payload.old_record.status !== 'scheduled' && payload.old_record.status !== 'sheduled')
     ) {
       const userId = payload.record.user_id
       const amount = payload.record.amount
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
       // Update the user's wallet balance
       await supabaseAdmin.rpc('increment_wallet_balance', {
         user_id: userId,
-        increment_amount: -amount,
+        increment_amount: -amount, // Negative amount to decrease balance
       })
       
       console.log(`Successfully reduced wallet balance for user ${userId} by ${amount}`)

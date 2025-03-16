@@ -39,8 +39,8 @@ export default function WithdrawalRequestsTable() {
         
         // If a withdrawal status is changed to "scheduled", show a notification
         if (payload.eventType === 'UPDATE' && 
-            payload.new.status === 'scheduled' && 
-            payload.old.status !== 'scheduled') {
+            (payload.new.status === 'scheduled' || payload.new.status === 'sheduled') && 
+            (payload.old.status !== 'scheduled' && payload.old.status !== 'sheduled')) {
           toast.info(`Retrait programmé de ${payload.new.amount}€`, {
             description: "Le montant a été déduit de votre solde disponible."
           });
