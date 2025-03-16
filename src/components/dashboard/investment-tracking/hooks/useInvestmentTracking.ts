@@ -23,7 +23,16 @@ export function useInvestmentTracking(investmentId: string | undefined) {
           
           // Once we have the investment data, fetch transactions for this user
           const transactionsData = await fetchTransactionHistory(investmentData.user_id);
-          setTransactions(transactionsData);
+          
+          // Convert any string types to the correct union type
+          const typedTransactions = transactionsData.map(tx => ({
+            ...tx,
+            type: tx.type === 'yield' || tx.type === 'investment' 
+              ? tx.type as 'yield' | 'investment'
+              : 'yield' // Default fallback
+          }));
+          
+          setTransactions(typedTransactions);
         }
       } catch (error) {
         console.error("Error loading investment tracking data:", error);
@@ -48,7 +57,16 @@ export function useInvestmentTracking(investmentId: string | undefined) {
         
         // Refresh transactions data
         const refreshedTransactions = await fetchTransactionHistory(refreshedInvestment.user_id);
-        setTransactions(refreshedTransactions);
+        
+        // Convert any string types to the correct union type
+        const typedTransactions = refreshedTransactions.map(tx => ({
+          ...tx,
+          type: tx.type === 'yield' || tx.type === 'investment' 
+            ? tx.type as 'yield' | 'investment'
+            : 'yield' // Default fallback
+        }));
+        
+        setTransactions(typedTransactions);
       }
     } catch (error) {
       console.error("Error refreshing investment data:", error);

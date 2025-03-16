@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Investment } from "../types/investment";
+import { Investment, Transaction } from "../types/investment";
 
 export const fetchInvestmentDetails = async (investmentId: string) => {
   try {
@@ -68,7 +68,16 @@ export const fetchTransactionHistory = async (userId: string) => {
       .order("created_at", { ascending: false });
       
     if (error) throw error;
-    return data || [];
+    
+    // Convert database transactions to the expected Transaction type
+    const typedTransactions = data?.map(tx => ({
+      ...tx,
+      type: tx.type === 'yield' || tx.type === 'investment' 
+        ? tx.type as 'yield' | 'investment'
+        : 'yield' // Default fallback
+    })) || [];
+    
+    return typedTransactions as Transaction[];
   } catch (error) {
     console.error("Error fetching transaction history:", error);
     return [];

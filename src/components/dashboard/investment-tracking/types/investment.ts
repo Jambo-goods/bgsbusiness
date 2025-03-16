@@ -47,4 +47,10 @@ export interface ScheduledPayment {
   updated_at: string;
   total_invested_amount?: number;
   calculatedCumulativeAmount?: number;
+  projects?: {
+    name: string;
+    image: string;
+    status: string;
+    company_name: string;
+  };
 }

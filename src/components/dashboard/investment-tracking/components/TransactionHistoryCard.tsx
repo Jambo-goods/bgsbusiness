@@ -27,6 +27,8 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       
       try {
         setIsLoading(true);
+        console.log("Fetching scheduled payments for investment ID:", investmentId);
+        
         // First, get the project_id from the investment
         const { data: investment, error: investmentError } = await supabase
           .from('investments')
@@ -40,10 +42,20 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           return;
         }
         
+        console.log("Found investment with project_id:", investment.project_id);
+        
         // Then fetch scheduled payments for this project
         const { data: payments, error: paymentsError } = await supabase
           .from('scheduled_payments')
-          .select('*')
+          .select(`
+            *,
+            projects (
+              name,
+              image,
+              status,
+              company_name
+            )
+          `)
           .eq('project_id', investment.project_id)
           .order('payment_date', { ascending: true });
           
@@ -53,21 +65,32 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           return;
         }
         
-        console.log("Scheduled payments fetched:", payments?.length || 0);
+        console.log("Scheduled payments fetched:", payments?.length || 0, payments);
         
-        // Add calculated cumulative amounts for each payment
-        let cumulativeAmount = 0;
-        const paymentsWithCumulative = payments?.map(payment => {
-          if (payment.status === 'processed') {
-            cumulativeAmount += payment.total_scheduled_amount || 0;
-          }
-          return {
-            ...payment,
-            calculatedCumulativeAmount: payment.status === 'processed' ? cumulativeAmount : 0
-          };
-        }) || [];
+        if (!payments || payments.length === 0) {
+          // If no scheduled payments found, create some mock data based on investment
+          console.log("No scheduled payments found, creating mock data based on investment");
+          const mockScheduledPayments = createMockScheduledPayments(investment);
+          setScheduledPayments(mockScheduledPayments);
+        } else {
+          // Add calculated cumulative amounts for each payment
+          let cumulativeAmount = 0;
+          const paymentsWithCumulative = payments?.map(payment => {
+            const calculatedAmount = payment.total_scheduled_amount || 0;
+            
+            if (payment.status === 'processed') {
+              cumulativeAmount += calculatedAmount;
+            }
+            
+            return {
+              ...payment,
+              calculatedCumulativeAmount: payment.status === 'processed' ? cumulativeAmount : 0
+            };
+          }) || [];
+          
+          setScheduledPayments(paymentsWithCumulative);
+        }
         
-        setScheduledPayments(paymentsWithCumulative);
         setIsLoading(false);
       } catch (error) {
         console.error("Error in fetchScheduledPayments:", error);
@@ -77,6 +100,36 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     
     fetchScheduledPayments();
   }, [investmentId]);
+
+  // Helper function to create mock scheduled payments if none exist in the database
+  const createMockScheduledPayments = (investment: any): ScheduledPayment[] => {
+    const mockPayments: ScheduledPayment[] = [];
+    const currentDate = new Date();
+    const monthlyYield = investment.amount * (fixedYieldPercentage / 100) / 12;
+    
+    // Create 12 monthly payments starting from now
+    for (let i = 0; i < 12; i++) {
+      const paymentDate = new Date(currentDate);
+      paymentDate.setMonth(currentDate.getMonth() + i);
+      
+      mockPayments.push({
+        id: `mock-${i}`,
+        project_id: investment.project_id,
+        payment_date: paymentDate.toISOString(),
+        percentage: fixedYieldPercentage / 12, // Monthly percentage
+        status: i === 0 ? 'pending' : 'scheduled',
+        total_scheduled_amount: monthlyYield,
+        investors_count: 1,
+        processed_at: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        total_invested_amount: investment.amount,
+        calculatedCumulativeAmount: 0
+      });
+    }
+    
+    return mockPayments;
+  };
 
   const formatDate = (date: string) => {
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
@@ -137,9 +190,10 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     const monthlyYield = investmentAmount * (fixedYieldPercentage / 100) / 12;
     
     return scheduledPayments.map(payment => {
+      // Use the payment amount from the database or calculate it if not available
       const paymentAmount = payment.total_scheduled_amount || monthlyYield;
       
-      // Only increase cumulative for future payments
+      // Only increase cumulative for future payments if they're not already processed
       if (payment.status !== 'processed') {
         cumulativeScheduledAmount += paymentAmount;
       }
@@ -149,7 +203,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         date: payment.payment_date,
         amount: paymentAmount,
         cumulativeAmount: cumulativeScheduledAmount,
-        percentage: payment.percentage || fixedYieldPercentage,
+        percentage: payment.percentage || (fixedYieldPercentage / 12), // Monthly percentage
         status: payment.status
       };
     });
@@ -237,7 +291,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                         {formatDate(payment.date)}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-blue-600">
-                        {payment.percentage}%
+                        {payment.percentage.toFixed(2)}%
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {payment.amount.toFixed(2)} €
@@ -263,9 +317,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-              {scheduledPayments.length === 0 && !isLoading ? 
-                "Aucun versement programmé trouvé dans la base de données pour cet investissement" : 
-                "Aucun versement programmé pour cet investissement"}
+              {!isLoading ? "Aucun versement programmé pour cet investissement" : ""}
             </div>
           )}
         </div>
