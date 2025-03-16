@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -141,6 +140,13 @@ export function useWalletBalance() {
       
       // Refresh the balance
       await fetchWalletBalance(false);
+      
+      if (response.data && response.data.new_balance) {
+        // Show toast notification with the new balance
+        toast.success("Solde mis à jour", {
+          description: `Nouveau solde: ${response.data.new_balance}€`
+        });
+      }
     } catch (err) {
       console.error("Error during withdrawal balance update:", err);
     }

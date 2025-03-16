@@ -58,8 +58,9 @@ serve(async (req) => {
     }
     
     // Calculate the new balance
-    const newBalance = (profile.wallet_balance || 0) - withdrawal.amount
-    console.log(`Updating balance for user ${withdrawal.user_id}: ${profile.wallet_balance} - ${withdrawal.amount} = ${newBalance}`)
+    const currentBalance = profile.wallet_balance || 0;
+    const newBalance = currentBalance - withdrawal.amount;
+    console.log(`Updating balance for user ${withdrawal.user_id}: ${currentBalance} - ${withdrawal.amount} = ${newBalance}`)
     
     // Update the user's wallet balance
     const { error: updateError } = await supabaseClient
