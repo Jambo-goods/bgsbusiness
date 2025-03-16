@@ -42,6 +42,14 @@ class NotificationService extends BaseNotificationService {
     return this.depositService.depositPending(amount);
   }
 
+  depositRequested(amount: number, reference: string): Promise<void> {
+    return this.depositService.depositRequested(amount, reference);
+  }
+
+  depositConfirmed(amount: number): Promise<void> {
+    return this.depositService.depositConfirmed(amount);
+  }
+
   insufficientFunds(): Promise<void> {
     return this.depositService.insufficientFunds();
   }

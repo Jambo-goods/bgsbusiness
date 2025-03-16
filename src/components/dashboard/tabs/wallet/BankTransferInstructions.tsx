@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -69,7 +70,8 @@ export default function BankTransferInstructions() {
       });
       
       // Send a notification using the notification service
-      await notificationService.deposit.depositRequested(parseInt(transferAmount), bankDetails.reference);
+      // Fix: Use depositRequested directly from notificationService
+      await notificationService.depositRequested(parseInt(transferAmount), bankDetails.reference);
       
       // Enregistrer le virement bancaire dans la nouvelle table bank_transfers
       await supabase.from('bank_transfers').insert({
