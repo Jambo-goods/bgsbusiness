@@ -73,6 +73,34 @@ serve(async (req) => {
       return handleError({ message: 'Failed to update wallet balance' }, 500)
     }
     
+    // Create wallet transaction record if it doesn't exist yet
+    const { data: existingTransaction } = await supabaseClient
+      .from('wallet_transactions')
+      .select('id')
+      .eq('user_id', withdrawal.user_id)
+      .eq('type', 'withdrawal')
+      .eq('amount', withdrawal.amount)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      
+    if (!existingTransaction || existingTransaction.length === 0) {
+      const { error: transactionError } = await supabaseClient
+        .from('wallet_transactions')
+        .insert({
+          user_id: withdrawal.user_id,
+          amount: withdrawal.amount,
+          type: 'withdrawal',
+          status: 'completed',
+          description: `Retrait ${withdrawal.status}`
+        })
+        
+      if (transactionError) {
+        console.error('Error creating transaction record:', transactionError)
+        // Continue even if transaction creation fails
+      }
+    }
+    
     return handleSuccess({ 
       message: 'Wallet balance updated successfully',
       withdrawal_id: withdrawal.id,

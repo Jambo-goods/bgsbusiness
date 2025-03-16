@@ -219,6 +219,24 @@ export function useWalletBalance() {
             
             // Refresh balance to make sure it's up-to-date
             fetchWalletBalance(false);
+            
+            if (payload.new && typeof payload.new === 'object') {
+              const newTransaction = payload.new as Record<string, any>;
+              if (newTransaction.status === 'completed') {
+                const type = newTransaction.type;
+                const amount = newTransaction.amount;
+                
+                if (type === 'deposit') {
+                  toast.success("Dépôt complété", {
+                    description: `${amount}€ ont été ajoutés à votre solde`
+                  });
+                } else if (type === 'withdrawal') {
+                  toast.info("Retrait complété", {
+                    description: `${amount}€ ont été déduits de votre solde`
+                  });
+                }
+              }
+            }
           }
         )
         .subscribe();
