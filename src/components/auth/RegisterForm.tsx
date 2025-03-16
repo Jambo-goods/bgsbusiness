@@ -76,14 +76,16 @@ export default function RegisterForm({ initialReferralCode = null }: RegisterFor
         lastName,
         email,
         password,
-        referralCode
+        referralCode // This is now correctly passed to registerUser
       });
 
       if (result.success) {
         console.log("Inscription réussie:", result.data);
         toast({
           title: "Inscription réussie",
-          description: "Votre compte a été créé avec succès"
+          description: referralCode 
+            ? "Votre compte a été créé avec succès. Le code de parrainage a été appliqué!"
+            : "Votre compte a été créé avec succès"
         });
         
         // Redirection vers le tableau de bord après inscription réussie
