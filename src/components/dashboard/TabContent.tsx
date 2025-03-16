@@ -2,7 +2,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
-import { Skeleton } from "@/components/ui/skeleton";
 import ProjectsList from "../projects/ProjectsList";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { Project } from "@/types/project";
@@ -38,15 +37,6 @@ interface TabContentProps {
   refreshData?: () => Promise<void>;
 }
 
-// Optimized loading fallback component
-const TabLoading = () => (
-  <div className="w-full space-y-3 p-3">
-    <Skeleton className="h-8 w-full" />
-    <Skeleton className="h-24 w-full" />
-    <Skeleton className="h-8 w-3/4" />
-  </div>
-);
-
 // Prefetch critical paths on page load
 if (typeof window !== 'undefined') {
   setTimeout(() => {
@@ -63,7 +53,7 @@ export default function TabContent({
   refreshData
 }: TabContentProps) {
   const [dbProjects, setDbProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingKey, setLoadingKey] = useState<string>('initial'); // Used to force remount of components
   
@@ -78,7 +68,6 @@ export default function TabContent({
   useEffect(() => {
     const loadProjects = async () => {
       try {
-        setLoading(true);
         const projects = await fetchProjectsFromDatabase();
         setDbProjects(projects || []);
       } catch (error) {
@@ -87,8 +76,6 @@ export default function TabContent({
           description: "Impossible de charger les projets depuis la base de données."
         });
         setDbProjects([]);
-      } finally {
-        setLoading(false);
       }
     };
     
@@ -138,7 +125,7 @@ export default function TabContent({
       )}
       
       {activeTab !== "overview" && (
-        <Suspense fallback={<TabLoading />}>
+        <div className="w-full">
           {activeTab === "wallet" && <WalletTab key={loadingKey} />}
           
           {activeTab === "yield" && <YieldTab key={loadingKey} />}
@@ -157,18 +144,13 @@ export default function TabContent({
               <p className="text-gray-600">
                 Découvrez tous les projets d'investissement disponibles sur la plateforme et trouvez ceux qui correspondent à vos objectifs financiers.
               </p>
-              {loading ? (
-                <div className="flex justify-center py-20">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
-                </div>
+              
+              {dbProjects.length > 0 ? (
+                <ProjectsList projects={dbProjects} />
               ) : (
-                dbProjects.length > 0 ? (
-                  <ProjectsList projects={dbProjects} />
-                ) : (
-                  <div className="text-center py-20">
-                    <p className="text-gray-500">Aucun projet disponible actuellement.</p>
-                  </div>
-                )
+                <div className="text-center py-20">
+                  <p className="text-gray-500">Aucun projet disponible actuellement.</p>
+                </div>
               )}
             </div>
           )}
@@ -184,7 +166,7 @@ export default function TabContent({
           {activeTab === "settings" && <SettingsTab />}
           
           {activeTab === "notifications" && <NotificationsTab />}
-        </Suspense>
+        </div>
       )}
     </div>
   );

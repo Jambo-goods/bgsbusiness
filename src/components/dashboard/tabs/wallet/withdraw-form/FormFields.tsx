@@ -6,24 +6,28 @@ import { Label } from "@/components/ui/label";
 interface FormFieldsProps {
   amount: string;
   setAmount: (value: string) => void;
-  accountHolder: string;
-  setAccountHolder: (value: string) => void;
+  accountOwner: string;
+  setAccountOwner: (value: string) => void;
   bankName: string;
   setBankName: (value: string) => void;
-  accountNumber: string;
-  setAccountNumber: (value: string) => void;
+  iban: string;
+  setIban: (value: string) => void;
+  bic: string;
+  setBic: (value: string) => void;
   balance: number;
 }
 
 export default function FormFields({
   amount,
   setAmount,
-  accountHolder,
-  setAccountHolder,
+  accountOwner,
+  setAccountOwner,
   bankName,
   setBankName,
-  accountNumber,
-  setAccountNumber,
+  iban,
+  setIban,
+  bic,
+  setBic,
   balance
 }: FormFieldsProps) {
   
@@ -52,12 +56,12 @@ export default function FormFields({
       </div>
       
       <div>
-        <Label htmlFor="accountHolder">Titulaire du compte</Label>
+        <Label htmlFor="accountOwner">Titulaire du compte</Label>
         <Input
-          id="accountHolder"
+          id="accountOwner"
           type="text"
-          value={accountHolder}
-          onChange={(e) => setAccountHolder(e.target.value)}
+          value={accountOwner}
+          onChange={(e) => setAccountOwner(e.target.value)}
           placeholder="Nom et prénom du titulaire"
           className="mt-1"
         />
@@ -76,13 +80,25 @@ export default function FormFields({
       </div>
       
       <div>
-        <Label htmlFor="accountNumber">Numéro de compte / IBAN</Label>
+        <Label htmlFor="iban">IBAN</Label>
         <Input
-          id="accountNumber"
+          id="iban"
           type="text"
-          value={accountNumber}
-          onChange={(e) => setAccountNumber(e.target.value.toUpperCase())}
+          value={iban}
+          onChange={(e) => setIban(e.target.value.toUpperCase())}
           placeholder="FR76..."
+          className="mt-1 font-mono"
+        />
+      </div>
+      
+      <div>
+        <Label htmlFor="bic">BIC / SWIFT</Label>
+        <Input
+          id="bic"
+          type="text"
+          value={bic}
+          onChange={(e) => setBic(e.target.value.toUpperCase())}
+          placeholder="BNPAFRPP..."
           className="mt-1 font-mono"
         />
       </div>

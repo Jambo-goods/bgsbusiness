@@ -1,7 +1,7 @@
 
 import React from "react";
 import { useParams, Link } from "react-router-dom";
-import { ChevronLeft, RefreshCw } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { useInvestmentTracking } from "./hooks/useInvestmentTracking";
@@ -15,9 +15,7 @@ export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
   const { 
     investment, 
-    transactions, 
-    isRefreshing, 
-    refreshData 
+    transactions
   } = useInvestmentTracking(investmentId);
   
   // Error state - no investment found
@@ -45,8 +43,6 @@ export default function InvestmentTrackingPage() {
     <DashboardLayout>
       <DashboardHeader 
         userData={userData}
-        refreshData={refreshData}
-        isRefreshing={isRefreshing}
       />
       
       <div className="space-y-8">

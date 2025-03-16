@@ -109,8 +109,10 @@ export function useWithdrawForm(walletBalance: number, onSuccess?: () => void) {
           amount: withdrawalAmount,
           bank_name: bankName,
           account_owner: accountOwner,
-          iban: iban.replace(/\s/g, ''),
-          bic: bic.replace(/\s/g, ''),
+          bank_info: {
+            iban: iban.replace(/\s/g, ''),
+            bic: bic.replace(/\s/g, '')
+          },
           status: 'pending'
         })
         .select()
@@ -128,8 +130,7 @@ export function useWithdrawForm(walletBalance: number, onSuccess?: () => void) {
           amount: withdrawalAmount,
           type: 'withdrawal',
           description: `Demande de retrait vers ${bankName}`,
-          status: 'pending',
-          withdrawal_id: withdrawalData.id
+          status: 'pending'
         });
         
       if (transactionError) {
@@ -140,8 +141,7 @@ export function useWithdrawForm(walletBalance: number, onSuccess?: () => void) {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ 
-          wallet_balance: walletBalance - withdrawalAmount,
-          last_withdrawal_date: new Date().toISOString()
+          wallet_balance: walletBalance - withdrawalAmount
         })
         .eq('id', userId);
         
@@ -176,6 +176,12 @@ export function useWithdrawForm(walletBalance: number, onSuccess?: () => void) {
     }
   };
 
+  const isFormValid = amount.trim() !== "" && 
+                     bankName.trim() !== "" && 
+                     accountOwner.trim() !== "" && 
+                     iban.trim() !== "" &&
+                     bic.trim() !== "";
+
   return {
     amount,
     setAmount,
@@ -189,6 +195,7 @@ export function useWithdrawForm(walletBalance: number, onSuccess?: () => void) {
     setBic,
     errors,
     isSubmitting,
+    isFormValid,
     handleSubmit
   };
 }
