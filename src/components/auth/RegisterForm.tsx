@@ -13,34 +13,28 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-interface RegisterFormProps {
-  initialReferralCode?: string | null;
-}
-
-export default function RegisterForm({ initialReferralCode = null }: RegisterFormProps) {
+export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [referralCode, setReferralCode] = useState(initialReferralCode || "");
+  const [referralCode, setReferralCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
 
-  // Extract referral code from URL if present and not already set by props
+  // Extract referral code from URL if present
   useEffect(() => {
-    if (!initialReferralCode) {
-      const params = new URLSearchParams(location.search);
-      const ref = params.get('ref');
-      if (ref) {
-        setReferralCode(ref);
-      }
+    const params = new URLSearchParams(location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref);
     }
-  }, [location, initialReferralCode]);
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

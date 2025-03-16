@@ -1,14 +1,12 @@
 
-import { useEffect, useState } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import RegisterForm from "@/components/auth/RegisterForm";
 
 export default function Register() {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [referralCode, setReferralCode] = useState<string | null>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -18,15 +16,7 @@ export default function Register() {
     if (storedUser) {
       navigate("/dashboard");
     }
-
-    // Extract referral code from URL if present
-    const params = new URLSearchParams(location.search);
-    const ref = params.get('ref');
-    if (ref) {
-      console.log("Referral code detected in URL:", ref);
-      setReferralCode(ref);
-    }
-  }, [navigate, location]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen page-transition">
@@ -40,14 +30,9 @@ export default function Register() {
               <p className="text-bgs-blue/70">
                 Rejoignez BGS Business Club et commencez à investir dans des projets à fort potentiel
               </p>
-              {referralCode && (
-                <div className="mt-2 p-2 bg-green-50 text-green-700 rounded-md text-sm">
-                  Code de parrainage détecté ! Vous recevrez un bonus de 25€.
-                </div>
-              )}
             </div>
             
-            <RegisterForm initialReferralCode={referralCode} />
+            <RegisterForm />
             
             <div className="mt-6 text-center">
               <p className="text-bgs-blue/70">

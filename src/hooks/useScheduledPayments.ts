@@ -89,10 +89,9 @@ export const useScheduledPayments = () => {
             // If a payment status changed to "paid", show a notification
             if (payload.new.status === 'paid' && payload.old.status !== 'paid') {
               // We need to ensure 'id' exists in payload.new
-              if (payload.new && typeof payload.new === 'object' && 'id' in payload.new) {
-                const payloadId = payload.new.id as string;
+              if ('id' in payload.new) {
                 // Get project name if available
-                const projectName = scheduledPayments.find(p => p.id === payloadId)?.projects?.name || 'votre projet';
+                const projectName = scheduledPayments.find(p => p.id === payload.new.id)?.projects?.name || 'votre projet';
                 
                 toast.success(`Rendement reçu !`, {
                   description: `Vous avez reçu un rendement pour ${projectName}.`,
