@@ -1,7 +1,7 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, RefreshCw } from "lucide-react";
 import DashboardLayout from "@/layouts/DashboardLayout";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { useInvestmentTracking } from "./hooks/useInvestmentTracking";
@@ -15,7 +15,16 @@ import { toast } from "sonner";
 
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
-  const { investment, transactions, loading, isRefreshing, refreshData } = useInvestmentTracking(investmentId);
+  const { 
+    investment, 
+    transactions, 
+    loading, 
+    loadingTimeout,
+    isRefreshing, 
+    refreshData 
+  } = useInvestmentTracking(investmentId);
+  
+  const [loadAttempts, setLoadAttempts] = useState(0);
   
   useEffect(() => {
     // Log page render and loading state for debugging
@@ -33,18 +42,47 @@ export default function InvestmentTrackingPage() {
     return () => clearTimeout(timeoutId);
   }, [loading, investment]);
   
+  const handleRetry = () => {
+    setLoadAttempts(prev => prev + 1);
+    toast.info("Nouvelle tentative de chargement", {
+      description: "Tentative de récupération des données d'investissement..."
+    });
+    
+    // Force reload after a few attempts
+    if (loadAttempts >= 2) {
+      window.location.reload();
+    } else {
+      refreshData();
+    }
+  };
+  
   // Loading state
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <LoadingIndicator message="Chargement des données d'investissement..." />
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <LoadingIndicator 
+            message="Chargement des données d'investissement..." 
+            timeout={loadingTimeout}
+          />
+          
+          {loadingTimeout > 20 && (
+            <div className="mt-6">
+              <button 
+                onClick={handleRetry}
+                className="flex items-center px-4 py-2 rounded bg-bgs-blue text-white hover:bg-bgs-blue-dark"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Réessayer
+              </button>
+            </div>
+          )}
         </div>
       </DashboardLayout>
     );
   }
   
-  // No investment found state
+  // Error state - no investment found
   if (!investment) {
     return (
       <DashboardLayout>

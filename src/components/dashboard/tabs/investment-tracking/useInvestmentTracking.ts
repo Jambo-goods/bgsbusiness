@@ -18,13 +18,15 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
   const [animateRefresh, setAnimateRefresh] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [loadingSeconds, setLoadingSeconds] = useState(0);
   const [hasShownNoInvestmentToast, setHasShownNoInvestmentToast] = useState(false);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const loadingCounterRef = useRef<NodeJS.Timeout | null>(null);
   const loadAttemptRef = useRef(0);
-  const maxLoadAttempts = 3;
+  const maxLoadAttempts = 5; // Increase max attempts
   
   // Function to safely set loading state with debounce to prevent flickering
-  const setLoadingWithDebounce = (isLoading: boolean) => {
+  const setLoadingWithDebounce = useCallback((isLoading: boolean) => {
     // Clear any existing timer
     if (loadingTimerRef.current) {
       clearTimeout(loadingTimerRef.current);
@@ -34,13 +36,29 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
     if (isLoading) {
       // Set loading to true immediately
       setIsLoading(true);
+      
+      // Start counter for loading time
+      if (!loadingCounterRef.current) {
+        let seconds = 0;
+        loadingCounterRef.current = setInterval(() => {
+          seconds += 1;
+          setLoadingSeconds(seconds);
+        }, 1000);
+      }
     } else {
       // Delay setting loading to false to prevent flickering
       loadingTimerRef.current = setTimeout(() => {
         setIsLoading(false);
+        setLoadingSeconds(0);
+        
+        // Clear counter
+        if (loadingCounterRef.current) {
+          clearInterval(loadingCounterRef.current);
+          loadingCounterRef.current = null;
+        }
       }, 800); // 800ms debounce to ensure stability
     }
-  };
+  }, []);
   
   const loadRealTimeData = useCallback(async () => {
     setLoadingWithDebounce(true);
@@ -64,7 +82,19 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       setUserId(currentUserId);
       console.log("Using user ID for investment tracking:", currentUserId);
       
-      const investments = await fetchRealTimeInvestmentData(currentUserId);
+      // Set timeout to prevent infinite loading
+      const timeoutPromise = new Promise<null>((_, reject) => 
+        setTimeout(() => reject(new Error("Fetch timeout")), 15000)
+      );
+      
+      // Fetch data with timeout protection
+      const investments = await Promise.race([
+        fetchRealTimeInvestmentData(currentUserId),
+        timeoutPromise
+      ]).catch(error => {
+        console.error("Timed out or error fetching investments:", error);
+        return null;
+      });
       
       console.log("Fetched investments:", investments?.length || 0);
       
@@ -104,15 +134,23 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       } else {
         // No investments found
         console.log("No investments found");
-        setPaymentRecords([]);
         
-        // Only show the toast once per session to avoid repeated notifications
-        if (!hasShownNoInvestmentToast) {
-          toast.info("Aucun investissement", {
-            description: "Aucun investissement trouvé pour votre compte.",
-            id: "no-investments-toast" // Add an ID to prevent duplicates
-          });
-          setHasShownNoInvestmentToast(true);
+        // Show empty state if we've tried multiple times
+        if (loadAttemptRef.current >= maxLoadAttempts) {
+          setPaymentRecords([]);
+          
+          // Only show the toast once per session to avoid repeated notifications
+          if (!hasShownNoInvestmentToast) {
+            toast.info("Aucun investissement", {
+              description: "Aucun investissement trouvé pour votre compte.",
+              id: "no-investments-toast" // Add an ID to prevent duplicates
+            });
+            setHasShownNoInvestmentToast(true);
+          }
+        } else {
+          // Retry after a delay
+          setTimeout(loadRealTimeData, 2000);
+          return;
         }
       }
     } catch (error) {
@@ -121,7 +159,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       // Retry up to max attempts
       if (loadAttemptRef.current < maxLoadAttempts) {
         console.log(`Retrying data load (attempt ${loadAttemptRef.current}/${maxLoadAttempts})...`);
-        setTimeout(loadRealTimeData, 1500); // Retry after 1.5 seconds
+        setTimeout(loadRealTimeData, 2000); // Retry after 2 seconds
         return;
       }
       
@@ -138,7 +176,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
         }, 500);
       }
     }
-  }, [paymentRecords, hasShownNoInvestmentToast]);
+  }, [paymentRecords, hasShownNoInvestmentToast, setLoadingWithDebounce]);
   
   useEffect(() => {
     loadRealTimeData();
@@ -154,6 +192,9 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       // Clean up any existing loading timer
       if (loadingTimerRef.current) {
         clearTimeout(loadingTimerRef.current);
+      }
+      if (loadingCounterRef.current) {
+        clearInterval(loadingCounterRef.current);
       }
     };
   }, [loadRealTimeData]);
@@ -177,6 +218,18 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
     loadRealTimeData();
   };
   
+  // Force retry if loading takes too long
+  useEffect(() => {
+    if (loadingSeconds === 30 && isLoading) {
+      toast.info("Chargement prolongé", {
+        description: "Le chargement prend plus de temps que prévu. Tentative de rafraîchissement automatique..."
+      });
+      // Force retry
+      loadAttemptRef.current = 0;
+      loadRealTimeData();
+    }
+  }, [loadingSeconds, isLoading, loadRealTimeData]);
+  
   return {
     sortColumn,
     sortDirection,
@@ -186,6 +239,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
     paymentRecords,
     animateRefresh,
     userId,
+    loadingSeconds,
     handleSort,
     handleRefresh
   };
