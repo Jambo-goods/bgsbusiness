@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from 'react';
 import { TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { PaymentRecord } from './types';
@@ -207,6 +208,16 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
 
   const fixedPercentage = 12;
   
+  // Format date to match the scheduled_payments format
+  const formatDate = (date: Date) => {
+    // Format the date to be displayed as "5 janvier 2024" instead of MM/DD/YYYY
+    return date.toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+  
   return (
     <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 transition-all hover:shadow-lg">
       <div className="flex items-center justify-between mb-6">
@@ -268,11 +279,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             {futurePayments && futurePayments.length > 0 ? futurePayments.map(payment => <tr key={payment.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {payment.date.toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}
+                    {formatDate(payment.date)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
                     {payment.projectName}
