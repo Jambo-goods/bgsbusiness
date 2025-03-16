@@ -1,10 +1,7 @@
-
 import React, { useMemo } from 'react';
-import { TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { TrendingUp, CheckCircle, Clock, AlertCircle, ChevronRight } from 'lucide-react';
 import { PaymentRecord } from './types';
 import { Project } from '@/types/project';
-import LoadingIndicator from './LoadingIndicator';
-import DashboardLoading from '../../DashboardLoading';
 
 interface ReturnProjectionSectionProps {
   paymentRecords: PaymentRecord[];
@@ -91,7 +88,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
     };
   }, [paymentRecords]);
 
-  if (isLoading) {
+  if (!paymentRecords || paymentRecords.length === 0 || isLoading) {
     return (
       <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 min-h-[400px]">
         <div className="flex items-center justify-between mb-6">
@@ -106,35 +103,63 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           </div>
         </div>
         
-        <DashboardLoading message="Chargement des projections de rendement..." />
-      </div>
-    );
-  }
-
-  // No data case
-  if (!futurePayments || futurePayments.length === 0) {
-    return (
-      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 min-h-[200px]">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="bg-green-50 p-2.5 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">Rendement mensuel</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Basées sur vos investissements actuels</p>
-            </div>
+        <div className="flex flex-col p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {userInvestments && userInvestments.length > 0 ? (
+              userInvestments.map((investment, index) => (
+                <div key={index} className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-all">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-blue-600">{investment.name}</h3>
+                      <p className="text-sm text-gray-600 mt-1">{investment.companyName}</p>
+                      
+                      <div className="flex items-center mt-4 text-sm">
+                        <div className="mr-4">
+                          <p className="text-gray-500">Montant investi</p>
+                          <p className="font-semibold">{investment.investedAmount}€</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-500">Rendement annuel</p>
+                          <p className="font-semibold text-green-600">{investment.yield}%</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-end">
+                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium">
+                        {investment.status === 'active' ? 'Actif' : 
+                         investment.status === 'completed' ? 'Terminé' : 'À venir'}
+                      </span>
+                      
+                      <div className="mt-auto pt-4">
+                        <button className="flex items-center text-sm text-blue-600 hover:text-blue-800">
+                          Détails <ChevronRight className="h-4 w-4 ml-1" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-2 flex flex-col items-center justify-center py-12 text-center">
+                <div className="bg-blue-50 p-3 rounded-full mb-4">
+                  <AlertCircle className="h-6 w-6 text-blue-500" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">Aucun investissement actif</h3>
+                <p className="text-sm text-gray-500 max-w-md">
+                  Vous n'avez pas encore d'investissements actifs. Explorez nos opportunités pour commencer à investir.
+                </p>
+              </div>
+            )}
           </div>
-        </div>
-        
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="bg-blue-50 p-3 rounded-full mb-4">
-            <AlertCircle className="h-6 w-6 text-blue-500" />
+          
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-100 mt-4">
+            <h3 className="font-medium text-gray-700 mb-2">Rendement estimé</h3>
+            <p className="text-sm text-gray-600">
+              Les investissements actifs génèrent un rendement annuel moyen de 12%, avec des versements mensuels.
+              Votre premier versement est généralement effectué après la période de délai initiale spécifiée dans chaque projet.
+            </p>
           </div>
-          <h3 className="text-lg font-medium text-gray-800 mb-2">Aucune projection disponible</h3>
-          <p className="text-sm text-gray-500 max-w-md">
-            Nous n'avons pas encore de projections de rendement à afficher. Veuillez vérifier ultérieurement.
-          </p>
         </div>
       </div>
     );
