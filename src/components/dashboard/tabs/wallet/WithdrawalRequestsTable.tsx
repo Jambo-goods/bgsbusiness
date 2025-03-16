@@ -5,6 +5,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components
 import LoadingState from "./withdrawal-table/LoadingState";
 import EmptyState from "./withdrawal-table/EmptyState";
 import WithdrawalTableRow from "./withdrawal-table/WithdrawalTableRow";
+import { toast } from "sonner";
 
 interface WithdrawalRequest {
   id: string;
@@ -25,6 +26,35 @@ export default function WithdrawalRequestsTable() {
 
   useEffect(() => {
     fetchWithdrawalRequests();
+
+    // Set up real-time listener for withdrawal_requests table
+    const withdrawalChannel = supabase
+      .channel('withdrawal_requests_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'withdrawal_requests'
+      }, (payload) => {
+        console.log('Withdrawal request change detected:', payload);
+        
+        // If a withdrawal status is changed to "scheduled", show a notification
+        if (payload.eventType === 'UPDATE' && 
+            payload.new.status === 'scheduled' && 
+            payload.old.status !== 'scheduled') {
+          toast.info(`Retrait programmé de ${payload.new.amount}€`, {
+            description: "Le montant a été déduit de votre solde disponible."
+          });
+        }
+        
+        // Refresh the withdrawal requests list
+        fetchWithdrawalRequests();
+      })
+      .subscribe();
+
+    // Cleanup function
+    return () => {
+      supabase.removeChannel(withdrawalChannel);
+    };
   }, []);
 
   const fetchWithdrawalRequests = async () => {

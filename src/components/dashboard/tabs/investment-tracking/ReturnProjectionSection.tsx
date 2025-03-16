@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from 'react';
 import { TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { PaymentRecord } from './types';
@@ -56,17 +55,14 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   const [localExpectedReturns, setLocalExpectedReturns] = useState<PaymentRecord[]>(cumulativeExpectedReturns);
   const [realtimeLoading, setRealtimeLoading] = useState(false);
 
-  // Set up real-time subscription to scheduled_payments table
   useEffect(() => {
-    // Initialize with props
     setLocalPaymentRecords(paymentRecords);
     setLocalExpectedReturns(cumulativeExpectedReturns);
     
-    // Create channel for real-time updates
     const scheduledPaymentsChannel = supabase
       .channel('scheduled_payments_updates')
       .on('postgres_changes', {
-        event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+        event: '*',
         schema: 'public',
         table: 'scheduled_payments'
       }, async (payload) => {
@@ -77,7 +73,26 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
         });
         
         try {
-          // Get updated payment data
+          if (payload.eventType === 'DELETE') {
+            if (payload.old && payload.old.id) {
+              setLocalPaymentRecords(current => 
+                current.filter(r => r.id !== payload.old.id)
+              );
+              
+              setLocalExpectedReturns(current => 
+                current.filter(r => r.id !== payload.old.id)
+              );
+            }
+            setRealtimeLoading(false);
+            return;
+          }
+          
+          const recordId = payload.new?.id;
+          if (!recordId) {
+            setRealtimeLoading(false);
+            return;
+          }
+          
           const { data: updatedPayment, error } = await supabase
             .from('scheduled_payments')
             .select(`
@@ -89,13 +104,12 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
                 company_name
               )
             `)
-            .eq('id', payload.new?.id || payload.old?.id)
+            .eq('id', recordId)
             .single();
             
           if (error) throw error;
           
           if (updatedPayment) {
-            // Convert to PaymentRecord format
             const updatedRecord: PaymentRecord = {
               id: updatedPayment.id,
               projectId: updatedPayment.project_id,
@@ -107,12 +121,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
               percentage: updatedPayment.percentage
             };
             
-            // Update local state with new data
             setLocalPaymentRecords(current => {
-              if (payload.eventType === 'DELETE') {
-                return current.filter(r => r.id !== payload.old.id);
-              }
-              
               const updatedRecords = [...current];
               const index = updatedRecords.findIndex(r => r.id === updatedPayment.id);
               
@@ -125,40 +134,27 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
               return updatedRecords;
             });
             
-            // Update cumulative returns
-            if (payload.eventType !== 'DELETE') {
-              setLocalExpectedReturns(current => {
-                const updatedReturns = [...current];
-                const index = updatedReturns.findIndex(r => r.id === updatedPayment.id);
-                
-                if (index >= 0) {
-                  updatedReturns[index] = {
-                    ...updatedRecord,
-                    expectedCumulativeReturn: updatedReturns[index].expectedCumulativeReturn
-                  };
-                } else {
-                  // Calculate expected cumulative return for new payment
-                  const totalBefore = updatedReturns.reduce((sum, record) => {
-                    return record.date < updatedRecord.date ? sum + record.amount : sum;
-                  }, 0);
-                  updatedReturns.push({
-                    ...updatedRecord,
-                    expectedCumulativeReturn: totalBefore + updatedRecord.amount
-                  });
-                }
-                
-                return updatedReturns.sort((a, b) => a.date.getTime() - b.date.getTime());
-              });
-            }
-          } else if (payload.eventType === 'DELETE') {
-            // Handle deletion
-            setLocalPaymentRecords(current => 
-              current.filter(r => r.id !== payload.old.id)
-            );
-            
-            setLocalExpectedReturns(current => 
-              current.filter(r => r.id !== payload.old.id)
-            );
+            setLocalExpectedReturns(current => {
+              const updatedReturns = [...current];
+              const index = updatedReturns.findIndex(r => r.id === updatedPayment.id);
+              
+              if (index >= 0) {
+                updatedReturns[index] = {
+                  ...updatedRecord,
+                  expectedCumulativeReturn: updatedReturns[index].expectedCumulativeReturn
+                };
+              } else {
+                const totalBefore = updatedReturns.reduce((sum, record) => {
+                  return record.date < updatedRecord.date ? sum + record.amount : sum;
+                }, 0);
+                updatedReturns.push({
+                  ...updatedRecord,
+                  expectedCumulativeReturn: totalBefore + updatedRecord.amount
+                });
+              }
+              
+              return updatedReturns.sort((a, b) => a.date.getTime() - b.date.getTime());
+            });
           }
         } catch (error) {
           console.error('Error handling scheduled payment update:', error);
@@ -168,7 +164,6 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
       })
       .subscribe();
       
-    // Cleanup function
     return () => {
       supabase.removeChannel(scheduledPaymentsChannel);
     };
