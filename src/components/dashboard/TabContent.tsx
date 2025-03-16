@@ -34,6 +34,16 @@ interface TabContentProps {
   refreshData?: () => Promise<void>;
 }
 
+interface OverviewProps {
+  userData: any;
+  userInvestments: any[];
+  setActiveTab: (tab: string) => void;
+}
+
+interface ProfileTabProps {
+  userData: any;
+}
+
 // Optimized loading fallback component
 const TabLoading = () => (
   <div className="w-full space-y-3 p-3">

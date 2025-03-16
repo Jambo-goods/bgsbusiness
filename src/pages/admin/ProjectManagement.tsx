@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -26,6 +27,7 @@ export default function ProjectManagement() {
   const [sortField, setSortField] = useState('created_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [editingProject, setEditingProject] = useState<any>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Form state
   const [formData, setFormData] = useState({
@@ -40,9 +42,9 @@ export default function ProjectManagement() {
     duration: '',
     category: '',
     status: 'active',
-    funding_progress: '',
+    funding_progress: '0',
     possible_durations: '',
-    profitability: '' // Added missing profitability field
+    profitability: ''
   });
 
   useEffect(() => {
@@ -83,6 +85,49 @@ export default function ProjectManagement() {
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error for this field if it exists
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    const requiredFields = [
+      'name', 'company_name', 'description', 'location', 'image', 
+      'price', 'yield', 'min_investment', 'duration', 'category', 'profitability'
+    ];
+    
+    requiredFields.forEach(field => {
+      if (!formData[field as keyof typeof formData] || formData[field as keyof typeof formData].trim() === '') {
+        errors[field] = 'Ce champ est obligatoire';
+      }
+    });
+    
+    // Validate numeric fields
+    if (formData.price && isNaN(Number(formData.price))) {
+      errors.price = 'Doit être un nombre';
+    }
+    
+    if (formData.yield && isNaN(Number(formData.yield))) {
+      errors.yield = 'Doit être un nombre';
+    }
+    
+    if (formData.min_investment && isNaN(Number(formData.min_investment))) {
+      errors.min_investment = 'Doit être un nombre';
+    }
+    
+    if (formData.profitability && isNaN(Number(formData.profitability))) {
+      errors.profitability = 'Doit être un nombre';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmitProject = async (e: React.FormEvent) => {
@@ -90,13 +135,19 @@ export default function ProjectManagement() {
     
     if (!adminUser) return;
     
+    // Validate the form
+    if (!validateForm()) {
+      toast.error("Veuillez corriger les erreurs du formulaire");
+      return;
+    }
+    
     try {
       // Parse numeric values
       const projectData = {
         ...formData,
         price: parseInt(formData.price),
         yield: parseFloat(formData.yield),
-        profitability: parseFloat(formData.profitability), // Parse the profitability field
+        profitability: parseFloat(formData.profitability),
         min_investment: parseInt(formData.min_investment),
         funding_progress: parseInt(formData.funding_progress) || 0,
         possible_durations: formData.possible_durations ? 
@@ -134,7 +185,10 @@ export default function ProjectManagement() {
           .insert(projectData)
           .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error details:", error);
+          throw error;
+        }
         result = data?.[0];
         
         // Log admin action
@@ -162,9 +216,9 @@ export default function ProjectManagement() {
         duration: '',
         category: '',
         status: 'active',
-        funding_progress: '',
+        funding_progress: '0',
         possible_durations: '',
-        profitability: '' // Reset profitability as well
+        profitability: ''
       });
       setIsAddProjectModalOpen(false);
       setEditingProject(null);
@@ -192,9 +246,9 @@ export default function ProjectManagement() {
       duration: project.duration || '',
       category: project.category || '',
       status: project.status || 'active',
-      funding_progress: project.funding_progress?.toString() || '',
+      funding_progress: project.funding_progress?.toString() || '0',
       possible_durations: project.possible_durations ? project.possible_durations.join(', ') : '',
-      profitability: project.profitability?.toString() || '' // Add profitability to the form when editing
+      profitability: project.profitability?.toString() || ''
     });
     setIsAddProjectModalOpen(true);
   };
@@ -281,10 +335,11 @@ export default function ProjectManagement() {
                 duration: '',
                 category: '',
                 status: 'active',
-                funding_progress: '',
+                funding_progress: '0',
                 possible_durations: '',
-                profitability: '' // Reset profitability
+                profitability: ''
               });
+              setFormErrors({});
               setIsAddProjectModalOpen(true);
             }}
             className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
@@ -413,12 +468,13 @@ export default function ProjectManagement() {
                     <Input
                       id="name"
                       name="name"
-                      className="pl-10"
+                      className={`pl-10 ${formErrors.name ? 'border-red-500' : ''}`}
                       placeholder="Nom du projet"
                       value={formData.name}
                       onChange={handleFormChange}
                       required
                     />
+                    {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
                   </div>
                 </div>
                 
@@ -431,12 +487,13 @@ export default function ProjectManagement() {
                     <Input
                       id="company_name"
                       name="company_name"
-                      className="pl-10"
+                      className={`pl-10 ${formErrors.company_name ? 'border-red-500' : ''}`}
                       placeholder="Nom de la société"
                       value={formData.company_name}
                       onChange={handleFormChange}
                       required
                     />
+                    {formErrors.company_name && <p className="text-red-500 text-xs mt-1">{formErrors.company_name}</p>}
                   </div>
                 </div>
               </div>
@@ -449,12 +506,13 @@ export default function ProjectManagement() {
                   id="description"
                   name="description"
                   rows={3}
-                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                  className={`mt-1 block w-full rounded-md border ${formErrors.description ? 'border-red-500' : 'border-gray-300'} px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm`}
                   placeholder="Description du projet"
                   value={formData.description}
                   onChange={handleFormChange}
                   required
                 />
+                {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -467,12 +525,13 @@ export default function ProjectManagement() {
                     <Input
                       id="location"
                       name="location"
-                      className="pl-10"
+                      className={`pl-10 ${formErrors.location ? 'border-red-500' : ''}`}
                       placeholder="Localisation"
                       value={formData.location}
                       onChange={handleFormChange}
                       required
                     />
+                    {formErrors.location && <p className="text-red-500 text-xs mt-1">{formErrors.location}</p>}
                   </div>
                 </div>
                 
@@ -483,7 +542,7 @@ export default function ProjectManagement() {
                   <select
                     id="category"
                     name="category"
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                    className={`mt-1 block w-full rounded-md border ${formErrors.category ? 'border-red-500' : 'border-gray-300'} px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm`}
                     value={formData.category}
                     onChange={handleFormChange}
                     required
@@ -495,6 +554,7 @@ export default function ProjectManagement() {
                     <option value="energie">Énergie</option>
                     <option value="agriculture">Agriculture</option>
                   </select>
+                  {formErrors.category && <p className="text-red-500 text-xs mt-1">{formErrors.category}</p>}
                 </div>
               </div>
               
@@ -507,12 +567,13 @@ export default function ProjectManagement() {
                   <Input
                     id="image"
                     name="image"
-                    className="pl-10"
+                    className={`pl-10 ${formErrors.image ? 'border-red-500' : ''}`}
                     placeholder="https://example.com/image.jpg"
                     value={formData.image}
                     onChange={handleFormChange}
                     required
                   />
+                  {formErrors.image && <p className="text-red-500 text-xs mt-1">{formErrors.image}</p>}
                 </div>
               </div>
               
@@ -531,12 +592,13 @@ export default function ProjectManagement() {
                       type="number"
                       min="1"
                       step="1"
-                      className="pl-10"
+                      className={`pl-10 ${formErrors.price ? 'border-red-500' : ''}`}
                       placeholder="Prix"
                       value={formData.price}
                       onChange={handleFormChange}
                       required
                     />
+                    {formErrors.price && <p className="text-red-500 text-xs mt-1">{formErrors.price}</p>}
                   </div>
                 </div>
                 
@@ -552,12 +614,13 @@ export default function ProjectManagement() {
                       type="number"
                       min="0.1"
                       step="0.1"
-                      className="pl-10"
+                      className={`pl-10 ${formErrors.yield ? 'border-red-500' : ''}`}
                       placeholder="Rendement"
                       value={formData.yield}
                       onChange={handleFormChange}
                       required
                     />
+                    {formErrors.yield && <p className="text-red-500 text-xs mt-1">{formErrors.yield}</p>}
                   </div>
                 </div>
                 
@@ -573,12 +636,13 @@ export default function ProjectManagement() {
                       type="number"
                       min="1"
                       step="1"
-                      className="pl-10"
+                      className={`pl-10 ${formErrors.min_investment ? 'border-red-500' : ''}`}
                       placeholder="Investissement minimum"
                       value={formData.min_investment}
                       onChange={handleFormChange}
                       required
                     />
+                    {formErrors.min_investment && <p className="text-red-500 text-xs mt-1">{formErrors.min_investment}</p>}
                   </div>
                 </div>
               </div>
@@ -593,12 +657,13 @@ export default function ProjectManagement() {
                     <Input
                       id="duration"
                       name="duration"
-                      className="pl-10"
+                      className={`pl-10 ${formErrors.duration ? 'border-red-500' : ''}`}
                       placeholder="ex: 12-24 mois"
                       value={formData.duration}
                       onChange={handleFormChange}
                       required
                     />
+                    {formErrors.duration && <p className="text-red-500 text-xs mt-1">{formErrors.duration}</p>}
                   </div>
                 </div>
                 
@@ -654,12 +719,13 @@ export default function ProjectManagement() {
                       type="number"
                       min="0.1"
                       step="0.1"
-                      className="pl-10"
+                      className={`pl-10 ${formErrors.profitability ? 'border-red-500' : ''}`}
                       placeholder="Rentabilité"
                       value={formData.profitability}
                       onChange={handleFormChange}
                       required
                     />
+                    {formErrors.profitability && <p className="text-red-500 text-xs mt-1">{formErrors.profitability}</p>}
                   </div>
                 </div>
                 
@@ -690,6 +756,7 @@ export default function ProjectManagement() {
                   onClick={() => {
                     setIsAddProjectModalOpen(false);
                     setEditingProject(null);
+                    setFormErrors({});
                   }}
                 >
                   Annuler
