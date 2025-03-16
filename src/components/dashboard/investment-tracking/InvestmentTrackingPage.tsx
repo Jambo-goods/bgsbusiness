@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import DashboardLayout from "@/layouts/DashboardLayout";
@@ -11,10 +11,27 @@ import TransactionHistoryCard from "./components/TransactionHistoryCard";
 import ProjectUpdatesCard from "./components/ProjectUpdatesCard";
 import ContactActionsCard from "./components/ContactActionsCard";
 import LoadingIndicator from "../tabs/investment-tracking/LoadingIndicator";
+import { toast } from "sonner";
 
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
   const { investment, transactions, loading, isRefreshing, refreshData } = useInvestmentTracking(investmentId);
+  
+  useEffect(() => {
+    // Log page render and loading state for debugging
+    console.log("InvestmentTrackingPage rendering, loading:", loading, "investment:", !!investment);
+    
+    // Set a timeout to notify user if loading takes too long
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        toast.info("Chargement en cours", {
+          description: "Le chargement prend plus de temps que prévu. Veuillez patienter..."
+        });
+      }
+    }, 5000);
+    
+    return () => clearTimeout(timeoutId);
+  }, [loading, investment]);
   
   // Loading state
   if (loading) {
@@ -33,6 +50,7 @@ export default function InvestmentTrackingPage() {
       <DashboardLayout>
         <div className="flex flex-col items-center justify-center min-h-[40vh] text-center py-8">
           <p className="text-bgs-gray-medium mb-4">Investissement non trouvé</p>
+          <p className="text-gray-500 mb-4">L'investissement que vous recherchez n'existe pas ou vous n'y avez pas accès.</p>
           <Link to="/dashboard" className="text-bgs-blue hover:text-bgs-blue-light underline">
             Retour au tableau de bord
           </Link>

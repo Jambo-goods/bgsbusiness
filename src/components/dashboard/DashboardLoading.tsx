@@ -12,6 +12,7 @@ export default function DashboardLoading({ message = "Chargement du tableau de b
       <div className="flex flex-col items-center space-y-4">
         <Loader2 className="h-10 w-10 text-bgs-orange animate-spin" />
         <div className="text-bgs-blue font-medium">{message}</div>
+        <div className="text-sm text-gray-500 mt-2">Patientez pendant le chargement des données...</div>
       </div>
     </div>
   );
