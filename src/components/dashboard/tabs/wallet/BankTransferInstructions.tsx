@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon, AlertCircle, CopyIcon, CheckIcon } from "lucide-react";
@@ -13,13 +13,19 @@ export default function BankTransferInstructions() {
   const [copied, setCopied] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
+  const [reference, setReference] = useState("");
+
+  // Generate reference only once when component mounts
+  useEffect(() => {
+    const generatedReference = "DEP-" + Math.floor(100000 + Math.random() * 900000);
+    setReference(generatedReference);
+  }, []);
 
   const bankDetails = {
     name: "BGS Invest",
     iban: "FR76 1234 5678 9101 1121 3141 516",
     bic: "BGSFRINVXXX",
-    bank: "Banque Générale Française",
-    reference: "DEP-" + Math.floor(100000 + Math.random() * 900000)
+    bank: "Banque Générale Française"
   };
 
   const copyToClipboard = (text: string) => {
@@ -57,7 +63,7 @@ export default function BankTransferInstructions() {
       // Enregistrer le virement bancaire dans la nouvelle table bank_transfers
       await supabase.from('bank_transfers').insert({
         user_id: userId,
-        reference: bankDetails.reference,
+        reference: reference,
         amount: parseInt(transferAmount),
         status: 'pending',
         notes: 'Confirmation de virement par l\'utilisateur'
@@ -69,7 +75,7 @@ export default function BankTransferInstructions() {
         amount: parseInt(transferAmount),
         type: "deposit",
         status: "pending",
-        description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
+        description: `Virement bancaire confirmé (réf: ${reference})`
       });
       
       // Fetch user profile data for email notification
@@ -87,7 +93,7 @@ export default function BankTransferInstructions() {
           userName: userName,
           userId: userId,
           userEmail: userEmail || "Email non disponible",
-          reference: bankDetails.reference,
+          reference: reference,
           amount: parseInt(transferAmount)
         }
       });
@@ -107,6 +113,11 @@ export default function BankTransferInstructions() {
       setIsConfirming(false);
     }
   };
+
+  // Don't render until reference is generated
+  if (!reference) {
+    return <div>Chargement des informations bancaires...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -166,12 +177,12 @@ export default function BankTransferInstructions() {
             <div className="border-t border-gray-200 pt-4">
               <p className="text-sm font-medium text-gray-500 mb-1">Référence à indiquer</p>
               <div className="flex items-center gap-2">
-                <p className="font-mono font-semibold tracking-wider text-bgs-blue">{bankDetails.reference}</p>
+                <p className="font-mono font-semibold tracking-wider text-bgs-blue">{reference}</p>
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   className="h-8 w-8 p-0" 
-                  onClick={() => copyToClipboard(bankDetails.reference)}
+                  onClick={() => copyToClipboard(reference)}
                 >
                   {copied ? <CheckIcon className="h-4 w-4 text-green-500" /> : <CopyIcon className="h-4 w-4" />}
                 </Button>
