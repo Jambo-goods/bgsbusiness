@@ -1,4 +1,3 @@
-
 // This Supabase Edge Function monitors withdrawal_requests status changes
 // and updates wallet balance when a withdrawal is scheduled
 
@@ -18,6 +17,7 @@ interface WebhookPayload {
     amount: number
     status: string
     processed_at: string | null
+    notes?: string
   }
   old_record: {
     status: string
@@ -46,6 +46,7 @@ Deno.serve(async (req) => {
 
   try {
     const payload: WebhookPayload = await req.json()
+    console.log("Received webhook payload:", JSON.stringify(payload, null, 2))
 
     // Only process withdrawal_requests table events
     if (payload.table !== 'withdrawal_requests') {
@@ -62,27 +63,31 @@ Deno.serve(async (req) => {
       const userId = payload.record.user_id
       const amount = payload.record.amount
       const status = payload.record.status
+      const reason = payload.record.notes
       
       try {
-        // Create notification for processing
-        const { error: notificationError } = await supabaseAdmin
-          .from('notifications')
-          .insert({
-            user_id: userId,
-            title: 'Demande de retrait traitée',
-            message: `Votre demande de retrait de ${amount}€ a été traitée. Statut: ${status}.`,
-            type: 'withdrawal',
-            seen: false,
-            data: { 
-              amount, 
-              status, 
-              category: status === 'rejected' ? 'error' : 'success',
+        // Create notification via the Edge Function
+        const notificationResponse = await fetch(
+          `${supabaseUrl}/functions/v1/send-withdrawal-notification`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${supabaseServiceRoleKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              amount,
+              status,
+              reason,
               processed: true
-            }
-          })
+            }),
+          }
+        )
         
-        if (notificationError) {
-          console.error("Error sending processing notification:", notificationError)
+        if (!notificationResponse.ok) {
+          const errorData = await notificationResponse.json()
+          console.error("Error sending notification via Edge Function:", errorData)
         } else {
           console.log(`Processing notification sent to user ${userId} for amount ${amount}€`)
         }
@@ -218,40 +223,32 @@ Deno.serve(async (req) => {
     if (newStatus !== oldStatus) {
       const userId = payload.record.user_id
       const amount = payload.record.amount
+      const reason = payload.record.notes
       
       try {
-        let notificationData = {
-          user_id: userId,
-          title: '',
-          message: '',
-          type: 'withdrawal',
-          seen: false,
-          data: { amount, status: newStatus, category: 'info' as const }
-        }
-        
-        if (newStatus === 'approved') {
-          notificationData.title = 'Retrait approuvé'
-          notificationData.message = `Votre retrait de ${amount}€ a été approuvé et sera traité prochainement.`
-          notificationData.data.category = 'success'
-        } else if (newStatus === 'completed') {
-          notificationData.title = 'Retrait effectué'
-          notificationData.message = `Votre retrait de ${amount}€ a été traité avec succès et les fonds ont été envoyés sur votre compte bancaire.`
-          notificationData.data.category = 'success'
-        } else if (newStatus === 'rejected') {
-          notificationData.title = 'Retrait refusé'
-          notificationData.message = `Votre demande de retrait de ${amount}€ a été refusée.`
-          notificationData.data.category = 'error'
-        }
-        
-        // Only send notification if we have a title (meaning we want to send a notification for this status)
-        if (notificationData.title) {
-          const { error: notificationError } = await supabaseAdmin
-            .from('notifications')
-            .insert(notificationData)
-          
-          if (notificationError) {
-            console.error("Error sending status change notification:", notificationError)
+        // Send notification via the Edge Function for any status change
+        const notificationResponse = await fetch(
+          `${supabaseUrl}/functions/v1/send-withdrawal-notification`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${supabaseServiceRoleKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              amount,
+              status: newStatus,
+              reason
+            }),
           }
+        )
+        
+        if (!notificationResponse.ok) {
+          const errorData = await notificationResponse.json()
+          console.error("Error sending status change notification via Edge Function:", errorData)
+        } else {
+          console.log(`Status change notification sent to user ${userId} for withdrawal status: ${newStatus}`)
         }
       } catch (notifError) {
         console.error("Error processing status change notification:", notifError)
@@ -269,6 +266,7 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error("Error in handle-withdrawal-status:", error)
     return new Response(
       JSON.stringify({ 
         success: false, 

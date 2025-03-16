@@ -80,4 +80,52 @@ export class WithdrawalNotificationService extends BaseNotificationService {
       metadata: { amount, status, processed: true }
     });
   }
+
+  /**
+   * Notification for specific withdrawal statuses
+   */
+  withdrawalStatusUpdated(amount: number, status: string, reason?: string): Promise<void> {
+    let title = "";
+    let description = "";
+    let category: 'info' | 'success' | 'warning' | 'error' = 'info';
+    
+    switch (status) {
+      case 'submitted':
+        title = "Demande de retrait soumise";
+        description = `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`;
+        break;
+      case 'validated':
+      case 'approved':
+        title = "Retrait validé";
+        description = `Votre demande de retrait de ${amount}€ a été validée et sera traitée prochainement.`;
+        category = 'success';
+        break;
+      case 'scheduled':
+        title = "Retrait programmé";
+        description = `Votre retrait de ${amount}€ a été programmé et sera envoyé sur votre compte.`;
+        category = 'success';
+        break;
+      case 'completed':
+        title = "Retrait effectué";
+        description = `Votre retrait de ${amount}€ a été effectué avec succès.`;
+        category = 'success';
+        break;
+      case 'rejected':
+        title = "Retrait refusé";
+        description = `Votre demande de retrait de ${amount}€ a été refusée.${reason ? ` Raison: ${reason}` : ''}`;
+        category = 'error';
+        break;
+      default:
+        title = "Statut de retrait mis à jour";
+        description = `Le statut de votre retrait de ${amount}€ a été mis à jour: ${status}.`;
+    }
+    
+    return this.createNotification({
+      title,
+      description,
+      type: 'withdrawal',
+      category,
+      metadata: { amount, status, reason }
+    });
+  }
 }

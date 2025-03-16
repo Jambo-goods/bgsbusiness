@@ -6,6 +6,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.34.0'
 
 Deno.serve(async (req) => {
+  console.log("send-withdrawal-notification function called")
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -19,6 +21,7 @@ Deno.serve(async (req) => {
   
   try {
     const { userId, amount, status, type = "withdrawal", reason = "", processed = false } = await req.json()
+    console.log("Received notification request:", { userId, amount, status, type, reason, processed })
     
     if (!userId || !amount || !status) {
       return new Response(
@@ -49,11 +52,11 @@ Deno.serve(async (req) => {
       title = 'Demande de retrait soumise'
       message = `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`
       category = 'info'
-    } else if (status === 'validated') {
+    } else if (status === 'validated' || status === 'approved') {
       title = 'Retrait validé'
-      message = `Votre demande de retrait de ${amount}€ est en cours de traitement.`
-      category = 'info'
-    } else if (status === 'scheduled') {
+      message = `Votre demande de retrait de ${amount}€ a été validée et sera traitée prochainement.`
+      category = 'success'
+    } else if (status === 'scheduled' || status === 'sheduled') {
       title = 'Retrait programmé'
       message = `Votre retrait de ${amount}€ a été programmé et sera traité prochainement.`
       category = 'success'
@@ -71,6 +74,8 @@ Deno.serve(async (req) => {
       category = 'info'
     }
     
+    console.log("Creating notification:", { title, message, category, status })
+    
     // Créer une notification avec les champs correctement formatés
     const { data, error } = await supabase
       .from('notifications')
@@ -80,7 +85,7 @@ Deno.serve(async (req) => {
         message,
         type,
         seen: false,
-        data: { amount, status, category, processed }
+        data: { amount, status, category, processed, reason }
       })
     
     if (error) {
@@ -90,6 +95,8 @@ Deno.serve(async (req) => {
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
     }
+    
+    console.log("Notification created successfully")
     
     return new Response(
       JSON.stringify({ success: true, message: 'Withdrawal notification sent' }),
