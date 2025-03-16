@@ -84,6 +84,7 @@ Deno.serve(async (req) => {
       })
     
     if (error) {
+      console.error("Error creating notification:", error);
       return new Response(
         JSON.stringify({ error: 'Failed to create notification', details: error }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
@@ -101,6 +102,7 @@ Deno.serve(async (req) => {
       }
     )
   } catch (error) {
+    console.error("Error in send-withdrawal-notification:", error);
     return new Response(
       JSON.stringify({ error: 'Internal server error', details: error.message }),
       { 
