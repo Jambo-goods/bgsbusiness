@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 import DashboardLayout from "../layouts/DashboardLayout";
@@ -16,8 +16,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
   const { activeTab, setActiveTab } = useDashboardState();
-  const { userId, handleLogout } = useUserSession();
+  const { userId, sessionChecked, handleLogout } = useUserSession();
   const { isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useSidebarState();
+  const [hasShownNoSession, setHasShownNoSession] = useState(false);
   
   const { 
     userData, 
@@ -48,13 +49,7 @@ export default function Dashboard() {
   });
   
   useEffect(() => {
-    console.log("Dashboard polling status:", pollingStatus);
-    
-    const dataRefreshInterval = setInterval(() => {
-      refreshAllData();
-    }, 5 * 60 * 1000); // Refresh every 5 minutes
-    
-    // Set up direct wallet balance subscription
+    // Set up direct wallet balance subscription only once when userId is available
     if (userId) {
       console.log("Setting up dashboard wallet balance subscription");
       
@@ -80,15 +75,30 @@ export default function Dashboard() {
         .subscribe();
         
       return () => {
-        clearInterval(dataRefreshInterval);
         supabase.removeChannel(walletBalanceChannel);
       };
     }
-    
-    return () => {
-      clearInterval(dataRefreshInterval);
-    };
-  }, [pollingStatus, refreshAllData, userId, refreshProfileData]);
+  }, [userId, refreshProfileData]);
+
+  useEffect(() => {
+    // Only refresh data periodically when we have a userId
+    if (userId) {
+      const dataRefreshInterval = setInterval(() => {
+        refreshAllData();
+      }, 5 * 60 * 1000); // Refresh every 5 minutes
+      
+      return () => {
+        clearInterval(dataRefreshInterval);
+      };
+    }
+  }, [userId, refreshAllData]);
+
+  // Show no session message only once after session check completes
+  useEffect(() => {
+    if (sessionChecked && !userId && !hasShownNoSession) {
+      setHasShownNoSession(true);
+    }
+  }, [sessionChecked, userId, hasShownNoSession]);
 
   console.log("Current active tab (Dashboard.tsx):", activeTab);
   

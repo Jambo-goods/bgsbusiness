@@ -1,106 +1,128 @@
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SubscriptionOptions {
   userId: string;
   onProfileUpdate?: () => void;
   onInvestmentUpdate?: () => void;
   onTransactionUpdate?: () => void;
-  pollingInterval?: number; // in milliseconds
+  onNotificationUpdate?: () => void;
+  pollingInterval?: number;
 }
 
-export const useRealTimeSubscriptions = ({
+export function useRealTimeSubscriptions({
   userId,
   onProfileUpdate,
   onInvestmentUpdate,
   onTransactionUpdate,
-  pollingInterval = 60000 // Default polling every 60 seconds
-}: SubscriptionOptions) => {
-  const [pollingStatus, setPollingStatus] = useState<'disabled' | 'active' | 'error'>('disabled');
-  const pollingTimerRef = useRef<number | null>(null);
-  const lastUpdateRef = useRef<{
-    profile: number;
-    investment: number;
-    transaction: number;
-  }>({
-    profile: 0,
-    investment: 0,
-    transaction: 0
-  });
+  onNotificationUpdate,
+  pollingInterval = 60000 // Default to 1 minute
+}: SubscriptionOptions) {
+  const [pollingStatus, setPollingStatus] = useState<'active' | 'disabled' | 'error'>('disabled');
+  const [hasSetupSubscriptions, setHasSetupSubscriptions] = useState(false);
+  
+  const triggerManualUpdate = useCallback(() => {
+    if (onProfileUpdate) onProfileUpdate();
+    if (onInvestmentUpdate) onInvestmentUpdate();
+    if (onTransactionUpdate) onTransactionUpdate();
+    if (onNotificationUpdate) onNotificationUpdate();
+  }, [onProfileUpdate, onInvestmentUpdate, onTransactionUpdate, onNotificationUpdate]);
 
-  // Start polling when component mounts
   useEffect(() => {
-    if (!userId) {
-      console.log("No user ID provided. Polling disabled.");
-      return;
-    }
-
-    const startPolling = () => {
-      setPollingStatus('active');
-      console.log(`Polling started with interval of ${pollingInterval}ms`);
-
-      // Clear any existing interval
-      if (pollingTimerRef.current) {
-        window.clearInterval(pollingTimerRef.current);
+    // Only set up subscriptions once
+    if (userId && !hasSetupSubscriptions) {
+      setHasSetupSubscriptions(true);
+      console.log("Setting up real-time subscriptions for user:", userId);
+      
+      try {
+        const channels = [];
+        
+        // Set up profile changes channel
+        if (onProfileUpdate) {
+          const profileChannel = supabase.channel('profile-changes')
+            .on('postgres_changes', {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'profiles',
+              filter: `id=eq.${userId}`
+            }, (payload) => {
+              console.log('Profile updated:', payload);
+              onProfileUpdate();
+            })
+            .subscribe();
+          
+          channels.push(profileChannel);
+        }
+        
+        // Set up investment changes channel
+        if (onInvestmentUpdate) {
+          const investmentChannel = supabase.channel('investment-changes')
+            .on('postgres_changes', {
+              event: '*',
+              schema: 'public',
+              table: 'investments',
+              filter: `user_id=eq.${userId}`
+            }, (payload) => {
+              console.log('Investment updated:', payload);
+              onInvestmentUpdate();
+            })
+            .subscribe();
+          
+          channels.push(investmentChannel);
+        }
+        
+        // Set up transaction changes channel
+        if (onTransactionUpdate) {
+          const transactionChannel = supabase.channel('transaction-changes')
+            .on('postgres_changes', {
+              event: '*',
+              schema: 'public',
+              table: 'wallet_transactions',
+              filter: `user_id=eq.${userId}`
+            }, (payload) => {
+              console.log('Transaction updated:', payload);
+              onTransactionUpdate();
+            })
+            .subscribe();
+          
+          channels.push(transactionChannel);
+        }
+        
+        // Set up notification changes channel
+        if (onNotificationUpdate) {
+          const notificationChannel = supabase.channel('notification-changes')
+            .on('postgres_changes', {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'notifications',
+              filter: `user_id=eq.${userId}`
+            }, (payload) => {
+              console.log('New notification:', payload);
+              onNotificationUpdate();
+            })
+            .subscribe();
+          
+          channels.push(notificationChannel);
+        }
+        
+        setPollingStatus('active');
+        
+        return () => {
+          console.log("Cleaning up real-time subscriptions");
+          channels.forEach(channel => {
+            supabase.removeChannel(channel);
+          });
+        };
+      } catch (error) {
+        console.error("Error setting up real-time subscriptions:", error);
+        setPollingStatus('error');
       }
-
-      // Create new polling interval with throttling
-      pollingTimerRef.current = window.setInterval(() => {
-        console.log("Polling for updates...");
-        const now = Date.now();
-        
-        // Throttle profile updates (max once every 30 seconds)
-        if (onProfileUpdate && now - lastUpdateRef.current.profile > 30000) {
-          onProfileUpdate();
-          lastUpdateRef.current.profile = now;
-        }
-        
-        // Throttle investment updates (max once every 45 seconds)
-        if (onInvestmentUpdate && now - lastUpdateRef.current.investment > 45000) {
-          onInvestmentUpdate();
-          lastUpdateRef.current.investment = now;
-        }
-        
-        // Throttle transaction updates (max once every 60 seconds)
-        if (onTransactionUpdate && now - lastUpdateRef.current.transaction > 60000) {
-          onTransactionUpdate();
-          lastUpdateRef.current.transaction = now;
-        }
-      }, pollingInterval);
-    };
-
-    // Start polling
-    startPolling();
-
-    // Cleanup on unmount
-    return () => {
-      console.log("Cleaning up polling interval");
-      if (pollingTimerRef.current) {
-        window.clearInterval(pollingTimerRef.current);
-        pollingTimerRef.current = null;
-      }
-      setPollingStatus('disabled');
-    };
-  }, [userId, pollingInterval, onProfileUpdate, onInvestmentUpdate, onTransactionUpdate]);
-
-  // Function to manually trigger updates
-  const triggerManualUpdate = (type: 'profile' | 'investment' | 'transaction') => {
-    const now = Date.now();
-    
-    if (type === 'profile' && onProfileUpdate) {
-      onProfileUpdate();
-      lastUpdateRef.current.profile = now;
-    } else if (type === 'investment' && onInvestmentUpdate) {
-      onInvestmentUpdate();
-      lastUpdateRef.current.investment = now;
-    } else if (type === 'transaction' && onTransactionUpdate) {
-      onTransactionUpdate();
-      lastUpdateRef.current.transaction = now;
     }
-  };
+  }, [userId, onProfileUpdate, onInvestmentUpdate, onTransactionUpdate, onNotificationUpdate, hasSetupSubscriptions]);
 
-  return { 
+  return {
     pollingStatus,
     triggerManualUpdate
   };
-};
+}

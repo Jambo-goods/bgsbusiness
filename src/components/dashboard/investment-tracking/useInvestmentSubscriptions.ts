@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -7,9 +7,12 @@ export const useInvestmentSubscriptions = (
   userId: string | null,
   refreshCallback: () => void
 ) => {
+  const [hasSetupSubscriptions, setHasSetupSubscriptions] = useState(false);
+  
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || hasSetupSubscriptions) return;
     
+    setHasSetupSubscriptions(true);
     console.log("Setting up real-time subscriptions for user:", userId);
     
     // Investments channel with filter for user's investments
@@ -67,70 +70,22 @@ export const useInvestmentSubscriptions = (
             notificationMessage = `Vous avez reçu un rendement de ${transaction.amount}€.`;
           }
           
-          // Create a notification in the database
-          try {
-            console.log('Creating transaction notification:', notificationType);
-            await supabase.from('notifications').insert({
-              user_id: userId,
-              type: notificationType,
-              title: notificationTitle,
-              message: notificationMessage,
-              seen: false,
-              data: transaction
-            });
-            
-            // Show toast notification immediately
-            toast.info(notificationTitle, {
-              description: notificationMessage
-            });
-            
-            console.log('Transaction notification created successfully');
-          } catch (error) {
-            console.error('Error creating transaction notification:', error);
-          }
+          // Show toast notification immediately
+          toast.info(notificationTitle, {
+            description: notificationMessage
+          });
         }
         
         refreshCallback();
       })
       .subscribe();
-      
-    // Also subscribe to notifications table to handle new notifications
-    const notificationsChannel = supabase
-      .channel('notifications_changes')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId} AND seen=eq.false`
-      }, (payload) => {
-        console.log('New notification received:', payload.new);
-        
-        // Don't show toast for investment notifications - they're already shown by the confirmation hook
-        if (payload.new.type === 'investment') {
-          console.log('Skipping duplicate toast for investment notification');
-          return;
-        }
-        
-        // Show toast notification
-        toast.info(payload.new.title, {
-          description: payload.new.message,
-          action: {
-            label: "Voir détails",
-            onClick: () => {
-              window.location.href = `/dashboard?tab=notifications`;
-            }
-          }
-        });
-      })
-      .subscribe();
-      
+    
     console.log("Real-time subscriptions set up successfully");
     
     return () => {
       console.log("Cleaning up investment tracking subscriptions");
       if (investmentChannel) supabase.removeChannel(investmentChannel);
       if (walletChannel) supabase.removeChannel(walletChannel);
-      if (notificationsChannel) supabase.removeChannel(notificationsChannel);
     };
-  }, [userId, refreshCallback]);
+  }, [userId, refreshCallback, hasSetupSubscriptions]);
 };
