@@ -1,374 +1,310 @@
 
 import React, { useState, useEffect } from 'react';
-import { Copy, Share, UserPlus, Gift, Loader2, ExternalLink } from 'lucide-react';
-import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserSession } from '@/hooks/dashboard/useUserSession';
-import { Badge } from '@/components/ui/badge';
-import { Card } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Copy, Users, RefreshCw, Share2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface Referral {
+type Referral = {
   id: string;
+  referrer_id: string;
   referred_id: string;
   status: string;
-  created_at: string;
   commission_percentage: number;
-  referred_user?: {
+  created_at: string;
+  referred_user: {
     first_name: string;
     last_name: string;
     email: string;
   };
-}
+};
 
-const ParrainageTab = () => {
-  const { userId } = useUserSession();
-  const [referralCode, setReferralCode] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(true);
+export default function ParrainageTab() {
+  const [referralCode, setReferralCode] = useState<string | null>(null);
   const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [totalCommissions, setTotalCommissions] = useState<number>(0);
-  
-  // Fetch referral code and referrals from the database
+  const [totalCommission, setTotalCommission] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   useEffect(() => {
-    if (!userId) return;
-    
-    const fetchReferralData = async () => {
-      setLoading(true);
-      try {
-        // Get the user's referral code
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('referral_code')
-          .eq('id', userId)
-          .single();
-          
-        if (profileError) {
-          console.error('Error fetching referral code:', profileError);
-        } else if (profileData) {
-          setReferralCode(profileData.referral_code || '');
-        }
-        
-        // Get the user's referrals
-        const { data: referralsData, error: referralsError } = await supabase
-          .from('referrals')
-          .select(`
-            *,
-            referred_user:profiles!referred_id(
-              first_name, 
-              last_name,
-              email
-            )
-          `)
-          .eq('referrer_id', userId);
-          
-        if (referralsError) {
-          console.error('Error fetching referrals:', referralsError);
-        } else if (referralsData) {
-          setReferrals(referralsData as Referral[]);
-          
-          // Calculate total commissions (just a placeholder for now)
-          let total = 0;
-          referralsData.forEach(referral => {
-            // Let's say each referral generates 25€ for simplicity
-            total += 25;
-          });
-          setTotalCommissions(total);
-        }
-      } catch (error) {
-        console.error('Error in fetchReferralData:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchReferralData();
-    
-    // Set up real-time subscription for referrals
-    const referralsSubscription = supabase
+
+    // Set up real-time listener for referrals table
+    const channel = supabase
       .channel('referrals-changes')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'referrals',
-        filter: `referrer_id=eq.${userId}`,
-      }, (payload) => {
-        console.log('New referral:', payload);
-        toast.success('Nouveau filleul inscrit !', {
-          description: 'Un nouvel utilisateur s\'est inscrit avec votre code de parrainage.'
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'referrals' },
+        (payload) => {
+          console.log('Referrals table change:', payload);
+          fetchReferralData(false);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchReferralData = async (showLoading = true) => {
+    try {
+      if (showLoading) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
+      // Get current user session
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        toast.error("Vous devez être connecté pour accéder à cette page");
+        setIsLoading(false);
+        setIsRefreshing(false);
+        return;
+      }
+
+      // Get user's referral code
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('referral_code')
+        .eq('id', session.session.user.id)
+        .single();
+
+      if (profileData) {
+        setReferralCode(profileData.referral_code);
+      }
+
+      // Get user's referrals with referred user details
+      const { data: referralsData, error } = await supabase
+        .from('referrals')
+        .select(`
+          *,
+          referred_user:referred_id(
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('referrer_id', session.session.user.id);
+
+      if (error) {
+        console.error('Error fetching referrals:', error);
+        toast.error("Erreur lors de la récupération des parrainages");
+      } else {
+        // Map the data to our Referral type with proper type casting
+        const mappedReferrals = referralsData.map(referral => {
+          return {
+            ...referral,
+            referred_user: {
+              first_name: referral.referred_user?.first_name || 'Utilisateur',
+              last_name: referral.referred_user?.last_name || 'Inconnu',
+              email: referral.referred_user?.email || 'email@inconnu.com',
+            }
+          } as Referral;
         });
         
-        // Refresh data
-        fetchReferralData();
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(referralsSubscription);
-    };
-  }, [userId]);
-  
-  const copyReferralCode = () => {
-    if (!referralCode) return;
-    
-    navigator.clipboard.writeText(referralCode);
-    toast.success('Code de parrainage copié !');
+        setReferrals(mappedReferrals);
+        
+        // Calculate total commission (assuming we have a commission amount somewhere)
+        // For now, just count the number of successful referrals and multiply by 25
+        const completedReferrals = mappedReferrals.filter(r => r.status === 'completed').length;
+        setTotalCommission(completedReferrals * 25);
+      }
+    } catch (err) {
+      console.error('Error in fetchReferralData:', err);
+      toast.error("Une erreur est survenue");
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
   };
-  
-  const shareReferral = () => {
+
+  const handleCopyReferralLink = () => {
     if (!referralCode) return;
     
-    const shareText = `Rejoignez BGS Invest avec mon code de parrainage "${referralCode}" et obtenez un bonus de 25€ sur votre premier investissement !`;
-    const shareUrl = `${window.location.origin}/register?ref=${referralCode}`;
+    const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
+    navigator.clipboard.writeText(referralLink)
+      .then(() => {
+        toast.success("Lien de parrainage copié !");
+      })
+      .catch(() => {
+        toast.error("Impossible de copier le lien");
+      });
+  };
+
+  const handleShare = async () => {
+    if (!referralCode) return;
+    
+    const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
     
     if (navigator.share) {
-      navigator.share({
-        title: 'Rejoignez BGS Invest',
-        text: shareText,
-        url: shareUrl,
-      }).catch(err => {
-        console.error('Erreur lors du partage:', err);
-      });
+      try {
+        await navigator.share({
+          title: 'BGS Invest - Parrainage',
+          text: 'Rejoignez BGS Invest avec mon code de parrainage et obtenez un bonus de 25€ !',
+          url: referralLink,
+        });
+        toast.success("Partage réussi !");
+      } catch (err) {
+        console.error('Error sharing:', err);
+      }
     } else {
-      navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
-      toast.info('Lien et message copiés. Partagez-les avec vos amis !');
+      handleCopyReferralLink();
     }
   };
 
-  const getReferralStatusBadge = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <Badge className="bg-green-100 text-green-800 border-green-200">Actif</Badge>;
-      case 'pending':
-        return <Badge className="bg-amber-100 text-amber-800 border-amber-200">En attente</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800 border-gray-200">{status}</Badge>;
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-bgs-blue">Programme de Parrainage</h2>
-        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-24 w-full" />
+          </CardContent>
+        </Card>
         
-        <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-          <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
-            <div className="md:w-1/2 space-y-4">
-              <Skeleton className="h-10 w-10 rounded" />
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-16 w-full" />
-              
-              <div className="mt-6 space-y-4">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            </div>
-            
-            <div className="md:w-1/2 space-y-4">
-              <Skeleton className="h-10 w-10 rounded" />
-              <Skeleton className="h-6 w-36" />
-              <div className="space-y-3">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-8 w-full" />
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-8 w-64 mb-2" />
+            <Skeleton className="h-4 w-96" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-bgs-blue">Programme de Parrainage</h2>
-      </div>
-      
-      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-        <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8">
-          <div className="md:w-1/2 space-y-4">
-            <div className="bg-blue-50 p-3 rounded-lg inline-block mb-2">
-              <UserPlus className="w-8 h-8 text-bgs-blue" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800">Invitez vos amis et gagnez</h3>
-            <p className="text-gray-600">
-              Parrainez vos amis et recevez <span className="font-semibold">10% de tous les gains de vos filleuls</span> de manière permanente.
-              Votre filleul bénéficie également d'un bonus de 25€ sur son premier investissement.
-            </p>
-            
-            <div className="mt-6 space-y-4">
-              <div className="relative">
-                <label className="text-sm font-medium text-gray-700">Votre code de parrainage</label>
-                <div className="mt-1 flex rounded-md shadow-sm">
-                  <input
-                    type="text"
-                    readOnly
-                    value={referralCode}
-                    className="flex-1 min-w-0 block w-full px-3 py-3 rounded-md border border-gray-300 bg-gray-50 text-gray-900 sm:text-sm font-medium"
-                  />
-                  <button
-                    type="button"
-                    onClick={copyReferralCode}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-r-md shadow-sm text-white bg-bgs-blue hover:bg-bgs-blue-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bgs-blue"
-                  >
-                    <Copy className="h-4 w-4 mr-1" />
-                    Copier
-                  </button>
+      <Card>
+        <CardHeader>
+          <CardTitle>Votre code de parrainage</CardTitle>
+          <CardDescription>Partagez ce code avec vos amis pour leur offrir un bonus de 25€</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gray-50 p-6 rounded-lg text-center">
+            {referralCode ? (
+              <>
+                <div className="mb-4">
+                  <span className="text-xl font-semibold bg-white px-6 py-3 rounded-lg border border-gray-200 inline-block shadow-sm">
+                    {referralCode}
+                  </span>
                 </div>
-              </div>
-              
-              <button
-                onClick={shareReferral}
-                className="w-full inline-flex justify-center items-center px-4 py-3 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-bgs-blue hover:bg-bgs-blue-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-bgs-blue"
-              >
-                <Share className="h-4 w-4 mr-2" />
-                Partager mon code
-              </button>
-              
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Lien d'invitation :</span>
-                  <br />
-                  <a 
-                    href={`${window.location.origin}/register?ref=${referralCode}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-bgs-blue hover:underline flex items-center gap-1 mt-1"
-                  >
-                    {`${window.location.origin}/register?ref=${referralCode}`}
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
+                <p className="text-sm text-gray-600 mb-4">
+                  Pour chaque ami qui s'inscrit avec votre code et effectue un investissement, 
+                  vous recevrez une commission de 25€.
                 </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={handleCopyReferralLink}
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copier le lien
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    className="flex items-center gap-2"
+                    onClick={handleShare}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    Partager
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center">
+                <p>Aucun code de parrainage trouvé.</p>
               </div>
-            </div>
+            )}
           </div>
-          
-          <div className="md:w-1/2 space-y-4 border-t pt-6 md:pt-0 md:border-t-0 md:border-l md:pl-8 mt-6 md:mt-0">
-            <div className="bg-green-50 p-3 rounded-lg inline-block mb-2">
-              <Gift className="w-8 h-8 text-green-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-800">Comment ça marche</h3>
-            <ul className="space-y-4">
-              <li className="flex items-start">
-                <div className="flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-bgs-blue text-white text-xs font-medium">
-                  1
-                </div>
-                <div className="ml-3">
-                  <p className="text-gray-600">Partagez votre code avec vos amis</p>
-                </div>
-              </li>
-              <li className="flex items-start">
-                <div className="flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-bgs-blue text-white text-xs font-medium">
-                  2
-                </div>
-                <div className="ml-3">
-                  <p className="text-gray-600">Ils s'inscrivent en utilisant votre code</p>
-                </div>
-              </li>
-              <li className="flex items-start">
-                <div className="flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-bgs-blue text-white text-xs font-medium">
-                  3
-                </div>
-                <div className="ml-3">
-                  <p className="text-gray-600">Ils effectuent leur premier investissement</p>
-                </div>
-              </li>
-              <li className="flex items-start">
-                <div className="flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-bgs-blue text-white text-xs font-medium">
-                  4
-                </div>
-                <div className="ml-3">
-                  <p className="text-gray-600">Vous recevez 10% de tous leurs gains</p>
-                </div>
-              </li>
-            </ul>
-            
-            <div className="mt-4 bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <span className="font-semibold">Exemple :</span> Si votre filleul gagne 100€ de rendement, vous recevez automatiquement 10€ sur votre portefeuille. Ces commissions sont calculées à vie sur l'ensemble de ses gains !
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       
-      <div className="bg-white rounded-xl shadow-md p-6 border border-gray-100">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">Vos parrainages</h3>
-          
-          {referrals.length > 0 && (
-            <div className="mt-2 md:mt-0">
-              <Badge className="bg-green-100 text-green-800 border-green-200 text-sm px-3 py-1">
-                Total des commissions: {totalCommissions}€
-              </Badge>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Vos parrainages</CardTitle>
+            <CardDescription>Suivez les personnes que vous avez parrainées</CardDescription>
+          </div>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            onClick={() => fetchReferralData(false)}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gray-50 p-4 rounded-lg mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-blue-500" />
+              <span className="font-medium">Total des commissions gagnées :</span>
             </div>
-          )}
-        </div>
-        
-        {referrals.length > 0 ? (
-          <div className="space-y-4">
+            <span className="text-lg font-semibold text-green-600">{totalCommission} €</span>
+          </div>
+          
+          {referrals.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Filleul</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission</th>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4">Nom</th>
+                    <th className="text-left py-3 px-4">Email</th>
+                    <th className="text-left py-3 px-4">Date</th>
+                    <th className="text-left py-3 px-4">Statut</th>
+                    <th className="text-left py-3 px-4">Commission</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody>
                   {referrals.map((referral) => (
-                    <tr key={referral.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0 h-8 w-8 bg-bgs-blue rounded-full flex items-center justify-center text-white font-semibold">
-                            {referral.referred_user?.first_name?.[0] || '?'}
-                          </div>
-                          <div className="ml-3">
-                            <div className="text-sm font-medium text-gray-900">
-                              {referral.referred_user?.first_name} {referral.referred_user?.last_name}
-                            </div>
-                            <div className="text-xs text-gray-500">{referral.referred_user?.email}</div>
-                          </div>
-                        </div>
+                    <tr key={referral.id} className="border-b hover:bg-gray-50">
+                      <td className="py-3 px-4">
+                        {`${referral.referred_user.first_name} ${referral.referred_user.last_name}`}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                      <td className="py-3 px-4">{referral.referred_user.email}</td>
+                      <td className="py-3 px-4">
                         {new Date(referral.created_at).toLocaleDateString('fr-FR')}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {getReferralStatusBadge(referral.status)}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm">
-                        <span className="text-green-600 font-medium">
-                          {referral.commission_percentage}% des gains
+                      <td className="py-3 px-4">
+                        <span 
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
+                            ${referral.status === 'completed' 
+                              ? 'bg-green-100 text-green-800' 
+                              : referral.status === 'pending' 
+                                ? 'bg-yellow-100 text-yellow-800' 
+                                : 'bg-gray-100 text-gray-800'}`}
+                        >
+                          {referral.status === 'completed' ? 'Complété' : 
+                           referral.status === 'pending' ? 'En attente' : referral.status}
                         </span>
+                      </td>
+                      <td className="py-3 px-4 font-medium">
+                        {referral.status === 'completed' ? '25 €' : '-'}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            
-            <Alert className="bg-blue-50 border-blue-100">
-              <AlertDescription className="text-blue-800">
-                Les commissions sont directement ajoutées à votre solde et apparaissent dans l'historique de transactions dans votre portefeuille.
-              </AlertDescription>
-            </Alert>
-          </div>
-        ) : (
-          <div className="bg-gray-50 p-8 rounded-lg text-center">
-            <p className="text-gray-600">Vous n'avez pas encore parrainé d'amis.</p>
-            <p className="text-gray-600 mt-2">Partagez votre code et commencez à gagner des commissions sur leurs gains !</p>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Users className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p>Vous n'avez pas encore parrainé d'amis.</p>
+              <p className="text-sm mt-1">Partagez votre code pour commencer !</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default ParrainageTab;
+}

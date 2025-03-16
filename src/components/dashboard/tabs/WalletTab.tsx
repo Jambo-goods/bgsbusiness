@@ -23,7 +23,44 @@ export default function WalletTab() {
       fetchWalletBalance(false); // Silent refresh (no loading indicator)
     }, 30000); // Check every 30 seconds
     
-    return () => clearInterval(balanceInterval);
+    // Set up realtime listener for scheduled payments to update balance
+    const scheduledPaymentsChannel = supabase
+      .channel('wallet-scheduled-payments')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'scheduled_payments', filter: 'status=eq.paid' },
+        (payload) => {
+          console.log('Scheduled payment paid:', payload);
+          fetchWalletBalance(false); // Refresh balance without loading state
+          
+          toast.success("Rendement reçu !", {
+            description: "Un paiement de rendement a été ajouté à votre portefeuille.",
+          });
+        }
+      )
+      .subscribe();
+      
+    // Set up realtime listener for wallet balance
+    const profilesChannel = supabase
+      .channel('wallet-balance-changes')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'profiles' },
+        async (payload) => {
+          const { data: session } = await supabase.auth.getSession();
+          
+          // Only update if this is the current user's profile
+          if (session.session?.user.id === payload.new.id && payload.new.wallet_balance !== payload.old.wallet_balance) {
+            console.log('Wallet balance updated:', payload.new.wallet_balance);
+            setBalance(payload.new.wallet_balance);
+          }
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      clearInterval(balanceInterval);
+      supabase.removeChannel(scheduledPaymentsChannel);
+      supabase.removeChannel(profilesChannel);
+    };
   }, []);
 
   const fetchWalletBalance = async (showLoading = true) => {
