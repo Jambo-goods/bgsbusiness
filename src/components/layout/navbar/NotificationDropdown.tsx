@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
@@ -13,6 +12,7 @@ import {
   Info, 
   XCircle
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { notificationService, Notification, NotificationType } from "@/services/notifications";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
