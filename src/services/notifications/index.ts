@@ -1,3 +1,4 @@
+
 import { BaseNotificationService } from "./BaseNotificationService";
 import { DepositNotificationService } from "./DepositNotificationService";
 import { WithdrawalNotificationService } from "./WithdrawalNotificationService";
@@ -88,6 +89,10 @@ class NotificationService extends BaseNotificationService {
   
   withdrawalReceived(amount: number): Promise<void> {
     return this.withdrawalService.withdrawalReceived(amount);
+  }
+  
+  withdrawalPaid(amount: number): Promise<void> {
+    return this.withdrawalService.withdrawalPaid(amount);
   }
 
   // Investment Notifications

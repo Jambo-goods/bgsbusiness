@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("Processing withdrawal notification request");
     const payload: NotificationPayload = await req.json()
     const { userId, amount, status, reason, processed } = payload
 
@@ -101,6 +102,8 @@ Deno.serve(async (req) => {
         message = `Le statut de votre retrait de ${amount}€ a été mis à jour: ${status}.`
         category = 'info'
     }
+
+    console.log(`Creating ${status} notification with title: ${title}`);
 
     // Create the notification
     const { data, error } = await supabase
