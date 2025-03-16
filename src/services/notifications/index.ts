@@ -33,6 +33,11 @@ class NotificationService extends BaseNotificationService {
     this.marketingService = new MarketingNotificationService();
   }
 
+  // Get unread count - needed for the NavbarActions component
+  getUnreadCount(): Promise<number> {
+    return super.getUnreadCount();
+  }
+
   // Deposit Notifications
   depositSuccess(amount: number): Promise<void> {
     return this.depositService.depositSuccess(amount);

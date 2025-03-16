@@ -1,5 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { Notification, NotificationCategory, NotificationType } from "./types";
+import { Notification, NotificationCategory, NotificationType, DatabaseNotification } from "./types";
 import { v4 as uuidv4 } from 'uuid';
 
 interface NotificationPayload {
@@ -86,10 +87,54 @@ export class BaseNotificationService {
         return [];
       }
       
-      return data as Notification[];
+      // Transform database notifications to app notifications
+      return (data as DatabaseNotification[]).map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.message,
+        date: new Date(item.created_at),
+        read: item.seen,
+        type: item.type as NotificationType,
+        category: item.data?.category as NotificationCategory,
+        metadata: item.data
+      }));
     } catch (error) {
       console.error("Error in getNotifications:", error);
       return [];
+    }
+  }
+
+  /**
+   * Get the count of unread notifications for the current user
+   */
+  async getUnreadCount(): Promise<number> {
+    try {
+      // Get current user
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session?.session) {
+        console.error("User not authenticated");
+        return 0;
+      }
+      
+      const userId = session.session.user.id;
+      
+      // Get unread notifications count
+      const { count, error } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('seen', false);
+      
+      if (error) {
+        console.error("Error fetching unread count:", error);
+        return 0;
+      }
+      
+      return count || 0;
+    } catch (error) {
+      console.error("Error in getUnreadCount:", error);
+      return 0;
     }
   }
 
