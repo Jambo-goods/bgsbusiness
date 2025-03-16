@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { RefreshCcw, CalculatorIcon, AlertCircle } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,17 +7,21 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export function WalletCard() {
   const { 
     walletBalance, 
     isLoadingBalance, 
     refreshBalance, 
-    recalculateBalance 
+    recalculateBalance,
+    updateBalanceOnWithdrawal
   } = useWalletBalance();
   
   const [showRefreshAlert, setShowRefreshAlert] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
 
   // When component mounts, make sure balance is up to date
   useEffect(() => {
@@ -33,9 +37,71 @@ export function WalletCard() {
     };
     
     updateBalanceOnLoad();
-  }, [refreshBalance]);
+    
+    // Set up withdrawal request subscriptions
+    const setupWithdrawalSubscriptions = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const userId = sessionData.session?.user.id;
+      
+      if (!userId) return;
+      
+      console.log("Setting up withdrawal subscriptions for WalletCard");
+      
+      const withdrawalChannel = supabase
+        .channel('wallet-card-withdrawal-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'withdrawal_requests',
+            filter: `user_id=eq.${userId}`
+          },
+          async (payload) => {
+            console.log("Withdrawal request updated, WalletCard notified:", payload);
+            
+            const oldStatus = payload.old?.status;
+            const newStatus = payload.new?.status;
+            
+            // Status changed to one that affects balance
+            if ((newStatus === 'approved' || newStatus === 'completed' || newStatus === 'scheduled') && 
+                oldStatus !== newStatus) {
+              
+              try {
+                console.log("Processing withdrawal update for balance...");
+                
+                if (payload.new?.id) {
+                  // Use the dedicated function to update balance
+                  await updateBalanceOnWithdrawal(payload.new.id);
+                  setLastUpdate(new Date());
+                  console.log("Withdrawal processed and balance updated");
+                }
+              } catch (err) {
+                console.error("Error during withdrawal balance update:", err);
+                setShowRefreshAlert(true);
+                toast.error("Erreur lors de la mise à jour du solde. Essayez de recalculer manuellement.");
+              }
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Withdrawal subscription status for WalletCard:", status);
+        });
+        
+      return withdrawalChannel;
+    };
+    
+    const subscriptionPromise = setupWithdrawalSubscriptions();
+    
+    return () => {
+      subscriptionPromise.then(channel => {
+        if (channel) supabase.removeChannel(channel);
+      });
+    };
+  }, [refreshBalance, updateBalanceOnWithdrawal]);
 
   const handleRefresh = async () => {
+    setIsManualRefreshing(true);
     try {
       await refreshBalance();
       setLastUpdate(new Date());
@@ -45,20 +111,25 @@ export function WalletCard() {
       console.error("Refresh error:", error);
       setShowRefreshAlert(true);
       toast.error("Erreur lors de l'actualisation du solde");
+    } finally {
+      setIsManualRefreshing(false);
     }
   };
 
   const handleForceRecalculate = async () => {
-    toast.loading("Recalcul forcé du solde en cours...");
+    setIsRecalculating(true);
+    const toastId = toast.loading("Recalcul forcé du solde en cours...");
     try {
       await recalculateBalance();
       setLastUpdate(new Date());
       setShowRefreshAlert(false);
-      toast.success("Recalcul du solde terminé");
+      toast.success("Recalcul du solde terminé", { id: toastId });
     } catch (error) {
       console.error("Force recalculate error:", error);
       setShowRefreshAlert(true);
-      toast.error("Erreur lors du recalcul du solde");
+      toast.error("Erreur lors du recalcul du solde", { id: toastId });
+    } finally {
+      setIsRecalculating(false);
     }
   };
 
@@ -75,9 +146,9 @@ export function WalletCard() {
                     onClick={handleRefresh} 
                     className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                     aria-label="Rafraîchir le solde"
-                    disabled={isLoadingBalance}
+                    disabled={isLoadingBalance || isManualRefreshing}
                   >
-                    <RefreshCcw className={`h-4 w-4 text-bgs-blue ${isLoadingBalance ? 'animate-spin' : ''}`} />
+                    <RefreshCcw className={`h-4 w-4 text-bgs-blue ${isManualRefreshing ? 'animate-spin' : ''}`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -93,9 +164,9 @@ export function WalletCard() {
                     onClick={handleForceRecalculate} 
                     className="p-2 rounded-full hover:bg-gray-100 transition-colors"
                     aria-label="Recalculer le solde"
-                    disabled={isLoadingBalance}
+                    disabled={isLoadingBalance || isRecalculating}
                   >
-                    <CalculatorIcon className={`h-4 w-4 text-bgs-blue ${isLoadingBalance ? 'animate-spin' : ''}`} />
+                    <CalculatorIcon className={`h-4 w-4 text-bgs-blue ${isRecalculating ? 'animate-spin' : ''}`} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -106,7 +177,7 @@ export function WalletCard() {
           </div>
         </div>
         
-        {isLoadingBalance ? (
+        {isLoadingBalance || isManualRefreshing || isRecalculating ? (
           <Skeleton className="h-10 w-32 mt-2" />
         ) : (
           <div className="flex items-baseline">

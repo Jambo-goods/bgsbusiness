@@ -43,15 +43,7 @@ serve(async (req) => {
     }
     
     console.log('Withdrawal found:', withdrawal)
-    
-    // Only proceed if the status is one that should affect the balance
-    if (!['approved', 'completed', 'scheduled'].includes(withdrawal.status)) {
-      console.log(`No balance update needed: withdrawal status is ${withdrawal.status}`)
-      return handleSuccess({ 
-        message: `No balance update needed: withdrawal status is ${withdrawal.status}` 
-      })
-    }
-    
+
     // Get the current user balance
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
@@ -69,51 +61,66 @@ serve(async (req) => {
     const newBalance = currentBalance - withdrawal.amount;
     console.log(`Updating balance for user ${withdrawal.user_id}: ${currentBalance} - ${withdrawal.amount} = ${newBalance}`)
     
-    // Update the user's wallet balance
-    const { error: updateError } = await supabaseClient
-      .from('profiles')
-      .update({ wallet_balance: newBalance })
-      .eq('id', withdrawal.user_id)
+    // Update the user's wallet balance - Use increment_wallet_balance to ensure atomicity
+    const { error: rpcError } = await supabaseClient.rpc(
+      'increment_wallet_balance',
+      { 
+        user_id: withdrawal.user_id,
+        increment_amount: -withdrawal.amount 
+      }
+    )
       
-    if (updateError) {
-      console.error('Error updating wallet balance:', updateError)
-      return handleError({ message: 'Failed to update wallet balance' }, 500)
+    if (rpcError) {
+      console.error('Error using increment_wallet_balance RPC:', rpcError)
+      
+      // Fallback: Update the balance directly if RPC fails
+      const { error: updateError } = await supabaseClient
+        .from('profiles')
+        .update({ wallet_balance: newBalance })
+        .eq('id', withdrawal.user_id)
+        
+      if (updateError) {
+        console.error('Error updating wallet balance (fallback method):', updateError)
+        return handleError({ message: 'Failed to update wallet balance' }, 500)
+      }
     }
     
     console.log('Wallet balance updated successfully, now creating transaction record')
     
-    // Create wallet transaction record if it doesn't exist yet
-    const { data: existingTransaction } = await supabaseClient
+    // Create wallet transaction record
+    const { error: transactionError } = await supabaseClient
       .from('wallet_transactions')
-      .select('id')
-      .eq('user_id', withdrawal.user_id)
-      .eq('type', 'withdrawal')
-      .eq('amount', withdrawal.amount)
-      .eq('status', 'completed')
-      .eq('description', `Retrait ${withdrawal.status}`)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .insert({
+        user_id: withdrawal.user_id,
+        amount: withdrawal.amount,
+        type: 'withdrawal',
+        status: 'completed',
+        description: `Retrait ${withdrawal.amount}€ - ${withdrawal.status}`
+      })
       
-    if (!existingTransaction || existingTransaction.length === 0) {
-      console.log('No existing transaction found, creating new one')
-      const { error: transactionError } = await supabaseClient
-        .from('wallet_transactions')
-        .insert({
+    if (transactionError) {
+      console.error('Error creating transaction record:', transactionError)
+      // Continue even if transaction creation fails as the balance was already updated
+    } else {
+      console.log('Transaction record created successfully')
+    }
+    
+    // Notify about the balance update
+    try {
+      const { error: notificationError } = await supabaseClient.functions.invoke('send-withdrawal-notification', {
+        body: { 
           user_id: withdrawal.user_id,
           amount: withdrawal.amount,
-          type: 'withdrawal',
-          status: 'completed',
-          description: `Retrait ${withdrawal.status}`
-        })
-        
-      if (transactionError) {
-        console.error('Error creating transaction record:', transactionError)
-        // Continue even if transaction creation fails
-      } else {
-        console.log('Transaction record created successfully')
+          new_balance: newBalance,
+          withdrawal_id: withdrawal.id 
+        }
+      })
+      
+      if (notificationError) {
+        console.error('Error sending notification:', notificationError)
       }
-    } else {
-      console.log('Existing transaction found, skipping creation')
+    } catch (notifyError) {
+      console.error('Error invoking notification function:', notifyError)
     }
     
     return handleSuccess({ 

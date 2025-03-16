@@ -1,77 +1,87 @@
 
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
+// send-withdrawal-notification/index.ts
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-const adminEmail = "jambogoodsafrica@gmail.com"; // Hardcoded admin email address
+import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-interface WithdrawalNotificationRequest {
-  userName: string;
-  userId: string;
-  userEmail: string;
-  amount: number;
-  bankDetails: {
-    accountName: string;
-    bankName: string;
-    accountNumber: string;
-  };
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const handler = async (req: Request): Promise<Response> => {
+serve(async (req) => {
   // Handle CORS preflight requests
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
   }
-
+  
   try {
-    console.log("Received withdrawal notification request");
-    const { userName, userId, userEmail, amount, bankDetails }: WithdrawalNotificationRequest = await req.json();
+    console.log('send-withdrawal-notification function called')
     
-    console.log(`Preparing to send withdrawal notification for user: ${userName} (${userId}), amount: ${amount}€`);
-    console.log(`Sending email to: ${adminEmail}`);
+    // Create a Supabase client with the Auth context of the logged in user
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    )
 
-    const emailResponse = await resend.emails.send({
-      from: "BGS Invest <notifications@bgsinvest.fr>",
-      to: [adminEmail],
-      subject: "Notification de demande de retrait",
-      html: `
-        <h1>Un utilisateur a demandé un retrait</h1>
-        <p><strong>Utilisateur:</strong> ${userName}</p>
-        <p><strong>ID utilisateur:</strong> ${userId}</p>
-        <p><strong>Email:</strong> ${userEmail}</p>
-        <p><strong>Montant:</strong> ${amount}€</p>
-        <h2>Coordonnées bancaires</h2>
-        <p><strong>Titulaire du compte:</strong> ${bankDetails.accountName}</p>
-        <p><strong>Banque:</strong> ${bankDetails.bankName}</p>
-        <p><strong>Numéro de compte:</strong> ${bankDetails.accountNumber}</p>
-        <p>Veuillez traiter cette demande de retrait.</p>
-      `,
-    });
+    // Get the request body
+    const { user_id, amount, new_balance, withdrawal_id } = await req.json()
+    
+    console.log('Processing notification for user:', user_id, 'withdrawal:', withdrawal_id)
+    
+    if (!user_id || !withdrawal_id) {
+      return new Response(
+        JSON.stringify({ error: 'User ID and withdrawal ID are required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-    console.log("Email withdrawal notification sent successfully:", emailResponse);
-
-    return new Response(JSON.stringify(emailResponse), {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders,
-      },
-    });
-  } catch (error: any) {
-    console.error("Error sending withdrawal notification:", error);
+    // Get the withdrawal request details
+    const { data: withdrawal, error: withdrawalError } = await supabaseClient
+      .from('withdrawal_requests')
+      .select('status')
+      .eq('id', withdrawal_id)
+      .single()
+      
+    if (withdrawalError) {
+      console.error('Error fetching withdrawal:', withdrawalError)
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch withdrawal details' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+    
+    // Add a database notification
+    const { error: notificationError } = await supabaseClient
+      .from('notifications')
+      .insert({
+        user_id: user_id,
+        type: 'withdrawal',
+        title: 'Mise à jour de retrait',
+        message: `Votre retrait de ${amount}€ a été traité. Nouveau solde: ${new_balance}€`,
+        seen: false,
+        data: { withdrawal_id, amount, new_balance, status: withdrawal.status }
+      })
+    
+    if (notificationError) {
+      console.error('Error creating notification:', notificationError)
+      // Continue even if notification creation fails
+    }
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
-    );
+      JSON.stringify({ 
+        success: true,
+        message: 'Withdrawal notification sent successfully'
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+    
+  } catch (error) {
+    console.error('Unexpected error in send-withdrawal-notification:', error)
+    return new Response(
+      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-};
-
-serve(handler);
+})
