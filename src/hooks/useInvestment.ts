@@ -6,19 +6,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { useInvestmentConfirmation } from "./useInvestmentConfirmation";
 
 export const useInvestment = (project: Project, investorCount: number) => {
-  const [investmentAmount, setInvestmentAmount] = useState<number>(project.min_investment || 100);
+  const [investmentAmount, setInvestmentAmount] = useState<number>(project.minInvestment || 100);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [selectedDuration, setSelectedDuration] = useState<number>(12);
   const [userId, setUserId] = useState<string | null>(null);
 
-  const minInvestment = project.min_investment || 100;
-  const maxInvestment = project.max_investment || 10000;
+  const minInvestment = project.minInvestment || 100;
+  const maxInvestment = project.maxInvestment || 10000;
 
   // Available durations
   const durations = [6, 12, 24, 36];
 
   // Calculate expected returns
-  const monthlyYieldPercentage = project.monthly_yield_percentage || 1;
+  const monthlyYieldPercentage = project.yield || 1;
   const monthlyReturn = (investmentAmount * monthlyYieldPercentage) / 100;
   const totalReturn = monthlyReturn * selectedDuration;
 

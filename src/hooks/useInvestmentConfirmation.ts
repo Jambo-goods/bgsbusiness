@@ -44,7 +44,7 @@ export const useInvestmentConfirmation = ({
       // Get project data for validating investment
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
-        .select("name, min_investment, max_investment, monthly_yield_percentage")
+        .select("name, min_investment, max_investment, yield")
         .eq("id", projectId)
         .single();
         
@@ -74,8 +74,8 @@ export const useInvestmentConfirmation = ({
           user_id: userId,
           project_id: projectId,
           amount: amount,
-          duration_months: duration,
-          monthly_yield_percentage: projectData.monthly_yield_percentage,
+          duration: duration,
+          yield_rate: projectData.yield,
           status: "active"
         })
         .select()
@@ -91,9 +91,9 @@ export const useInvestmentConfirmation = ({
         .from("profiles")
         .update({ 
           wallet_balance: newBalance,
-          // Increment investment_total if it exists
-          investment_total: supabase.rpc("increment_wallet_balance", { amount: amount }),
-          projects_count: supabase.rpc("increment_wallet_balance", { amount: 1 })
+          // Use increment functions for these values
+          investment_total: supabase.rpc("increment_wallet_balance", { user_id: userId, increment_amount: amount }),
+          projects_count: supabase.rpc("increment_wallet_balance", { user_id: userId, increment_amount: 1 })
         })
         .eq("id", userId);
         
@@ -117,8 +117,10 @@ export const useInvestmentConfirmation = ({
         throw new Error("Erreur lors de l'enregistrement de la transaction");
       }
       
-      // Send notification
-      notificationService.investmentConfirmed(amount, projectData.name, projectId);
+      // Send notification using the notification service
+      if (typeof notificationService?.investmentConfirmed === 'function') {
+        notificationService.investmentConfirmed(amount, projectData.name, projectId);
+      }
       
       // Send success toast
       toast.success("Investissement confirmé", {
