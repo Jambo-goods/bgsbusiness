@@ -23,13 +23,18 @@ interface ScheduledPayment {
 
 export default function TransactionHistoryCard({ transactions, investmentId }: TransactionHistoryCardProps) {
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Fetch scheduled payments for this project
   useEffect(() => {
     const fetchScheduledPayments = async () => {
-      if (!investmentId) return;
+      if (!investmentId) {
+        setIsLoading(false);
+        return;
+      }
       
       try {
+        setIsLoading(true);
         // First, get the project_id from the investment
         const { data: investment, error: investmentError } = await supabase
           .from('investments')
@@ -39,6 +44,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           
         if (investmentError || !investment) {
           console.error("Error fetching investment:", investmentError);
+          setIsLoading(false);
           return;
         }
         
@@ -51,12 +57,16 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           
         if (paymentsError) {
           console.error("Error fetching scheduled payments:", paymentsError);
+          setIsLoading(false);
           return;
         }
         
+        console.log("Scheduled payments fetched:", payments?.length || 0);
         setScheduledPayments(payments || []);
+        setIsLoading(false);
       } catch (error) {
         console.error("Error in fetchScheduledPayments:", error);
+        setIsLoading(false);
       }
     };
     
@@ -195,7 +205,11 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             </span>
           </h3>
           
-          {formattedScheduledPayments.length > 0 ? (
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
+              Chargement des versements programmés...
+            </div>
+          ) : formattedScheduledPayments.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -240,7 +254,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-              Aucun versement programmé trouvé pour cet investissement
+              {scheduledPayments.length === 0 && !isLoading ? 
+                "Aucun versement programmé trouvé dans la base de données pour cet investissement" : 
+                "Aucun versement programmé pour cet investissement"}
             </div>
           )}
         </div>
