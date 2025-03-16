@@ -12,6 +12,7 @@ import { useDashboardState } from "@/hooks/dashboard/useDashboardState";
 import { useUserSession } from "@/hooks/dashboard/useUserSession";
 import { useDataRefresh } from "@/hooks/dashboard/useDataRefresh";
 import DashboardStatusMapper from "@/components/dashboard/DashboardStatusMapper";
+import { useInvestmentData } from "@/hooks/dashboard/useInvestmentData";
 
 export default function Dashboard() {
   const { activeTab, setActiveTab } = useDashboardState();
@@ -29,6 +30,11 @@ export default function Dashboard() {
     isLoading: investmentsLoading, 
     refreshInvestmentsData 
   } = useInvestmentsData(userId);
+  
+  const {
+    investmentTotal,
+    activeProjectsCount,
+  } = useInvestmentData(userId);
   
   const { pollingStatus } = useRealTimeSubscriptions({
     userId: userId || '',
@@ -79,13 +85,13 @@ export default function Dashboard() {
       >
         <DashboardMain 
           isSidebarOpen={isSidebarOpen} 
-          userData={userData || {
-            firstName: "",
-            lastName: "",
-            email: "",
-            investmentTotal: 0,
-            projectsCount: 0,
-            walletBalance: 0
+          userData={{
+            firstName: userData?.firstName || "",
+            lastName: userData?.lastName || "",
+            email: userData?.email || "",
+            investmentTotal: investmentTotal, // Use real-time calculated value
+            projectsCount: activeProjectsCount, // Use real-time calculated value
+            walletBalance: userData?.walletBalance || 0
           }} 
           activeTab={activeTab} 
           userInvestments={userInvestments}

@@ -5,9 +5,13 @@ import { InvestmentChange, ProjectsChange } from "./types";
 import { toast } from "sonner";
 
 export const useInvestmentData = (
-  userId: string | null,
-  investmentTotal: number
-): { investmentChange: InvestmentChange; projectsChange: ProjectsChange } => {
+  userId: string | null
+): { 
+  investmentChange: InvestmentChange; 
+  projectsChange: ProjectsChange;
+  investmentTotal: number;
+  activeProjectsCount: number;
+} => {
   const [investmentChange, setInvestmentChange] = useState<InvestmentChange>({
     percentage: "0%",
     value: "0€",
@@ -15,23 +19,20 @@ export const useInvestmentData = (
   const [projectsChange, setProjectsChange] = useState<ProjectsChange>({
     value: "0",
   });
+  const [investmentTotal, setInvestmentTotal] = useState<number>(0);
+  const [activeProjectsCount, setActiveProjectsCount] = useState<number>(0);
 
   useEffect(() => {
     if (!userId) return;
 
     const fetchInvestmentData = async () => {
       try {
-        // Get investments for the last 3 months
-        const threeMonthsAgo = new Date();
-        threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-        const oneMonthAgo = new Date();
-        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-
+        // Get all active investments
         const { data: investmentsData, error: investmentsError } = await supabase
           .from("investments")
-          .select("amount, project_id, date")
+          .select("amount, project_id, date, status")
           .eq("user_id", userId)
-          .gte("date", threeMonthsAgo.toISOString());
+          .eq("status", "active");
 
         if (investmentsError) {
           console.error("Error fetching investments:", investmentsError);
@@ -39,11 +40,31 @@ export const useInvestmentData = (
         }
 
         if (investmentsData && investmentsData.length > 0) {
-          console.log(`Found ${investmentsData.length} investments in the last 3 months`);
+          console.log(`Found ${investmentsData.length} investments`);
 
-          // Calculate new projects count in last 3 months
-          const uniqueProjectsLastThreeMonths = new Set(
+          // Calculate active projects count
+          const uniqueActiveProjects = new Set(
             investmentsData.map((inv) => inv.project_id)
+          );
+          
+          const activeProjects = uniqueActiveProjects.size;
+          setActiveProjectsCount(activeProjects);
+          
+          // Calculate total investment amount from active investments
+          const totalInvestment = investmentsData
+            .reduce((sum, inv) => sum + inv.amount, 0);
+          
+          setInvestmentTotal(totalInvestment);
+
+          // Calculate new projects count in last 3 months for change indicator
+          const threeMonthsAgo = new Date();
+          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+          
+          const recentInvestments = investmentsData
+            .filter((inv) => new Date(inv.date) >= threeMonthsAgo);
+          
+          const uniqueProjectsLastThreeMonths = new Set(
+            recentInvestments.map((inv) => inv.project_id)
           ).size;
           
           setProjectsChange({
@@ -51,13 +72,16 @@ export const useInvestmentData = (
           });
 
           // Calculate investment change in last month
+          const oneMonthAgo = new Date();
+          oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+          
           const lastMonthInvestments = investmentsData
             .filter((inv) => new Date(inv.date) >= oneMonthAgo)
             .reduce((sum, inv) => sum + inv.amount, 0);
 
-          if (investmentTotal > 0) {
+          if (totalInvestment > 0) {
             const investPercentChange = Math.round(
-              (lastMonthInvestments / investmentTotal) * 100
+              (lastMonthInvestments / totalInvestment) * 100
             );
             setInvestmentChange({
               percentage: `${lastMonthInvestments > 0 ? "+" : ""}${investPercentChange}%`,
@@ -71,12 +95,6 @@ export const useInvestmentData = (
               percentage: "+100%",
               value: `↑ ${lastMonthInvestments}€`,
             });
-          } else {
-            // No investments and no total
-            setInvestmentChange({
-              percentage: "0%",
-              value: "0€",
-            });
           }
         } else {
           // No investments found
@@ -87,6 +105,8 @@ export const useInvestmentData = (
             percentage: "0%",
             value: "0€",
           });
+          setInvestmentTotal(0);
+          setActiveProjectsCount(0);
         }
       } catch (error) {
         console.error("Error in fetchInvestmentData:", error);
@@ -113,7 +133,12 @@ export const useInvestmentData = (
     return () => {
       supabase.removeChannel(investmentsChannel);
     };
-  }, [userId, investmentTotal]);
+  }, [userId]);
 
-  return { investmentChange, projectsChange };
+  return { 
+    investmentChange, 
+    projectsChange, 
+    investmentTotal, 
+    activeProjectsCount 
+  };
 };
