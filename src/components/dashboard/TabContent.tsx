@@ -11,7 +11,7 @@ import TransactionHistoryCard from "./investment-tracking/components/Transaction
 
 // Prefetch critical paths
 const preloadWalletTab = () => import("./tabs/WalletTab");
-const preloadInvestments = () => import("./Investments");
+const preloadInvestments = () => import("./tabs/wallet/WalletTab");
 
 // Lazy load tabs that aren't used as frequently
 const WalletTab = lazy(() => {
@@ -53,7 +53,6 @@ export default function TabContent({
   refreshData
 }: TabContentProps) {
   const [dbProjects, setDbProjects] = useState<Project[]>([]);
-  const [loading, setLoading] = useState(false);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loadingKey, setLoadingKey] = useState<string>('initial'); // Used to force remount of components
   
@@ -149,7 +148,7 @@ export default function TabContent({
                 <ProjectsList projects={dbProjects} />
               ) : (
                 <div className="text-center py-20">
-                  <p className="text-gray-500">Aucun projet disponible actuellement.</p>
+                  <p className="text-gray-500">Projets en cours de chargement...</p>
                 </div>
               )}
             </div>

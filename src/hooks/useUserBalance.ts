@@ -5,18 +5,14 @@ import { toast } from "sonner";
 
 export const useUserBalance = () => {
   const [userBalance, setUserBalance] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
   const maxAttempts = 3;
 
   const fetchUserBalance = useCallback(async () => {
     try {
-      // Skip loading state for better UX
-      setIsLoading(false);
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
-        setIsLoading(false);
         return;
       }
       
@@ -48,8 +44,6 @@ export const useUserBalance = () => {
         setTimeout(fetchUserBalance, 2000); // Retry after 2 seconds
         return;
       }
-    } finally {
-      setIsLoading(false);
     }
   }, [loadAttempts]);
 
@@ -96,7 +90,7 @@ export const useUserBalance = () => {
 
   return { 
     userBalance, 
-    isLoading: false, // Force loading to always be false
+    isLoading: false,
     refreshBalance: fetchUserBalance 
   };
 };

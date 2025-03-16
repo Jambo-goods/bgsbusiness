@@ -18,13 +18,11 @@ export default function InvestmentTrackingPage() {
     transactions
   } = useInvestmentTracking(investmentId);
   
-  // Error state - no investment found
+  // If no investment found yet, still show structure
   if (!investment) {
     return (
       <DashboardLayout>
-        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center py-8">
-          <p className="text-bgs-gray-medium mb-4">Investissement non trouvé</p>
-          <p className="text-gray-500 mb-4">L'investissement que vous recherchez n'existe pas ou vous n'y avez pas accès.</p>
+        <div className="flex flex-col py-8">
           <Link to="/dashboard" className="text-bgs-blue hover:text-bgs-blue-light underline">
             Retour au tableau de bord
           </Link>
