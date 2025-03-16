@@ -1,7 +1,7 @@
 
 import React from "react";
 import SidebarNavItem from "@/components/dashboard/SidebarNavItem";
-import { BarChart3, Wallet, TrendingUp, Briefcase, Award } from "lucide-react";
+import { BarChart3, Wallet, TrendingUp, Briefcase, Award, CalendarClock } from "lucide-react";
 
 interface PrincipalSectionProps {
   activeTab: string;
@@ -53,6 +53,14 @@ export default function PrincipalSection({
         icon={Award}
         label="Opportunités"
         value="opportunities"
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        expanded={expanded}
+      />
+      <SidebarNavItem
+        icon={CalendarClock}
+        label="Paiements"
+        value="payments"
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         expanded={expanded}
