@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
@@ -41,8 +42,16 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
         event: 'INSERT',
         schema: 'public',
         table: 'notifications'
-      }, () => {
-        console.log("New notification detected, refreshing list");
+      }, (payload) => {
+        console.log("New notification detected, refreshing list:", payload);
+        fetchNotifications();
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notifications'
+      }, (payload) => {
+        console.log("Notification updated, refreshing list:", payload);
         fetchNotifications();
       })
       .subscribe();

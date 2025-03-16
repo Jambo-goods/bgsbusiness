@@ -1,4 +1,3 @@
-
 import { BaseNotificationService } from "./BaseNotificationService";
 
 export class WithdrawalNotificationService extends BaseNotificationService {
@@ -151,12 +150,18 @@ export class WithdrawalNotificationService extends BaseNotificationService {
    * Notification when a withdrawal request is confirmed (processed_at field is filled)
    */
   withdrawalConfirmed(amount: number): Promise<void> {
+    console.log(`Creating withdrawal confirmed notification for amount: ${amount}`);
     return this.createNotification({
       title: "Demande de retrait confirmée",
       description: `Votre demande de retrait de ${amount}€ a été confirmée et est en cours de traitement.`,
       type: 'withdrawal',
       category: 'success',
       metadata: { amount, status: 'confirmed' }
+    }).then(() => {
+      console.log(`Successfully created withdrawal confirmed notification for amount: ${amount}`);
+    }).catch(error => {
+      console.error(`Error creating withdrawal confirmed notification: ${error.message}`);
+      throw error;
     });
   }
   

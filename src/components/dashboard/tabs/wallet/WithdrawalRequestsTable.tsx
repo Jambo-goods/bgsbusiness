@@ -72,7 +72,13 @@ export default function WithdrawalRequestsTable() {
               case 'confirmed':
                 // Handle confirmed status notification
                 console.log("Withdrawal confirmed notification");
-                notificationService.withdrawalConfirmed(amount);
+                notificationService.withdrawalConfirmed(amount)
+                  .then(() => {
+                    console.log(`Notification sent for confirmed withdrawal of ${amount}€`);
+                  })
+                  .catch(error => {
+                    console.error("Error sending confirmed withdrawal notification:", error);
+                  });
                 toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
                   description: "Elle est en cours de traitement."
                 });
