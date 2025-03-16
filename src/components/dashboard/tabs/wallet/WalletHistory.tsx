@@ -21,7 +21,7 @@ interface Transaction {
 interface Notification {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   created_at: string;
   type: string;
   read: boolean;
@@ -94,13 +94,31 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         
       if (notificationsError) throw notificationsError;
       
-      setTransactions(transactionsData || []);
-      setNotifications(notificationsData || []);
+      // Convert database types to our interface types
+      const typedTransactions = transactionsData?.map(item => ({
+        ...item,
+        type: item.type as 'deposit' | 'withdrawal'
+      })) || [];
+      
+      // Convert notifications to match our Notification interface
+      const typedNotifications = notificationsData?.map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.message,
+        created_at: item.created_at,
+        type: item.type,
+        read: item.seen,
+        category: 'info',
+        metadata: item.data as { amount: number; status: string } | null
+      })) || [];
+      
+      setTransactions(typedTransactions);
+      setNotifications(typedNotifications);
       
       // Combiner et trier les transactions et notifications par date
       const combined = [
-        ...(transactionsData || []).map(item => ({ ...item, itemType: 'transaction' as const })),
-        ...(notificationsData || []).map(item => ({ ...item, itemType: 'notification' as const }))
+        ...typedTransactions.map(item => ({ ...item, itemType: 'transaction' as const })),
+        ...typedNotifications.map(item => ({ ...item, itemType: 'notification' as const }))
       ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
       setCombinedItems(combined);
@@ -203,7 +221,10 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
 
   const getItemAmount = (item: any) => {
     if (item.itemType === 'notification') {
-      return item.metadata?.amount ? `${item.metadata.amount} €` : '';
+      if (item.metadata?.amount) {
+        return `-${item.metadata.amount} €`;
+      }
+      return '';
     }
     
     return formatAmount(item.amount, item.type);
@@ -211,7 +232,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
 
   const getItemAmountClass = (item: any) => {
     if (item.itemType === 'notification') {
-      return 'font-semibold text-gray-700';
+      return 'font-semibold text-red-600';
     }
     
     return `font-semibold ${getAmountClass(item.type)}`;
