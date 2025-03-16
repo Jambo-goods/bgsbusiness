@@ -53,6 +53,41 @@ export const bankTransferService = {
         console.log(`Successfully recalculated balance for user ${item.user_id}`);
       }
       
+      // Send a notification to the user about the deposit confirmation
+      try {
+        // Get user information
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email')
+          .eq('id', item.user_id)
+          .single();
+        
+        if (userError) {
+          console.error("Error fetching user data:", userError);
+        } else {
+          // Send email notification
+          const userName = `${userData.first_name} ${userData.last_name}`;
+          
+          await supabase.functions.invoke('send-user-notification', {
+            body: {
+              userEmail: userData.email,
+              userName,
+              subject: "Dépôt confirmé",
+              eventType: "deposit",
+              data: {
+                amount: amount,
+                status: "completed"
+              }
+            }
+          });
+          
+          console.log(`Notification sent to user ${item.user_id} about deposit confirmation`);
+        }
+      } catch (notifError) {
+        console.error("Error sending notification:", notifError);
+        // Continue even if notification fails
+      }
+      
       // Log admin action
       if (adminUser.id) {
         await logAdminAction(

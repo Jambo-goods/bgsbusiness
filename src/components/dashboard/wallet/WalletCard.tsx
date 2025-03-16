@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { RefreshCcw, CalculatorIcon, AlertCircle } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
@@ -8,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { notificationService } from "@/services/notifications";
 
 export function WalletCard() {
   const { 
@@ -23,11 +23,9 @@ export function WalletCard() {
   const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
 
-  // When component mounts, make sure balance is up to date with a full recalculation
   useEffect(() => {
     const updateBalanceOnLoad = async () => {
       try {
-        // On component mount, do a full recalculation to ensure accuracy
         await recalculateBalance();
         setLastUpdate(new Date());
         console.log("Balance recalculated on component mount");
@@ -39,7 +37,6 @@ export function WalletCard() {
     
     updateBalanceOnLoad();
     
-    // Set up withdrawal request subscriptions
     const setupWithdrawalSubscriptions = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
@@ -48,7 +45,6 @@ export function WalletCard() {
       
       console.log("Setting up withdrawal subscriptions for WalletCard");
       
-      // Listen to both INSERTs and UPDATEs
       const withdrawalChannel = supabase
         .channel('wallet-card-withdrawal-changes')
         .on(
@@ -62,20 +58,24 @@ export function WalletCard() {
           async (payload) => {
             console.log("Withdrawal request changed, WalletCard notified:", payload);
             
-            // For new withdrawals, refresh immediately as balance should already be updated
             if (payload.eventType === 'INSERT') {
               await refreshBalance();
               return;
             }
             
-            // For updates, check if we need to handle status changes
             if (payload.eventType === 'UPDATE') {
               const oldStatus = payload.old?.status;
               const newStatus = payload.new?.status;
               
               console.log(`Withdrawal status changed from ${oldStatus} to ${newStatus}`);
               
-              // Force recalculation to ensure accuracy regardless of status
+              if (payload.new?.amount && newStatus !== oldStatus) {
+                notificationService.withdrawalStatus(
+                  payload.new.amount, 
+                  newStatus === 'scheduled' ? 'processing' : newStatus
+                );
+              }
+              
               await recalculateBalance();
               setLastUpdate(new Date());
             }
@@ -85,14 +85,43 @@ export function WalletCard() {
           console.log("Withdrawal subscription status for WalletCard:", status);
         });
         
-      return withdrawalChannel;
+      const bankTransferChannel = supabase
+        .channel('wallet-card-bank-transfer-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'bank_transfers',
+            filter: `user_id=eq.${userId}`
+          },
+          async (payload) => {
+            console.log("Bank transfer updated, WalletCard notified:", payload);
+            
+            if (payload.new?.status === 'reçu' || payload.new?.status === 'received') {
+              if (payload.new.amount) {
+                notificationService.depositSuccess(payload.new.amount);
+              }
+              
+              await recalculateBalance();
+              setLastUpdate(new Date());
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Bank transfer subscription status for WalletCard:", status);
+        });
+      
+      return [withdrawalChannel, bankTransferChannel];
     };
     
     const subscriptionPromise = setupWithdrawalSubscriptions();
     
     return () => {
-      subscriptionPromise.then(channel => {
-        if (channel) supabase.removeChannel(channel);
+      subscriptionPromise.then(channels => {
+        channels?.forEach(channel => {
+          if (channel) supabase.removeChannel(channel);
+        });
       });
     };
   }, [refreshBalance, updateBalanceOnWithdrawal, recalculateBalance]);

@@ -1,7 +1,7 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 
 export function useWalletBalance() {
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -27,7 +27,6 @@ export function useWalletBalance() {
       const userId = session.session.user.id;
       console.log("Fetching wallet balance for user:", userId);
       
-      // Get the current balance directly from the profile
       const { data, error } = await supabase
         .from('profiles')
         .select('wallet_balance')
@@ -40,7 +39,6 @@ export function useWalletBalance() {
         setWalletBalance(0);
       } else {
         console.log("Wallet balance fetched from profile:", data?.wallet_balance);
-        // Convert null or undefined to 0
         const balance = data?.wallet_balance ?? 0;
         setWalletBalance(balance);
       }
@@ -70,7 +68,6 @@ export function useWalletBalance() {
       }
       
       try {
-        // Try to call the RPC function directly first as it's more reliable
         const { data: rpcData, error: rpcError } = await supabase.rpc(
           'recalculate_wallet_balance',
           { user_uuid: session.session.user.id }
@@ -79,7 +76,6 @@ export function useWalletBalance() {
         if (rpcError) {
           console.error("Error calling RPC function:", rpcError);
           
-          // Fall back to the Edge Function if RPC fails
           const response = await supabase.functions.invoke('recalculate-wallet-balance');
           
           console.log("Function response:", response);
@@ -99,7 +95,6 @@ export function useWalletBalance() {
           if (data && typeof data.balance === 'number') {
             setWalletBalance(data.balance);
             
-            // Determine appropriate toast based on balance
             if (data.balance < 0) {
               toast.warning("Solde recalculé avec succès", {
                 id: toastId,
@@ -119,7 +114,6 @@ export function useWalletBalance() {
         } else {
           console.log("RPC recalculation successful");
           
-          // Fetch the updated balance after RPC recalculation
           await fetchWalletBalance(false);
           
           toast.success("Solde recalculé avec succès", {
@@ -134,7 +128,6 @@ export function useWalletBalance() {
         });
       }
       
-      // Fetch the updated balance
       await fetchWalletBalance(false);
     } catch (err) {
       console.error("Error during recalculation:", err);
@@ -162,11 +155,9 @@ export function useWalletBalance() {
       
       console.log("Balance updated successfully:", response.data);
       
-      // Refresh the balance
       await fetchWalletBalance(false);
       
       if (response.data && response.data.new_balance !== undefined) {
-        // Show toast notification with the new balance
         toast.success("Solde mis à jour", {
           id: toastId,
           description: `Nouveau solde: ${response.data.new_balance}€`
@@ -184,12 +175,10 @@ export function useWalletBalance() {
     console.log("Setting up wallet balance subscriptions");
     fetchWalletBalance();
     
-    // Set up polling to check balance every minute
     const pollingInterval = setInterval(() => {
-      fetchWalletBalance(false); // Don't show loading state for automatic updates
+      fetchWalletBalance(false);
     }, 60000);
     
-    // Subscribe to both profiles table and wallet_transactions table changes for real-time updates
     const setupRealtimeSubscriptions = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
@@ -198,7 +187,6 @@ export function useWalletBalance() {
       
       console.log("Setting up realtime subscriptions for wallet balance, user:", userId);
       
-      // Listen for direct changes to the user's profile (wallet_balance column)
       const profileChannel = supabase
         .channel('wallet-balance-profile-changes')
         .on(
@@ -217,7 +205,6 @@ export function useWalletBalance() {
                 console.log("Setting new wallet balance from realtime update:", newProfile.wallet_balance);
                 setWalletBalance(newProfile.wallet_balance);
                 
-                // Check if balance has actually changed
                 if (payload.old && typeof payload.old === 'object') {
                   const oldProfile = payload.old as { wallet_balance?: number };
                   if (newProfile.wallet_balance !== oldProfile.wallet_balance) {
@@ -240,13 +227,12 @@ export function useWalletBalance() {
           console.log("Realtime subscription status for profiles:", status);
         });
       
-      // Listen for changes to wallet transactions
       const transactionChannel = supabase
         .channel('wallet-transactions-changes')
         .on(
           'postgres_changes',
           {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            event: '*',
             schema: 'public',
             table: 'wallet_transactions',
             filter: `user_id=eq.${userId}`
@@ -254,7 +240,6 @@ export function useWalletBalance() {
           (payload) => {
             console.log("Wallet transaction changed in real-time:", payload);
             
-            // Refresh balance to make sure it's up-to-date
             fetchWalletBalance(false);
             
             if (payload.new && typeof payload.new === 'object') {
@@ -264,13 +249,9 @@ export function useWalletBalance() {
                 const amount = newTransaction.amount;
                 
                 if (type === 'deposit') {
-                  toast.success("Dépôt complété", {
-                    description: `${amount}€ ont été ajoutés à votre solde`
-                  });
+                  notificationService.depositSuccess(amount);
                 } else if (type === 'withdrawal') {
-                  toast.info("Retrait complété", {
-                    description: `${amount}€ ont été déduits de votre solde`
-                  });
+                  notificationService.withdrawalStatus(amount, 'completed');
                 }
               }
             }
@@ -280,13 +261,12 @@ export function useWalletBalance() {
           console.log("Realtime subscription status for wallet transactions:", status);
         });
       
-      // Listen for changes to bank transfers
       const bankTransferChannel = supabase
         .channel('bank-transfers-changes')
         .on(
           'postgres_changes',
           {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            event: '*',
             schema: 'public',
             table: 'bank_transfers',
             filter: `user_id=eq.${userId}`
@@ -295,7 +275,6 @@ export function useWalletBalance() {
             console.log("Bank transfer changed in real-time:", payload);
             
             if (payload.new && typeof payload.new === 'object') {
-              // Check for status changes, especially to 'reçu' or 'received'
               const newPayload = payload.new as Record<string, any>;
               const oldPayload = payload.old as Record<string, any>;
               const status = newPayload.status;
@@ -309,12 +288,45 @@ export function useWalletBalance() {
                   oldPayload?.status !== 'reçu' && oldPayload?.status !== 'received') {
                 console.log("Transfer status changed to 'received', refreshing balance...");
                 
-                // Force immediate balance refresh
                 fetchWalletBalance(false);
                 
-                toast.success("Virement bancaire confirmé", {
-                  description: `${newPayload.amount}€ ont été ajoutés à votre solde`
-                });
+                if (newPayload.amount) {
+                  notificationService.depositSuccess(newPayload.amount);
+                  
+                  const sendEmailNotification = async () => {
+                    try {
+                      const { data: sessionData } = await supabase.auth.getSession();
+                      if (!sessionData.session) return;
+                      
+                      const { data: userData } = await supabase
+                        .from('profiles')
+                        .select('first_name, last_name, email')
+                        .eq('id', sessionData.session.user.id)
+                        .single();
+                        
+                      if (userData) {
+                        const userName = `${userData.first_name} ${userData.last_name}`;
+                        
+                        await supabase.functions.invoke('send-user-notification', {
+                          body: {
+                            userEmail: userData.email,
+                            userName,
+                            subject: "Dépôt confirmé",
+                            eventType: "deposit",
+                            data: {
+                              amount: newPayload.amount,
+                              status: "completed"
+                            }
+                          }
+                        });
+                      }
+                    } catch (error) {
+                      console.error("Error sending deposit notification email:", error);
+                    }
+                  };
+                  
+                  sendEmailNotification();
+                }
               }
             }
           }
@@ -323,13 +335,12 @@ export function useWalletBalance() {
           console.log("Realtime subscription status for bank transfers:", status);
         });
       
-      // Listen for changes to withdrawal requests
       const withdrawalChannel = supabase
         .channel('withdrawal-requests-changes')
         .on(
           'postgres_changes',
           {
-            event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+            event: '*',
             schema: 'public',
             table: 'withdrawal_requests',
             filter: `user_id=eq.${userId}`
@@ -347,18 +358,61 @@ export function useWalletBalance() {
                 new: status,
               });
               
-              // If the status changed to approved, completed or scheduled
-              if ((status === 'approved' || status === 'completed' || status === 'scheduled') && 
-                  oldPayload?.status !== status) {
-                
+              if (oldPayload?.status !== status) {
                 console.log(`Withdrawal status changed to '${status}', updating balance...`);
                 
-                // Update the balance immediately via the edge function
-                updateBalanceOnWithdrawal(newPayload.id);
+                if (newPayload.id) {
+                  updateBalanceOnWithdrawal(newPayload.id);
+                }
                 
-                toast.info(`Votre demande de retrait a été ${status === 'approved' ? 'approuvée' : status === 'completed' ? 'complétée' : 'planifiée'}`, {
-                  description: `Le montant de ${newPayload.amount}€ a été déduit de votre solde`
-                });
+                if (newPayload.amount) {
+                  const statusMapping = {
+                    'pending': 'pending',
+                    'approved': 'processing',
+                    'scheduled': 'processing',
+                    'completed': 'completed',
+                    'rejected': 'rejected'
+                  } as Record<string, 'pending' | 'processing' | 'completed' | 'rejected'>;
+                  
+                  notificationService.withdrawalStatus(
+                    newPayload.amount, 
+                    statusMapping[status] || 'processing'
+                  );
+                  
+                  const sendEmailNotification = async () => {
+                    try {
+                      const { data: sessionData } = await supabase.auth.getSession();
+                      if (!sessionData.session) return;
+                      
+                      const { data: userData } = await supabase
+                        .from('profiles')
+                        .select('first_name, last_name, email')
+                        .eq('id', sessionData.session.user.id)
+                        .single();
+                        
+                      if (userData) {
+                        const userName = `${userData.first_name} ${userData.last_name}`;
+                        
+                        await supabase.functions.invoke('send-user-notification', {
+                          body: {
+                            userEmail: userData.email,
+                            userName,
+                            subject: `Retrait ${status === 'completed' ? 'validé' : 'mis à jour'}`,
+                            eventType: "withdrawal",
+                            data: {
+                              amount: newPayload.amount,
+                              status: status
+                            }
+                          }
+                        });
+                      }
+                    } catch (error) {
+                      console.error("Error sending withdrawal notification email:", error);
+                    }
+                  };
+                  
+                  sendEmailNotification();
+                }
               }
             }
           }
@@ -372,18 +426,16 @@ export function useWalletBalance() {
     
     const subscriptionPromise = setupRealtimeSubscriptions();
     
-    // Clean up on unmount
     return () => {
       clearInterval(pollingInterval);
       subscriptionPromise.then(channels => {
-        channels.forEach(channel => {
+        channels?.forEach(channel => {
           if (channel) supabase.removeChannel(channel);
         });
       });
     };
-  }, [fetchWalletBalance, updateBalanceOnWithdrawal]);
+  }, [fetchWalletBalance, updateBalanceOnWithdrawal, recalculateBalance]);
 
-  // Function to manually refresh the balance
   const refreshBalance = async () => {
     await fetchWalletBalance(true);
   };
