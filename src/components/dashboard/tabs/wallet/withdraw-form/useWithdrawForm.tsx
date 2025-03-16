@@ -68,7 +68,7 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
             bankName: bankName,
             accountNumber: accountNumber
           },
-          status: 'pending',
+          status: 'pending', // Ensure correct status spelling
           requested_at: new Date().toISOString()
         })
         .select('id')

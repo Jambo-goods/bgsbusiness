@@ -44,8 +44,12 @@ serve(async (req) => {
     
     console.log('Withdrawal found:', withdrawal)
 
+    // Fix: Check for all possible status values including the typo 'sheduled'
     // Check if this withdrawal is in a status that should update the balance
-    if (withdrawal.status !== 'approved' && withdrawal.status !== 'completed' && withdrawal.status !== 'scheduled') {
+    if (withdrawal.status !== 'approved' && 
+        withdrawal.status !== 'completed' && 
+        withdrawal.status !== 'scheduled' && 
+        withdrawal.status !== 'sheduled') {
       console.log(`Withdrawal status is ${withdrawal.status}, not updating balance`)
       return handleSuccess({ 
         message: 'No balance update needed for this withdrawal status',
@@ -92,7 +96,7 @@ serve(async (req) => {
       console.log('Transaction already exists for this withdrawal, not deducting again:', existingTransaction[0].id);
       
       // Still update the status to completed if needed
-      if (withdrawal.status === 'approved' || withdrawal.status === 'scheduled') {
+      if (withdrawal.status === 'approved' || withdrawal.status === 'scheduled' || withdrawal.status === 'sheduled') {
         const { error: updateError } = await supabaseClient
           .from('withdrawal_requests')
           .update({ status: 'completed' })
@@ -160,8 +164,8 @@ serve(async (req) => {
       console.log('Transaction record created successfully:', transaction)
     }
     
-    // Update withdrawal status to completed if it was approved
-    if (withdrawal.status === 'approved' || withdrawal.status === 'scheduled') {
+    // Update withdrawal status to completed if it was approved or scheduled (with any spelling)
+    if (withdrawal.status === 'approved' || withdrawal.status === 'scheduled' || withdrawal.status === 'sheduled') {
       const { error: updateError } = await supabaseClient
         .from('withdrawal_requests')
         .update({ status: 'completed' })

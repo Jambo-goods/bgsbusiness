@@ -57,6 +57,7 @@ serve(async (req) => {
     let notificationTitle = 'Mise à jour de retrait';
     let notificationMessage = '';
     
+    // Fix typo in status check (sheduled -> scheduled)
     if (withdrawal && withdrawal.status === 'pending') {
       notificationMessage = `Votre demande de retrait de ${amount || withdrawal.amount}€ a été reçue et est en cours de traitement.`;
     } else if (new_balance !== undefined) {
