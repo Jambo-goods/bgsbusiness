@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -42,6 +43,7 @@ export const notificationService = {
             console.error('Error creating database notification from service:', error);
           });
         }
+        return Promise.resolve();
       });
     } catch (error) {
       console.error('Error in investmentConfirmed notification:', error);

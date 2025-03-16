@@ -78,6 +78,9 @@ export async function fetchTransactionHistory(userId: string): Promise<Transacti
       return [];
     }
     
+    // Create a map of investment transactions to avoid duplicates
+    const investmentMap = new Map();
+    
     // Format the transactions for display
     const formattedTransactions = walletTransactions.map(tx => {
       // Set the type based on the wallet transaction type or description
@@ -86,6 +89,12 @@ export async function fetchTransactionHistory(userId: string): Promise<Transacti
       // Check if it's an investment (for backward compatibility)
       if (tx.description && tx.description.toLowerCase().includes('investissement')) {
         type = 'investment';
+        
+        // Track this investment to avoid duplicates
+        const projectNameMatch = tx.description.match(/Investissement dans (.+)/);
+        if (projectNameMatch && projectNameMatch[1]) {
+          investmentMap.set(projectNameMatch[1].trim(), true);
+        }
       }
       
       // Check if it's a yield payment
@@ -98,6 +107,34 @@ export async function fetchTransactionHistory(userId: string): Promise<Transacti
         type: type
       };
     });
+    
+    // Now fetch investments not already in wallet transactions
+    const { data: investments, error: investmentsError } = await supabase
+      .from('investments')
+      .select(`
+        *,
+        projects (name)
+      `)
+      .eq('user_id', userId)
+      .order('date', { ascending: false });
+      
+    if (!investmentsError && investments && investments.length > 0) {
+      // Add only investments that don't exist in wallet transactions
+      investments.forEach(inv => {
+        const projectName = inv.projects?.name || '';
+        
+        if (!investmentMap.has(projectName)) {
+          formattedTransactions.push({
+            id: `inv-${inv.id}`,
+            created_at: inv.date || new Date().toISOString(),
+            amount: inv.amount || 0,
+            type: 'investment',
+            description: `Investissement dans ${projectName || 'un projet'}`,
+            status: 'completed'
+          });
+        }
+      });
+    }
     
     return formattedTransactions.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

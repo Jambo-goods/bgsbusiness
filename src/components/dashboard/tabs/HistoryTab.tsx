@@ -84,14 +84,23 @@ export default function HistoryTab() {
           };
         });
         
-        // Transform investments into transactions (for backward compatibility)
+        // Generate a map of existing investment references
+        const investmentReferences = new Map();
+        walletItems.forEach(item => {
+          if (item.type === 'investment' && item.description) {
+            // Extract project name if possible
+            const projectNameMatch = item.description.match(/Investissement dans (.+)/);
+            if (projectNameMatch && projectNameMatch[1]) {
+              investmentReferences.set(projectNameMatch[1].trim(), true);
+            }
+          }
+        });
+        
+        // Only include investments that don't already exist in wallet transactions
         const investmentItems = (investments || [])
           .filter(inv => {
-            // Only include investments that might not already be in wallet transactions
-            return !walletItems.some(w => 
-              w.type === 'investment' && 
-              w.description.includes(inv.projects?.name || '')
-            );
+            const projectName = inv.projects?.name || '';
+            return !investmentReferences.has(projectName);
           })
           .map(inv => ({
             id: `inv-${inv.id}`,
@@ -129,25 +138,31 @@ export default function HistoryTab() {
                 // Check for investments in description
                 if (newTx.description && newTx.description.toLowerCase().includes('investissement')) {
                   type = 'investment';
-                  notificationService.investmentConfirmed(newTx.amount, newTx.description.split('dans ')[1] || 'un projet', '');
+                  // Skip showing duplicate notification for investments
+                  console.log('Skipping duplicate investment notification in history tab');
                 } else if (type === 'deposit') {
                   notificationService.depositSuccess(newTx.amount);
                 } else if (type === 'withdrawal') {
                   notificationService.withdrawalStatus(newTx.amount, newTx.status || 'pending');
                 }
                 
-                // Add the new transaction to the list
-                setTransactions(prev => [
-                  {
-                    id: newTx.id,
-                    date: newTx.created_at,
-                    description: newTx.description || (type === 'deposit' ? 'Dépôt' : type === 'withdrawal' ? 'Retrait' : 'Transaction'),
-                    amount: newTx.amount,
-                    type: type,
-                    status: newTx.status
-                  },
-                  ...prev
-                ]);
+                // Add the new transaction to the list, avoiding duplicates for investments
+                if (type !== 'investment' || !transactions.some(tx => 
+                    tx.type === 'investment' && 
+                    tx.description === `Investissement dans ${newTx.description?.split('dans ')[1] || 'un projet'}`
+                )) {
+                  setTransactions(prev => [
+                    {
+                      id: newTx.id,
+                      date: newTx.created_at,
+                      description: newTx.description || (type === 'deposit' ? 'Dépôt' : type === 'withdrawal' ? 'Retrait' : 'Transaction'),
+                      amount: newTx.amount,
+                      type: type,
+                      status: newTx.status
+                    },
+                    ...prev
+                  ]);
+                }
               }
             }
           )

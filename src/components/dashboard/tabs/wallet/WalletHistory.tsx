@@ -195,27 +195,43 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         return transactions;
       }).flat() : [];
       
-      const investmentsAsTransactions: Transaction[] = investmentsData ? investmentsData.map(investment => {
+      const investmentTransactionsMap = new Map();
+      
+      const typedTransactions = transactionsData ? transactionsData.map(tx => {
+        if (tx.description && tx.description.toLowerCase().includes('investissement dans')) {
+          const projectNameMatch = tx.description.match(/Investissement dans (.+)/);
+          if (projectNameMatch && projectNameMatch[1]) {
+            investmentTransactionsMap.set(projectNameMatch[1].trim(), true);
+          }
+        }
+        
         return {
-          id: `inv-${investment.id}`,
-          amount: investment.amount || 0,
-          type: 'withdrawal' as const,
-          description: `Investissement dans ${investment.projects?.name || 'un projet'}`,
-          created_at: investment.date || new Date().toISOString(),
-          status: 'completed',
-          raw_timestamp: investment.date || new Date().toISOString()
+          id: tx.id,
+          amount: tx.amount,
+          type: tx.type as 'deposit' | 'withdrawal',
+          description: tx.description,
+          created_at: tx.created_at,
+          status: tx.status,
+          raw_timestamp: tx.created_at
         };
       }) : [];
       
-      const typedTransactions: Transaction[] = transactionsData ? transactionsData.map(tx => ({
-        id: tx.id,
-        amount: tx.amount,
-        type: tx.type as 'deposit' | 'withdrawal',
-        description: tx.description,
-        created_at: tx.created_at,
-        status: tx.status,
-        raw_timestamp: tx.created_at
-      })) : [];
+      const investmentsAsTransactions = investmentsData ? investmentsData
+        .filter(investment => {
+          const projectName = investment.projects?.name || '';
+          return !investmentTransactionsMap.has(projectName);
+        })
+        .map(investment => {
+          return {
+            id: `inv-${investment.id}`,
+            amount: investment.amount || 0,
+            type: 'withdrawal' as const,
+            description: `Investissement dans ${investment.projects?.name || 'un projet'}`,
+            created_at: investment.date || new Date().toISOString(),
+            status: 'completed',
+            raw_timestamp: investment.date || new Date().toISOString()
+          };
+        }) : [];
       
       const allTransactions = [...typedTransactions, ...transfersAsTransactions, ...withdrawalsAsTransactions, ...investmentsAsTransactions]
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
