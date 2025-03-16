@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -175,9 +176,7 @@ export function useWalletBalance() {
     console.log("Setting up wallet balance subscriptions");
     fetchWalletBalance();
     
-    const pollingInterval = setInterval(() => {
-      fetchWalletBalance(false);
-    }, 60000);
+    // Remove automatic polling interval
     
     const setupRealtimeSubscriptions = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -240,7 +239,7 @@ export function useWalletBalance() {
           (payload) => {
             console.log("Wallet transaction changed in real-time:", payload);
             
-            fetchWalletBalance(false);
+            // Don't automatically refresh the balance, only update UI with notifications
             
             if (payload.new && typeof payload.new === 'object') {
               const newTransaction = payload.new as Record<string, any>;
@@ -286,9 +285,9 @@ export function useWalletBalance() {
               
               if ((status === 'reçu' || status === 'received') && 
                   oldPayload?.status !== 'reçu' && oldPayload?.status !== 'received') {
-                console.log("Transfer status changed to 'received', refreshing balance...");
+                console.log("Transfer status changed to 'received', user needs to manually refresh");
                 
-                fetchWalletBalance(false);
+                // Don't auto refresh the balance, but show notification
                 
                 if (newPayload.amount) {
                   notificationService.depositSuccess(newPayload.amount);
@@ -359,11 +358,10 @@ export function useWalletBalance() {
               });
               
               if (oldPayload?.status !== status) {
-                console.log(`Withdrawal status changed to '${status}', updating balance...`);
+                console.log(`Withdrawal status changed to '${status}', user needs to manually update balance...`);
                 
-                if (newPayload.id) {
-                  updateBalanceOnWithdrawal(newPayload.id);
-                }
+                // Don't automatically call updateBalanceOnWithdrawal
+                // Show a notification instead
                 
                 if (newPayload.amount) {
                   const statusMapping = {
@@ -427,7 +425,6 @@ export function useWalletBalance() {
     const subscriptionPromise = setupRealtimeSubscriptions();
     
     return () => {
-      clearInterval(pollingInterval);
       subscriptionPromise.then(channels => {
         channels?.forEach(channel => {
           if (channel) supabase.removeChannel(channel);

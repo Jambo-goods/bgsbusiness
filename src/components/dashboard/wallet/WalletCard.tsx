@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { RefreshCcw, CalculatorIcon, AlertCircle } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
@@ -24,18 +25,8 @@ export function WalletCard() {
   const [isRecalculating, setIsRecalculating] = useState(false);
 
   useEffect(() => {
-    const updateBalanceOnLoad = async () => {
-      try {
-        await recalculateBalance();
-        setLastUpdate(new Date());
-        console.log("Balance recalculated on component mount");
-      } catch (error) {
-        console.error("Error recalculating balance on mount:", error);
-        setShowRefreshAlert(true);
-      }
-    };
-    
-    updateBalanceOnLoad();
+    // No longer automatically recalculate on component mount
+    // Only set up the real-time subscriptions
     
     const setupWithdrawalSubscriptions = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -76,7 +67,7 @@ export function WalletCard() {
                 );
               }
               
-              await recalculateBalance();
+              await refreshBalance(false);
               setLastUpdate(new Date());
             }
           }
@@ -103,7 +94,7 @@ export function WalletCard() {
                 notificationService.depositSuccess(payload.new.amount);
               }
               
-              await recalculateBalance();
+              await refreshBalance(false);
               setLastUpdate(new Date());
             }
           }
@@ -115,7 +106,12 @@ export function WalletCard() {
       return [withdrawalChannel, bankTransferChannel];
     };
     
+    // Set up subscriptions
     const subscriptionPromise = setupWithdrawalSubscriptions();
+    
+    // Initial balance fetch
+    refreshBalance(false);
+    setLastUpdate(new Date());
     
     return () => {
       subscriptionPromise.then(channels => {
@@ -224,7 +220,7 @@ export function WalletCard() {
         )}
         
         <p className="text-sm text-gray-500 mt-4">
-          Votre solde est mis à jour automatiquement lorsque vos virements sont confirmés et vos retraits approuvés.
+          Votre solde est mis à jour manuellement. Utilisez les boutons ci-dessus pour actualiser ou recalculer.
           {lastUpdate && (
             <span className="block text-xs text-gray-400 mt-1">
               Dernière mise à jour: {lastUpdate.toLocaleTimeString()}
