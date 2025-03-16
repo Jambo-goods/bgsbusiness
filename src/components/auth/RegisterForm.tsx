@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ArrowRight, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NameFields from "./NameFields";
@@ -24,7 +24,17 @@ export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // Extract referral code from URL if present
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const ref = params.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,6 +132,11 @@ export default function RegisterForm() {
             onChange={(e) => setReferralCode(e.target.value)}
             className="w-full"
           />
+          {referralCode && (
+            <p className="text-green-600 text-xs mt-1">
+              Code de parrainage détecté. Vous recevrez un bonus de 25€ sur votre premier investissement !
+            </p>
+          )}
         </div>
         
         <TermsCheckbox 

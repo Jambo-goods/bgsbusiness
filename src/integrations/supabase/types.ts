@@ -196,6 +196,7 @@ export type Database = {
           last_name: string | null
           phone: string | null
           projects_count: number | null
+          referral_code: string | null
           updated_at: string | null
           wallet_balance: number | null
         }
@@ -210,6 +211,7 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           projects_count?: number | null
+          referral_code?: string | null
           updated_at?: string | null
           wallet_balance?: number | null
         }
@@ -224,6 +226,7 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           projects_count?: number | null
+          referral_code?: string | null
           updated_at?: string | null
           wallet_balance?: number | null
         }
@@ -304,6 +307,36 @@ export type Database = {
           target?: number | null
           updated_at?: string | null
           yield?: number
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          commission_percentage: number
+          created_at: string | null
+          id: string
+          referred_id: string
+          referrer_id: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          commission_percentage?: number
+          created_at?: string | null
+          id?: string
+          referred_id: string
+          referrer_id: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          commission_percentage?: number
+          created_at?: string | null
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+          status?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
