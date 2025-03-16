@@ -33,12 +33,31 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
     if (isOpen) {
       fetchNotifications();
     }
+    
+    // Add real-time notification listener to improve notification visibility
+    const notificationChannel = supabase
+      .channel('real-time-notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications'
+      }, () => {
+        console.log("New notification detected, refreshing list");
+        fetchNotifications();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(notificationChannel);
+    };
   }, [isOpen]);
 
   const fetchNotifications = async () => {
     setIsLoading(true);
     try {
+      console.log("Fetching latest notifications");
       const data = await notificationService.getNotifications(5);
+      console.log("Latest notifications fetched:", data);
       setNotifications(data);
     } catch (error) {
       console.error("Error fetching notifications:", error);

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -50,14 +49,18 @@ export default function WithdrawalRequestsTable() {
             notificationService.withdrawalProcessed(amount, payload.new.status);
             
             // Then send a confirmation notification with a small delay to ensure proper order
+            // Make notifications more visible with immediate toast 
+            toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
+              description: "Elle est en cours de traitement."
+            });
+            
+            // Add immediate call without delay to increase chances of notification showing up
+            notificationService.withdrawalConfirmed(amount);
+            
+            // Also add a delayed notification to make sure it goes through
             setTimeout(() => {
               console.log("Sending withdrawal confirmation notification");
               notificationService.withdrawalConfirmed(amount);
-              
-              // Also show a toast to make it more visible
-              toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
-                description: "Elle est en cours de traitement."
-              });
             }, 500);
           }
           // Check if status changed
@@ -66,21 +69,33 @@ export default function WithdrawalRequestsTable() {
               case 'scheduled':
               case 'sheduled':
                 notificationService.withdrawalScheduled(amount);
+                toast.info(`Votre demande de retrait de ${amount}€ a été programmée`);
                 break;
               case 'approved':
                 notificationService.withdrawalValidated(amount);
+                toast.success(`Votre demande de retrait de ${amount}€ a été validée`);
                 break;
               case 'completed':
                 notificationService.withdrawalCompleted(amount);
+                toast.success(`Votre retrait de ${amount}€ a été effectué avec succès`);
                 break;
               case 'rejected':
                 notificationService.withdrawalRejected(amount);
+                toast.error(`Votre demande de retrait de ${amount}€ a été refusée`);
                 break;
               case 'received':
                 console.log("Withdrawal request received notification");
                 notificationService.withdrawalReceived(amount);
                 toast.info(`Votre demande de retrait de ${amount}€ a été reçue`, {
                   description: "Elle est en cours d'examen."
+                });
+                break;
+              case 'confirmed':
+                // Add special case for confirmed status
+                console.log("Withdrawal confirmed notification");
+                notificationService.withdrawalConfirmed(amount);
+                toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
+                  description: "Elle est en cours de traitement."
                 });
                 break;
             }

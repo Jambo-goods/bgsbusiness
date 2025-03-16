@@ -1,3 +1,4 @@
+
 // This Supabase Edge Function monitors withdrawal_requests status changes
 // and updates wallet balance when a withdrawal is scheduled
 
@@ -92,29 +93,60 @@ Deno.serve(async (req) => {
           console.log(`Processing notification sent to user ${userId} for amount ${amount}€`)
         }
         
-        // Also send a confirmation notification
-        const confirmationResponse = await fetch(
-          `${supabaseUrl}/functions/v1/send-withdrawal-notification`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${supabaseServiceRoleKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId,
-              amount,
-              status: 'confirmed'
-            }),
+        // Make two attempts to send the confirmation notification
+        for (let i = 0; i < 2; i++) {
+          // Also send a confirmation notification
+          const confirmationResponse = await fetch(
+            `${supabaseUrl}/functions/v1/send-withdrawal-notification`,
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${supabaseServiceRoleKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId,
+                amount,
+                status: 'confirmed'
+              }),
+            }
+          )
+          
+          if (!confirmationResponse.ok) {
+            const errorData = await confirmationResponse.json()
+            console.error(`Error sending confirmation notification via Edge Function (attempt ${i+1}):`, errorData)
+          } else {
+            console.log(`Confirmation notification sent to user ${userId} for amount ${amount}€ (attempt ${i+1})`)
           }
-        )
-        
-        if (!confirmationResponse.ok) {
-          const errorData = await confirmationResponse.json()
-          console.error("Error sending confirmation notification via Edge Function:", errorData)
-        } else {
-          console.log(`Confirmation notification sent to user ${userId} for amount ${amount}€`)
+          
+          // Wait a bit before sending the second attempt
+          if (i === 0) {
+            await new Promise(resolve => setTimeout(resolve, 500))
+          }
         }
+
+        // Try direct DB insert for confirmation notification as a fallback
+        try {
+          const { error: notifError } = await supabaseAdmin
+            .from('notifications')
+            .insert({
+              user_id: userId,
+              title: 'Demande de retrait confirmée',
+              message: `Votre demande de retrait de ${amount}€ a été confirmée et est en cours de traitement.`,
+              type: 'withdrawal',
+              seen: false,
+              data: { amount, status: 'confirmed', category: 'success' }
+            })
+            
+          if (notifError) {
+            console.error("Error with direct DB notification insert:", notifError)
+          } else {
+            console.log("Direct confirmation notification inserted successfully")
+          }
+        } catch (directError) {
+          console.error("Exception during direct notification insert:", directError)
+        }
+        
       } catch (notifError) {
         console.error("Error creating processing notification:", notifError)
       }
