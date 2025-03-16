@@ -1,49 +1,66 @@
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Project } from "@/types/project";
-import { useToast } from "@/hooks/use-toast";
-import { calculateReturns } from "@/utils/investmentCalculations";
-import { useUserBalance } from "@/hooks/useUserBalance";
-import { useInvestmentConfirmation } from "@/hooks/useInvestmentConfirmation";
+import { supabase } from "@/integrations/supabase/client";
+import { useInvestmentConfirmation } from "./useInvestmentConfirmation";
 
 export const useInvestment = (project: Project, investorCount: number) => {
-  const [investmentAmount, setInvestmentAmount] = useState(project.minInvestment || 500);
+  const [investmentAmount, setInvestmentAmount] = useState<number>(project.min_investment || 100);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [selectedDuration, setSelectedDuration] = useState(
-    project.possibleDurations ? project.possibleDurations[0] : parseInt(project.duration)
-  );
-  const [totalReturn, setTotalReturn] = useState(0);
-  const [monthlyReturn, setMonthlyReturn] = useState(0);
-  const { toast } = useToast();
-  
-  const { userBalance } = useUserBalance();
-  
-  // Extract constants from project
-  const minInvestment = project.minInvestment;
-  const maxInvestment = project.maxInvestment || 10000;
-  const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
-  
-  const durations = project.possibleDurations || 
-    [parseInt(project.duration.split(' ')[0])];
-  
-  // Calculate investment returns when parameters change
+  const [selectedDuration, setSelectedDuration] = useState<number>(12);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  const minInvestment = project.min_investment || 100;
+  const maxInvestment = project.max_investment || 10000;
+
+  // Available durations
+  const durations = [6, 12, 24, 36];
+
+  // Calculate expected returns
+  const monthlyYieldPercentage = project.monthly_yield_percentage || 1;
+  const monthlyReturn = (investmentAmount * monthlyYieldPercentage) / 100;
+  const totalReturn = monthlyReturn * selectedDuration;
+
+  // Get current user ID
   useEffect(() => {
-    const { monthlyReturn: calculatedMonthlyReturn, totalReturn: calculatedTotalReturn } = 
-      calculateReturns(investmentAmount, project.yield, selectedDuration, firstPaymentDelay);
+    const getUserId = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setUserId(data.session.user.id);
+      }
+    };
     
-    setMonthlyReturn(calculatedMonthlyReturn);
-    setTotalReturn(calculatedTotalReturn);
-  }, [investmentAmount, selectedDuration, project.yield, firstPaymentDelay]);
-  
-  // Validation and confirmation handling
-  const handleInvest = () => {
-    if (userBalance < investmentAmount) {
-      toast({
-        title: "Solde insuffisant",
-        description: `Vous n'avez pas assez de fonds disponibles. Votre solde: ${userBalance}€`,
-        variant: "destructive"
-      });
-      
+    getUserId();
+  }, []);
+
+  // Use the investment confirmation hook
+  const {
+    isConfirming,
+    isSuccess,
+    error,
+    confirmInvestment
+  } = useInvestmentConfirmation({
+    userId: userId || "",
+    projectId: project.id,
+    amount: investmentAmount,
+    duration: selectedDuration
+  });
+
+  const handleInvest = async () => {
+    if (!userId) {
+      toast.error("Vous devez être connecté pour investir");
+      return;
+    }
+    
+    // Check if the amount is within the allowed range
+    if (investmentAmount < minInvestment) {
+      toast.error(`L'investissement minimum est de ${minInvestment}€`);
+      return;
+    }
+    
+    if (investmentAmount > maxInvestment) {
+      toast.error(`L'investissement maximum est de ${maxInvestment}€`);
       return;
     }
     
@@ -53,25 +70,12 @@ export const useInvestment = (project: Project, investorCount: number) => {
   const cancelInvestment = () => {
     setShowConfirmation(false);
   };
-
-  // Use the confirmation hook
-  const { isProcessing, confirmInvestment } = useInvestmentConfirmation(
-    project, 
-    investorCount,
-    investmentAmount,
-    selectedDuration,
-    monthlyReturn,
-    totalReturn,
-    userBalance,
-    firstPaymentDelay
-  );
-
+  
   return {
     investmentAmount,
     setInvestmentAmount,
     showConfirmation,
-    setShowConfirmation,
-    isProcessing,
+    isProcessing: isConfirming,
     selectedDuration,
     setSelectedDuration,
     totalReturn,
@@ -79,7 +83,6 @@ export const useInvestment = (project: Project, investorCount: number) => {
     minInvestment,
     maxInvestment,
     durations,
-    userBalance,
     handleInvest,
     cancelInvestment,
     confirmInvestment

@@ -1,8 +1,8 @@
+
 import React, { useEffect, useState, useCallback } from "react";
 import { RefreshCcw, CalculatorIcon, AlertCircle } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
@@ -59,15 +59,25 @@ export function WalletCard({ balance: propBalance }: WalletCardProps = {}) {
               const newStatus = payload.new?.status;
               
               if (payload.new?.amount && newStatus !== oldStatus) {
-                notificationService.withdrawalStatus(
-                  Number(payload.new.amount), // Convert to number
-                  newStatus === 'scheduled' ? 'processing' : newStatus
-                );
+                if (typeof payload.new.amount === 'string') {
+                  notificationService.withdrawalStatus(
+                    parseFloat(payload.new.amount),
+                    newStatus === 'scheduled' ? 'processing' : newStatus
+                  );
+                } else {
+                  notificationService.withdrawalStatus(
+                    payload.new.amount,
+                    newStatus === 'scheduled' ? 'processing' : newStatus
+                  );
+                }
                 setShowRefreshAlert(true);
               }
             } else if (payload.eventType === 'INSERT') {
               if (payload.new?.amount) {
-                notificationService.withdrawalStatus(Number(payload.new.amount), 'pending');
+                const amount = typeof payload.new.amount === 'string' 
+                  ? parseFloat(payload.new.amount) 
+                  : payload.new.amount;
+                notificationService.withdrawalStatus(amount, 'pending');
                 setShowRefreshAlert(true);
               }
             }
@@ -92,14 +102,20 @@ export function WalletCard({ balance: propBalance }: WalletCardProps = {}) {
             if (payload.eventType === 'UPDATE') {
               if (payload.new?.status === 'reçu' || payload.new?.status === 'received') {
                 if (payload.new.amount) {
-                  notificationService.depositSuccess(payload.new.amount);
+                  const amount = typeof payload.new.amount === 'string' 
+                    ? parseFloat(payload.new.amount) 
+                    : payload.new.amount;
+                  notificationService.depositSuccess(amount);
                   setShowRefreshAlert(true);
                 }
               }
             } else if (payload.eventType === 'INSERT') {
               if (payload.new?.amount) {
+                const amount = typeof payload.new.amount === 'string' 
+                  ? parseFloat(payload.new.amount) 
+                  : payload.new.amount;
                 toast.info("Demande de dépôt reçue", {
-                  description: `Votre demande de dépôt de ${payload.new.amount}€ a été reçue et est en cours de traitement.`
+                  description: `Votre demande de dépôt de ${amount}€ a été reçue et est en cours de traitement.`
                 });
               }
             }
@@ -131,10 +147,12 @@ export function WalletCard({ balance: propBalance }: WalletCardProps = {}) {
                   .single();
                   
                 if (project && payload.new.amount) {
+                  const amount = typeof payload.new.amount === 'string' 
+                    ? parseFloat(payload.new.amount) 
+                    : payload.new.amount;
                   notificationService.investmentConfirmed(
-                    payload.new.amount,
-                    project.name,
-                    payload.new.project_id
+                    amount,
+                    project.name
                   );
                   setShowRefreshAlert(true);
                 }
@@ -169,16 +187,22 @@ export function WalletCard({ balance: propBalance }: WalletCardProps = {}) {
                 // Extract project name if available
                 const projectNameMatch = payload.new.description.match(/du projet (.+)/);
                 const projectName = projectNameMatch ? projectNameMatch[1] : 'un projet';
+                const amount = typeof payload.new.amount === 'string' 
+                  ? parseFloat(payload.new.amount) 
+                  : payload.new.amount;
                 
                 notificationService.yieldReceived(
-                  payload.new.amount,
+                  amount,
                   projectName
                 );
                 setShowRefreshAlert(true);
               }
               // For regular deposits
               else if (payload.new.type === 'deposit' && payload.new.amount) {
-                notificationService.depositSuccess(payload.new.amount);
+                const amount = typeof payload.new.amount === 'string' 
+                  ? parseFloat(payload.new.amount) 
+                  : payload.new.amount;
+                notificationService.depositSuccess(amount);
                 setShowRefreshAlert(true);
               }
             }
@@ -282,16 +306,12 @@ export function WalletCard({ balance: propBalance }: WalletCardProps = {}) {
           </div>
         </div>
         
-        {isLoadingBalance || isManualRefreshing || isRecalculating ? (
-          <Skeleton className="h-10 w-32 mt-2" />
-        ) : (
-          <div className="flex items-baseline">
-            <span className={`text-3xl font-bold ${displayBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>
-              {displayBalance.toLocaleString('fr-FR')}
-            </span>
-            <span className={`ml-1 text-xl ${displayBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>€</span>
-          </div>
-        )}
+        <div className="flex items-baseline">
+          <span className={`text-3xl font-bold ${displayBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>
+            {displayBalance.toLocaleString('fr-FR')}
+          </span>
+          <span className={`ml-1 text-xl ${displayBalance < 0 ? 'text-red-500' : 'text-bgs-blue'}`}>€</span>
+        </div>
         
         {showRefreshAlert && (
           <Alert className="mt-4 bg-amber-50 border-amber-200">

@@ -1,165 +1,176 @@
 
-import { useState } from "react";
-import { toast } from "sonner";
+import React, { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { notificationService } from "@/services/notifications";
+import { toast } from "sonner";
 
-export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>) {
+export function useWithdrawForm(walletBalance: number, onSuccess?: () => void) {
   const [amount, setAmount] = useState("");
-  const [accountHolder, setAccountHolder] = useState("");
   const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
+  const [accountOwner, setAccountOwner] = useState("");
+  const [iban, setIban] = useState("");
+  const [bic, setBic] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const isValidForm = () => {
-    return (
-      amount && 
-      parseInt(amount) >= 100 && 
-      parseInt(amount) <= balance &&
-      bankName.trim().length >= 2 &&
-      accountNumber.trim().length >= 8 &&
-      accountHolder.trim().length >= 3
-    );
-  };
-  
+  const [errors, setErrors] = useState<{
+    amount?: string;
+    bankName?: string;
+    accountOwner?: string;
+    iban?: string;
+    bic?: string;
+  }>({});
+
+  const validateForm = useCallback(() => {
+    const newErrors: {
+      amount?: string;
+      bankName?: string;
+      accountOwner?: string;
+      iban?: string;
+      bic?: string;
+    } = {};
+    let isValid = true;
+
+    // Validate amount
+    if (!amount.trim()) {
+      newErrors.amount = "Le montant est requis";
+      isValid = false;
+    } else {
+      const numAmount = parseFloat(amount);
+      if (isNaN(numAmount) || numAmount <= 0) {
+        newErrors.amount = "Le montant doit être supérieur à zéro";
+        isValid = false;
+      } else if (numAmount > walletBalance) {
+        newErrors.amount = "Le montant demandé dépasse votre solde disponible";
+        isValid = false;
+      } else if (numAmount < 50) {
+        newErrors.amount = "Le montant minimum de retrait est de 50€";
+        isValid = false;
+      }
+    }
+
+    // Validate bank name
+    if (!bankName.trim()) {
+      newErrors.bankName = "Le nom de la banque est requis";
+      isValid = false;
+    }
+
+    // Validate account owner
+    if (!accountOwner.trim()) {
+      newErrors.accountOwner = "Le nom du titulaire du compte est requis";
+      isValid = false;
+    }
+
+    // Validate IBAN
+    if (!iban.trim()) {
+      newErrors.iban = "L'IBAN est requis";
+      isValid = false;
+    } else if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$/.test(iban.replace(/\s/g, ''))) {
+      newErrors.iban = "Format d'IBAN invalide";
+      isValid = false;
+    }
+
+    // Validate BIC
+    if (!bic.trim()) {
+      newErrors.bic = "Le BIC est requis";
+      isValid = false;
+    } else if (!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic.replace(/\s/g, ''))) {
+      newErrors.bic = "Format de BIC invalide";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  }, [amount, bankName, accountOwner, iban, bic, walletBalance]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!isValidForm()) {
-      toast.error("Veuillez remplir correctement tous les champs");
+    if (!validateForm()) {
       return;
     }
     
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
-      
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
-        toast.error("Veuillez vous connecter pour effectuer un retrait");
+        toast.error("Session expirée, veuillez vous reconnecter");
+        setIsSubmitting(false);
         return;
       }
       
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, email, wallet_balance')
-        .eq('id', session.session.user.id)
-        .single();
-        
-      if (userError) {
-        console.error("Erreur lors de la récupération des données utilisateur:", userError);
-        throw new Error("Impossible de récupérer les données utilisateur");
-      }
+      const userId = session.session.user.id;
+      const withdrawalAmount = parseFloat(amount);
       
-      if (userData.wallet_balance < parseInt(amount)) {
-        toast.error("Solde insuffisant pour effectuer ce retrait");
-        return;
-      }
-
-      console.log("Submitting withdrawal request...");
-      
-      // Calculation for the new balance after withdrawal
-      const withdrawalAmount = parseInt(amount);
-      const newBalance = userData.wallet_balance - withdrawalAmount;
-      
-      // First update the user's wallet balance to ensure we don't allow overdrafts
-      const { error: balanceUpdateError } = await supabase
-        .from('profiles')
-        .update({ wallet_balance: newBalance })
-        .eq('id', session.session.user.id);
-      
-      if (balanceUpdateError) {
-        console.error("Error updating balance:", balanceUpdateError);
-        throw new Error("Impossible de mettre à jour votre solde");
-      }
-      
-      // Insérer la demande de retrait avec toutes les informations bancaires
-      const { data: withdrawal, error } = await supabase
+      // Create withdrawal request
+      const { data: withdrawalData, error: withdrawalError } = await supabase
         .from('withdrawal_requests')
         .insert({
-          user_id: session.session.user.id,
+          user_id: userId,
           amount: withdrawalAmount,
-          bank_info: {
-            accountName: accountHolder,
-            bankName: bankName,
-            accountNumber: accountNumber
-          },
-          status: 'pending',
-          requested_at: new Date().toISOString()
+          bank_name: bankName,
+          account_owner: accountOwner,
+          iban: iban.replace(/\s/g, ''),
+          bic: bic.replace(/\s/g, ''),
+          status: 'pending'
         })
-        .select('id')
+        .select()
         .single();
         
-      if (error) {
-        console.error("Error creating withdrawal request:", error);
-        
-        // Revert the balance change if the withdrawal request failed
-        await supabase
-          .from('profiles')
-          .update({ wallet_balance: userData.wallet_balance })
-          .eq('id', session.session.user.id);
-          
-        throw error;
+      if (withdrawalError) {
+        throw withdrawalError;
       }
       
-      console.log("Withdrawal request created successfully:", withdrawal);
-      
-      // Create a transaction record
+      // Create transaction record
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
-          user_id: session.session.user.id,
+          user_id: userId,
           amount: withdrawalAmount,
           type: 'withdrawal',
-          description: `Retrait en attente - ID: ${withdrawal.id}`,
-          status: 'pending'
+          description: `Demande de retrait vers ${bankName}`,
+          status: 'pending',
+          withdrawal_id: withdrawalData.id
         });
-      
+        
       if (transactionError) {
-        console.error("Error creating transaction:", transactionError);
-        // Continue even if there's an error (the withdrawal was created)
+        throw transactionError;
       }
       
-      // Show notification for withdrawal request
-      notificationService.withdrawalStatus(withdrawalAmount, 'pending');
-      
-      // Notify about the withdrawal request to backend
-      try {
-        const userName = `${userData.first_name} ${userData.last_name}`;
+      // Temporarily deduct amount from wallet balance
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          wallet_balance: walletBalance - withdrawalAmount,
+          last_withdrawal_date: new Date().toISOString()
+        })
+        .eq('id', userId);
         
-        await supabase.functions.invoke('send-withdrawal-notification', {
-          body: {
-            user_id: session.session.user.id,
-            userName,
-            userEmail: userData.email,
-            amount: withdrawalAmount,
-            bankDetails: {
-              accountName: accountHolder,
-              bankName: bankName,
-              accountNumber: accountNumber
-            },
-            withdrawal_id: withdrawal.id
-          }
-        });
-        
-        console.log("Notification de retrait envoyée avec succès");
-      } catch (notifError) {
-        console.error("Erreur lors de l'envoi de la notification de retrait:", notifError);
-        // Continue even if notification fails
+      if (profileError) {
+        throw profileError;
       }
       
-      toast.success("Demande de retrait soumise avec succès");
+      // Success notification
+      toast.success("Demande de retrait envoyée", {
+        description: `Votre demande de retrait de ${withdrawalAmount}€ a été enregistrée et sera traitée sous 48h ouvrées.`
+      });
+      
+      // Reset form
       setAmount("");
       setBankName("");
-      setAccountNumber("");
-      setAccountHolder("");
+      setAccountOwner("");
+      setIban("");
+      setBic("");
       
-      // Important: Call onWithdraw to update UI and state
-      await onWithdraw();
+      // Call success callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
       
     } catch (error) {
-      console.error("Erreur lors du retrait:", error);
-      toast.error("Une erreur s'est produite lors de la demande de retrait");
+      console.error("Error submitting withdrawal request:", error);
+      toast.error("Erreur lors de la demande de retrait", {
+        description: "Votre demande n'a pas pu être traitée. Veuillez réessayer plus tard."
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -168,14 +179,16 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
   return {
     amount,
     setAmount,
-    accountHolder,
-    setAccountHolder,
     bankName,
     setBankName,
-    accountNumber,
-    setAccountNumber,
+    accountOwner,
+    setAccountOwner,
+    iban,
+    setIban,
+    bic,
+    setBic,
+    errors,
     isSubmitting,
-    isValidForm,
     handleSubmit
   };
 }

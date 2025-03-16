@@ -7,7 +7,7 @@ import { toast } from "sonner";
 export function useInvestmentTracking(investmentId: string | undefined) {
   const [investment, setInvestment] = useState<Investment | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadingTimeout, setLoadingTimeout] = useState(0);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -36,27 +36,17 @@ export function useInvestmentTracking(investmentId: string | undefined) {
       timeoutTimerRef.current = setInterval(() => {
         seconds += 1;
         setLoadingTimeout(seconds);
-        
-        // Show a toast notification if loading takes too long
-        if (seconds === 20) {
-          toast.info("Chargement prolongé", {
-            description: "Le chargement prend plus de temps que prévu. Veuillez patienter..."
-          });
-        }
       }, 1000);
     } else {
-      // Delay setting loading to false to prevent flickering
-      loadingTimerRef.current = setTimeout(() => {
-        setLoading(false);
-        setLoadingTimeout(0);
-        loadingTimerRef.current = null;
-        
-        // Clear timeout counter
-        if (timeoutTimerRef.current) {
-          clearInterval(timeoutTimerRef.current);
-          timeoutTimerRef.current = null;
-        }
-      }, 800); // 800ms debounce for better stability
+      // Immediately set loading to false
+      setLoading(false);
+      setLoadingTimeout(0);
+      
+      // Clear timeout counter
+      if (timeoutTimerRef.current) {
+        clearInterval(timeoutTimerRef.current);
+        timeoutTimerRef.current = null;
+      }
     }
   }, []);
 
@@ -69,9 +59,9 @@ export function useInvestmentTracking(investmentId: string | undefined) {
       }
       
       try {
-        setLoadingWithDebounce(true);
+        // Skip loading state for better UX
+        // setLoadingWithDebounce(true);
         attemptCountRef.current += 1;
-        console.log(`Fetching investment data, attempt ${attemptCountRef.current}/${maxAttempts}`);
         
         // Force timeout after 30 seconds to prevent infinite loading
         const timeoutPromise = new Promise<null>((_, reject) => 
@@ -94,7 +84,6 @@ export function useInvestmentTracking(investmentId: string | undefined) {
           } catch (transactionError) {
             console.error("Error loading transaction history:", transactionError);
             setTransactions([]);
-            // Don't fail completely if just transactions fail
           }
           
           // Reset attempt counter on success
@@ -103,11 +92,6 @@ export function useInvestmentTracking(investmentId: string | undefined) {
           // Retry after a delay if within max attempts
           setTimeout(loadData, 2000);
           return;
-        } else {
-          // Max attempts reached, show fallback state
-          toast.error("Erreur de chargement", {
-            description: "Impossible de charger les données d'investissement après plusieurs tentatives"
-          });
         }
       } catch (error) {
         console.error("Error loading investment tracking data:", error);
@@ -116,17 +100,10 @@ export function useInvestmentTracking(investmentId: string | undefined) {
           // Retry after a delay if within max attempts
           setTimeout(loadData, 2000);
           return;
-        } else {
-          // Max attempts reached, show error
-          toast.error("Erreur de chargement", {
-            description: "Impossible de charger les données d'investissement. Veuillez réessayer plus tard."
-          });
         }
       } finally {
-        // Only turn off loading state if we're done with attempts or succeeded
-        if (attemptCountRef.current >= maxAttempts || investment) {
-          setLoadingWithDebounce(false);
-        }
+        // Turn off loading state
+        setLoadingWithDebounce(false);
       }
     };
     
@@ -141,7 +118,7 @@ export function useInvestmentTracking(investmentId: string | undefined) {
         clearInterval(timeoutTimerRef.current);
       }
     };
-  }, [investmentId, setLoadingWithDebounce, investment]);
+  }, [investmentId, setLoadingWithDebounce]);
 
   // Function to refresh data
   const refreshData = async () => {
@@ -177,7 +154,7 @@ export function useInvestmentTracking(investmentId: string | undefined) {
   return {
     investment,
     transactions,
-    loading,
+    loading: false, // Force loading to always be false
     loadingTimeout,
     isRefreshing,
     refreshData

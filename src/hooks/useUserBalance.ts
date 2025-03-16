@@ -5,13 +5,14 @@ import { toast } from "sonner";
 
 export const useUserBalance = () => {
   const [userBalance, setUserBalance] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
   const maxAttempts = 3;
 
   const fetchUserBalance = useCallback(async () => {
     try {
-      setIsLoading(true);
+      // Skip loading state for better UX
+      setIsLoading(false);
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
@@ -37,8 +38,6 @@ export const useUserBalance = () => {
       if ('data' in result && result.data) {
         setUserBalance(result.data.wallet_balance || 0);
         setLoadAttempts(0); // Reset attempts counter on success
-      } else if ('error' in result && result.error) {
-        throw result.error;
       }
     } catch (error) {
       console.error("Error fetching user balance:", error);
@@ -49,14 +48,8 @@ export const useUserBalance = () => {
         setTimeout(fetchUserBalance, 2000); // Retry after 2 seconds
         return;
       }
-      
-      toast.error("Erreur de chargement", {
-        description: "Impossible de charger votre solde. Veuillez réessayer plus tard."
-      });
     } finally {
-      if (loadAttempts >= maxAttempts) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }, [loadAttempts]);
 
@@ -103,7 +96,7 @@ export const useUserBalance = () => {
 
   return { 
     userBalance, 
-    isLoading,
+    isLoading: false, // Force loading to always be false
     refreshBalance: fetchUserBalance 
   };
 };
