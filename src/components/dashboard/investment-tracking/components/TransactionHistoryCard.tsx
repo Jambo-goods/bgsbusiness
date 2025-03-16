@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -6,6 +7,7 @@ import { TrendingUp, CheckCircle, Clock, Calendar } from "lucide-react";
 import { Transaction, ScheduledPayment } from "../types/investment";
 import { calculateReturns } from "@/utils/investmentCalculations";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface TransactionHistoryCardProps {
   transactions: Transaction[];
@@ -16,83 +18,110 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  useEffect(() => {
-    const fetchScheduledPayments = async () => {
-      if (!investmentId) {
+  // Fonction pour récupérer les paiements programmés
+  const fetchScheduledPayments = async () => {
+    if (!investmentId) {
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      console.log("Fetching scheduled payments for investment ID:", investmentId);
+      
+      const { data: investment, error: investmentError } = await supabase
+        .from('investments')
+        .select('project_id, amount, yield_rate')
+        .eq('id', investmentId)
+        .single();
+        
+      if (investmentError || !investment) {
+        console.error("Error fetching investment:", investmentError);
         setIsLoading(false);
         return;
       }
       
-      try {
-        setIsLoading(true);
-        console.log("Fetching scheduled payments for investment ID:", investmentId);
+      console.log("Found investment with project_id:", investment.project_id);
+      
+      const { data: payments, error: paymentsError } = await supabase
+        .from('scheduled_payments')
+        .select(`
+          *,
+          projects (
+            name,
+            image,
+            status,
+            company_name
+          )
+        `)
+        .eq('project_id', investment.project_id)
+        .order('payment_date', { ascending: true });
         
-        const { data: investment, error: investmentError } = await supabase
-          .from('investments')
-          .select('project_id, amount, yield_rate')
-          .eq('id', investmentId)
-          .single();
-          
-        if (investmentError || !investment) {
-          console.error("Error fetching investment:", investmentError);
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log("Found investment with project_id:", investment.project_id);
-        
-        const { data: payments, error: paymentsError } = await supabase
-          .from('scheduled_payments')
-          .select(`
-            *,
-            projects (
-              name,
-              image,
-              status,
-              company_name
-            )
-          `)
-          .eq('project_id', investment.project_id)
-          .order('payment_date', { ascending: true });
-          
-        if (paymentsError) {
-          console.error("Error fetching scheduled payments:", paymentsError);
-          setIsLoading(false);
-          return;
-        }
-        
-        console.log("Scheduled payments fetched:", payments?.length || 0, payments);
-        
-        if (!payments || payments.length === 0) {
-          console.log("No scheduled payments found, creating mock data based on investment");
-          const mockScheduledPayments = createMockScheduledPayments(investment);
-          setScheduledPayments(mockScheduledPayments);
-        } else {
-          let cumulativeAmount = 0;
-          const paymentsWithCumulative = payments?.map(payment => {
-            const calculatedAmount = payment.total_scheduled_amount || 0;
-            
-            if (payment.status === 'processed') {
-              cumulativeAmount += calculatedAmount;
-            }
-            
-            return {
-              ...payment,
-              calculatedCumulativeAmount: payment.status === 'processed' ? cumulativeAmount : 0
-            };
-          }) || [];
-          
-          setScheduledPayments(paymentsWithCumulative);
-        }
-        
+      if (paymentsError) {
+        console.error("Error fetching scheduled payments:", paymentsError);
         setIsLoading(false);
-      } catch (error) {
-        console.error("Error in fetchScheduledPayments:", error);
-        setIsLoading(false);
+        return;
       }
-    };
-    
+      
+      console.log("Scheduled payments fetched:", payments?.length || 0, payments);
+      
+      if (!payments || payments.length === 0) {
+        console.log("No scheduled payments found, creating mock data based on investment");
+        const mockScheduledPayments = createMockScheduledPayments(investment);
+        setScheduledPayments(mockScheduledPayments);
+      } else {
+        let cumulativeAmount = 0;
+        const paymentsWithCumulative = payments?.map(payment => {
+          const calculatedAmount = payment.total_scheduled_amount || 0;
+          
+          if (payment.status === 'processed') {
+            cumulativeAmount += calculatedAmount;
+          }
+          
+          return {
+            ...payment,
+            calculatedCumulativeAmount: payment.status === 'processed' ? cumulativeAmount : 0
+          };
+        }) || [];
+        
+        setScheduledPayments(paymentsWithCumulative);
+      }
+      
+      setIsLoading(false);
+    } catch (error) {
+      console.error("Error in fetchScheduledPayments:", error);
+      setIsLoading(false);
+    }
+  };
+  
+  // Appel initial de chargement des données
+  useEffect(() => {
     fetchScheduledPayments();
+    
+    // Configuration de la synchronisation en temps réel avec Supabase
+    const scheduledPaymentsChannel = supabase
+      .channel('scheduled_payment_changes')
+      .on('postgres_changes', {
+        event: '*', // Écouter tous les événements (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'scheduled_payments',
+      }, (payload) => {
+        console.log('Scheduled payment change detected:', payload);
+        
+        // Notification à l'utilisateur
+        toast.info("Mise à jour des paiements programmés", {
+          description: "Les données de paiements sont en cours d'actualisation."
+        });
+        
+        // Recharger les données
+        fetchScheduledPayments();
+      })
+      .subscribe();
+    
+    // Nettoyage à la suppression du composant
+    return () => {
+      supabase.removeChannel(scheduledPaymentsChannel);
+    };
   }, [investmentId]);
 
   const createMockScheduledPayments = (investment: any): ScheduledPayment[] => {

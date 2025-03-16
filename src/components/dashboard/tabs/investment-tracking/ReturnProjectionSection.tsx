@@ -1,7 +1,10 @@
-import React, { useMemo } from 'react';
+
+import React, { useMemo, useEffect, useState } from 'react';
 import { TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { PaymentRecord } from './types';
 import { Project } from '@/types/project';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ReturnProjectionSectionProps {
   paymentRecords: PaymentRecord[];
@@ -49,8 +52,105 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   isLoading,
   userInvestments
 }) => {
+  const [localPaymentRecords, setLocalPaymentRecords] = useState<PaymentRecord[]>(paymentRecords);
+  const [localExpectedReturns, setLocalExpectedReturns] = useState<PaymentRecord[]>(cumulativeExpectedReturns);
+  const [realtimeLoading, setRealtimeLoading] = useState(false);
+
+  // Set up real-time subscription to scheduled_payments table
+  useEffect(() => {
+    setLocalPaymentRecords(paymentRecords);
+    setLocalExpectedReturns(cumulativeExpectedReturns);
+    
+    // Create channel for real-time updates
+    const scheduledPaymentsChannel = supabase
+      .channel('scheduled_payments_updates')
+      .on('postgres_changes', {
+        event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'scheduled_payments'
+      }, async (payload) => {
+        console.log('Scheduled payments change detected:', payload);
+        setRealtimeLoading(true);
+        toast.info("Mise à jour des données de rendement", {
+          description: "Synchronisation avec la base de données en cours..."
+        });
+        
+        try {
+          // Get updated payment data
+          const { data: updatedPayment, error } = await supabase
+            .from('scheduled_payments')
+            .select(`
+              *,
+              projects (
+                name,
+                image,
+                status,
+                company_name
+              )
+            `)
+            .eq('id', payload.new.id)
+            .single();
+            
+          if (error) throw error;
+          
+          if (updatedPayment) {
+            // Convert to PaymentRecord format
+            const updatedRecord: PaymentRecord = {
+              id: updatedPayment.id,
+              projectId: updatedPayment.project_id,
+              projectName: updatedPayment.projects?.name || 'Projet inconnu',
+              amount: updatedPayment.total_scheduled_amount || 0,
+              date: new Date(updatedPayment.payment_date),
+              type: 'yield',
+              status: updatedPayment.status as 'paid' | 'pending' | 'scheduled',
+              percentage: updatedPayment.percentage
+            };
+            
+            // Update local state with new data
+            setLocalPaymentRecords(current => {
+              const updatedRecords = [...current];
+              const index = updatedRecords.findIndex(r => r.id === updatedPayment.id);
+              
+              if (index >= 0) {
+                updatedRecords[index] = updatedRecord;
+              } else {
+                updatedRecords.push(updatedRecord);
+              }
+              
+              return updatedRecords;
+            });
+            
+            // Update cumulative returns
+            setLocalExpectedReturns(current => {
+              const updatedReturns = [...current];
+              const index = updatedReturns.findIndex(r => r.id === updatedPayment.id);
+              
+              if (index >= 0) {
+                updatedReturns[index] = {
+                  ...updatedRecord,
+                  expectedCumulativeReturn: updatedReturns[index].expectedCumulativeReturn
+                };
+              }
+              
+              return updatedReturns;
+            });
+          }
+        } catch (error) {
+          console.error('Error handling scheduled payment update:', error);
+        } finally {
+          setRealtimeLoading(false);
+        }
+      })
+      .subscribe();
+      
+    // Cleanup function
+    return () => {
+      supabase.removeChannel(scheduledPaymentsChannel);
+    };
+  }, [paymentRecords, cumulativeExpectedReturns]);
+
   const futurePayments = useMemo(() => {
-    const payments = cumulativeExpectedReturns.filter(payment => payment.status === 'scheduled' || payment.status === 'pending').map(payment => {
+    const payments = localExpectedReturns.filter(payment => payment.status === 'scheduled' || payment.status === 'pending').map(payment => {
       const originalDate = new Date(payment.date);
       const adjustedDate = new Date(originalDate.getFullYear(), originalDate.getMonth(), 5);
 
@@ -64,12 +164,12 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
     });
 
     return payments.sort((a, b) => a.date.getTime() - b.date.getTime());
-  }, [cumulativeExpectedReturns]);
+  }, [localExpectedReturns]);
 
   const stats = useMemo(() => {
-    const totalReceived = paymentRecords.filter(payment => payment.status === 'paid').reduce((sum, payment) => sum + payment.amount, 0);
-    const totalPending = paymentRecords.filter(payment => payment.status === 'pending' || payment.status === 'scheduled').reduce((sum, payment) => sum + payment.amount, 0);
-    const paidPayments = paymentRecords.filter(payment => payment.status === 'paid');
+    const totalReceived = localPaymentRecords.filter(payment => payment.status === 'paid').reduce((sum, payment) => sum + payment.amount, 0);
+    const totalPending = localPaymentRecords.filter(payment => payment.status === 'pending' || payment.status === 'scheduled').reduce((sum, payment) => sum + payment.amount, 0);
+    const paidPayments = localPaymentRecords.filter(payment => payment.status === 'paid');
     const averageMonthlyReturn = paidPayments.length > 0 ? totalReceived / paidPayments.length : 0;
     const averageReturnPercentage = 12;
 
@@ -79,9 +179,9 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
       averageMonthlyReturn,
       averageReturnPercentage
     };
-  }, [paymentRecords]);
+  }, [localPaymentRecords]);
 
-  if (isLoading) {
+  if (isLoading || realtimeLoading) {
     return <LoadingState />;
   }
 
