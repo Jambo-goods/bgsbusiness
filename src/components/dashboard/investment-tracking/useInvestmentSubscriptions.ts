@@ -2,7 +2,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { notificationService } from "@/services/notifications";
 
 export const useInvestmentSubscriptions = (
   userId: string | null,
@@ -24,15 +23,10 @@ export const useInvestmentSubscriptions = (
       }, async (payload) => {
         console.log('Investment data changed, refreshing tracking tab...', payload);
         
-        // Only create notification for inserts if it comes from a real-time event
-        // and not from the confirmation hook
-        if (payload.eventType === 'INSERT') {
-          console.log('Investment insert detected via realtime subscription');
-          refreshCallback();
-        } else {
-          // For other events (UPDATE, DELETE), just refresh
-          refreshCallback();
-        }
+        toast.info("Mise à jour des investissements", {
+          description: "Les données de suivi sont en cours d'actualisation."
+        });
+        refreshCallback();
       })
       .subscribe();
       
@@ -110,6 +104,12 @@ export const useInvestmentSubscriptions = (
         filter: `user_id=eq.${userId} AND seen=eq.false`
       }, (payload) => {
         console.log('New notification received:', payload.new);
+        
+        // Don't show toast for investment notifications - they're already shown by the confirmation hook
+        if (payload.new.type === 'investment') {
+          console.log('Skipping duplicate toast for investment notification');
+          return;
+        }
         
         // Show toast notification
         toast.info(payload.new.title, {

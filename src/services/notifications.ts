@@ -26,10 +26,10 @@ export const notificationService = {
     // Ensure notification is also recorded in database (important for tracking)
     try {
       // Get current user's session
-      supabase.auth.getSession().then(({ data: sessionData }) => {
+      return supabase.auth.getSession().then(({ data: sessionData }) => {
         const userId = sessionData.session?.user?.id;
         if (userId) {
-          supabase.from('notifications').insert({
+          return supabase.from('notifications').insert({
             user_id: userId,
             type: 'investment',
             title: 'Investissement confirmé',
@@ -45,9 +45,8 @@ export const notificationService = {
       });
     } catch (error) {
       console.error('Error in investmentConfirmed notification:', error);
+      return Promise.resolve();
     }
-    
-    return Promise.resolve();
   },
   
   /**
