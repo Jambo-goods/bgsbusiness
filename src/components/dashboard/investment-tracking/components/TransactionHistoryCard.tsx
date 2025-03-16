@@ -3,7 +3,7 @@ import React, { useMemo } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { TrendingUp, CheckCircle, Clock } from "lucide-react";
 import { Transaction } from "../types/investment";
 import { calculateReturns } from "@/utils/investmentCalculations";
 
@@ -35,74 +35,140 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     return investmentTx ? investmentTx.amount : 0;
   }, [filteredTransactions]);
   
+  // Calculer le total des versements en attente
+  const pendingYields = useMemo(() => {
+    return filteredTransactions
+      .filter(tx => tx.type === 'yield' && tx.status === 'pending')
+      .reduce((total, tx) => total + tx.amount, 0);
+  }, [filteredTransactions]);
+  
+  // Préparer les transactions pour le format tableau
+  const tableData = useMemo(() => {
+    const sorted = [...filteredTransactions]
+      .filter(tx => tx.type === 'yield')
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    
+    let cumulativeAmount = 0;
+    return sorted.map(tx => {
+      cumulativeAmount += tx.amount;
+      return {
+        ...tx,
+        cumulativeAmount
+      };
+    });
+  }, [filteredTransactions]);
+  
+  // Rendement mensuel fixe (12%)
+  const fixedYieldPercentage = 12;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle>Historique des transactions</CardTitle>
       </CardHeader>
       <CardContent>
-        {investmentAmount > 0 && (
-          <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <h4 className="text-sm font-medium text-blue-800 mb-2">Programme de rendement mensuel</h4>
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-sm text-blue-700">Montant investi: <span className="font-medium">{investmentAmount}€</span></p>
-                <p className="text-sm text-blue-700">Rendement mensuel prévu: <span className="font-medium">{(investmentAmount * 0.08 / 12).toFixed(2)}€</span></p>
-              </div>
-              <div>
-                <p className="text-sm text-green-700">Rendement déjà reçu: <span className="font-medium">{totalYieldReceived}€</span></p>
-              </div>
+        <div className="mb-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-green-50 p-2.5 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-green-600" />
             </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">Rendement mensuel</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Basées sur vos investissements actuels</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+              <div className="flex items-center mb-2">
+                <div className="bg-green-100 p-1.5 rounded-full mr-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+                <p className="text-xs text-green-700">Total des versements perçus</p>
+              </div>
+              <p className="text-lg font-medium text-green-700">{totalYieldReceived.toFixed(2)} €</p>
+            </div>
+            
+            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
+              <div className="flex items-center mb-2">
+                <div className="bg-yellow-100 p-1.5 rounded-full mr-2">
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                </div>
+                <p className="text-xs text-yellow-700">Total des versements en attente</p>
+              </div>
+              <p className="text-lg font-medium text-yellow-700">{pendingYields.toFixed(2)} €</p>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+              <div className="flex items-center mb-2">
+                <div className="bg-blue-100 p-1.5 rounded-full mr-2">
+                  <TrendingUp className="h-4 w-4 text-blue-600" />
+                </div>
+                <p className="text-xs text-blue-700">Rendement mensuel moyen</p>
+              </div>
+              <p className="text-lg font-medium text-blue-700">{fixedYieldPercentage}%</p>
+            </div>
+          </div>
+        </div>
+
+        {tableData.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projet</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pourcentage</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cumul</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {tableData.map((tx, index) => (
+                  <tr key={tx.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(tx.created_at)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
+                      {investmentId ? "Investissement actuel" : `Projet #${index + 1}`}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                      {fixedYieldPercentage}%
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {tx.amount.toFixed(2)} €
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                      {tx.cumulativeAmount.toFixed(2)} €
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        tx.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {tx.status === 'completed' ? '✓ Confirmé' : 'Programmé'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500">
+            Aucune transaction de rendement trouvée pour cet investissement
           </div>
         )}
         
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Montant</TableHead>
-              <TableHead>Rendement mensuel</TableHead>
-              <TableHead>Statut</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTransactions.length > 0 ? (
-              filteredTransactions.map((transaction) => {
-                // Calculer le rendement mensuel (uniquement pour les transactions de type yield)
-                const monthlyYield = transaction.type === 'yield' 
-                  ? transaction.amount 
-                  : '-';
-
-                return (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{formatDate(transaction.created_at)}</TableCell>
-                    <TableCell>{transaction.type === 'yield' ? 'Gain reçu' : 'Investissement'}</TableCell>
-                    <TableCell className={transaction.type === 'yield' ? 'text-green-600' : 'text-red-600'}>
-                      {transaction.type === 'yield' ? '+' : '-'}{transaction.amount}€
-                    </TableCell>
-                    <TableCell className={transaction.type === 'yield' ? 'text-green-600' : 'text-gray-400'}>
-                      {transaction.type === 'yield' ? `${monthlyYield}€` : '-'}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        transaction.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {transaction.status === 'completed' ? '✓ Confirmé' : '⏳ En attente'}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-6 text-gray-500">
-                  Aucune transaction trouvée pour cet investissement
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        {investmentAmount > 0 && (
+          <div className="mt-6 pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              <strong>Note:</strong> Ces projections sont basées sur les taux de rendement actuels et peuvent varier. 
+              Le premier versement est généralement effectué après la période de délai initiale spécifiée dans chaque projet. 
+              Les versements suivants sont effectués le 5 de chaque mois.
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
