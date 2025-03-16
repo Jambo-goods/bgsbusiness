@@ -12,6 +12,7 @@ import { useDashboardState } from "@/hooks/dashboard/useDashboardState";
 import { useUserSession } from "@/hooks/dashboard/useUserSession";
 import { useDataRefresh } from "@/hooks/dashboard/useDataRefresh";
 import DashboardStatusMapper from "@/components/dashboard/DashboardStatusMapper";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function Dashboard() {
   const { activeTab, setActiveTab } = useDashboardState();
@@ -34,7 +35,8 @@ export default function Dashboard() {
     userId: userId || '',
     onProfileUpdate: refreshProfileData,
     onInvestmentUpdate: refreshInvestmentsData,
-    onTransactionUpdate: refreshProfileData
+    onTransactionUpdate: refreshProfileData,
+    pollingInterval: 30000 // Reduce polling interval to 30 seconds
   });
   
   const {
@@ -50,12 +52,43 @@ export default function Dashboard() {
     
     const dataRefreshInterval = setInterval(() => {
       refreshAllData();
-    }, 10 * 60 * 1000); // Refresh every 10 minutes
+    }, 5 * 60 * 1000); // Refresh every 5 minutes
+    
+    // Set up direct wallet balance subscription
+    if (userId) {
+      console.log("Setting up dashboard wallet balance subscription");
+      
+      const walletBalanceChannel = supabase
+        .channel('dashboard-wallet-balance')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'profiles',
+            filter: `id=eq.${userId}`
+          },
+          (payload) => {
+            if (payload.new && typeof payload.new.wallet_balance === 'number') {
+              console.log("Dashboard detected wallet balance change:", payload.new.wallet_balance);
+              
+              // Force refresh profile data
+              refreshProfileData();
+            }
+          }
+        )
+        .subscribe();
+        
+      return () => {
+        clearInterval(dataRefreshInterval);
+        supabase.removeChannel(walletBalanceChannel);
+      };
+    }
     
     return () => {
       clearInterval(dataRefreshInterval);
     };
-  }, [pollingStatus, refreshAllData]);
+  }, [pollingStatus, refreshAllData, userId, refreshProfileData]);
 
   console.log("Current active tab (Dashboard.tsx):", activeTab);
   
