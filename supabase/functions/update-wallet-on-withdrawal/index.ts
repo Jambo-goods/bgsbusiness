@@ -44,6 +44,16 @@ serve(async (req) => {
     
     console.log('Withdrawal found:', withdrawal)
 
+    // Check if this withdrawal is in a status that should update the balance
+    if (withdrawal.status !== 'approved' && withdrawal.status !== 'completed' && withdrawal.status !== 'scheduled') {
+      console.log(`Withdrawal status is ${withdrawal.status}, not updating balance`)
+      return handleSuccess({ 
+        message: 'No balance update needed for this withdrawal status',
+        withdrawal_id: withdrawal.id,
+        status: withdrawal.status
+      })
+    }
+
     // Get the current user balance
     const { data: profile, error: profileError } = await supabaseClient
       .from('profiles')
@@ -88,7 +98,7 @@ serve(async (req) => {
     console.log('Wallet balance updated successfully, now creating transaction record')
     
     // Create wallet transaction record
-    const { error: transactionError } = await supabaseClient
+    const { data: transaction, error: transactionError } = await supabaseClient
       .from('wallet_transactions')
       .insert({
         user_id: withdrawal.user_id,
@@ -97,12 +107,29 @@ serve(async (req) => {
         status: 'completed',
         description: `Retrait ${withdrawal.amount}€ - ${withdrawal.status}`
       })
+      .select('id')
+      .single()
       
     if (transactionError) {
       console.error('Error creating transaction record:', transactionError)
       // Continue even if transaction creation fails as the balance was already updated
     } else {
-      console.log('Transaction record created successfully')
+      console.log('Transaction record created successfully:', transaction)
+    }
+    
+    // Update withdrawal status to completed if it was approved
+    if (withdrawal.status === 'approved') {
+      const { error: updateError } = await supabaseClient
+        .from('withdrawal_requests')
+        .update({ status: 'completed' })
+        .eq('id', withdrawal.id)
+        
+      if (updateError) {
+        console.error('Error updating withdrawal status:', updateError)
+        // Continue even if status update fails
+      } else {
+        console.log('Withdrawal status updated to completed')
+      }
     }
     
     // Notify about the balance update
@@ -118,6 +145,8 @@ serve(async (req) => {
       
       if (notificationError) {
         console.error('Error sending notification:', notificationError)
+      } else {
+        console.log('Withdrawal notification sent successfully')
       }
     } catch (notifyError) {
       console.error('Error invoking notification function:', notifyError)

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import WalletBalance from "./wallet/WalletBalance";
 import ActionButtons from "./wallet/ActionButtons";
@@ -10,11 +10,13 @@ import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { supabase } from "@/integrations/supabase/client";
-import { Wallet } from "lucide-react";
+import { Wallet, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function WalletTab() {
   const [activeTab, setActiveTab] = useState("overview");
-  const { walletBalance, isLoadingBalance, refreshBalance, recalculateBalance } = useWalletBalance();
+  const [showWithdrawalAlert, setShowWithdrawalAlert] = useState(false);
+  const { walletBalance, isLoadingBalance, refreshBalance, recalculateBalance, updateBalanceOnWithdrawal } = useWalletBalance();
 
   // Auto-recalculate when tab loads
   useEffect(() => {
@@ -81,17 +83,64 @@ export default function WalletTab() {
           console.log("Realtime subscription status for bank transfers:", status);
         });
       
-      return bankTransfersChannel;
+      // Subscribe to withdrawal_requests table changes
+      const withdrawalChannel = supabase
+        .channel('wallet-withdrawal-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'withdrawal_requests',
+            filter: `user_id=eq.${userId}`
+          },
+          async (payload) => {
+            console.log("Withdrawal request updated:", payload);
+            
+            const oldStatus = payload.old?.status;
+            const newStatus = payload.new?.status;
+            
+            // Handle status changes that affect balance
+            if ((newStatus === 'approved' || newStatus === 'completed' || newStatus === 'scheduled') &&
+                oldStatus !== newStatus) {
+              
+              console.log(`Withdrawal status changed to ${newStatus}, updating balance...`);
+              
+              try {
+                if (payload.new?.id) {
+                  // Call the edge function to process the withdrawal
+                  await updateBalanceOnWithdrawal(payload.new.id);
+                  toast.success(`Retrait ${newStatus === 'approved' ? 'approuvé' : 'complété'}`, {
+                    description: `Votre solde a été mis à jour.`
+                  });
+                }
+              } catch (err) {
+                console.error("Error processing withdrawal:", err);
+                setShowWithdrawalAlert(true);
+                toast.error("Erreur lors du traitement du retrait", {
+                  description: "Veuillez cliquer sur le bouton 'Recalculer' pour mettre à jour votre solde."
+                });
+              }
+            }
+          }
+        )
+        .subscribe((status) => {
+          console.log("Realtime subscription status for withdrawals:", status);
+        });
+      
+      return [bankTransfersChannel, withdrawalChannel];
     };
     
-    const bankTransferPromise = setupBankTransferSubscriptions();
+    const subscriptionPromise = setupBankTransferSubscriptions();
     
     return () => {
-      bankTransferPromise.then(channel => {
-        if (channel) supabase.removeChannel(channel);
+      subscriptionPromise.then(channels => {
+        channels?.forEach(channel => {
+          if (channel) supabase.removeChannel(channel);
+        });
       });
     };
-  }, [refreshBalance]);
+  }, [refreshBalance, updateBalanceOnWithdrawal]);
 
   const handleDeposit = async () => {
     await refreshBalance();
@@ -99,6 +148,7 @@ export default function WalletTab() {
 
   const handleWithdraw = async () => {
     await refreshBalance();
+    await recalculateBalance(); // Force recalculation after withdrawal
   };
 
   const handleTabChange = (tab: string) => {
@@ -114,6 +164,15 @@ export default function WalletTab() {
         onRefresh={refreshBalance}
         onRecalculate={recalculateBalance}
       />
+      
+      {showWithdrawalAlert && (
+        <Alert className="mb-4 bg-yellow-50 border-yellow-200">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="text-yellow-800">
+            Une demande de retrait a été traitée mais votre solde pourrait ne pas être à jour. Veuillez cliquer sur "Recalculer" pour mettre à jour votre solde.
+          </AlertDescription>
+        </Alert>
+      )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-6">

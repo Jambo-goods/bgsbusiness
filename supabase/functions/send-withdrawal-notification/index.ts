@@ -69,6 +69,17 @@ serve(async (req) => {
       // Continue even if notification creation fails
     }
     
+    // Attempt to trigger a manual recalculation of the wallet balance
+    try {
+      await supabaseClient.rpc('recalculate_wallet_balance', { 
+        user_uuid: user_id 
+      });
+      console.log('Wallet balance recalculated after withdrawal');
+    } catch (recalcError) {
+      console.error('Error recalculating wallet balance:', recalcError);
+      // Continue even if recalculation fails
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: true,

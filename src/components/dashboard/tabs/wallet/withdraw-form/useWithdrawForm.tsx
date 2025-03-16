@@ -55,8 +55,10 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
         return;
       }
 
+      console.log("Submitting withdrawal request...");
+      
       // Insérer la demande de retrait avec toutes les informations bancaires
-      const { error } = await supabase
+      const { data: withdrawal, error } = await supabase
         .from('withdrawal_requests')
         .insert({
           user_id: session.session.user.id,
@@ -68,17 +70,24 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
           },
           status: 'pending',
           requested_at: new Date().toISOString()
-        });
+        })
+        .select('id')
+        .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating withdrawal request:", error);
+        throw error;
+      }
       
-      // Envoyer une notification par email à l'administrateur
+      console.log("Withdrawal request created successfully:", withdrawal);
+      
+      // Notify the admin about the withdrawal request
       try {
         const userName = `${userData.first_name} ${userData.last_name}`;
         
         await supabase.functions.invoke('send-withdrawal-notification', {
           body: {
-            userId: session.session.user.id,
+            user_id: session.session.user.id,
             userName,
             userEmail: userData.email,
             amount: parseInt(amount),
@@ -86,14 +95,15 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
               accountName: accountHolder,
               bankName: bankName,
               accountNumber: accountNumber
-            }
+            },
+            withdrawal_id: withdrawal.id
           }
         });
         
         console.log("Notification de retrait envoyée avec succès");
       } catch (notifError) {
         console.error("Erreur lors de l'envoi de la notification de retrait:", notifError);
-        // Nous ne voulons pas faire échouer la demande de retrait si la notification échoue
+        // Continue even if notification fails
       }
       
       toast.success("Demande de retrait soumise avec succès");
