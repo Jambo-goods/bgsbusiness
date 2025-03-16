@@ -1,9 +1,10 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDownIcon, ArrowUpIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
 
 // Base item properties shared between transactions and notifications
 export interface HistoryBaseItem {
@@ -40,6 +41,33 @@ interface HistoryItemProps {
 }
 
 export default function HistoryItem({ item }: HistoryItemProps) {
+  const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
+  
+  useEffect(() => {
+    // Set up a subscription to withdrawal_requests status changes
+    const withdrawalRequestsChannel = supabase
+      .channel('withdrawal_requests_changes')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'withdrawal_requests',
+        filter: `status=eq.confirmed`,
+      }, (payload) => {
+        console.log('Withdrawal request status changed to confirmed:', payload);
+        setShowConfirmationAlert(true);
+        
+        // Hide the confirmation alert after 10 seconds
+        setTimeout(() => {
+          setShowConfirmationAlert(false);
+        }, 10000);
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(withdrawalRequestsChannel);
+    };
+  }, []);
+
   const formattedDate = formatDistanceToNow(
     new Date(item.created_at),
     { addSuffix: true, locale: fr }
@@ -48,6 +76,15 @@ export default function HistoryItem({ item }: HistoryItemProps) {
   if (item.itemType === 'transaction') {
     return (
       <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+        {/* Show confirmation alert when withdrawal request is confirmed */}
+        {showConfirmationAlert && item.type === 'withdrawal' && (
+          <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="h-4 w-4" />
+              <span>Demande de retrait confirmée</span>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-start">
           <div className="flex items-start space-x-3">
             <div className={`p-2 rounded-full ${item.type === 'deposit' ? 'bg-green-100' : 'bg-red-100'}`}>
@@ -75,6 +112,15 @@ export default function HistoryItem({ item }: HistoryItemProps) {
     // It's a notification
     return (
       <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
+        {/* Show confirmation alert when withdrawal request is confirmed and notification is related to withdrawal */}
+        {showConfirmationAlert && item.type === 'withdrawal' && (
+          <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md text-green-700 text-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="h-4 w-4" />
+              <span>Demande de retrait confirmée</span>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-start">
           <div className="flex items-start space-x-3">
             <NotificationIcon category={item.category} type={item.type} />
