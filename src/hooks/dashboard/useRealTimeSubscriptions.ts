@@ -18,6 +18,15 @@ export const useRealTimeSubscriptions = ({
 }: SubscriptionOptions) => {
   const [pollingStatus, setPollingStatus] = useState<'disabled' | 'active' | 'error'>('disabled');
   const pollingTimerRef = useRef<number | null>(null);
+  const lastUpdateRef = useRef<{
+    profile: number;
+    investment: number;
+    transaction: number;
+  }>({
+    profile: 0,
+    investment: 0,
+    transaction: 0
+  });
 
   // Start polling when component mounts
   useEffect(() => {
@@ -35,14 +44,28 @@ export const useRealTimeSubscriptions = ({
         window.clearInterval(pollingTimerRef.current);
       }
 
-      // Create new polling interval
+      // Create new polling interval with throttling
       pollingTimerRef.current = window.setInterval(() => {
         console.log("Polling for updates...");
+        const now = Date.now();
         
-        // Trigger all update callbacks
-        if (onProfileUpdate) onProfileUpdate();
-        if (onInvestmentUpdate) onInvestmentUpdate();
-        if (onTransactionUpdate) onTransactionUpdate();
+        // Throttle profile updates (max once every 30 seconds)
+        if (onProfileUpdate && now - lastUpdateRef.current.profile > 30000) {
+          onProfileUpdate();
+          lastUpdateRef.current.profile = now;
+        }
+        
+        // Throttle investment updates (max once every 45 seconds)
+        if (onInvestmentUpdate && now - lastUpdateRef.current.investment > 45000) {
+          onInvestmentUpdate();
+          lastUpdateRef.current.investment = now;
+        }
+        
+        // Throttle transaction updates (max once every 60 seconds)
+        if (onTransactionUpdate && now - lastUpdateRef.current.transaction > 60000) {
+          onTransactionUpdate();
+          lastUpdateRef.current.transaction = now;
+        }
       }, pollingInterval);
     };
 
@@ -62,12 +85,17 @@ export const useRealTimeSubscriptions = ({
 
   // Function to manually trigger updates
   const triggerManualUpdate = (type: 'profile' | 'investment' | 'transaction') => {
+    const now = Date.now();
+    
     if (type === 'profile' && onProfileUpdate) {
       onProfileUpdate();
+      lastUpdateRef.current.profile = now;
     } else if (type === 'investment' && onInvestmentUpdate) {
       onInvestmentUpdate();
+      lastUpdateRef.current.investment = now;
     } else if (type === 'transaction' && onTransactionUpdate) {
       onTransactionUpdate();
+      lastUpdateRef.current.transaction = now;
     }
   };
 

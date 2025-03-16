@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Project } from "@/types/project";
 import { PaymentRecord } from "./types";
@@ -19,9 +19,29 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const [animateRefresh, setAnimateRefresh] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [hasShownNoInvestmentToast, setHasShownNoInvestmentToast] = useState(false);
+  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Function to safely set loading state with debounce to prevent flickering
+  const setLoadingWithDebounce = (isLoading: boolean) => {
+    // Clear any existing timer
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
+      loadingTimerRef.current = null;
+    }
+    
+    if (isLoading) {
+      // Set loading to true immediately
+      setIsLoading(true);
+    } else {
+      // Delay setting loading to false to prevent flickering
+      loadingTimerRef.current = setTimeout(() => {
+        setIsLoading(false);
+      }, 600); // 600ms debounce to ensure stability
+    }
+  };
   
   const loadRealTimeData = useCallback(async () => {
-    setIsLoading(true);
+    setLoadingWithDebounce(true);
     try {
       console.log("Fetching investment data...");
       const { data: session } = await supabase.auth.getSession();
@@ -92,7 +112,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       });
       setPaymentRecords([]);
     } finally {
-      setIsLoading(false);
+      setLoadingWithDebounce(false);
       setAnimateRefresh(false);
     }
   }, [paymentRecords, hasShownNoInvestmentToast]);
@@ -108,6 +128,10 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
     
     return () => {
       clearInterval(refreshInterval);
+      // Clean up any existing loading timer
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
     };
   }, [loadRealTimeData]);
   

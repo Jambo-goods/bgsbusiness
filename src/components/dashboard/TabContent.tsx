@@ -65,8 +65,14 @@ export default function TabContent({
   const [dbProjects, setDbProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingKey, setLoadingKey] = useState<string>('initial'); // Used to force remount of components
   
   console.log("TabContent rendering with active tab:", activeTab);
+  
+  // When active tab changes, set a new key to force remount of tab components
+  useEffect(() => {
+    setLoadingKey(`${activeTab}-${Date.now()}`);
+  }, [activeTab]);
   
   // Load projects from database only
   useEffect(() => {
@@ -133,12 +139,13 @@ export default function TabContent({
       
       {activeTab !== "overview" && (
         <Suspense fallback={<TabLoading />}>
-          {activeTab === "wallet" && <WalletTab />}
+          {activeTab === "wallet" && <WalletTab key={loadingKey} />}
           
-          {activeTab === "yield" && <YieldTab />}
+          {activeTab === "yield" && <YieldTab key={loadingKey} />}
           
           {activeTab === "investments" && (
             <Investments 
+              key={loadingKey}
               userInvestments={userInvestments}
               onRefresh={refreshData}
             />

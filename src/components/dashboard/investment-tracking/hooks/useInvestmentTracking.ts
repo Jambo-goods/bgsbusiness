@@ -8,6 +8,26 @@ export function useInvestmentTracking(investmentId: string | undefined) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadingTimer, setLoadingTimer] = useState<NodeJS.Timeout | null>(null);
+
+  // Function to safely set loading state with debounce
+  const setLoadingWithDebounce = (isLoading: boolean) => {
+    // Clear any existing timer
+    if (loadingTimer) {
+      clearTimeout(loadingTimer);
+    }
+    
+    if (isLoading) {
+      // Set loading to true immediately
+      setLoading(true);
+    } else {
+      // Delay setting loading to false to prevent flickering
+      const timer = setTimeout(() => {
+        setLoading(false);
+      }, 300); // 300ms debounce
+      setLoadingTimer(timer);
+    }
+  };
 
   // Initial data loading
   useEffect(() => {
@@ -15,7 +35,7 @@ export function useInvestmentTracking(investmentId: string | undefined) {
       if (!investmentId) return;
       
       try {
-        setLoading(true);
+        setLoadingWithDebounce(true);
         const investmentData = await fetchInvestmentDetails(investmentId);
         
         if (investmentData) {
@@ -28,11 +48,18 @@ export function useInvestmentTracking(investmentId: string | undefined) {
       } catch (error) {
         console.error("Error loading investment tracking data:", error);
       } finally {
-        setLoading(false);
+        setLoadingWithDebounce(false);
       }
     };
     
     loadData();
+    
+    // Cleanup timer on unmount
+    return () => {
+      if (loadingTimer) {
+        clearTimeout(loadingTimer);
+      }
+    };
   }, [investmentId]);
 
   // Function to refresh data
