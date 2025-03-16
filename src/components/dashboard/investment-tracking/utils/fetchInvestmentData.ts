@@ -76,7 +76,12 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
 
 // Add these functions to fix the build errors
 export async function fetchInvestmentDetails(investmentId: string): Promise<Investment | null> {
-  return fetchInvestmentData(investmentId);
+  try {
+    return await fetchInvestmentData(investmentId);
+  } catch (error) {
+    console.error("Error in fetchInvestmentDetails:", error);
+    return null;
+  }
 }
 
 export async function fetchTransactionHistory(userId: string): Promise<Transaction[]> {

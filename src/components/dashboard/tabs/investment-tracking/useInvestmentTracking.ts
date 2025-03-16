@@ -20,6 +20,8 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const [userId, setUserId] = useState<string | null>(null);
   const [hasShownNoInvestmentToast, setHasShownNoInvestmentToast] = useState(false);
   const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const loadAttemptRef = useRef(0);
+  const maxLoadAttempts = 3;
   
   // Function to safely set loading state with debounce to prevent flickering
   const setLoadingWithDebounce = (isLoading: boolean) => {
@@ -44,6 +46,8 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
     setLoadingWithDebounce(true);
     try {
       console.log("Fetching investment data...");
+      loadAttemptRef.current += 1;
+      
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
@@ -52,6 +56,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
           description: "Connectez-vous pour voir vos données."
         });
         setPaymentRecords([]);
+        setLoadingWithDebounce(false);
         return;
       }
       
@@ -61,7 +66,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       
       const investments = await fetchRealTimeInvestmentData(currentUserId);
       
-      console.log("Fetched investments:", investments.length);
+      console.log("Fetched investments:", investments?.length || 0);
       
       if (investments && investments.length > 0) {
         // Use investment data to generate payment records
@@ -94,6 +99,7 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
         
         setPaymentRecords(realPayments);
         setHasShownNoInvestmentToast(false);
+        loadAttemptRef.current = 0; // Reset attempt counter on success
         console.log("Updated payment records with data:", realPayments.length);
       } else {
         // No investments found
@@ -111,15 +117,26 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
       }
     } catch (error) {
       console.error("Error loading investment data:", error);
+      
+      // Retry up to max attempts
+      if (loadAttemptRef.current < maxLoadAttempts) {
+        console.log(`Retrying data load (attempt ${loadAttemptRef.current}/${maxLoadAttempts})...`);
+        setTimeout(loadRealTimeData, 1500); // Retry after 1.5 seconds
+        return;
+      }
+      
       toast.error("Erreur de chargement", {
         description: "Impossible de charger les données de rendement."
       });
       setPaymentRecords([]);
     } finally {
-      setTimeout(() => {
-        setLoadingWithDebounce(false);
-        setAnimateRefresh(false);
-      }, 500); // Add a small delay before setting loading to false
+      // Only turn off loading if we're done with attempts or succeeded
+      if (loadAttemptRef.current >= maxLoadAttempts || paymentRecords.length > 0) {
+        setTimeout(() => {
+          setLoadingWithDebounce(false);
+          setAnimateRefresh(false);
+        }, 500);
+      }
     }
   }, [paymentRecords, hasShownNoInvestmentToast]);
   
@@ -155,6 +172,8 @@ export const useInvestmentTracking = (userInvestments: Project[]) => {
   const handleRefresh = () => {
     console.log("Manual refresh requested");
     setAnimateRefresh(true);
+    // Reset attempt counter for manual refresh
+    loadAttemptRef.current = 0;
     loadRealTimeData();
   };
   

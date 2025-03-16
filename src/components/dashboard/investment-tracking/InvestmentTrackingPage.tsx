@@ -31,7 +31,12 @@ export default function InvestmentTrackingPage() {
   if (!investment) {
     return (
       <DashboardLayout>
-        <div className="text-center py-8">Investissement non trouvé</div>
+        <div className="flex flex-col items-center justify-center min-h-[40vh] text-center py-8">
+          <p className="text-bgs-gray-medium mb-4">Investissement non trouvé</p>
+          <Link to="/dashboard" className="text-bgs-blue hover:text-bgs-blue-light underline">
+            Retour au tableau de bord
+          </Link>
+        </div>
       </DashboardLayout>
     );
   }

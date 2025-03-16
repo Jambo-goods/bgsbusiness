@@ -13,7 +13,7 @@ export default function LoadingIndicator({
 }: LoadingIndicatorProps) {
   return (
     <div className={`py-8 flex flex-col items-center justify-center ${className}`}>
-      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-bgs-orange mb-3"></div>
+      <Loader2 className="h-8 w-8 text-bgs-orange animate-spin mb-3" />
       <p className="text-sm text-bgs-gray-medium">{message}</p>
     </div>
   );
