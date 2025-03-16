@@ -1,5 +1,6 @@
 
 import React from "react";
+import { Loader2 } from "lucide-react";
 
 interface InvestmentListStatusProps {
   isLoading: boolean;
@@ -9,8 +10,9 @@ interface InvestmentListStatusProps {
 export default function InvestmentListStatus({ isLoading, isEmpty }: InvestmentListStatusProps) {
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-bgs-orange"></div>
+      <div className="flex flex-col items-center justify-center py-8 space-y-3">
+        <Loader2 className="h-8 w-8 text-bgs-orange animate-spin" />
+        <p className="text-sm text-bgs-gray-medium">Chargement des investissements...</p>
       </div>
     );
   }

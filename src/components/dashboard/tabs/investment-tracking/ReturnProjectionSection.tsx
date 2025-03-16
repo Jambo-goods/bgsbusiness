@@ -1,9 +1,10 @@
 
 import React, { useMemo } from 'react';
-import { TrendingUp, CheckCircle, Clock } from 'lucide-react';
+import { TrendingUp, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { PaymentRecord } from './types';
 import { Project } from '@/types/project';
 import LoadingIndicator from './LoadingIndicator';
+import DashboardLoading from '../../DashboardLoading';
 
 interface ReturnProjectionSectionProps {
   paymentRecords: PaymentRecord[];
@@ -26,6 +27,10 @@ const PaymentStatusBadge: React.FC<{
       return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
           Programmé
         </span>;
+    case 'paid':
+      return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+          Payé
+        </span>;
     default:
       return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
           {status}
@@ -40,23 +45,38 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   userInvestments
 }) => {
   const futurePayments = useMemo(() => {
-    const payments = cumulativeExpectedReturns.filter(payment => payment.status === 'scheduled' || payment.status === 'pending').map(payment => {
-      const originalDate = new Date(payment.date);
-      const adjustedDate = new Date(originalDate.getFullYear(), originalDate.getMonth(), 5);
+    if (!cumulativeExpectedReturns || cumulativeExpectedReturns.length === 0) {
+      return [];
+    }
+    
+    const payments = cumulativeExpectedReturns
+      .filter(payment => payment.status === 'scheduled' || payment.status === 'pending')
+      .map(payment => {
+        const originalDate = new Date(payment.date);
+        const adjustedDate = new Date(originalDate.getFullYear(), originalDate.getMonth(), 5);
 
-      if (originalDate.getDate() > 5 && payment.status === 'scheduled') {
-        adjustedDate.setMonth(adjustedDate.getMonth() + 1);
-      }
-      return {
-        ...payment,
-        date: adjustedDate
-      };
-    });
+        if (originalDate.getDate() > 5 && payment.status === 'scheduled') {
+          adjustedDate.setMonth(adjustedDate.getMonth() + 1);
+        }
+        return {
+          ...payment,
+          date: adjustedDate
+        };
+      });
 
     return payments.sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [cumulativeExpectedReturns]);
 
   const stats = useMemo(() => {
+    if (!paymentRecords || paymentRecords.length === 0) {
+      return {
+        totalReceived: 0,
+        totalPending: 0,
+        averageMonthlyReturn: 0,
+        averageReturnPercentage: 12
+      };
+    }
+    
     const totalReceived = paymentRecords.filter(payment => payment.status === 'paid').reduce((sum, payment) => sum + payment.amount, 0);
     const totalPending = paymentRecords.filter(payment => payment.status === 'pending' || payment.status === 'scheduled').reduce((sum, payment) => sum + payment.amount, 0);
     const paidPayments = paymentRecords.filter(payment => payment.status === 'paid');
@@ -72,9 +92,52 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   }, [paymentRecords]);
 
   if (isLoading) {
-    return <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 min-h-[400px] flex items-center justify-center">
-      <LoadingIndicator message="Chargement des projections de rendement..." />
-    </div>;
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 min-h-[400px]">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-green-50 p-2.5 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">Rendement mensuel</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Basées sur vos investissements actuels</p>
+            </div>
+          </div>
+        </div>
+        
+        <DashboardLoading message="Chargement des projections de rendement..." />
+      </div>
+    );
+  }
+
+  // No data case
+  if (!futurePayments || futurePayments.length === 0) {
+    return (
+      <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 min-h-[200px]">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="bg-green-50 p-2.5 rounded-lg">
+              <TrendingUp className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">Rendement mensuel</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Basées sur vos investissements actuels</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="bg-blue-50 p-3 rounded-full mb-4">
+            <AlertCircle className="h-6 w-6 text-blue-500" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Aucune projection disponible</h3>
+          <p className="text-sm text-gray-500 max-w-md">
+            Nous n'avons pas encore de projections de rendement à afficher. Veuillez vérifier ultérieurement.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const fixedPercentage = 12;
@@ -137,45 +200,51 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {futurePayments && futurePayments.length > 0 ? futurePayments.map(payment => <tr key={payment.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {payment.date.toLocaleDateString('fr-FR', {
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric'
-              })}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
-                    {payment.projectName}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                    {fixedPercentage}%
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {payment.amount.toFixed(2)} €
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
-                    {payment.expectedCumulativeReturn ? payment.expectedCumulativeReturn.toFixed(2) : 0} €
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <PaymentStatusBadge status={payment.status} />
-                  </td>
-                </tr>) : <tr>
+            {futurePayments && futurePayments.length > 0 ? futurePayments.map(payment => (
+              <tr key={payment.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {payment.date.toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-blue-600">
+                  {payment.projectName}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                  {fixedPercentage}%
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {payment.amount.toFixed(2)} €
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-green-600">
+                  {payment.expectedCumulativeReturn ? payment.expectedCumulativeReturn.toFixed(2) : 0} €
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  <PaymentStatusBadge status={payment.status} />
+                </td>
+              </tr>
+            )) : (
+              <tr>
                 <td colSpan={6} className="px-4 py-4 text-sm text-center text-gray-500">
                   Aucune projection de rendement disponible
                 </td>
-              </tr>}
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
 
-      {userInvestments && userInvestments.length > 0 && <div className="mt-4 pt-4 border-t border-gray-100">
+      {userInvestments && userInvestments.length > 0 && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
           <p className="text-xs text-gray-500">
             <strong>Note:</strong> Ces projections sont basées sur les taux de rendement actuels et peuvent varier. 
             Le premier versement est généralement effectué après la période de délai initiale spécifiée dans chaque projet. 
             Les versements suivants sont effectués le 5 de chaque mois.
           </p>
-        </div>}
+        </div>
+      )}
     </div>
   );
 };

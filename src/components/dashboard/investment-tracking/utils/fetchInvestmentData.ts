@@ -49,11 +49,22 @@ export async function fetchInvestmentData(investmentId: string): Promise<Investm
     
     const remainingDuration = Math.max(0, totalMonths - elapsedMonths);
     
+    // Fetch user data if needed for the investment
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', investment.user_id)
+      .single();
+    
+    if (userError) {
+      console.error("Error fetching user data for investment:", userError);
+    }
+    
     return {
       ...investment,
       remainingDuration,
-      user_first_name: investment.user_first_name || '',
-      user_last_name: investment.user_last_name || '',
+      user_first_name: userData?.first_name || '',
+      user_last_name: userData?.last_name || '',
       user_id: investment.user_id || '',
       duration: investment.duration || 12
     };

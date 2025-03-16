@@ -8,13 +8,16 @@ export function useInvestmentTracking(investmentId: string | undefined) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadingTimer, setLoadingTimer] = useState<NodeJS.Timeout | null>(null);
+  const loadingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const attemptCountRef = useRef(0);
+  const maxAttempts = 3;
 
   // Function to safely set loading state with debounce
   const setLoadingWithDebounce = (isLoading: boolean) => {
     // Clear any existing timer
-    if (loadingTimer) {
-      clearTimeout(loadingTimer);
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
+      loadingTimerRef.current = null;
     }
     
     if (isLoading) {
@@ -22,20 +25,26 @@ export function useInvestmentTracking(investmentId: string | undefined) {
       setLoading(true);
     } else {
       // Delay setting loading to false to prevent flickering
-      const timer = setTimeout(() => {
+      loadingTimerRef.current = setTimeout(() => {
         setLoading(false);
+        loadingTimerRef.current = null;
       }, 800); // 800ms debounce for better stability
-      setLoadingTimer(timer);
     }
   };
 
   // Initial data loading
   useEffect(() => {
     const loadData = async () => {
-      if (!investmentId) return;
+      if (!investmentId) {
+        setLoadingWithDebounce(false);
+        return;
+      }
       
       try {
         setLoadingWithDebounce(true);
+        attemptCountRef.current += 1;
+        console.log(`Fetching investment data, attempt ${attemptCountRef.current}/${maxAttempts}`);
+        
         const investmentData = await fetchInvestmentDetails(investmentId);
         
         if (investmentData) {
@@ -44,14 +53,27 @@ export function useInvestmentTracking(investmentId: string | undefined) {
           // Once we have the investment data, fetch transactions for this user
           const transactionsData = await fetchTransactionHistory(investmentData.user_id);
           setTransactions(transactionsData);
+          
+          // Reset attempt counter on success
+          attemptCountRef.current = 0;
+        } else if (attemptCountRef.current < maxAttempts) {
+          // Retry after a delay if within max attempts
+          setTimeout(loadData, 2000);
+          return;
         }
       } catch (error) {
         console.error("Error loading investment tracking data:", error);
+        
+        if (attemptCountRef.current < maxAttempts) {
+          // Retry after a delay if within max attempts
+          setTimeout(loadData, 2000);
+          return;
+        }
       } finally {
-        // Add a slight delay before turning off loading state to prevent UI flicker
-        setTimeout(() => {
+        // Only turn off loading state if we're done with attempts or succeeded
+        if (attemptCountRef.current >= maxAttempts || investment) {
           setLoadingWithDebounce(false);
-        }, 300);
+        }
       }
     };
     
@@ -59,8 +81,8 @@ export function useInvestmentTracking(investmentId: string | undefined) {
     
     // Cleanup timer on unmount
     return () => {
-      if (loadingTimer) {
-        clearTimeout(loadingTimer);
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
       }
     };
   }, [investmentId]);
