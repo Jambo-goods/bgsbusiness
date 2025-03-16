@@ -34,15 +34,15 @@ export default function NotificationItem({
     switch (type) {
       case 'deposit':
       case 'withdrawal':
-        return <Wallet className="h-4 w-4 text-blue-500" />;
+        return <Wallet className="h-5 w-5 text-blue-500" />;
       case 'investment':
-        return <Briefcase className="h-4 w-4 text-green-500" />;
+        return <Briefcase className="h-5 w-5 text-green-500" />;
       case 'security':
-        return <Shield className="h-4 w-4 text-purple-500" />;
+        return <Shield className="h-5 w-5 text-purple-500" />;
       case 'marketing':
-        return <Megaphone className="h-4 w-4 text-orange-500" />;
+        return <Megaphone className="h-5 w-5 text-orange-500" />;
       default:
-        return <Bell className="h-4 w-4 text-gray-500" />;
+        return <Bell className="h-5 w-5 text-gray-500" />;
     }
   };
 
@@ -69,7 +69,7 @@ export default function NotificationItem({
 
   return (
     <Card 
-      className={`p-4 ${notification.read ? 'bg-white' : 'bg-blue-50'}`}
+      className={`p-4 ${notification.read ? 'bg-white' : 'bg-blue-50 shadow-md'} transition-all hover:shadow-lg`}
     >
       <div className="flex items-start gap-3">
         <div className="mt-1">
@@ -78,10 +78,10 @@ export default function NotificationItem({
         
         <div className="flex-1">
           <div className="flex justify-between items-start mb-1">
-            <p className={`font-medium ${notification.read ? 'text-gray-900' : 'text-blue-800'}`}>
+            <p className={`font-semibold ${notification.read ? 'text-gray-900' : 'text-blue-800'}`}>
               {notification.title}
             </p>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
               {formatDate(notification.date)}
             </span>
           </div>
@@ -96,7 +96,7 @@ export default function NotificationItem({
                 onClick={() => onMarkAsRead(notification.id)} 
                 variant="ghost" 
                 size="sm"
-                className="text-blue-600 hover:text-blue-800"
+                className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
               >
                 <Check className="h-4 w-4 mr-1" />
                 Marquer comme lu
@@ -109,7 +109,8 @@ export default function NotificationItem({
           variant="ghost"
           size="icon"
           onClick={() => onDelete(notification.id)}
-          className="text-gray-400 hover:text-red-500"
+          className="text-gray-400 hover:text-red-500 hover:bg-red-50"
+          aria-label="Supprimer la notification"
         >
           <Trash2 className="h-4 w-4" />
         </Button>

@@ -6,6 +6,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.34.0'
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       headers: {
@@ -17,6 +18,7 @@ Deno.serve(async (req) => {
   }
   
   try {
+    console.log("Received withdrawal notification request");
     const { userId, amount, status, type = "withdrawal" } = await req.json()
     
     if (!userId || !amount || !status) {
@@ -64,6 +66,9 @@ Deno.serve(async (req) => {
       category = 'info'
     }
     
+    // Log for debugging
+    console.log(`Creating withdrawal notification for user ${userId}: ${title}`);
+    
     const { data, error } = await supabase
       .from('notifications')
       .insert({
@@ -72,26 +77,39 @@ Deno.serve(async (req) => {
         description,
         type,
         category,
-        read: false
+        read: false,
+        metadata: { amount, status }
       })
     
     if (error) {
       console.error('Error creating notification:', error)
       return new Response(
-        JSON.stringify({ error: 'Failed to create notification' }),
+        JSON.stringify({ error: 'Failed to create notification', details: error }),
         { status: 500, headers: { 'Content-Type': 'application/json' } }
       )
     }
     
     return new Response(
       JSON.stringify({ success: true, message: 'Withdrawal notification sent' }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { 
+        status: 200, 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        } 
+      }
     )
   } catch (error) {
     console.error('Error processing request:', error)
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Internal server error', details: error.message }),
+      { 
+        status: 500, 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*'
+        } 
+      }
     )
   }
 })

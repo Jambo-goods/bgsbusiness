@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { notificationService, Notification } from "@/services/notifications";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,11 +16,7 @@ export default function NotificationsTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setIsRefreshing(true);
     setError(null);
     
@@ -37,7 +33,21 @@ export default function NotificationsTab() {
       setIsRefreshing(false);
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Set up real-time subscription
+    const unsubscribe = notificationService.setupRealtimeSubscription(() => {
+      console.log("Real-time notification update detected");
+      fetchNotifications();
+    });
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
   
@@ -93,6 +103,7 @@ export default function NotificationsTab() {
 
   const handleRefresh = async () => {
     await fetchNotifications();
+    toast.info("Notifications actualisées");
   };
 
   const handleFilterChange = (newFilter: 'all' | 'unread') => {
@@ -123,8 +134,8 @@ export default function NotificationsTab() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <NotificationHeader notificationCount={notifications.length} />
         <NotificationActions
           unreadCount={unreadCount}

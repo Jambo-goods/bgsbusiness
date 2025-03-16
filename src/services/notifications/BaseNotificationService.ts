@@ -25,7 +25,10 @@ export class BaseNotificationService {
           read: false
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error creating notification:", error);
+        throw error;
+      }
       
       // Also show a toast notification
       this.showToast(notification);
@@ -81,12 +84,12 @@ export class BaseNotificationService {
       return data.map(notification => ({
         id: notification.id,
         title: notification.title,
-        description: notification.description,
+        description: notification.description || notification.message,
         date: new Date(notification.created_at),
-        read: notification.read,
+        read: notification.read === true,
         type: notification.type as Notification['type'],
         category: notification.category as NotificationCategory,
-        metadata: notification.metadata ? notification.metadata as Record<string, any> : {}
+        metadata: notification.metadata || {}
       }));
       
     } catch (error) {
@@ -163,5 +166,25 @@ export class BaseNotificationService {
       console.error("Error marking all notifications as read:", error);
       throw error;
     }
+  }
+  
+  setupRealtimeSubscription(callback: () => void): () => void {
+    const channel = supabase
+      .channel('notification_changes')
+      .on('postgres_changes', 
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        }, 
+        () => {
+          callback();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 }
