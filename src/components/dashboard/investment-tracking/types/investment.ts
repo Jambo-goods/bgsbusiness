@@ -33,3 +33,18 @@ export interface Transaction {
   status: 'pending' | 'completed';
   cumulativeAmount?: number;
 }
+
+export interface ScheduledPayment {
+  id: string;
+  project_id: string;
+  payment_date: string;
+  percentage: number;
+  status: string;
+  total_scheduled_amount: number;
+  investors_count: number;
+  processed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  total_invested_amount?: number;
+  calculatedCumulativeAmount?: number;
+}

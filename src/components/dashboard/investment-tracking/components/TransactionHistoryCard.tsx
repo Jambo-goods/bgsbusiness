@@ -4,21 +4,13 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, CheckCircle, Clock, Calendar } from "lucide-react";
-import { Transaction } from "../types/investment";
+import { Transaction, ScheduledPayment } from "../types/investment";
 import { calculateReturns } from "@/utils/investmentCalculations";
 import { supabase } from "@/integrations/supabase/client";
 
 interface TransactionHistoryCardProps {
   transactions: Transaction[];
   investmentId?: string;
-}
-
-interface ScheduledPayment {
-  id: string;
-  project_id: string;
-  payment_date: string;
-  percentage: number;
-  status: string;
 }
 
 export default function TransactionHistoryCard({ transactions, investmentId }: TransactionHistoryCardProps) {
@@ -62,7 +54,20 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         }
         
         console.log("Scheduled payments fetched:", payments?.length || 0);
-        setScheduledPayments(payments || []);
+        
+        // Add calculated cumulative amounts for each payment
+        let cumulativeAmount = 0;
+        const paymentsWithCumulative = payments?.map(payment => {
+          if (payment.status === 'processed') {
+            cumulativeAmount += payment.total_scheduled_amount || 0;
+          }
+          return {
+            ...payment,
+            calculatedCumulativeAmount: payment.status === 'processed' ? cumulativeAmount : 0
+          };
+        }) || [];
+        
+        setScheduledPayments(paymentsWithCumulative);
         setIsLoading(false);
       } catch (error) {
         console.error("Error in fetchScheduledPayments:", error);
@@ -77,32 +82,32 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
   };
   
-  // Filtrer les transactions liées à cet investissement
+  // Filter transactions related to this investment
   const filteredTransactions = investmentId 
     ? transactions.filter(tx => tx.investment_id === investmentId)
     : transactions;
   
-  // Calculer le rendement total reçu
+  // Calculate total yield received
   const totalYieldReceived = useMemo(() => {
     return filteredTransactions
       .filter(tx => tx.type === 'yield' && tx.status === 'completed')
       .reduce((total, tx) => total + tx.amount, 0);
   }, [filteredTransactions]);
   
-  // Obtenir le montant de l'investissement
+  // Get investment amount
   const investmentAmount = useMemo(() => {
     const investmentTx = filteredTransactions.find(tx => tx.type === 'investment');
     return investmentTx ? investmentTx.amount : 0;
   }, [filteredTransactions]);
   
-  // Calculer le total des versements en attente
+  // Calculate total pending yields
   const pendingYields = useMemo(() => {
     return filteredTransactions
       .filter(tx => tx.type === 'yield' && tx.status === 'pending')
       .reduce((total, tx) => total + tx.amount, 0);
   }, [filteredTransactions]);
   
-  // Préparer les transactions pour le format tableau
+  // Prepare transactions for table format
   const tableData = useMemo(() => {
     const sorted = [...filteredTransactions]
       .filter(tx => tx.type === 'yield')
@@ -118,29 +123,33 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     });
   }, [filteredTransactions]);
   
-  // Rendement mensuel fixe (12%)
+  // Fixed yield percentage (12%)
   const fixedYieldPercentage = 12;
 
-  // Formater les versements programmés
+  // Format scheduled payments
   const formattedScheduledPayments = useMemo(() => {
-    if (!scheduledPayments.length || !investmentAmount) return [];
+    if (!scheduledPayments?.length || !investmentAmount) return [];
     
-    // Initialisation du cumul pour les versements programmés
+    // Initialize cumulative for scheduled payments
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    // Calculer le montant mensuel basé sur le pourcentage fixe
+    // Calculate monthly amount based on fixed percentage
     const monthlyYield = investmentAmount * (fixedYieldPercentage / 100) / 12;
     
-    return scheduledPayments.map((payment, index) => {
-      const paymentAmount = monthlyYield;
-      cumulativeScheduledAmount += paymentAmount;
+    return scheduledPayments.map(payment => {
+      const paymentAmount = payment.total_scheduled_amount || monthlyYield;
+      
+      // Only increase cumulative for future payments
+      if (payment.status !== 'processed') {
+        cumulativeScheduledAmount += paymentAmount;
+      }
       
       return {
         id: payment.id,
         date: payment.payment_date,
         amount: paymentAmount,
         cumulativeAmount: cumulativeScheduledAmount,
-        percentage: fixedYieldPercentage,
+        percentage: payment.percentage || fixedYieldPercentage,
         status: payment.status
       };
     });
@@ -196,7 +205,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           </div>
         </div>
 
-        {/* Versements programmés */}
+        {/* Scheduled Payments */}
         <div className="mb-8">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">
             <span className="flex items-center gap-2">
@@ -261,7 +270,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           )}
         </div>
 
-        {/* Historique des transactions */}
+        {/* Transaction History */}
         <div>
           <h3 className="text-lg font-semibold mb-4 text-gray-800">
             <span className="flex items-center gap-2">
