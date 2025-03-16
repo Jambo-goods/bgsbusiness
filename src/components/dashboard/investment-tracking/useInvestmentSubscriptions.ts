@@ -27,6 +27,7 @@ export const useInvestmentSubscriptions = (
         // Create a notification in the database
         if (payload.eventType === 'INSERT') {
           try {
+            console.log('Creating new investment notification for:', userId);
             await supabase.from('notifications').insert({
               user_id: userId,
               type: 'investment',
@@ -36,9 +37,14 @@ export const useInvestmentSubscriptions = (
               data: payload.new
             });
             
-            toast.info("Nouvel investissement", {
-              description: "Votre investissement a été enregistré avec succès."
-            });
+            // Show toast notification immediately
+            notificationService.investmentConfirmed(
+              payload.new.amount,
+              payload.new.project_name || "votre projet", 
+              payload.new.project_id
+            );
+            
+            console.log('Investment notification created successfully');
           } catch (error) {
             console.error('Error creating investment notification:', error);
           }
@@ -86,6 +92,7 @@ export const useInvestmentSubscriptions = (
           
           // Create a notification in the database
           try {
+            console.log('Creating transaction notification:', notificationType);
             await supabase.from('notifications').insert({
               user_id: userId,
               type: notificationType,
@@ -95,9 +102,12 @@ export const useInvestmentSubscriptions = (
               data: transaction
             });
             
+            // Show toast notification immediately
             toast.info(notificationTitle, {
               description: notificationMessage
             });
+            
+            console.log('Transaction notification created successfully');
           } catch (error) {
             console.error('Error creating transaction notification:', error);
           }

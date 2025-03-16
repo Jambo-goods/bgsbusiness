@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,6 +22,31 @@ export const notificationService = {
         }
       }
     });
+    
+    // Ensure notification is also recorded in database (important for tracking)
+    try {
+      // Get current user's session
+      supabase.auth.getSession().then(({ data: sessionData }) => {
+        const userId = sessionData.session?.user?.id;
+        if (userId) {
+          supabase.from('notifications').insert({
+            user_id: userId,
+            type: 'investment',
+            title: 'Investissement confirmé',
+            message: `Votre investissement de ${amount}€ dans ${projectName} a été confirmé.`,
+            seen: false,
+            data: { amount, projectName, projectId }
+          }).then(() => {
+            console.log('Successfully created database notification from service');
+          }).catch(error => {
+            console.error('Error creating database notification from service:', error);
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Error in investmentConfirmed notification:', error);
+    }
+    
     return Promise.resolve();
   },
   

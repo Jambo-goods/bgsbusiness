@@ -6,7 +6,6 @@ import { Project } from "@/types/project";
 import { useNavigate } from "react-router-dom";
 import { notificationService } from "@/services/notifications";
 
-// Session validation function
 const validateUserSession = async () => {
   const { data: session } = await supabase.auth.getSession();
   
@@ -18,7 +17,6 @@ const validateUserSession = async () => {
   return session.session.user.id;
 };
 
-// Verify user has enough balance
 const verifyUserBalance = async (userId: string, investmentAmount: number) => {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -39,7 +37,6 @@ const verifyUserBalance = async (userId: string, investmentAmount: number) => {
   return profile.wallet_balance;
 };
 
-// Create investment record
 const createInvestmentRecord = async (userId: string, projectId: string, investmentAmount: number, selectedDuration: number, yieldRate: number) => {
   console.log("Création de l'investissement...", {
     user_id: userId,
@@ -75,7 +72,6 @@ const createInvestmentRecord = async (userId: string, projectId: string, investm
   return investment.id;
 };
 
-// Create wallet transaction for investment
 const createInvestmentTransaction = async (userId: string, projectId: string, projectName: string, investmentAmount: number) => {
   const { data: transaction, error: transactionError } = await supabase
     .from('wallet_transactions')
@@ -97,7 +93,6 @@ const createInvestmentTransaction = async (userId: string, projectId: string, pr
   return transaction?.id;
 };
 
-// Update user wallet balance
 const updateUserWalletBalance = async (userId: string, investmentAmount: number) => {
   const { error: walletError } = await supabase.rpc(
     'increment_wallet_balance', 
@@ -110,9 +105,7 @@ const updateUserWalletBalance = async (userId: string, investmentAmount: number)
   }
 };
 
-// Update user profile with investment info
 const updateUserProfile = async (userId: string, investmentAmount: number, yieldRate: number) => {
-  // First, get current profile data
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('investment_total, projects_count')
@@ -124,11 +117,9 @@ const updateUserProfile = async (userId: string, investmentAmount: number, yield
     throw new Error("Erreur lors de la mise à jour du profil");
   }
 
-  // Calculate new values
   const newInvestmentTotal = (profile?.investment_total || 0) + investmentAmount;
   const newProjectsCount = (profile?.projects_count || 0) + 1;
 
-  // Update profile with new values
   const { error: updateError } = await supabase
     .from('profiles')
     .update({
@@ -143,7 +134,6 @@ const updateUserProfile = async (userId: string, investmentAmount: number, yield
   }
 };
 
-// Update scheduled payments
 const updateScheduledPayments = async (projectId: string) => {
   try {
     await supabase.rpc('initialize_project_scheduled_payments', {
@@ -155,7 +145,6 @@ const updateScheduledPayments = async (projectId: string) => {
   }
 };
 
-// Save investment data for confirmation page
 const saveInvestmentData = (projectId: string, projectName: string, investmentAmount: number, selectedDuration: number, yieldRate: number, monthlyReturn: number, totalReturn: number, firstPaymentDelay: number) => {
   const investmentData = {
     projectId,
@@ -190,13 +179,10 @@ export const useInvestmentConfirmation = (
     setIsProcessing(true);
     
     try {
-      // Get the current user session
       const userId = await validateUserSession();
       
-      // Double check user balance
       await verifyUserBalance(userId, investmentAmount);
       
-      // Make sure we have a valid project ID
       console.log("Création/recherche du projet:", project.name);
       let projectId;
       try {
@@ -210,23 +196,17 @@ export const useInvestmentConfirmation = (
         throw new Error("Erreur avec le projet: " + (projectError instanceof Error ? projectError.message : "Erreur inconnue"));
       }
       
-      // Create the investment record first
       const investmentId = await createInvestmentRecord(userId, projectId, investmentAmount, selectedDuration, project.yield);
       
       try {
-        // Create wallet transaction for the investment
         await createInvestmentTransaction(userId, projectId, project.name, investmentAmount);
         
-        // Update the user's wallet balance
         await updateUserWalletBalance(userId, investmentAmount);
         
-        // Update scheduled payments - non-critical
         await updateScheduledPayments(projectId);
         
-        // Update user profile with investment data
         await updateUserProfile(userId, investmentAmount, project.yield);
         
-        // Save investment data for confirmation page
         saveInvestmentData(
           projectId, 
           project.name, 
@@ -238,22 +218,36 @@ export const useInvestmentConfirmation = (
           firstPaymentDelay
         );
         
-        // Log successful investment
         console.log(`Investissement réussi: ${investmentAmount}€ dans ${project.name} pour ${selectedDuration} mois`);
         
-        // Notification via toast standard
         toast({
           title: "Investissement réussi !",
           description: `Vous avez investi ${investmentAmount}€ dans ${project.name} pour une durée de ${selectedDuration} mois.`,
         });
         
-        // Utiliser le service de notification personnalisé
+        try {
+          console.log('Creating direct investment notification from confirmation hook');
+          await supabase.from('notifications').insert({
+            user_id: userId,
+            type: 'investment',
+            title: 'Investissement confirmé',
+            message: `Votre investissement de ${investmentAmount}€ dans ${project.name} a été confirmé.`,
+            seen: false,
+            data: {
+              projectId,
+              projectName: project.name,
+              amount: investmentAmount,
+              duration: selectedDuration
+            }
+          });
+        } catch (error) {
+          console.error('Error creating direct investment notification:', error);
+        }
+        
         notificationService.investmentConfirmed(investmentAmount, project.name, projectId);
         
         navigate("/dashboard");
       } catch (error) {
-        // If any errors happen after investment creation but before completion, 
-        // try to rollback the investment record
         console.error("Error after investment creation, attempting rollback:", error);
         try {
           if (investmentId) {
