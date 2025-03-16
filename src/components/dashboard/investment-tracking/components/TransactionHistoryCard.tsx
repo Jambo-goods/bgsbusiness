@@ -197,50 +197,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         <CardTitle>Historique des transactions</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="bg-green-50 p-2.5 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-green-600" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-800">Rendement mensuel</h2>
-              <p className="text-xs text-gray-500 mt-0.5">Basées sur vos investissements actuels</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-              <div className="flex items-center mb-2">
-                <div className="bg-green-100 p-1.5 rounded-full mr-2">
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </div>
-                <p className="text-xs text-green-700">Total des versements perçus</p>
-              </div>
-              <p className="text-lg font-medium text-green-700">{totalYieldReceived.toFixed(2)} €</p>
-            </div>
-            
-            <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100">
-              <div className="flex items-center mb-2">
-                <div className="bg-yellow-100 p-1.5 rounded-full mr-2">
-                  <Clock className="h-4 w-4 text-yellow-600" />
-                </div>
-                <p className="text-xs text-yellow-700">Total des versements en attente</p>
-              </div>
-              <p className="text-lg font-medium text-yellow-700">{pendingYields.toFixed(2)} €</p>
-            </div>
-            
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-              <div className="flex items-center mb-2">
-                <div className="bg-blue-100 p-1.5 rounded-full mr-2">
-                  <TrendingUp className="h-4 w-4 text-blue-600" />
-                </div>
-                <p className="text-xs text-blue-700">Rendement mensuel moyen</p>
-              </div>
-              <p className="text-lg font-medium text-blue-700">{fixedYieldPercentage}%</p>
-            </div>
-          </div>
-        </div>
-
         <div>
           <h3 className="text-lg font-semibold mb-4 text-gray-800">
             <span className="flex items-center gap-2">
