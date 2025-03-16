@@ -79,7 +79,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         .select('*')
         .eq('user_id', session.session.user.id)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(15);
 
       if (transactionsError) throw transactionsError;
       
@@ -90,9 +90,11 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         .eq('user_id', session.session.user.id)
         .eq('type', 'withdrawal')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(15);
         
       if (notificationsError) throw notificationsError;
+      
+      console.log("Notifications récupérées:", notificationsData);
       
       // Convert database types to our interface types
       const typedTransactions = transactionsData?.map(item => ({
@@ -108,7 +110,7 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
         created_at: item.created_at,
         type: item.type,
         read: item.seen,
-        category: 'info',
+        category: item.category || 'info',
         metadata: item.data as { amount: number; status: string } | null
       })) || [];
       
@@ -150,6 +152,8 @@ export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
     if (item.itemType === 'notification') {
       if (item.category === 'success') {
         return <CheckCircle className="h-4 w-4 text-green-600" />;
+      } else if (item.category === 'error') {
+        return <AlertCircle className="h-4 w-4 text-red-600" />;
       } else {
         return <AlertCircle className="h-4 w-4 text-blue-600" />;
       }

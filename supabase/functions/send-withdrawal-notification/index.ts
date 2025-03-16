@@ -39,42 +39,41 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey)
     
-    let title
-    let description
-    let category
+    let title, message, category
     
     if (status === 'submitted') {
       title = 'Demande de retrait soumise'
-      description = `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`
+      message = `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`
       category = 'info'
     } else if (status === 'scheduled') {
       title = 'Retrait programmé'
-      description = `Votre retrait de ${amount}€ a été programmé et sera traité prochainement.`
+      message = `Votre retrait de ${amount}€ a été programmé et sera traité prochainement.`
       category = 'success'
     } else if (status === 'completed') {
       title = 'Retrait effectué'
-      description = `Votre retrait de ${amount}€ a été traité avec succès et les fonds ont été envoyés sur votre compte bancaire.`
+      message = `Votre retrait de ${amount}€ a été traité avec succès et les fonds ont été envoyés sur votre compte bancaire.`
       category = 'success'
     } else if (status === 'rejected') {
       title = 'Retrait refusé'
-      description = `Votre demande de retrait de ${amount}€ a été refusée. Veuillez contacter le support pour plus d'informations.`
+      message = `Votre demande de retrait de ${amount}€ a été refusée. Veuillez contacter le support pour plus d'informations.`
       category = 'error'
     } else {
       title = 'Mise à jour du retrait'
-      description = `Le statut de votre retrait de ${amount}€ a été mis à jour: ${status}.`
+      message = `Le statut de votre retrait de ${amount}€ a été mis à jour: ${status}.`
       category = 'info'
     }
     
+    // Créer une notification avec les champs correctement formatés
     const { data, error } = await supabase
       .from('notifications')
       .insert({
         user_id: userId,
         title,
-        description,
+        message,
         type,
         category,
-        read: false,
-        metadata: { amount, status }
+        seen: false,
+        data: { amount, status }
       })
     
     if (error) {
