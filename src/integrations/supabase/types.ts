@@ -153,39 +153,33 @@ export type Database = {
       }
       notifications: {
         Row: {
-          category: string
-          created_at: string | null
-          description: string
+          created_at: string
+          data: Json | null
           id: string
-          metadata: Json | null
-          read: boolean
+          message: string
+          seen: boolean
           title: string
           type: string
-          updated_at: string | null
           user_id: string
         }
         Insert: {
-          category?: string
-          created_at?: string | null
-          description: string
+          created_at?: string
+          data?: Json | null
           id?: string
-          metadata?: Json | null
-          read?: boolean
+          message: string
+          seen?: boolean
           title: string
           type: string
-          updated_at?: string | null
           user_id: string
         }
         Update: {
-          category?: string
-          created_at?: string | null
-          description?: string
+          created_at?: string
+          data?: Json | null
           id?: string
-          metadata?: Json | null
-          read?: boolean
+          message?: string
+          seen?: boolean
           title?: string
           type?: string
-          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
@@ -463,6 +457,12 @@ export type Database = {
           user_email: string
         }
         Returns: boolean
+      }
+      recalculate_wallet_balance: {
+        Args: {
+          user_uuid: string
+        }
+        Returns: undefined
       }
       update_user_profile_investment: {
         Args: {
