@@ -5,6 +5,7 @@ import { fr } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Transaction } from "../types/investment";
+import { ArrowDownCircle, ArrowUpCircle, PiggyBank, Clock } from "lucide-react";
 
 interface TransactionHistoryCardProps {
   transactions: Transaction[];
@@ -21,8 +22,53 @@ export default function TransactionHistoryCard({ transactions }: TransactionHist
         return 'Gain reçu';
       case 'investment':
         return 'Investissement';
+      case 'deposit':
+        return 'Dépôt';
+      case 'withdrawal':
+        return 'Retrait';
       default:
         return type;
+    }
+  };
+  
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'yield':
+        return <ArrowDownCircle className="h-4 w-4 text-green-500" />;
+      case 'investment':
+        return <PiggyBank className="h-4 w-4 text-blue-500" />;
+      case 'deposit':
+        return <ArrowDownCircle className="h-4 w-4 text-green-500" />;
+      case 'withdrawal':
+        return <ArrowUpCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+  
+  const getAmountColor = (type: string) => {
+    switch (type) {
+      case 'yield':
+      case 'deposit':
+        return 'text-green-600';
+      case 'investment':
+      case 'withdrawal':
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+  
+  const getAmountPrefix = (type: string) => {
+    switch (type) {
+      case 'yield':
+      case 'deposit':
+        return '+';
+      case 'investment':
+      case 'withdrawal':
+        return '-';
+      default:
+        return '';
     }
   };
   
@@ -50,9 +96,14 @@ export default function TransactionHistoryCard({ transactions }: TransactionHist
               transactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell>{formatDate(transaction.created_at)}</TableCell>
-                  <TableCell>{getTransactionTypeLabel(transaction.type)}</TableCell>
-                  <TableCell className={transaction.type === 'yield' ? 'text-green-600' : 'text-red-600'}>
-                    {transaction.type === 'yield' ? '+' : '-'}{transaction.amount}€
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getTransactionIcon(transaction.type)}
+                      {getTransactionTypeLabel(transaction.type)}
+                    </div>
+                  </TableCell>
+                  <TableCell className={getAmountColor(transaction.type)}>
+                    {getAmountPrefix(transaction.type)}{transaction.amount}€
                   </TableCell>
                   <TableCell>
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

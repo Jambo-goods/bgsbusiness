@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useCallback } from "react";
 import { RefreshCcw, CalculatorIcon, AlertCircle } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
@@ -59,6 +58,11 @@ export function WalletCard() {
                 );
                 setShowRefreshAlert(true);
               }
+            } else if (payload.eventType === 'INSERT') {
+              if (payload.new?.amount) {
+                notificationService.withdrawalStatus(payload.new.amount, 'pending');
+                setShowRefreshAlert(true);
+              }
             }
           }
         )
@@ -69,16 +73,103 @@ export function WalletCard() {
         .on(
           'postgres_changes',
           {
-            event: 'UPDATE',
+            event: '*',
             schema: 'public',
             table: 'bank_transfers',
             filter: `user_id=eq.${userId}`
           },
           async (payload) => {
-            console.log("Bank transfer updated, notification only:", payload);
+            console.log("Bank transfer changed, notification only:", payload);
             
-            if (payload.new?.status === 'reçu' || payload.new?.status === 'received') {
-              if (payload.new.amount) {
+            if (payload.eventType === 'UPDATE') {
+              if (payload.new?.status === 'reçu' || payload.new?.status === 'received') {
+                if (payload.new.amount) {
+                  notificationService.depositSuccess(payload.new.amount);
+                  setShowRefreshAlert(true);
+                }
+              }
+            } else if (payload.eventType === 'INSERT') {
+              if (payload.new?.amount) {
+                toast.info("Demande de dépôt reçue", {
+                  description: `Votre demande de dépôt de ${payload.new.amount}€ a été reçue et est en cours de traitement.`
+                });
+              }
+            }
+          }
+        )
+        .subscribe();
+        
+      // Listen for investment changes
+      const investmentChannel = supabase
+        .channel('wallet-card-investment-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'investments',
+            filter: `user_id=eq.${userId}`
+          },
+          async (payload) => {
+            console.log("New investment detected:", payload);
+            
+            if (payload.new) {
+              try {
+                // Get project details
+                const { data: project } = await supabase
+                  .from('projects')
+                  .select('name')
+                  .eq('id', payload.new.project_id)
+                  .single();
+                  
+                if (project && payload.new.amount) {
+                  notificationService.investmentConfirmed(
+                    payload.new.amount,
+                    project.name,
+                    payload.new.project_id
+                  );
+                  setShowRefreshAlert(true);
+                }
+              } catch (error) {
+                console.error("Error getting project details for notification:", error);
+              }
+            }
+          }
+        )
+        .subscribe();
+        
+      // Listen for yield payments
+      const walletTransactionsChannel = supabase
+        .channel('wallet-card-transactions-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'wallet_transactions',
+            filter: `user_id=eq.${userId} AND type=eq.deposit`
+          },
+          async (payload) => {
+            console.log("New wallet transaction detected:", payload);
+            
+            if (payload.new) {
+              // Check if it's a yield payment based on description
+              if (payload.new.description && 
+                  payload.new.description.toLowerCase().includes('rendement') && 
+                  payload.new.amount) {
+                
+                // Extract project name if available
+                const projectNameMatch = payload.new.description.match(/du projet (.+)/);
+                const projectName = projectNameMatch ? projectNameMatch[1] : 'un projet';
+                
+                notificationService.yieldReceived(
+                  payload.new.amount,
+                  projectName
+                );
+                setShowRefreshAlert(true);
+              }
+              // For regular deposits
+              else if (payload.new.type === 'deposit' && payload.new.amount) {
                 notificationService.depositSuccess(payload.new.amount);
                 setShowRefreshAlert(true);
               }
@@ -87,7 +178,7 @@ export function WalletCard() {
         )
         .subscribe();
       
-      return [withdrawalChannel, bankTransferChannel];
+      return [withdrawalChannel, bankTransferChannel, investmentChannel, walletTransactionsChannel];
     };
     
     // Set up subscriptions for notifications only

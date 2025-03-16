@@ -65,12 +65,11 @@ export async function fetchInvestmentDetails(investmentId: string): Promise<Inve
 
 export async function fetchTransactionHistory(userId: string): Promise<any[]> {
   try {
-    // First fetch wallet transactions related to investments
-    const { data: walletData, error: walletError } = await supabase
+    // Fetch all wallet transactions with investment, deposit, and withdrawal operations
+    const { data: walletTransactions, error: walletError } = await supabase
       .from('wallet_transactions')
       .select('*')
       .eq('user_id', userId)
-      .ilike('description', '%Investissement%')
       .order('created_at', { ascending: false });
       
     if (walletError) {
@@ -78,34 +77,30 @@ export async function fetchTransactionHistory(userId: string): Promise<any[]> {
       return [];
     }
     
-    // Fetch yield payments
-    const { data: yieldData, error: yieldError } = await supabase
-      .from('wallet_transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('type', 'deposit')
-      .ilike('description', '%rendement%')
-      .order('created_at', { ascending: false });
+    // Format the transactions for display
+    const formattedTransactions = walletTransactions.map(tx => {
+      // Set the type based on the wallet transaction type or description
+      let type = tx.type;
       
-    if (yieldError) {
-      console.error("Error fetching yield transactions:", yieldError);
-    }
+      // Check if it's an investment (for backward compatibility)
+      if (tx.description && tx.description.toLowerCase().includes('investissement')) {
+        type = 'investment';
+      }
+      
+      // Check if it's a yield payment
+      if (tx.type === 'deposit' && tx.description && tx.description.toLowerCase().includes('rendement')) {
+        type = 'yield';
+      }
+      
+      return {
+        ...tx,
+        type: type
+      };
+    });
     
-    // Combine all transactions
-    const allTransactions = [
-      ...(walletData || []).map(tx => ({
-        ...tx,
-        type: 'investment'
-      })),
-      ...(yieldData || []).map(tx => ({
-        ...tx,
-        type: 'yield'
-      }))
-    ].sort((a, b) => 
+    return formattedTransactions.sort((a, b) => 
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
-    
-    return allTransactions;
   } catch (error) {
     console.error("Unexpected error in fetchTransactionHistory:", error);
     return [];

@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { notificationService } from "@/services/notifications";
 
 export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>) {
   const [amount, setAmount] = useState("");
@@ -111,7 +112,7 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
           amount: withdrawalAmount,
           type: 'withdrawal',
           description: `Retrait en attente - ID: ${withdrawal.id}`,
-          status: 'completed'
+          status: 'pending'
         });
       
       if (transactionError) {
@@ -119,7 +120,10 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
         // Continue even if there's an error (the withdrawal was created)
       }
       
-      // Notify about the withdrawal request
+      // Show notification for withdrawal request
+      notificationService.withdrawalStatus(withdrawalAmount, 'pending');
+      
+      // Notify about the withdrawal request to backend
       try {
         const userName = `${userData.first_name} ${userData.last_name}`;
         
