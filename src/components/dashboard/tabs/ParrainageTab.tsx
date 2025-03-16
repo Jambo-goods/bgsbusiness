@@ -76,40 +76,41 @@ export default function ParrainageTab() {
         setReferralCode(profileData.referral_code);
       }
 
-      // Get user's referrals with referred user details
+      // Get user's referrals 
       const { data: referralsData, error } = await supabase
         .from('referrals')
-        .select(`
-          *,
-          referred_user:referred_id(
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .eq('referrer_id', session.session.user.id);
 
       if (error) {
         console.error('Error fetching referrals:', error);
         toast.error("Erreur lors de la récupération des parrainages");
       } else {
-        // Map the data to our Referral type with proper type casting
-        const mappedReferrals = referralsData.map(referral => {
-          return {
-            ...referral,
-            referred_user: {
-              first_name: referral.referred_user?.first_name || 'Utilisateur',
-              last_name: referral.referred_user?.last_name || 'Inconnu',
-              email: referral.referred_user?.email || 'email@inconnu.com',
-            }
-          } as Referral;
-        });
+        // For each referral, fetch the referred user details
+        const referralsWithUserDetails = await Promise.all(
+          (referralsData || []).map(async (referral) => {
+            const { data: userData } = await supabase
+              .from('profiles')
+              .select('first_name, last_name, email')
+              .eq('id', referral.referred_id)
+              .single();
+            
+            return {
+              ...referral,
+              referred_user: {
+                first_name: userData?.first_name || 'Utilisateur',
+                last_name: userData?.last_name || 'Inconnu',
+                email: userData?.email || 'email@inconnu.com',
+              }
+            } as Referral;
+          })
+        );
         
-        setReferrals(mappedReferrals);
+        setReferrals(referralsWithUserDetails);
         
         // Calculate total commission (assuming we have a commission amount somewhere)
         // For now, just count the number of successful referrals and multiply by 25
-        const completedReferrals = mappedReferrals.filter(r => r.status === 'completed').length;
+        const completedReferrals = referralsWithUserDetails.filter(r => r.status === 'completed').length;
         setTotalCommission(completedReferrals * 25);
       }
     } catch (err) {

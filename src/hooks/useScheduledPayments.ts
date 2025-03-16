@@ -52,7 +52,13 @@ export const useScheduledPayments = () => {
         return;
       }
 
-      setScheduledPayments(data || []);
+      // Map the data to ensure status is one of the valid types
+      const typedData = (data || []).map(payment => ({
+        ...payment,
+        status: (payment.status as 'pending' | 'scheduled' | 'paid') || 'pending'
+      }));
+
+      setScheduledPayments(typedData);
     } catch (err: any) {
       console.error('Error in useScheduledPayments:', err);
       setError(err.message || 'Une erreur est survenue');
@@ -73,7 +79,9 @@ export const useScheduledPayments = () => {
           console.log('Scheduled payment change detected:', payload);
           
           // If a payment status changed to "paid", show a notification
-          if (payload.new?.status === 'paid' && payload.old?.status !== 'paid') {
+          if (payload.new && payload.old && 
+              payload.new.status === 'paid' && 
+              payload.old.status !== 'paid') {
             // Get project name if available
             const projectName = scheduledPayments.find(p => p.id === payload.new.id)?.projects?.name || 'votre projet';
             
