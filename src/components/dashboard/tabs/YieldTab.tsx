@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { ArrowUpRight, Calendar, DollarSign, TrendingUp, PercentIcon, ChevronRight, BarChart3 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import LoadingIndicator from "./investment-tracking/LoadingIndicator";
@@ -244,37 +243,7 @@ export default function YieldTab({ userInvestments = [] }: YieldTabProps) {
         </Card>
       </div>
       
-      {/* Chart Section - Removed the div with className="p-6" as requested */}
-      <Card>
-        <h2 className="text-lg font-semibold mb-4 p-4">Projection des Rendements sur {timeRange === "3months" ? "3" : timeRange === "6months" ? "6" : "12"} mois</h2>
-        <div className="h-80 px-4 pb-4">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={filteredData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip 
-                formatter={(value) => [`${value} €`, '']}
-                labelFormatter={(label) => `Mois: ${label}`}
-              />
-              <Legend />
-              <Bar 
-                name="Rendement Attendu" 
-                dataKey="expected" 
-                fill="#3b82f6" 
-              />
-              <Bar 
-                name="Rendement Perçu" 
-                dataKey="received" 
-                fill="#22c55e" 
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
+      {/* Chart Section has been removed */}
       
       {/* Current Investments Section */}
       <div>
