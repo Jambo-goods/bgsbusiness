@@ -78,22 +78,18 @@ export const useScheduledPayments = () => {
         (payload) => {
           console.log('Scheduled payment change detected:', payload);
           
-          // Check if payload contains the necessary properties before processing
-          if (payload && 
-              typeof payload === 'object' && 
-              'new' in payload && 
-              payload.new && 
+          // Fix the TypeScript errors by properly typing and checking payload
+          if (payload.new && 
               typeof payload.new === 'object' && 
               'status' in payload.new && 
-              'old' in payload && 
               payload.old && 
               typeof payload.old === 'object' && 
               'status' in payload.old) {
             
             // If a payment status changed to "paid", show a notification
             if (payload.new.status === 'paid' && payload.old.status !== 'paid') {
-              // Make sure the payload contains an ID before proceeding
-              if ('id' in payload.new) {
+              // We need to ensure 'id' exists in payload.new
+              if (payload.new && typeof payload.new === 'object' && 'id' in payload.new) {
                 const payloadId = payload.new.id as string;
                 // Get project name if available
                 const projectName = scheduledPayments.find(p => p.id === payloadId)?.projects?.name || 'votre projet';

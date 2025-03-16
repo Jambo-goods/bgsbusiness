@@ -60,10 +60,6 @@ serve(async (req) => {
       const totalInvestedAmount = record.total_invested_amount || 0;
       const totalScheduledAmount = record.total_scheduled_amount || 0;
 
-      console.log(`Processing payment for project: ${projectName}`);
-      console.log(`Total invested amount: ${totalInvestedAmount}, Total scheduled amount: ${totalScheduledAmount}`);
-      console.log(`Found ${investments?.length || 0} active investments for this project`);
-
       // Pour chaque investisseur, mettre à jour son solde de portefeuille
       for (const investment of investments || []) {
         // Calculer le pourcentage de l'investissement par rapport au total
@@ -74,7 +70,7 @@ serve(async (req) => {
         // Calculer le montant à ajouter au portefeuille de l'investisseur
         const amountToAdd = Math.round(totalScheduledAmount * investmentPercentage);
         
-        console.log(`Adding ${amountToAdd} to user ${investment.user_id} wallet (${investmentPercentage * 100}% of total)`);
+        console.log(`Adding ${amountToAdd} to user ${investment.user_id} wallet`);
 
         if (amountToAdd > 0) {
           // Mettre à jour le solde du portefeuille
@@ -124,74 +120,6 @@ serve(async (req) => {
           if (notificationError) {
             console.error(`Error creating notification for user ${investment.user_id}:`, notificationError);
           }
-          
-          // Vérifier si cet utilisateur a été parrainé et si c'est son premier rendement
-          // Si c'est le cas, mettre à jour le statut du parrainage à "completed" et donner la commission
-          const { data: referralData, error: referralError } = await supabase
-            .from('referrals')
-            .select('*')
-            .eq('referred_id', investment.user_id)
-            .eq('status', 'pending')
-            .maybeSingle();
-            
-          if (!referralError && referralData) {
-            console.log(`Found pending referral for user ${investment.user_id}, updating status to completed`);
-            
-            // Mise à jour du statut du parrainage
-            const { error: updateError } = await supabase
-              .from('referrals')
-              .update({ status: 'completed' })
-              .eq('id', referralData.id);
-              
-            if (updateError) {
-              console.error(`Error updating referral status:`, updateError);
-            } else {
-              // Ajouter la commission de 25€ au portefeuille du parrain
-              const { error: commissionError } = await supabase.rpc(
-                'increment_wallet_balance',
-                {
-                  user_id: referralData.referrer_id,
-                  increment_amount: 25
-                }
-              );
-              
-              if (commissionError) {
-                console.error(`Error adding commission to referrer ${referralData.referrer_id}:`, commissionError);
-              } else {
-                // Créer une transaction pour la commission
-                const { error: commissionTxError } = await supabase
-                  .from('wallet_transactions')
-                  .insert({
-                    user_id: referralData.referrer_id,
-                    amount: 25,
-                    type: 'referral',
-                    description: `Commission de parrainage`
-                  });
-                  
-                if (commissionTxError) {
-                  console.error(`Error creating commission transaction:`, commissionTxError);
-                }
-                
-                // Créer une notification pour le parrain
-                const { error: commissionNotifError } = await supabase
-                  .from('notifications')
-                  .insert({
-                    user_id: referralData.referrer_id,
-                    title: "Commission de parrainage reçue",
-                    message: `Vous avez reçu 25€ de commission pour votre parrainage.`,
-                    type: 'referral',
-                    data: {
-                      amount: 25,
-                      referredId: investment.user_id
-                    }
-                  });
-                  
-                if (commissionNotifError) {
-                  console.error(`Error creating commission notification:`, commissionNotifError);
-                }
-              }
-            }
-          }
         }
       }
 
@@ -214,3 +142,35 @@ serve(async (req) => {
     );
   }
 });
+
+// Update the trigger function to handle renamed field for referral code
+
+/*
+-- This SQL migration will be needed to fix the referral function:
+
+CREATE OR REPLACE FUNCTION public.process_referral_on_signup()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+DECLARE
+    referrer_id UUID;
+    referral_code_used TEXT;
+BEGIN
+    -- Extract referral code from user metadata if it exists
+    referral_code_used := NEW.raw_user_meta_data->>'referral_code_used';
+    
+    IF referral_code_used IS NOT NULL AND referral_code_used != '' THEN
+        -- Find the referrer from the referral code
+        SELECT id INTO referrer_id FROM public.profiles WHERE referral_code = referral_code_used;
+        
+        -- If referrer exists, create a new referral record
+        IF referrer_id IS NOT NULL THEN
+            INSERT INTO public.referrals (referrer_id, referred_id)
+            VALUES (referrer_id, NEW.id);
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$function$;
+*/

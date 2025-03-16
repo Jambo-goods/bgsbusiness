@@ -88,7 +88,7 @@ export default function ParrainageTab() {
         setReferralCode(profileData.referral_code);
       }
 
-      // Get user's referrals where they are the referrer
+      // Get user's referrals 
       const { data: referralsData, error: referralsError } = await supabase
         .from('referrals')
         .select('*')
@@ -104,7 +104,6 @@ export default function ParrainageTab() {
         if (referralsData && referralsData.length > 0) {
           const referralsWithUserDetails = await Promise.all(
             referralsData.map(async (referral) => {
-              // Get the referred user details from profiles table
               const { data: userData, error: userError } = await supabase
                 .from('profiles')
                 .select('first_name, last_name, email')
@@ -125,10 +124,10 @@ export default function ParrainageTab() {
               
               return {
                 ...referral,
-                referred_user: userData || {
-                  first_name: 'Utilisateur',
-                  last_name: 'Inconnu',
-                  email: 'email@inconnu.com',
+                referred_user: {
+                  first_name: userData?.first_name || 'Utilisateur',
+                  last_name: userData?.last_name || 'Inconnu',
+                  email: userData?.email || 'email@inconnu.com',
                 }
               } as Referral;
             })
@@ -137,7 +136,8 @@ export default function ParrainageTab() {
           console.log("Referrals with user details:", referralsWithUserDetails);
           setReferrals(referralsWithUserDetails);
           
-          // Calculate total commission (assuming 25€ per completed referral)
+          // Calculate total commission (assuming we have a commission amount somewhere)
+          // For now, just count the number of successful referrals and multiply by 25
           const completedReferrals = referralsWithUserDetails.filter(r => r.status === 'completed').length;
           setTotalCommission(completedReferrals * 25);
         } else {
@@ -148,7 +148,7 @@ export default function ParrainageTab() {
       }
     } catch (err) {
       console.error('Error in fetchReferralData:', err);
-      toast.error("Une erreur est survenue lors du chargement des parrainages");
+      toast.error("Une erreur est survenue");
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
