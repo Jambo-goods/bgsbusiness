@@ -96,10 +96,6 @@ class NotificationService extends BaseNotificationService {
     return this.investmentService.newInvestmentOpportunity(projectName, projectId);
   }
 
-  investmentConfirmed(amount: number, projectName: string, projectId: string): Promise<void> {
-    return this.investmentService.investmentConfirmed(amount, projectName, projectId);
-  }
-
   profitReceived(amount: number, projectName: string, projectId: string): Promise<void> {
     return this.investmentService.profitReceived(amount, projectName, projectId);
   }

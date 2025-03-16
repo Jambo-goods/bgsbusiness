@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -642,7 +641,6 @@ export default function ProjectManagement() {
                 </div>
               </div>
               
-              {/* Add profitability field */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="profitability" className="text-sm font-medium text-gray-700">

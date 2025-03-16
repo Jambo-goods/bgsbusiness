@@ -52,15 +52,6 @@ const handler = async (req: Request): Promise<Response> => {
         `;
         break;
         
-      case 'investment':
-        emailContent = `
-          <h1>Confirmation d'investissement</h1>
-          <p>Bonjour ${userName},</p>
-          <p>Votre investissement de ${data.amount}€ dans le projet ${data.projectName} a été confirmé.</p>
-          <p>Vous pouvez suivre son évolution dans votre tableau de bord.</p>
-        `;
-        break;
-        
       case 'yield':
         emailContent = `
           <h1>Rendement reçu</h1>
@@ -68,6 +59,14 @@ const handler = async (req: Request): Promise<Response> => {
           <p>Nous avons le plaisir de vous informer qu'un rendement de ${data.amount}€ du projet ${data.projectName} a été crédité sur votre portefeuille.</p>
         `;
         break;
+        
+      // No case for 'investment' as we're removing that notification type
+      default:
+        emailContent = `
+          <h1>${subject}</h1>
+          <p>Bonjour ${userName},</p>
+          <p>Vous avez reçu une notification de BGS Invest.</p>
+        `;
     }
 
     const emailResponse = await resend.emails.send({
