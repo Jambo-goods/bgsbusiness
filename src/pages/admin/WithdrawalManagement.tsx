@@ -136,6 +136,22 @@ export default function WithdrawalManagement() {
           withdrawal.amount
         );
         
+        // Create a notification for the user
+        try {
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id: withdrawal.user_id,
+              title: 'Retrait refusé',
+              message: `Votre demande de retrait de ${withdrawal.amount}€ a été refusée. Raison: solde insuffisant.`,
+              type: 'withdrawal',
+              seen: false,
+              data: { amount: withdrawal.amount, status: 'rejected', category: 'error', reason: 'Solde insuffisant' }
+            });
+        } catch (notifError) {
+          console.error("Error creating notification:", notifError);
+        }
+        
         fetchWithdrawals();
         return;
       }
@@ -152,8 +168,44 @@ export default function WithdrawalManagement() {
         
       if (schedulingError) throw schedulingError;
       
-      // Wait for Edge Function to process the change (reduce wallet balance)
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Update user wallet balance
+      const { error: walletError } = await supabase
+        .from('profiles')
+        .update({ 
+          wallet_balance: userProfile.wallet_balance - withdrawal.amount 
+        })
+        .eq('id', withdrawal.user_id);
+      
+      if (walletError) throw walletError;
+      
+      // Create a wallet transaction record
+      const { error: transactionError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: withdrawal.user_id,
+          amount: withdrawal.amount,
+          type: 'withdrawal',
+          description: 'Retrait programmé',
+          status: 'completed',
+        });
+      
+      if (transactionError) throw transactionError;
+      
+      // Create balance deduction notification
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: withdrawal.user_id,
+            title: 'Montant débité',
+            message: `Le montant de ${withdrawal.amount}€ a été débité de votre solde pour votre demande de retrait.`,
+            type: 'withdrawal',
+            seen: false,
+            data: { amount: withdrawal.amount, status: 'balance_deducted', category: 'info' }
+          });
+      } catch (notifError) {
+        console.error("Error creating balance deduction notification:", notifError);
+      }
       
       // Then approve it
       const { error: approvalError } = await supabase
@@ -270,7 +322,7 @@ export default function WithdrawalManagement() {
           .insert({
             user_id: withdrawal.user_id,
             title: 'Retrait rejeté',
-            message: `Votre demande de retrait de ${withdrawal.amount}€ a ��té rejetée. Le montant a été recrédité sur votre solde.`,
+            message: `Votre demande de retrait de ${withdrawal.amount}€ a été rejetée. Le montant a été recrédité sur votre solde.`,
             type: 'withdrawal',
             seen: false,
             data: { amount: withdrawal.amount, status: 'rejected', category: 'error' }

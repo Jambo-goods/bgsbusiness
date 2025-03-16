@@ -42,30 +42,8 @@ export default function WithdrawalRequestsTable() {
         if (payload.eventType === 'UPDATE') {
           const amount = payload.new.amount;
           
-          // Check if processed_at was just filled (null -> value)
-          if (payload.new.processed_at && !payload.old.processed_at) {
-            console.log("Withdrawal request processed notification");
-            
-            // First send the processing notification
-            notificationService.withdrawalProcessed(amount, payload.new.status);
-            
-            // Then send a confirmation notification with a small delay to ensure proper order
-            // Make notifications more visible with immediate toast 
-            toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
-              description: "Elle est en cours de traitement."
-            });
-            
-            // Add immediate call without delay to increase chances of notification showing up
-            notificationService.withdrawalConfirmed(amount);
-            
-            // Also add a delayed notification to make sure it goes through
-            setTimeout(() => {
-              console.log("Sending withdrawal confirmation notification");
-              notificationService.withdrawalConfirmed(amount);
-            }, 500);
-          }
           // Check if status changed
-          else if (payload.old.status !== payload.new.status) {
+          if (payload.old.status !== payload.new.status) {
             switch (payload.new.status) {
               case 'scheduled':
               case 'sheduled':
