@@ -16,28 +16,30 @@ interface TabContentProps {
   activeTab: string;
   userData: any;
   userInvestments: any[];
-  refreshData: () => Promise<void>;
+  refreshData?: () => Promise<void>;
+  setActiveTab?: (tab: string) => void;
 }
 
 const TabContent: React.FC<TabContentProps> = ({ 
   activeTab, 
   userData, 
   userInvestments,
-  refreshData
+  refreshData,
+  setActiveTab
 }) => {
   // Don't show no session message, just render the appropriate tab
   return (
     <div className="p-0 md:p-4 h-full">
       <div className="bg-transparent h-full">
-        {activeTab === "overview" && <Overview userData={userData} userInvestments={userInvestments} />}
-        {activeTab === "active-list" && <ActiveListTab />}
+        {activeTab === "overview" && <Overview userData={userData} userInvestments={userInvestments} setActiveTab={setActiveTab} />}
+        {activeTab === "active-list" && <ActiveListTab userInvestments={userInvestments} />}
         {activeTab === "history" && <HistoryTab />}
         {activeTab === "yield" && <YieldTab />}
-        {activeTab === "capital" && <CapitalTab />}
+        {activeTab === "capital" && <CapitalTab investmentTotal={userData?.investmentTotal || 0} />}
         {activeTab === "notifications" && <NotificationsTab />}
         {activeTab === "opportunities" && <OpportunitiesTab />}
         {activeTab === "parrainage" && <ParrainageTab />}
-        {activeTab === "profile" && <ProfileTab userData={userData} refreshData={refreshData} />}
+        {activeTab === "profile" && <ProfileTab userData={userData} />}
         {activeTab === "settings" && <SettingsTab />}
         {activeTab === "wallet" && <WalletTab userData={userData} refreshWalletData={refreshData} />}
       </div>

@@ -38,8 +38,8 @@ export default function DashboardMain({
       activeTab={activeTab} 
       userData={userData} 
       userInvestments={userInvestments} 
-      setActiveTab={setActiveTab} 
       refreshData={refreshData}
+      setActiveTab={setActiveTab}
     />
   ), [activeTab, userData, userInvestments, setActiveTab, refreshData]);
 
