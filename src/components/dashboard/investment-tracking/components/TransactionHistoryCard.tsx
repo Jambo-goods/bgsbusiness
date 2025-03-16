@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -18,7 +17,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Fonction pour récupérer les paiements programmés
   const fetchScheduledPayments = async () => {
     if (!investmentId) {
       setIsLoading(false);
@@ -94,11 +92,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     }
   };
   
-  // Appel initial de chargement des données
   useEffect(() => {
     fetchScheduledPayments();
     
-    // Configuration de la synchronisation en temps réel avec Supabase
     const scheduledPaymentsChannel = supabase
       .channel('scheduled_payment_changes')
       .on('postgres_changes', {
@@ -108,17 +104,14 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       }, (payload) => {
         console.log('Scheduled payment change detected:', payload);
         
-        // Notification à l'utilisateur
         toast.info("Mise à jour des paiements programmés", {
           description: "Les données de paiements sont en cours d'actualisation."
         });
         
-        // Recharger les données
         fetchScheduledPayments();
       })
       .subscribe();
     
-    // Nettoyage à la suppression du composant
     return () => {
       supabase.removeChannel(scheduledPaymentsChannel);
     };
