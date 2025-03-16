@@ -171,19 +171,9 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
   }, [paymentRecords, cumulativeExpectedReturns]);
 
   const futurePayments = useMemo(() => {
-    const payments = localExpectedReturns.filter(payment => payment.status === 'scheduled' || payment.status === 'pending').map(payment => {
-      const originalDate = new Date(payment.date);
-      const adjustedDate = new Date(originalDate.getFullYear(), originalDate.getMonth(), 5);
-
-      if (originalDate.getDate() > 5 && payment.status === 'scheduled') {
-        adjustedDate.setMonth(adjustedDate.getMonth() + 1);
-      }
-      return {
-        ...payment,
-        date: adjustedDate
-      };
-    });
-
+    // Utiliser les dates réelles sans ajustement
+    const payments = localExpectedReturns.filter(payment => payment.status === 'scheduled' || payment.status === 'pending');
+    
     return payments.sort((a, b) => a.date.getTime() - b.date.getTime());
   }, [localExpectedReturns]);
 
@@ -309,7 +299,7 @@ const ReturnProjectionSection: React.FC<ReturnProjectionSectionProps> = ({
           <p className="text-xs text-gray-500">
             <strong>Note:</strong> Ces projections sont basées sur les taux de rendement actuels et peuvent varier. 
             Le premier versement est généralement effectué après la période de délai initiale spécifiée dans chaque projet. 
-            Les versements suivants sont effectués le 5 de chaque mois.
+            Les versements sont effectués à la date indiquée.
           </p>
         </div>}
     </div>
