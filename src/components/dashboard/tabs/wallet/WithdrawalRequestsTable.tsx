@@ -45,9 +45,20 @@ export default function WithdrawalRequestsTable() {
           // Check if processed_at was just filled (null -> value)
           if (payload.new.processed_at && !payload.old.processed_at) {
             console.log("Withdrawal request processed notification");
+            
+            // First send the processing notification
             notificationService.withdrawalProcessed(amount, payload.new.status);
-            // Also send a confirmation notification
-            notificationService.withdrawalConfirmed(amount);
+            
+            // Then send a confirmation notification with a small delay to ensure proper order
+            setTimeout(() => {
+              console.log("Sending withdrawal confirmation notification");
+              notificationService.withdrawalConfirmed(amount);
+              
+              // Also show a toast to make it more visible
+              toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
+                description: "Elle est en cours de traitement."
+              });
+            }, 500);
           }
           // Check if status changed
           else if (payload.old.status !== payload.new.status) {

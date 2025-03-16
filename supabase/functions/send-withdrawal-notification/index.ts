@@ -52,6 +52,8 @@ Deno.serve(async (req) => {
       title = 'Demande de retrait confirmée'
       message = `Votre demande de retrait de ${amount}€ a été confirmée et est en cours de traitement.`
       category = 'success'
+      
+      console.log("Creating withdrawal confirmation notification")
     } else if (processed) {
       title = 'Demande de retrait traitée'
       message = `Votre demande de retrait de ${amount}€ a été traitée. Statut: ${status}.`
