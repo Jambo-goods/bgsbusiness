@@ -41,10 +41,9 @@ const saveInvestment = async (
   }
 };
 
-// Update investor count and total raised
+// Update project stats (removing investors_count as it doesn't exist)
 const updateProjectStats = async (
   projectId: string, 
-  investorCount: number,
   totalRaised: number,
   investmentAmount: number
 ) => {
@@ -52,7 +51,6 @@ const updateProjectStats = async (
     const { error } = await supabase
       .from("projects")
       .update({
-        investors_count: investorCount + 1,
         total_raised: totalRaised + investmentAmount
       })
       .eq("id", projectId);
@@ -215,10 +213,9 @@ export const useInvestmentConfirmation = (
       );
       if (!saveSuccess || saveError) throw new Error("Erreur lors de l'enregistrement de l'investissement");
 
-      // Step 2: Update project stats
+      // Step 2: Update project stats (removed investorCount parameter)
       const { success: statsSuccess, error: statsError } = await updateProjectStats(
         projectId,
-        investorCount,
         totalRaised,
         investmentAmount
       );
