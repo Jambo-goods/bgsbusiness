@@ -1,4 +1,3 @@
-
 // This Supabase Edge Function monitors withdrawal_requests status changes
 // and updates wallet balance when a withdrawal is scheduled
 
@@ -347,6 +346,75 @@ Deno.serve(async (req) => {
         )
       } catch (notifError) {
         console.error("Error sending received notification:", notifError)
+      }
+    }
+    
+    // Handle "paid" status change specifically
+    if (newStatus === 'paid' && oldStatus !== 'paid') {
+      const userId = payload.record.user_id
+      const amount = payload.record.amount
+      
+      try {
+        // Send notification via the Edge Function
+        const paidResponse = await fetch(
+          `${supabaseUrl}/functions/v1/send-withdrawal-notification`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${supabaseServiceRoleKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId,
+              amount,
+              status: 'paid'
+            }),
+          }
+        )
+        
+        if (!paidResponse.ok) {
+          const errorData = await paidResponse.json()
+          console.error("Error sending paid notification via Edge Function:", errorData)
+        } else {
+          console.log(`Paid status notification sent to user ${userId} for amount ${amount}€`)
+        }
+        
+        // Also send a direct DB notification as backup
+        try {
+          const { error: notifError } = await supabaseAdmin
+            .from('notifications')
+            .insert({
+              user_id: userId,
+              title: 'Retrait payé',
+              message: `Votre retrait de ${amount}€ a été payé et le montant a été transféré sur votre compte bancaire.`,
+              type: 'withdrawal',
+              seen: false,
+              data: { amount, status: 'paid', category: 'success' }
+            })
+            
+          if (notifError) {
+            console.error("Error with direct DB notification insert for paid status:", notifError)
+          } else {
+            console.log("Direct paid notification inserted successfully")
+          }
+        } catch (directError) {
+          console.error("Exception during direct paid notification insert:", directError)
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            message: 'Paid status notification sent successfully',
+            user_id: userId,
+            amount: amount
+          }),
+          {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 200,
+          }
+        )
+      } catch (notifError) {
+        console.error("Error sending paid notification:", notifError)
       }
     }
     

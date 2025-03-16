@@ -1,3 +1,4 @@
+
 import { BaseNotificationService } from "./BaseNotificationService";
 
 export class WithdrawalNotificationService extends BaseNotificationService {
@@ -114,6 +115,11 @@ export class WithdrawalNotificationService extends BaseNotificationService {
         description = `Votre demande de retrait de ${amount}€ a été refusée.${reason ? ` Raison: ${reason}` : ''}`;
         category = 'error';
         break;
+      case 'paid':
+        title = "Retrait payé";
+        description = `Votre retrait de ${amount}€ a été payé et le montant a été transféré sur votre compte bancaire.`;
+        category = 'success';
+        break;
       default:
         title = "Statut de retrait mis à jour";
         description = `Le statut de votre retrait de ${amount}€ a été mis à jour: ${status}.`;
@@ -164,6 +170,19 @@ export class WithdrawalNotificationService extends BaseNotificationService {
       type: 'withdrawal',
       category: 'info',
       metadata: { amount, status: 'received' }
+    });
+  }
+  
+  /**
+   * Notification when a withdrawal has been paid
+   */
+  withdrawalPaid(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait payé",
+      description: `Votre retrait de ${amount}€ a été payé et le montant a été transféré sur votre compte bancaire.`,
+      type: 'withdrawal',
+      category: 'success',
+      metadata: { amount, status: 'paid' }
     });
   }
 }

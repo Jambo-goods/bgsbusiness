@@ -287,6 +287,69 @@ export default function WithdrawalManagement() {
     }
   };
 
+  const handleMarkAsPaid = async (withdrawal: any) => {
+    if (!adminUser || !window.confirm(`Êtes-vous sûr de vouloir marquer ce retrait de ${withdrawal.amount}€ comme payé ?`)) {
+      return;
+    }
+    
+    try {
+      // Check if withdrawal is already paid
+      if (withdrawal.status === 'paid') {
+        toast.error("Ce retrait est déjà marqué comme payé");
+        return;
+      }
+      
+      // Check if withdrawal is in an appropriate status to be marked as paid
+      if (withdrawal.status !== 'approved' && withdrawal.status !== 'scheduled' && withdrawal.status !== 'sheduled' && withdrawal.status !== 'completed') {
+        toast.error("Ce retrait doit d'abord être approuvé avant d'être marqué comme payé");
+        return;
+      }
+      
+      // Mark the withdrawal as paid
+      const { error: paidError } = await supabase
+        .from('withdrawal_requests')
+        .update({
+          status: 'paid',
+          admin_id: adminUser.id,
+          processed_at: withdrawal.processed_at || new Date().toISOString()
+        })
+        .eq('id', withdrawal.id);
+        
+      if (paidError) throw paidError;
+
+      await logAdminAction(
+        adminUser.id, 
+        'withdrawal_management', 
+        `Marquer un retrait de ${withdrawal.amount}€ comme payé`, 
+        withdrawal.user_id, 
+        undefined, 
+        withdrawal.amount
+      );
+      
+      // Create a notification for the user
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: withdrawal.user_id,
+            title: 'Retrait payé',
+            message: `Votre retrait de ${withdrawal.amount}€ a été payé et le montant a été transféré sur votre compte bancaire.`,
+            type: 'withdrawal',
+            seen: false,
+            data: { amount: withdrawal.amount, status: 'paid', category: 'success' }
+          });
+      } catch (notifError) {
+        console.error("Error creating notification:", notifError);
+      }
+      
+      toast.success(`Retrait de ${withdrawal.amount}€ marqué comme payé`);
+      fetchWithdrawals();
+    } catch (error) {
+      console.error("Erreur lors du marquage du retrait comme payé:", error);
+      toast.error("Une erreur s'est produite lors du marquage du retrait comme payé");
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -309,6 +372,11 @@ export default function WithdrawalManagement() {
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XCircle className="h-3 w-3 mr-1" />
             Rejeté
+          </span>;
+      case 'paid':
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-500 text-white">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Payé
           </span>;
       default:
         return <span>{status}</span>;
@@ -386,7 +454,8 @@ export default function WithdrawalManagement() {
                         {withdrawal.processed_at ? new Date(withdrawal.processed_at).toLocaleString('fr-FR') : 'N/A'}
                       </TableCell>
                       <TableCell className="text-right">
-                        {withdrawal.status === 'pending' ? <div className="flex justify-end items-center space-x-2">
+                        {withdrawal.status === 'pending' ? (
+                          <div className="flex justify-end items-center space-x-2">
                             <Button variant="outline" size="sm" onClick={() => handleApproveWithdrawal(withdrawal)} className="text-green-600 hover:text-green-800 hover:bg-green-50">
                               <CheckCircle className="h-4 w-4 mr-1" />
                               Approuver
@@ -395,7 +464,15 @@ export default function WithdrawalManagement() {
                               <XCircle className="h-4 w-4 mr-1" />
                               Rejeter
                             </Button>
-                          </div> : <span className="text-gray-500 text-sm">Traité</span>}
+                          </div>
+                        ) : withdrawal.status === 'approved' || withdrawal.status === 'scheduled' || withdrawal.status === 'sheduled' || withdrawal.status === 'completed' ? (
+                          <Button variant="outline" size="sm" onClick={() => handleMarkAsPaid(withdrawal)} className="text-green-600 hover:text-green-800 hover:bg-green-50">
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Marquer comme payé
+                          </Button>
+                        ) : (
+                          <span className="text-gray-500 text-sm">Traité</span>
+                        )}
                       </TableCell>
                     </TableRow>;
             })}

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -96,6 +97,14 @@ export default function WithdrawalRequestsTable() {
                 notificationService.withdrawalConfirmed(amount);
                 toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
                   description: "Elle est en cours de traitement."
+                });
+                break;
+              case 'paid':
+                // Add special case for paid status
+                console.log("Withdrawal paid notification");
+                notificationService.withdrawalPaid(amount);
+                toast.success(`Votre retrait de ${amount}€ a été payé`, {
+                  description: "Le montant a été transféré sur votre compte bancaire."
                 });
                 break;
             }
