@@ -81,7 +81,7 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
       
       console.log("Withdrawal request created successfully:", withdrawal);
       
-      // Notify the admin about the withdrawal request
+      // Notify about the withdrawal request
       try {
         const userName = `${userData.first_name} ${userData.last_name}`;
         

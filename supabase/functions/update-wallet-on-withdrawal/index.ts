@@ -71,6 +71,49 @@ serve(async (req) => {
     const newBalance = currentBalance - withdrawal.amount;
     console.log(`Updating balance for user ${withdrawal.user_id}: ${currentBalance} - ${withdrawal.amount} = ${newBalance}`)
     
+    // Create or update a transaction record to avoid duplicate deductions
+    const { data: existingTransaction, error: checkError } = await supabaseClient
+      .from('wallet_transactions')
+      .select('id')
+      .eq('user_id', withdrawal.user_id)
+      .eq('type', 'withdrawal')
+      .eq('amount', withdrawal.amount)
+      .eq('status', 'completed')
+      .or(`description.like.%${withdrawal.id}%,description.like.%${withdrawal.status}%`)
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
+    if (checkError) {
+      console.error('Error checking for existing transactions:', checkError);
+    }
+    
+    // If we found an existing transaction for this withdrawal, don't deduct again
+    if (existingTransaction && existingTransaction.length > 0) {
+      console.log('Transaction already exists for this withdrawal, not deducting again:', existingTransaction[0].id);
+      
+      // Still update the status to completed if needed
+      if (withdrawal.status === 'approved' || withdrawal.status === 'scheduled') {
+        const { error: updateError } = await supabaseClient
+          .from('withdrawal_requests')
+          .update({ status: 'completed' })
+          .eq('id', withdrawal.id)
+          
+        if (updateError) {
+          console.error('Error updating withdrawal status:', updateError)
+        } else {
+          console.log('Withdrawal status updated to completed')
+        }
+      }
+      
+      return handleSuccess({ 
+        message: 'Wallet balance already updated for this withdrawal',
+        withdrawal_id: withdrawal.id,
+        user_id: withdrawal.user_id,
+        amount: withdrawal.amount,
+        new_balance: currentBalance
+      });
+    }
+    
     // Update the user's wallet balance - Use increment_wallet_balance to ensure atomicity
     const { error: rpcError } = await supabaseClient.rpc(
       'increment_wallet_balance',
@@ -105,7 +148,7 @@ serve(async (req) => {
         amount: withdrawal.amount,
         type: 'withdrawal',
         status: 'completed',
-        description: `Retrait ${withdrawal.amount}€ - ${withdrawal.status}`
+        description: `Retrait ${withdrawal.amount}€ - ${withdrawal.status} (ID: ${withdrawal.id})`
       })
       .select('id')
       .single()
@@ -118,7 +161,7 @@ serve(async (req) => {
     }
     
     // Update withdrawal status to completed if it was approved
-    if (withdrawal.status === 'approved') {
+    if (withdrawal.status === 'approved' || withdrawal.status === 'scheduled') {
       const { error: updateError } = await supabaseClient
         .from('withdrawal_requests')
         .update({ status: 'completed' })

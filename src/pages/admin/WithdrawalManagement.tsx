@@ -19,6 +19,7 @@ export default function WithdrawalManagement() {
   const [sortField, setSortField] = useState('requested_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [userData, setUserData] = useState<Record<string, any>>({});
+  const [processingId, setProcessingId] = useState<string | null>(null);
   
   useEffect(() => {
     fetchWithdrawals();
@@ -76,6 +77,8 @@ export default function WithdrawalManagement() {
     }
     
     try {
+      setProcessingId(withdrawal.id);
+      
       // First check if user has enough balance
       const {
         data: userData,
@@ -112,27 +115,26 @@ export default function WithdrawalManagement() {
       
       if (withdrawalError) throw withdrawalError;
 
-      // Create wallet transaction record
-      const {
-        error: transactionError
-      } = await supabase.from('wallet_transactions').insert({
-        user_id: withdrawal.user_id,
-        amount: withdrawal.amount,
-        type: 'withdrawal',
-        status: 'completed',
-        description: 'Retrait approuvé'
-      });
-      
-      if (transactionError) throw transactionError;
+      // Manually call the edge function to process the withdrawal
+      try {
+        await supabase.functions.invoke('update-wallet-on-withdrawal', {
+          body: { withdrawal_id: withdrawal.id }
+        });
+        console.log('Called update-wallet-on-withdrawal edge function');
+      } catch (edgeFunctionError) {
+        console.error('Error calling update-wallet-on-withdrawal:', edgeFunctionError);
+        // Continue even if edge function call fails - we already updated the status
+      }
 
       // Log admin action
       await logAdminAction(adminUser.id, 'withdrawal_management', `Approbation d'un retrait de ${withdrawal.amount}€`, withdrawal.user_id, undefined, withdrawal.amount);
       
       // Force a recalculation of the user's wallet balance
       try {
-        await supabase.functions.invoke('recalculate-wallet-balance', {
-          body: { userId: withdrawal.user_id }
+        await supabase.rpc('recalculate_wallet_balance', {
+          user_uuid: withdrawal.user_id
         });
+        console.log('Recalculated wallet balance via RPC');
       } catch (recalcError) {
         console.error("Error recalculating wallet balance:", recalcError);
         // Continue even if recalculation fails - we've already updated the balance directly
@@ -147,6 +149,8 @@ export default function WithdrawalManagement() {
     } catch (error) {
       console.error("Erreur lors de l'approbation du retrait:", error);
       toast.error("Une erreur s'est produite lors de l'approbation du retrait");
+    } finally {
+      setProcessingId(null);
     }
   };
   
@@ -155,6 +159,8 @@ export default function WithdrawalManagement() {
       return;
     }
     try {
+      setProcessingId(withdrawal.id);
+      
       // Update withdrawal status
       const {
         error: withdrawalError
@@ -167,6 +173,20 @@ export default function WithdrawalManagement() {
 
       // Log admin action
       await logAdminAction(adminUser.id, 'withdrawal_management', `Rejet d'un retrait de ${withdrawal.amount}€`, withdrawal.user_id, undefined, withdrawal.amount);
+      
+      // Notify the user about rejection
+      try {
+        await supabase.functions.invoke('send-withdrawal-notification', {
+          body: { 
+            user_id: withdrawal.user_id,
+            amount: withdrawal.amount,
+            withdrawal_id: withdrawal.id
+          }
+        });
+      } catch (notifError) {
+        console.error('Error sending rejection notification:', notifError);
+      }
+      
       toast.success(`Retrait de ${withdrawal.amount}€ rejeté`);
 
       // Refresh withdrawal list
@@ -174,6 +194,8 @@ export default function WithdrawalManagement() {
     } catch (error) {
       console.error("Erreur lors du rejet du retrait:", error);
       toast.error("Une erreur s'est produite lors du rejet du retrait");
+    } finally {
+      setProcessingId(null);
     }
   };
   
@@ -193,6 +215,11 @@ export default function WithdrawalManagement() {
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckCircle className="h-3 w-3 mr-1" />
             Approuvé
+          </span>;
+      case 'completed':
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-700 text-white">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Complété
           </span>;
       case 'rejected':
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
@@ -220,8 +247,9 @@ export default function WithdrawalManagement() {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           <Input type="text" placeholder="Rechercher un utilisateur..." className="pl-10 w-full md:w-80" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
-        
-        
+        <Button onClick={fetchWithdrawals} variant="outline">
+          Actualiser
+        </Button>
       </div>
       
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -258,8 +286,8 @@ export default function WithdrawalManagement() {
               </TableHeader>
               <TableBody>
                 {filteredWithdrawals.map(withdrawal => {
-              const user = userData[withdrawal.user_id] || {};
-              return <TableRow key={withdrawal.id}>
+                  const user = userData[withdrawal.user_id] || {};
+                  return <TableRow key={withdrawal.id}>
                       <TableCell>
                         <div>
                           <div className="font-medium">{user.first_name} {user.last_name}</div>
@@ -279,18 +307,30 @@ export default function WithdrawalManagement() {
                       </TableCell>
                       <TableCell className="text-right">
                         {withdrawal.status === 'pending' ? <div className="flex justify-end items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleApproveWithdrawal(withdrawal)} className="text-green-600 hover:text-green-800 hover:bg-green-50">
-                              <CheckCircle className="h-4 w-4 mr-1" />
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleApproveWithdrawal(withdrawal)} 
+                              className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                              disabled={processingId === withdrawal.id}
+                            >
+                              {processingId === withdrawal.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <CheckCircle className="h-4 w-4 mr-1" />}
                               Approuver
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleRejectWithdrawal(withdrawal)} className="text-red-600 hover:text-red-800 hover:bg-red-50">
-                              <XCircle className="h-4 w-4 mr-1" />
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleRejectWithdrawal(withdrawal)} 
+                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              disabled={processingId === withdrawal.id}
+                            >
+                              {processingId === withdrawal.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <XCircle className="h-4 w-4 mr-1" />}
                               Rejeter
                             </Button>
                           </div> : <span className="text-gray-500 text-sm">Traité</span>}
                       </TableCell>
                     </TableRow>;
-            })}
+                })}
               </TableBody>
             </Table>
           </div>}
