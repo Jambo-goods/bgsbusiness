@@ -83,6 +83,22 @@ Deno.serve(async (req) => {
             })
             .eq('id', payload.record.id)
           
+          // Send rejection notification
+          try {
+            await supabaseAdmin
+              .from('notifications')
+              .insert({
+                user_id: userId,
+                title: 'Retrait refusé',
+                message: `Votre demande de retrait de ${amount}€ a été refusée. Raison: solde insuffisant.`,
+                type: 'withdrawal',
+                seen: false,
+                data: { amount, status: 'rejected', category: 'error', reason: 'Solde insuffisant' }
+              })
+          } catch (notifError) {
+            console.error("Error sending rejection notification:", notifError)
+          }
+          
           return new Response(
             JSON.stringify({
               success: false,
@@ -124,12 +140,15 @@ Deno.serve(async (req) => {
           .insert({
             user_id: userId,
             title: 'Retrait programmé',
-            description: `Votre retrait de ${amount}€ a été programmé.`,
+            message: `Votre retrait de ${amount}€ a été programmé.`,
             type: 'withdrawal',
-            category: 'info',
-            metadata: { amount, status: 'scheduled' },
-            read: false
+            seen: false,
+            data: { amount, status: 'scheduled', category: 'info' }
           })
+        
+        if (notificationError) {
+          console.error("Error sending notification:", notificationError)
+        }
         
         return new Response(
           JSON.stringify({ 
@@ -157,10 +176,54 @@ Deno.serve(async (req) => {
       }
     }
     
+    // Handle other status changes like completed or rejected
+    if (newStatus !== oldStatus) {
+      const userId = payload.record.user_id
+      const amount = payload.record.amount
+      
+      try {
+        let notificationData = {
+          user_id: userId,
+          title: '',
+          message: '',
+          type: 'withdrawal',
+          seen: false,
+          data: { amount, status: newStatus, category: 'info' as const }
+        }
+        
+        if (newStatus === 'approved') {
+          notificationData.title = 'Retrait approuvé'
+          notificationData.message = `Votre retrait de ${amount}€ a été approuvé et sera traité prochainement.`
+          notificationData.data.category = 'success'
+        } else if (newStatus === 'completed') {
+          notificationData.title = 'Retrait effectué'
+          notificationData.message = `Votre retrait de ${amount}€ a été traité avec succès et les fonds ont été envoyés sur votre compte bancaire.`
+          notificationData.data.category = 'success'
+        } else if (newStatus === 'rejected') {
+          notificationData.title = 'Retrait refusé'
+          notificationData.message = `Votre demande de retrait de ${amount}€ a été refusée.`
+          notificationData.data.category = 'error'
+        }
+        
+        // Only send notification if we have a title (meaning we want to send a notification for this status)
+        if (notificationData.title) {
+          const { error: notificationError } = await supabaseAdmin
+            .from('notifications')
+            .insert(notificationData)
+          
+          if (notificationError) {
+            console.error("Error sending status change notification:", notificationError)
+          }
+        }
+      } catch (notifError) {
+        console.error("Error processing status change notification:", notifError)
+      }
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'No action needed for this status change',
+        message: 'Status change processed successfully',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

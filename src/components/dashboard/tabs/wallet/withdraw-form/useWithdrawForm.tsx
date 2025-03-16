@@ -4,35 +4,36 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
 
-export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>) {
+export const useWithdrawForm = (balance: number, onWithdraw: () => Promise<void>) => {
   const [amount, setAmount] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const isValidForm = () => {
+
+  const isValidForm = (): boolean => {
     return (
-      amount && 
-      parseInt(amount) >= 100 && 
-      parseInt(amount) <= balance &&
-      bankName.trim().length >= 2 &&
-      accountNumber.trim().length >= 8 &&
-      accountHolder.trim().length >= 3
+      !!amount && 
+      parseFloat(amount) > 0 && 
+      parseFloat(amount) <= balance &&
+      !!accountHolder && 
+      !!bankName && 
+      !!accountNumber
     );
   };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!isValidForm()) {
-      toast.error("Veuillez remplir correctement tous les champs");
+      toast.error("Veuillez remplir tous les champs correctement");
       return;
     }
     
+    setIsSubmitting(true);
+    
     try {
-      setIsSubmitting(true);
-      
+      // Get user session
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
@@ -40,71 +41,43 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
         return;
       }
       
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, email')
-        .eq('id', session.session.user.id)
-        .single();
-        
-      if (userError) {
-        console.error("Erreur lors de la récupération des données utilisateur:", userError);
-        throw new Error("Impossible de récupérer les données utilisateur");
-      }
+      // Format withdrawal amount
+      const withdrawalAmount = parseFloat(amount);
       
-      // Insérer la demande de retrait avec toutes les informations bancaires
-      const { error } = await supabase
-        .from('withdrawal_requests')
-        .insert({
-          user_id: session.session.user.id,
-          amount: parseInt(amount),
-          bank_info: {
-            accountName: accountHolder,
-            bankName: bankName,
-            accountNumber: accountNumber
-          },
-          status: 'pending',
-          requested_at: new Date().toISOString()
-        });
-        
+      // Bank account info
+      const bankInfo = {
+        accountName: accountHolder,
+        bankName: bankName,
+        accountNumber: accountNumber
+      };
+      
+      // Create withdrawal request
+      const { error } = await supabase.from('withdrawal_requests').insert({
+        user_id: session.session.user.id,
+        amount: withdrawalAmount,
+        status: 'pending',
+        bank_info: bankInfo,
+        requested_at: new Date().toISOString()
+      });
+      
       if (error) throw error;
       
-      // Envoyer une notification par email à l'administrateur
-      try {
-        const userName = `${userData.first_name} ${userData.last_name}`;
-        
-        await supabase.functions.invoke('send-withdrawal-notification', {
-          body: {
-            userId: session.session.user.id,
-            userName,
-            userEmail: userData.email,
-            amount: parseInt(amount),
-            bankDetails: {
-              accountName: accountHolder,
-              bankName: bankName,
-              accountNumber: accountNumber
-            }
-          }
-        });
-        
-        console.log("Notification de retrait envoyée avec succès");
-      } catch (notifError) {
-        console.error("Erreur lors de l'envoi de la notification de retrait:", notifError);
-        // Nous ne voulons pas faire échouer la demande de retrait si la notification échoue
-      }
+      // Send notification
+      await notificationService.withdrawalRequested(withdrawalAmount);
       
-      await notificationService.withdrawalValidated(parseInt(amount));
+      // Show success toast
+      toast.success("Votre demande de retrait a été soumise avec succès");
       
-      toast.success("Demande de retrait soumise avec succès");
+      // Reset form
       setAmount("");
-      setBankName("");
-      setAccountNumber("");
-      setAccountHolder("");
       
-      await onWithdraw();
-      
+      // Update wallet balance
+      if (onWithdraw) {
+        await onWithdraw();
+      }
     } catch (error) {
-      console.error("Erreur lors du retrait:", error);
-      toast.error("Une erreur s'est produite lors de la demande de retrait");
+      console.error("Erreur lors de la demande de retrait:", error);
+      toast.error("Une erreur est survenue lors de la demande de retrait");
     } finally {
       setIsSubmitting(false);
     }
@@ -123,4 +96,4 @@ export function useWithdrawForm(balance: number, onWithdraw: () => Promise<void>
     isValidForm,
     handleSubmit
   };
-}
+};

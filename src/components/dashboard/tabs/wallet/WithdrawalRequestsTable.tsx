@@ -6,6 +6,7 @@ import LoadingState from "./withdrawal-table/LoadingState";
 import EmptyState from "./withdrawal-table/EmptyState";
 import WithdrawalTableRow from "./withdrawal-table/WithdrawalTableRow";
 import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 
 interface WithdrawalRequest {
   id: string;
@@ -37,13 +38,25 @@ export default function WithdrawalRequestsTable() {
       }, (payload) => {
         console.log('Withdrawal request change detected:', payload);
         
-        // If a withdrawal status is changed to "scheduled", show a notification
-        if (payload.eventType === 'UPDATE' && 
-            (payload.new.status === 'scheduled' || payload.new.status === 'sheduled') && 
-            (payload.old.status !== 'scheduled' && payload.old.status !== 'sheduled')) {
-          toast.info(`Retrait programmé de ${payload.new.amount}€`, {
-            description: "Le montant a été déduit de votre solde disponible."
-          });
+        // If a withdrawal status is changed, send appropriate notification
+        if (payload.eventType === 'UPDATE' && payload.old.status !== payload.new.status) {
+          const amount = payload.new.amount;
+          
+          switch (payload.new.status) {
+            case 'scheduled':
+            case 'sheduled':
+              notificationService.withdrawalScheduled(amount);
+              break;
+            case 'approved':
+              notificationService.withdrawalValidated(amount);
+              break;
+            case 'completed':
+              notificationService.withdrawalCompleted(amount);
+              break;
+            case 'rejected':
+              notificationService.withdrawalRejected(amount);
+              break;
+          }
         }
         
         // Refresh the withdrawal requests list

@@ -55,12 +55,24 @@ class NotificationService extends BaseNotificationService {
   }
 
   // Withdrawal Notifications
+  withdrawalRequested(amount: number): Promise<void> {
+    return this.withdrawalService.withdrawalRequested(amount);
+  }
+
   withdrawalValidated(amount: number): Promise<void> {
     return this.withdrawalService.withdrawalValidated(amount);
   }
 
+  withdrawalScheduled(amount: number): Promise<void> {
+    return this.withdrawalService.withdrawalScheduled(amount);
+  }
+
   withdrawalCompleted(amount: number): Promise<void> {
     return this.withdrawalService.withdrawalCompleted(amount);
+  }
+
+  withdrawalRejected(amount: number, reason?: string): Promise<void> {
+    return this.withdrawalService.withdrawalRejected(amount, reason);
   }
 
   // Investment Notifications

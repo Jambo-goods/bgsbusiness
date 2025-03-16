@@ -71,9 +71,8 @@ Deno.serve(async (req) => {
         title,
         message,
         type,
-        category,
         seen: false,
-        data: { amount, status }
+        data: { amount, status, category }
       })
     
     if (error) {

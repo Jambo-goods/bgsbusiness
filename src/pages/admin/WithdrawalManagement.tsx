@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -178,15 +177,20 @@ export default function WithdrawalManagement() {
       );
       
       // Create a notification for the user
-      await supabase.from('notifications').insert({
-        user_id: withdrawal.user_id,
-        title: 'Retrait approuvé',
-        description: `Votre retrait de ${withdrawal.amount}€ a été approuvé et sera traité prochainement.`,
-        type: 'withdrawal',
-        category: 'success',
-        metadata: { amount: withdrawal.amount },
-        read: false
-      });
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: withdrawal.user_id,
+            title: 'Retrait approuvé',
+            message: `Votre retrait de ${withdrawal.amount}€ a été approuvé et sera traité prochainement.`,
+            type: 'withdrawal',
+            seen: false,
+            data: { amount: withdrawal.amount, status: 'approved', category: 'success' }
+          });
+      } catch (notifError) {
+        console.error("Error creating notification:", notifError);
+      }
       
       toast.success(`Retrait de ${withdrawal.amount}€ approuvé`);
       fetchWithdrawals();
@@ -260,15 +264,20 @@ export default function WithdrawalManagement() {
       );
       
       // Create a notification for the user
-      await supabase.from('notifications').insert({
-        user_id: withdrawal.user_id,
-        title: 'Retrait rejeté',
-        description: `Votre demande de retrait de ${withdrawal.amount}€ a été rejetée. Le montant a été recrédité sur votre solde.`,
-        type: 'withdrawal',
-        category: 'error',
-        metadata: { amount: withdrawal.amount },
-        read: false
-      });
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: withdrawal.user_id,
+            title: 'Retrait rejeté',
+            message: `Votre demande de retrait de ${withdrawal.amount}€ a ��té rejetée. Le montant a été recrédité sur votre solde.`,
+            type: 'withdrawal',
+            seen: false,
+            data: { amount: withdrawal.amount, status: 'rejected', category: 'error' }
+          });
+      } catch (notifError) {
+        console.error("Error creating notification:", notifError);
+      }
       
       toast.success(`Retrait de ${withdrawal.amount}€ rejeté`);
       fetchWithdrawals();
