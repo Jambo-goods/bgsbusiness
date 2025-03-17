@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BankTransferTableProps } from "./types/bankTransfer";
+import { BankTransferTableProps, BankTransferItem } from "./types/bankTransfer";
 import BankTransferTableRow from "./BankTransferTableRow";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 

@@ -12,6 +12,10 @@ export interface BankTransferItem {
     last_name: string | null;
     email: string | null;
   };
+  reference?: string;
+  processed?: boolean;
+  processed_at?: string | null;
+  notes?: string;
 }
 
 export interface BankTransferTableProps {

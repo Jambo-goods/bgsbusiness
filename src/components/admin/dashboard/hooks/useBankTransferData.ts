@@ -27,65 +27,56 @@ export function useBankTransferData() {
         
         console.log("Raw bank_transfers data:", bankTransfersData);
         
-        if (bankTransfersData && bankTransfersData.length > 0) {
-          console.log("Using bank_transfers table:", bankTransfersData);
+        // Extract unique user IDs
+        const userIds = [...new Set((bankTransfersData || []).map(transfer => transfer.user_id))];
+        
+        // Fetch all profiles in one query
+        const { data: profilesData, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id, first_name, last_name, email")
+          .in("id", userIds.length > 0 ? userIds : ['00000000-0000-0000-0000-000000000000']);
           
-          // Extract unique user IDs
-          const userIds = [...new Set(bankTransfersData.map(transfer => transfer.user_id))];
-          
-          // Fetch all profiles in one query
-          const { data: profilesData, error: profilesError } = await supabase
-            .from("profiles")
-            .select("id, first_name, last_name, email")
-            .in("id", userIds);
-            
-          if (profilesError) {
-            console.error("Erreur lors de la récupération des profils:", profilesError);
-            toast.error("Impossible de récupérer les données des utilisateurs");
-          }
-          
-          // Create a map of user profiles for quick lookup
-          const profilesMap = (profilesData || []).reduce((map, profile) => {
-            map[profile.id] = profile;
-            return map;
-          }, {} as Record<string, any>);
-          
-          // Map bank transfers to expected format
-          let formattedTransfers = bankTransfersData.map(transfer => {
-            const profile = profilesMap[transfer.user_id] || {
-              first_name: "Utilisateur",
-              last_name: "Inconnu",
-              email: null
-            };
-            
-            return {
-              id: transfer.id,
-              created_at: transfer.confirmed_at,
-              user_id: transfer.user_id,
-              amount: transfer.amount || 0,
-              description: `Virement bancaire (réf: ${transfer.reference})`,
-              status: transfer.status || "pending",
-              receipt_confirmed: transfer.processed || false,
-              profile: {
-                first_name: profile.first_name,
-                last_name: profile.last_name,
-                email: profile.email
-              }
-            };
-          });
-          
-          // Apply status filter if not "all"
-          if (statusFilter !== "all") {
-            formattedTransfers = formattedTransfers.filter(item => item.status === statusFilter);
-          }
-          
-          console.log("Formatted bank transfers after filtering:", formattedTransfers);
-          return formattedTransfers as BankTransferItem[];
+        if (profilesError) {
+          console.error("Erreur lors de la récupération des profils:", profilesError);
+          toast.error("Impossible de récupérer les données des utilisateurs");
         }
         
-        // Fallback: Use wallet_transactions table (existing code)
-        // Build the query for fetching bank transfers
-        let query = supabase
+        // Create a map of user profiles for quick lookup
+        const profilesMap = (profilesData || []).reduce((map, profile) => {
+          map[profile.id] = profile;
+          return map;
+        }, {} as Record<string, any>);
+        
+        // Map bank transfers to expected format
+        let formattedTransfers = (bankTransfersData || []).map(transfer => {
+          const profile = profilesMap[transfer.user_id] || {
+            first_name: "Utilisateur",
+            last_name: "Inconnu",
+            email: null
+          };
+          
+          return {
+            id: transfer.id,
+            created_at: transfer.confirmed_at,
+            user_id: transfer.user_id,
+            amount: transfer.amount || 0,
+            description: `Virement bancaire (réf: ${transfer.reference})`,
+            status: transfer.status || "pending",
+            receipt_confirmed: transfer.processed || false,
+            reference: transfer.reference,
+            processed: transfer.processed,
+            processed_at: transfer.processed_at,
+            notes: transfer.notes,
+            profile: {
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              email: profile.email
+            }
+          };
+        });
+        
+        // Now also fetch from wallet_transactions as fallback
+        let { data: walletData, error: walletError } = await supabase
           .from("wallet_transactions")
           .select(`
             id,
@@ -100,73 +91,78 @@ export function useBankTransferData() {
           .eq("type", "deposit")
           .order("created_at", { ascending: false });
         
+        if (walletError) {
+          console.error("Error fetching wallet transactions:", walletError);
+        } else if (walletData && walletData.length > 0) {
+          console.log("Found wallet transactions:", walletData.length);
+          
+          // Filter transactions that mention "Virement bancaire" in their description
+          const bankTransfers = walletData.filter(transaction => 
+            transaction.description?.toLowerCase().includes("virement bancaire")
+          );
+          
+          console.log("Filtered bank transfers from wallet:", bankTransfers.length);
+          
+          if (bankTransfers.length > 0) {
+            // Get any new user IDs not already fetched
+            const newUserIds = [...new Set(bankTransfers.map(t => t.user_id))].filter(id => !profilesMap[id]);
+            
+            // Fetch additional profiles if needed
+            if (newUserIds.length > 0) {
+              const { data: additionalProfiles } = await supabase
+                .from("profiles")
+                .select("id, first_name, last_name, email")
+                .in("id", newUserIds);
+                
+              // Add to existing profiles map
+              (additionalProfiles || []).forEach(profile => {
+                profilesMap[profile.id] = profile;
+              });
+            }
+            
+            // Map wallet transactions to BankTransferItem format and add to formatted transfers
+            const walletTransfers = bankTransfers.map(transfer => {
+              const profile = profilesMap[transfer.user_id] || {
+                first_name: "Utilisateur",
+                last_name: "Inconnu",
+                email: null
+              };
+              
+              return {
+                id: transfer.id,
+                created_at: transfer.created_at,
+                user_id: transfer.user_id,
+                amount: transfer.amount || 0,
+                description: transfer.description || "Virement bancaire",
+                status: transfer.status || "pending",
+                receipt_confirmed: transfer.receipt_confirmed || false,
+                profile: {
+                  first_name: profile.first_name,
+                  last_name: profile.last_name,
+                  email: profile.email
+                }
+              };
+            });
+            
+            // Add wallet transfers to formatted transfers, avoiding duplicates by ID
+            const existingIds = new Set(formattedTransfers.map(t => t.id));
+            walletTransfers.forEach(transfer => {
+              if (!existingIds.has(transfer.id)) {
+                formattedTransfers.push(transfer);
+                existingIds.add(transfer.id);
+              }
+            });
+          }
+        }
+        
         // Apply status filter if not "all"
         if (statusFilter !== "all") {
-          query = query.eq("status", statusFilter);
+          formattedTransfers = formattedTransfers.filter(item => item.status === statusFilter);
         }
         
-        const { data, error } = await query;
-
-        if (error) {
-          console.error("Erreur lors de la récupération des virements:", error);
-          toast.error("Impossible de récupérer les données des virements");
-          throw error;
-        }
-
-        console.log("Virements récupérés:", data);
-        
-        // Filter transactions that mention "Virement bancaire" in their description
-        const bankTransfers = data?.filter(transaction => 
-          transaction.description?.toLowerCase().includes("virement bancaire")
-        ) || [];
-        
-        console.log("Virements bancaires filtrés:", bankTransfers);
-
-        // Fetch user profiles in a single batch to reduce number of queries
-        if (bankTransfers.length === 0) {
-          return [];
-        }
-        
-        // Extract unique user IDs
-        const userIds = [...new Set(bankTransfers.map(transfer => transfer.user_id))];
-        
-        // Fetch all profiles in one query
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, first_name, last_name, email")
-          .in("id", userIds);
-          
-        if (profilesError) {
-          console.error("Erreur lors de la récupération des profils:", profilesError);
-          toast.error("Impossible de récupérer les données des utilisateurs");
-        }
-        
-        // Create a map of user profiles for quick lookup
-        const profilesMap = (profilesData || []).reduce((map, profile) => {
-          map[profile.id] = profile;
-          return map;
-        }, {} as Record<string, any>);
-        
-        // Combine transfer data with profiles
-        const transfersWithProfiles = bankTransfers.map(transfer => {
-          const profile = profilesMap[transfer.user_id] || {
-            first_name: "Utilisateur",
-            last_name: "Inconnu",
-            email: null
-          };
-          
-          return {
-            ...transfer,
-            profile: {
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              email: profile.email
-            }
-          };
-        });
-        
-        console.log("Virements avec profils:", transfersWithProfiles);
-        return transfersWithProfiles as BankTransferItem[];
+        console.log("All formatted transfers after filtering:", formattedTransfers.length);
+        console.log("Transfer IDs:", formattedTransfers.map(t => t.id));
+        return formattedTransfers as BankTransferItem[];
       } catch (error) {
         console.error("Erreur globale:", error);
         toast.error("Une erreur est survenue lors du chargement des données");

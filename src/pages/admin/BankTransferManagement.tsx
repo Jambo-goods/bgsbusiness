@@ -20,7 +20,7 @@ export default function BankTransferManagement() {
   } = useBankTransferData();
 
   console.log("Bank Transfer Management - Transfers loaded:", pendingTransfers?.length);
-  console.log("Bank Transfer Data:", pendingTransfers);
+  console.log("Transfer IDs:", pendingTransfers?.map(t => t.id));
 
   return (
     <>
@@ -71,10 +71,13 @@ export default function BankTransferManagement() {
           </Card>
         </div>
         
-        {/* Debug information panel to show all transfers */}
+        {/* Debug information panel to show all transfers in detail */}
         <div className="mt-8 p-4 bg-gray-50 rounded-md border border-gray-200">
-          <h3 className="text-sm font-semibold mb-2">Données de débogage ({pendingTransfers?.length || 0} virements)</h3>
-          <pre className="text-xs overflow-auto max-h-40 p-2 bg-white rounded border border-gray-200">
+          <h3 className="text-sm font-semibold mb-2">Données de débogage détaillées ({pendingTransfers?.length || 0} virements)</h3>
+          <div className="text-xs mb-2">
+            <span className="font-semibold">IDs des virements:</span> {pendingTransfers?.map(t => t.id).join(', ')}
+          </div>
+          <pre className="text-xs overflow-auto max-h-60 p-2 bg-white rounded border border-gray-200">
             {JSON.stringify(pendingTransfers, null, 2)}
           </pre>
         </div>
