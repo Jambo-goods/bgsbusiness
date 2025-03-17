@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
@@ -63,7 +62,7 @@ const ScheduledPaymentsPage = () => {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [availableProjects, setAvailableProjects] = useState([]);
-  
+
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -82,7 +81,7 @@ const ScheduledPaymentsPage = () => {
     
     fetchProjects();
   }, []);
-  
+
   const form = useForm({
     defaultValues: {
       project_id: '',
@@ -92,7 +91,7 @@ const ScheduledPaymentsPage = () => {
       total_scheduled_amount: 0
     }
   });
-  
+
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return '—';
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -182,7 +181,7 @@ const ScheduledPaymentsPage = () => {
       direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
-  
+
   const handleEditPayment = (payment) => {
     setEditingPayment(payment);
     form.reset({
@@ -194,7 +193,7 @@ const ScheduledPaymentsPage = () => {
     });
     setIsAddPaymentOpen(true);
   };
-  
+
   const handleAddPayment = () => {
     setEditingPayment(null);
     form.reset({
@@ -206,7 +205,7 @@ const ScheduledPaymentsPage = () => {
     });
     setIsAddPaymentOpen(true);
   };
-  
+
   const onSubmit = async (data) => {
     try {
       if (editingPayment) {
@@ -231,7 +230,7 @@ const ScheduledPaymentsPage = () => {
       toast.error(`Erreur: ${err.message || 'Une erreur est survenue'}`);
     }
   };
-  
+
   const handleChangeStatus = async (paymentId, newStatus) => {
     try {
       await updatePaymentStatus(paymentId, newStatus);
@@ -289,11 +288,6 @@ const ScheduledPaymentsPage = () => {
                     <NavigationMenuLink asChild>
                       <Link to="/projects" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
                         <span>Projets</span>
-                      </Link>
-                    </NavigationMenuLink>
-                    <NavigationMenuLink asChild>
-                      <Link to="/scheduled-payments" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
-                        <span>Paiements Programmés</span>
                       </Link>
                     </NavigationMenuLink>
                   </div>
