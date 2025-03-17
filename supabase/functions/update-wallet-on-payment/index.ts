@@ -28,6 +28,21 @@ serve(async (req) => {
 
     console.log('Scheduled payment update received:', { new: record, old: old_record });
 
+    // Vérifier que la date de paiement est valide
+    if (!record.payment_date) {
+      console.error('Error: payment_date is missing or null');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "La date de paiement est obligatoire" 
+        }),
+        { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }, 
+          status: 400 
+        }
+      );
+    }
+
     // Vérifier si le statut a changé en "paid"
     if (record && old_record && record.status === 'paid' && old_record.status !== 'paid') {
       // Récupérer les détails du projet

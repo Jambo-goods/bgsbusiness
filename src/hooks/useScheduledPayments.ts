@@ -55,7 +55,8 @@ export const useScheduledPayments = () => {
       // Map the data to ensure status is one of the valid types
       const typedData = (data || []).map(payment => ({
         ...payment,
-        status: (payment.status as 'pending' | 'scheduled' | 'paid') || 'pending'
+        status: (payment.status as 'pending' | 'scheduled' | 'paid') || 'pending',
+        payment_date: payment.payment_date || new Date().toISOString() // Ensure payment_date is never null
       }));
 
       setScheduledPayments(typedData);
@@ -112,10 +113,74 @@ export const useScheduledPayments = () => {
     };
   }, []);
 
+  // Function to add a new scheduled payment
+  const addScheduledPayment = async (newPayment: Omit<ScheduledPayment, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      // Ensure payment_date is provided and is a valid date
+      if (!newPayment.payment_date) {
+        throw new Error('La date de paiement est obligatoire');
+      }
+      
+      // Try to convert to a date object to validate format
+      const paymentDate = new Date(newPayment.payment_date);
+      if (isNaN(paymentDate.getTime())) {
+        throw new Error('La date de paiement est invalide');
+      }
+      
+      const { data, error } = await supabase
+        .from('scheduled_payments')
+        .insert({
+          ...newPayment,
+          payment_date: paymentDate.toISOString().split('T')[0] // Format as YYYY-MM-DD
+        })
+        .select();
+
+      if (error) {
+        console.error('Error adding scheduled payment:', error);
+        throw error;
+      }
+
+      toast.success('Paiement programmé avec succès');
+      await fetchScheduledPayments();
+      return data;
+    } catch (err: any) {
+      console.error('Error in addScheduledPayment:', err);
+      toast.error(`Erreur: ${err.message || 'Une erreur est survenue'}`);
+      throw err;
+    }
+  };
+
+  // Function to update a scheduled payment status
+  const updatePaymentStatus = async (paymentId: string, newStatus: 'pending' | 'scheduled' | 'paid') => {
+    try {
+      const { error } = await supabase
+        .from('scheduled_payments')
+        .update({ 
+          status: newStatus,
+          processed_at: newStatus === 'paid' ? new Date().toISOString() : null 
+        })
+        .eq('id', paymentId);
+
+      if (error) {
+        console.error('Error updating payment status:', error);
+        throw error;
+      }
+
+      toast.success(`Statut du paiement mis à jour: ${newStatus}`);
+      await fetchScheduledPayments();
+    } catch (err: any) {
+      console.error('Error in updatePaymentStatus:', err);
+      toast.error(`Erreur: ${err.message || 'Une erreur est survenue'}`);
+      throw err;
+    }
+  };
+
   return {
     scheduledPayments,
     isLoading,
     error,
-    refetch: fetchScheduledPayments
+    refetch: fetchScheduledPayments,
+    addScheduledPayment,
+    updatePaymentStatus
   };
 };

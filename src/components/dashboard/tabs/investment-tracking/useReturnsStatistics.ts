@@ -27,8 +27,14 @@ export const useReturnsStatistics = () => {
         throw error;
       }
 
-      console.log("Scheduled payments with percentage:", data);
-      return data || [];
+      // Ensure payment_date is valid
+      const validPayments = (data || []).map(payment => ({
+        ...payment,
+        payment_date: payment.payment_date || new Date().toISOString().split('T')[0] // Ensure we have a valid date
+      }));
+
+      console.log("Scheduled payments with percentage:", validPayments);
+      return validPayments;
     },
   });
 
