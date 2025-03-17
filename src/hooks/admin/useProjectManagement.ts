@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -102,13 +103,13 @@ export const useProjectManagement = (adminUserId?: string) => {
       // Parse numeric values
       const projectData = {
         ...formData,
-        price: parseInt(formData.price),
-        yield: parseFloat(formData.yield),
-        profitability: parseFloat(formData.profitability),
-        min_investment: parseInt(formData.min_investment),
+        price: parseInt(formData.price) || 0,
+        yield: parseFloat(formData.yield) || 0,
+        profitability: parseFloat(formData.profitability) || 0,
+        min_investment: parseInt(formData.min_investment) || 0,
         funding_progress: parseInt(formData.funding_progress) || 0,
         possible_durations: formData.possible_durations ? 
-          formData.possible_durations.split(',').map(d => parseInt(d.trim())) : 
+          formData.possible_durations.split(',').map(d => parseInt(d.trim()) || 0) : 
           [] // Ensure it's always an array, empty if no values
       };
       
@@ -150,7 +151,7 @@ export const useProjectManagement = (adminUserId?: string) => {
           .select();
           
         if (error) {
-          console.error("Error details:", error);
+          console.error("Error creating project:", error);
           throw error;
         }
         result = data?.[0];

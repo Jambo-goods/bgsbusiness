@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import ProjectManagement from './ProjectManagement';
 import AdminLayout from '@/layouts/AdminLayout';
 import { AdminProvider } from '@/contexts/AdminContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 const AdminProjects = () => {
   console.log("Rendering AdminProjects component");
@@ -25,10 +25,7 @@ const AdminProjects = () => {
               return <ProjectManagement />;
             } catch (error) {
               console.error("Error rendering ProjectManagement:", error);
-              toast({
-                title: "Erreur",
-                description: "Erreur lors du chargement de la gestion de projets"
-              });
+              toast.error("Erreur lors du chargement de la gestion de projets");
               return (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                   Erreur lors du chargement de la gestion de projets.
