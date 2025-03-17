@@ -1,7 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
-import DashboardLayout from '@/layouts/DashboardLayout';
 import { 
   Table, 
   TableBody, 
@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Toaster } from 'sonner';
-import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil } from 'lucide-react';
+import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, FolderOpen } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -24,6 +24,14 @@ import {
   DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from '@/components/ui/navigation-menu';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -32,7 +40,18 @@ import {
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage
+} from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
+import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 
 const ScheduledPaymentsPage = () => {
@@ -44,7 +63,6 @@ const ScheduledPaymentsPage = () => {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [availableProjects, setAvailableProjects] = useState([]);
-  const [activeTab, setActiveTab] = useState('payments');
   
   useEffect(() => {
     const fetchProjects = async () => {
@@ -224,9 +242,68 @@ const ScheduledPaymentsPage = () => {
     }
   };
 
-  const content = (
-    <>
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-red-500 text-center">
+          <h2 className="text-xl font-bold">Erreur</h2>
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
       <Toaster />
+      
+      <div className="bg-white shadow mb-6">
+        <div className="container mx-auto px-4">
+          <NavigationMenu className="py-4">
+            <NavigationMenuList>
+              <NavigationMenuItem>
+                <NavigationMenuLink asChild>
+                  <Link to="/" className="font-bold text-xl hover:text-blue-500">
+                    Finance App
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+              
+              <NavigationMenuItem>
+                <NavigationMenuTrigger>Navigation</NavigationMenuTrigger>
+                <NavigationMenuContent>
+                  <div className="grid w-[400px] gap-3 p-4">
+                    <NavigationMenuLink asChild>
+                      <Link to="/dashboard" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
+                        <span>Dashboard</span>
+                      </Link>
+                    </NavigationMenuLink>
+                    <NavigationMenuLink asChild>
+                      <Link to="/projects" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
+                        <span>Projets</span>
+                      </Link>
+                    </NavigationMenuLink>
+                    <NavigationMenuLink asChild>
+                      <Link to="/admin/projects" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        <span>Administration des projets</span>
+                      </Link>
+                    </NavigationMenuLink>
+                  </div>
+                </NavigationMenuContent>
+              </NavigationMenuItem>
+            </NavigationMenuList>
+          </NavigationMenu>
+        </div>
+      </div>
       
       <div className="container mx-auto py-8 px-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -534,36 +611,7 @@ const ScheduledPaymentsPage = () => {
           </form>
         </DialogContent>
       </Dialog>
-    </>
-  );
-
-  if (isLoading) {
-    return (
-      <DashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  if (error) {
-    return (
-      <DashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="text-red-500 text-center">
-            <h2 className="text-xl font-bold">Erreur</h2>
-            <p>{error}</p>
-          </div>
-        </div>
-      </DashboardLayout>
-    );
-  }
-
-  return (
-    <DashboardLayout activeTab={activeTab} setActiveTab={setActiveTab}>
-      {content}
-    </DashboardLayout>
+    </div>
   );
 };
 
