@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,7 +20,6 @@ export function useBankTransferData() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        console.log("Checking authentication status...");
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Erreur d'authentification:", error.message);
@@ -57,7 +57,7 @@ export function useBankTransferData() {
         // Récupérer les données de la table bank_transfers directement sans filtres RLS initiaux
         let { data: bankTransfersData, error: bankTransfersError } = await supabase
           .from("bank_transfers")
-          .select("*, profiles!bank_transfers_user_id_fkey(first_name, last_name, email)");
+          .select("*, profiles:user_id(first_name, last_name, email)");
         
         if (bankTransfersError) {
           console.error("Error fetching from bank_transfers:", bankTransfersError);
@@ -72,7 +72,7 @@ export function useBankTransferData() {
         // Récupérer les données de wallet_transactions sans filtres RLS initiaux
         let { data: walletTransactions, error: walletError } = await supabase
           .from("wallet_transactions")
-          .select("*, profiles!wallet_transactions_user_id_fkey(first_name, last_name, email)")
+          .select("*, profiles:user_id(first_name, last_name, email)")
           .eq("type", "deposit");
           
         if (walletError) {
@@ -100,16 +100,8 @@ export function useBankTransferData() {
         
         // Formater les virements bancaires
         let formattedTransfers = (bankTransfersData || []).map(transfer => {
-          // Safely handle the profiles relation - using optional chaining
-          const profileData: ProfileData = transfer.profiles ? {
-            first_name: transfer.profiles.first_name || null,
-            last_name: transfer.profiles.last_name || null,
-            email: transfer.profiles.email || null
-          } : {
-            first_name: null,
-            last_name: null,
-            email: null
-          };
+          // Safely access profile data in case the relation wasn't found
+          const profileData: ProfileData = transfer.profiles || {};
           
           return {
             id: transfer.id,
@@ -135,16 +127,8 @@ export function useBankTransferData() {
         // Formater les transactions de portefeuille
         if (walletTransactions && walletTransactions.length > 0) {
           const walletTransfers = walletTransactions.map(tx => {
-            // Safely handle the profiles relation - using optional chaining
-            const profileData: ProfileData = tx.profiles ? {
-              first_name: tx.profiles.first_name || null,
-              last_name: tx.profiles.last_name || null,
-              email: tx.profiles.email || null
-            } : {
-              first_name: null,
-              last_name: null,
-              email: null
-            };
+            // Safely access profile data in case the relation wasn't found
+            const profileData: ProfileData = tx.profiles || {};
             
             return {
               id: tx.id,

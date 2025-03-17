@@ -23,13 +23,10 @@ const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const WithdrawalRequestsPage = lazy(() => import("./pages/WithdrawalRequestsPage"));
 const BankTransfersPage = lazy(() => import("./pages/BankTransfersPage"));
 const ProfilesPage = lazy(() => import("./pages/ProfilesPage"));
-const BankTransferManagement = lazy(() => import("./pages/admin/BankTransferManagement"));
-const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
-const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-b-2 border-bgs-blue"></div>
   </div>
 );
 
@@ -52,7 +49,6 @@ const App = () => (
         <BrowserRouter>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
-              {/* Public routes */}
               <Route path="/" element={<Index />} />
               <Route path="/projects" element={<Opportunite />} />
               <Route path="/project/:id" element={<ProjectDetail />} />
@@ -61,8 +57,6 @@ const App = () => (
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
-              
-              {/* Dashboard routes */}
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/dashboard/*" element={<Dashboard />} />
               <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
@@ -72,13 +66,7 @@ const App = () => (
               <Route path="/profiles" element={<ProfilesPage />} />
               
               {/* Admin routes */}
-              <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Navigate to="/admin/projects" />} />
-                <Route path="dashboard" element={<AdminProjects />} />
-                <Route path="projects" element={<AdminProjects />} />
-                <Route path="bank-transfers" element={<BankTransferManagement />} />
-              </Route>
+              <Route path="/admin/projects" element={<AdminProjects />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>

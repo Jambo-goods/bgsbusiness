@@ -9,12 +9,8 @@ import BankTransferFilters from "@/components/admin/dashboard/BankTransferFilter
 import { useBankTransferData } from "@/components/admin/dashboard/hooks/useBankTransferData";
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { bankTransferService } from "@/services/bankTransferService";
-import { toast } from "sonner";
 
 export default function BankTransferManagement() {
-  console.log("Rendering BankTransferManagement component");
-  
   const { 
     pendingTransfers, 
     isLoading, 
@@ -31,22 +27,23 @@ export default function BankTransferManagement() {
   const [rawWalletTransactions, setRawWalletTransactions] = useState<any[]>([]);
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [databasePolicies, setDatabasePolicies] = useState<any[]>([]);
-  const [isCreatingTest, setIsCreatingTest] = useState(false);
 
+  // Vérifier directement les deux tables au chargement du composant et périodiquement
   useEffect(() => {
-    console.log("BankTransferManagement mounted, fetching transfers...");
     fetchAllTransfers();
     
+    // Configurer un timer pour vérifier périodiquement la base de données
     const intervalId = setInterval(fetchAllTransfers, 30000);
     
+    // Nettoyer l'intervalle lors du démontage du composant
     return () => clearInterval(intervalId);
   }, []);
 
   const fetchAllTransfers = async () => {
     try {
-      console.log("Fetching all transfers...");
       setDebugInfo("Récupération des données de toutes les tables...");
       
+      // Vérifier le statut d'authentification
       const { data: authData, error: authError } = await supabase.auth.getSession();
       if (authError) {
         setDebugInfo(prev => prev + "\nErreur lors de la vérification de la session: " + authError.message);
@@ -59,7 +56,9 @@ export default function BankTransferManagement() {
           setDebugInfo(prev => prev + `\nEmail User: ${authData.session?.user.email}`);
           setDebugInfo(prev => prev + `\nRole User: ${authData.session?.user.app_metadata?.role || 'standard'}`);
           
+          // Tenter de récupérer les polices RLS (cette fonction rpc n'existe peut-être pas)
           try {
+            // Utiliser une méthode alternative pour récupérer des informations sur les tables
             const { data: tableData, error: tableError } = await supabase
               .from('bank_transfers')
               .select('id')
@@ -78,6 +77,7 @@ export default function BankTransferManagement() {
         }
       }
       
+      // Vérifier la table bank_transfers
       const { data: bankTransfers, error: bankTransfersError } = await supabase
         .from("bank_transfers")
         .select("*");
@@ -93,6 +93,7 @@ export default function BankTransferManagement() {
         setDebugInfo(prev => prev + `\nTrouvé ${bankTransfers?.length || 0} enregistrements dans la table bank_transfers`);
       }
       
+      // Vérifier la table wallet_transactions
       const { data: walletTransactions, error: walletError } = await supabase
         .from("wallet_transactions")
         .select("*")
@@ -114,22 +115,6 @@ export default function BankTransferManagement() {
     }
   };
 
-  const createTestBankTransfer = async () => {
-    try {
-      setIsCreatingTest(true);
-      const success = await bankTransferService.createTestBankTransfer();
-      if (success) {
-        fetchAllTransfers();
-        refetch();
-      }
-    } catch (error) {
-      console.error("Erreur lors de la création du virement de test:", error);
-      toast.error("Une erreur est survenue");
-    } finally {
-      setIsCreatingTest(false);
-    }
-  };
-
   return (
     <>
       <Helmet>
@@ -139,27 +124,19 @@ export default function BankTransferManagement() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold tracking-tight">Gestion des Virements Bancaires</h1>
-          <div className="flex gap-2">
-            <button 
-              onClick={createTestBankTransfer} 
-              disabled={isCreatingTest}
-              className="flex items-center gap-2 px-4 py-2 bg-bgs-blue-light text-white rounded-md hover:bg-bgs-blue-dark transition-colors"
-            >
-              {isCreatingTest ? "Création..." : "Créer un test"}
-            </button>
-            <button 
-              onClick={() => {
-                handleManualRefresh();
-                fetchAllTransfers();
-              }} 
-              className="flex items-center gap-2 px-4 py-2 bg-bgs-blue text-white rounded-md hover:bg-bgs-blue-dark transition-colors"
-            >
-              <RefreshCcw className="w-4 h-4" />
-              Actualiser
-            </button>
-          </div>
+          <button 
+            onClick={() => {
+              handleManualRefresh();
+              fetchAllTransfers();
+            }} 
+            className="flex items-center gap-2 px-4 py-2 bg-bgs-blue text-white rounded-md hover:bg-bgs-blue-dark transition-colors"
+          >
+            <RefreshCcw className="w-4 h-4" />
+            Actualiser
+          </button>
         </div>
         
+        {/* Alerte d'authentification */}
         {authStatus !== "authenticated" && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -171,6 +148,7 @@ export default function BankTransferManagement() {
           </Alert>
         )}
         
+        {/* Alerte de rôle */}
         {authStatus === "authenticated" && userRole !== "admin" && (
           <Alert>
             <Shield className="h-4 w-4" />
@@ -181,6 +159,7 @@ export default function BankTransferManagement() {
           </Alert>
         )}
         
+        {/* Alerte d'absence de données */}
         {!isLoading && (!rawBankTransfers || rawBankTransfers.length === 0) && 
          (!rawWalletTransactions || rawWalletTransactions.length === 0) && (
           <Alert>
@@ -189,12 +168,6 @@ export default function BankTransferManagement() {
             <AlertDescription>
               Aucun enregistrement n'a été trouvé dans les tables bank_transfers et wallet_transactions.
               Cela peut être dû à l'absence de données ou à des problèmes de permissions (RLS).
-              <button 
-                onClick={createTestBankTransfer}
-                className="ml-2 underline text-blue-600 hover:text-blue-800"
-              >
-                Créer un exemple de test
-              </button>
             </AlertDescription>
           </Alert>
         )}
@@ -230,6 +203,7 @@ export default function BankTransferManagement() {
           </Card>
         </div>
         
+        {/* Panneau d'informations de débogage */}
         <div className="mt-8 p-4 bg-gray-50 rounded-md border border-gray-200">
           <h3 className="text-lg font-semibold mb-2">Informations de débogage détaillées</h3>
           

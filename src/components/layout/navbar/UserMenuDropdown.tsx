@@ -1,132 +1,63 @@
 
-import React, { useEffect, useState } from "react";
+import { UserCircle, Settings, LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  ChevronDown,
-  User,
-  LogOut,
-  Settings,
-  CreditCard,
-  BarChart,
-} from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
+import { logoutUser } from "@/services/authService";
+import { toast } from "sonner";
 
 interface UserMenuDropdownProps {
-  handleSignOut: () => Promise<void>;
+  isOpen: boolean;
+  isActive: (path: string) => boolean;
 }
 
-export default function UserMenuDropdown({ handleSignOut }: UserMenuDropdownProps) {
-  const [userData, setUserData] = useState<{
-    firstName: string;
-    lastName: string;
-    email: string;
-  } | null>(null);
+export default function UserMenuDropdown({ isOpen, isActive }: UserMenuDropdownProps) {
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const { data: authData } = await supabase.auth.getSession();
-        
-        if (authData.session) {
-          const { data: profileData, error } = await supabase
-            .from("profiles")
-            .select("first_name, last_name, email")
-            .eq("id", authData.session.user.id)
-            .single();
-
-          if (error) {
-            console.error("Error fetching profile:", error);
-            return;
-          }
-
-          if (profileData) {
-            setUserData({
-              firstName: profileData.first_name || "",
-              lastName: profileData.last_name || "",
-              email: profileData.email || authData.session.user.email || "",
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error in fetchUserProfile:", error);
-      }
-    };
-
-    fetchUserProfile();
-  }, []);
-
-  const getInitials = () => {
-    if (!userData) return "U";
+  
+  if (!isOpen) return null;
+  
+  const handleLogout = async () => {
+    // Clear storage immediately
+    localStorage.clear();
+    sessionStorage.clear();
     
-    const first = userData.firstName?.[0] || "";
-    const last = userData.lastName?.[0] || "";
+    // Execute the logout
+    const { success, error } = await logoutUser();
     
-    return (first + last).toUpperCase() || "U";
+    if (success) {
+      toast.success("Déconnexion réussie");
+    } else {
+      console.error("Logout error:", error);
+      toast.error("Erreur lors de la déconnexion");
+    }
+    
+    // Always force redirect regardless of success/failure
+    // This ensures user gets logged out even if there's an API error
+    window.location.href = "/login";
   };
-
-  const getFullName = () => {
-    if (!userData) return "Utilisateur";
-    return `${userData.firstName} ${userData.lastName}`.trim() || "Utilisateur";
-  };
-
+  
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 focus:outline-none">
-        <Avatar className="h-8 w-8">
-          <AvatarFallback className="bg-bgs-blue text-white">
-            {getInitials()}
-          </AvatarFallback>
-        </Avatar>
-        <ChevronDown className="h-4 w-4 text-gray-500" />
-      </DropdownMenuTrigger>
-      
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium">{getFullName()}</p>
-            <p className="text-xs text-gray-500 truncate">{userData?.email}</p>
-          </div>
-        </DropdownMenuLabel>
-        
-        <DropdownMenuSeparator />
-        
-        <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-          <BarChart className="mr-2 h-4 w-4" />
-          <span>Tableau de bord</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={() => navigate("/dashboard?tab=profile")}>
-          <User className="mr-2 h-4 w-4" />
-          <span>Mon profil</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={() => navigate("/dashboard?tab=wallet")}>
-          <CreditCard className="mr-2 h-4 w-4" />
-          <span>Portefeuille</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem onClick={() => navigate("/dashboard?tab=settings")}>
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Paramètres</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuSeparator />
-        
-        <DropdownMenuItem onClick={handleSignOut}>
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Déconnexion</span>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="absolute right-0 mt-2 w-56 bg-white shadow-lg rounded-lg z-50 border border-gray-100 animate-fade-in">
+      <div className="py-3 px-4 border-b border-gray-100">
+        <p className="text-sm font-medium text-bgs-blue">Compte utilisateur</p>
+        <p className="text-xs text-gray-500 mt-0.5">Gérez vos informations</p>
+      </div>
+      <div className="py-2">
+        <Link to="/dashboard/profile" className={`flex items-center px-4 py-2.5 text-sm ${isActive('/profile') ? 'bg-gray-50 text-bgs-blue font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
+          <UserCircle className="h-4 w-4 mr-3 text-bgs-blue" />
+          Mon Profil
+        </Link>
+        <Link to="/dashboard/settings" className={`flex items-center px-4 py-2.5 text-sm ${isActive('/settings') ? 'bg-gray-50 text-bgs-blue font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
+          <Settings className="h-4 w-4 mr-3 text-bgs-blue" />
+          Paramètres
+        </Link>
+        <hr className="my-1" />
+        <button 
+          onClick={handleLogout}
+          className="flex w-full items-center px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+        >
+          <LogOut className="h-4 w-4 mr-3" />
+          Déconnexion
+        </button>
+      </div>
+    </div>
   );
 }

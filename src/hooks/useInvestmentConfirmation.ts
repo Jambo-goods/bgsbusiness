@@ -1,163 +1,294 @@
+
 import { useState } from "react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
+import { Project } from "@/types/project";
+import { useNavigate } from "react-router-dom";
 
-export interface InvestmentConfirmationHook {
-  confirmationStatus: "idle" | "processing" | "success" | "error";
-  loadingMessage: string | null;
-  errorMessage: string | null;
-  successAmount: number | null;
-  successProject: string | null;
-  confirmInvestment: (amount: number) => Promise<boolean>;
-}
+// Calculate total expected return
+const calculateTotalReturn = (investmentAmount: number, yieldPerc: number, durationMonths: number) => {
+  const monthlyYield = yieldPerc / 100;
+  return investmentAmount + (investmentAmount * monthlyYield * durationMonths);
+};
 
-export default function useInvestmentConfirmation(projectId: string) {
-  const [confirmationStatus, setConfirmationStatus] = useState<InvestmentConfirmationHook["confirmationStatus"]>("idle");
-  const [loadingMessage, setLoadingMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successAmount, setSuccessAmount] = useState<number | null>(null);
-  const [successProject, setSuccessProject] = useState<string | null>(null);
+// Save investment to supabase
+const saveInvestment = async (
+  projectId: string, 
+  investmentAmount: number, 
+  project: Project,
+  userId: string,
+  duration: number
+) => {
+  try {
+    const { error } = await supabase
+      .from("investments")
+      .insert({
+        user_id: userId,
+        project_id: projectId,
+        amount: investmentAmount,
+        status: "active",
+        yield_rate: project.yield,
+        duration: duration // Add the duration field
+      });
 
-  const confirmInvestment = async (amount: number) => {
+    if (error) throw error;
+    
+    return { success: true, error: null };
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement de l'investissement:", error);
+    return { success: false, error };
+  }
+};
+
+// Update project stats (using the correct column name in database)
+const updateProjectStats = async (
+  projectId: string, 
+  totalRaised: number,
+  investmentAmount: number
+) => {
+  try {
+    const { error } = await supabase
+      .from("projects")
+      .update({
+        raised: totalRaised + investmentAmount  // Using 'raised' instead of 'total_raised'
+      })
+      .eq("id", projectId);
+
+    if (error) throw error;
+    
+    return { success: true, error: null };
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour des statistiques du projet:", error);
+    return { success: false, error };
+  }
+};
+
+// Record the amount in wallet transactions
+const recordWalletTransaction = async (
+  userId: string,
+  investmentAmount: number,
+  projectName: string
+) => {
+  try {
+    const { error } = await supabase
+      .from("wallet_transactions")
+      .insert({
+        user_id: userId,
+        amount: investmentAmount,
+        type: "investment",
+        description: `Investissement dans ${projectName}`,
+        status: "completed"
+      });
+
+    if (error) throw error;
+    
+    return { success: true, error: null };
+  } catch (error) {
+    console.error("Erreur lors de l'enregistrement de la transaction:", error);
+    return { success: false, error };
+  }
+};
+
+// Update user wallet balance
+const updateWalletBalance = async (
+  userId: string,
+  currentBalance: number,
+  investmentAmount: number
+) => {
+  try {
+    if (currentBalance < investmentAmount) {
+      throw new Error("Solde insuffisant");
+    }
+    
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        wallet_balance: currentBalance - investmentAmount
+      })
+      .eq("id", userId);
+
+    if (error) throw error;
+    
+    return { success: true, error: null };
+  } catch (error) {
+    console.error("Erreur lors de la mise à jour du solde:", error);
+    return { success: false, error };
+  }
+};
+
+// Store payment records for this investment
+const storePaymentSchedule = async (
+  projectId: string,
+  userId: string,
+  investmentAmount: number,
+  yieldPerc: number,
+  durationMonths: number,
+  firstPaymentDelay: number
+) => {
+  // Logic to calculate and store expected payment schedule
+  // Implementation here
+};
+
+// Store recent investment in local storage
+const storeRecentInvestment = (investmentData: any) => {
+  localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
+};
+
+// Create confirmation notification
+const createConfirmationNotification = async (investmentAmount: number, projectName: string, projectId: string) => {
+  try {
+    await notificationService.investmentConfirmed(investmentAmount, projectName, projectId);
+  } catch (error) {
+    console.error("Erreur lors de la création de la notification:", error);
+    // Non-critical error, continue execution
+  }
+};
+
+export const useInvestmentConfirmation = (
+  project: Project,
+  investorCount: number,
+  totalRaised: number,
+  onClose: () => void
+) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const confirmInvestment = async (investmentAmount: number, selectedDuration: number = 24) => {
+    if (!investmentAmount || investmentAmount <= 0) {
+      toast({
+        title: "Montant invalide",
+        description: "Veuillez entrer un montant d'investissement valide.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Fetch user details
+    const { data: userDetails, error: userError } = await supabase.auth.getUser();
+    if (userError || !userDetails?.user) {
+      toast({
+        title: "Erreur d'authentification",
+        description: "Impossible de récupérer les informations de l'utilisateur.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+    const user = userDetails.user;
+
+    // Fetch user profile to get current wallet balance
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("wallet_balance")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profileData) {
+      toast({
+        title: "Erreur de profil",
+        description: "Impossible de récupérer le solde du portefeuille.",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    const currentBalance = profileData.wallet_balance || 0;
+    const projectId = project.id;
+    const durationMonths = selectedDuration;
+    const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
+
     try {
-      setConfirmationStatus("processing");
-      setLoadingMessage("Traitement de votre investissement...");
+      // Step 1: Save investment
+      const { success: saveSuccess, error: saveError } = await saveInvestment(
+        projectId,
+        investmentAmount,
+        project,
+        user.id,
+        durationMonths // Pass the duration to saveInvestment
+      );
+      if (!saveSuccess || saveError) throw new Error("Erreur lors de l'enregistrement de l'investissement");
 
-      // Check if user is authenticated
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        setConfirmationStatus("error");
-        setErrorMessage("Vous devez être connecté pour investir");
-        return false;
-      }
+      // Step 2: Update project stats (using the correct property name)
+      const { success: statsSuccess, error: statsError } = await updateProjectStats(
+        projectId,
+        project.raised || 0, // Use project.raised instead of totalRaised
+        investmentAmount
+      );
+      if (!statsSuccess || statsError) throw new Error("Erreur lors de la mise à jour des statistiques du projet");
 
-      const userId = sessionData.session.user.id;
+      // Step 3: Record wallet transaction
+      const { success: recordSuccess, error: recordError } = await recordWalletTransaction(
+        user.id,
+        investmentAmount,
+        project.name
+      );
+      if (!recordSuccess || recordError) throw new Error("Erreur lors de l'enregistrement de la transaction");
 
-      // Check if user has enough balance
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        console.error("Error fetching user profile:", profileError);
-        setConfirmationStatus("error");
-        setErrorMessage("Impossible de vérifier votre solde");
-        return false;
-      }
-
-      if (!userProfile || userProfile.wallet_balance < amount) {
-        console.error("Insufficient funds:", userProfile?.wallet_balance, "needed:", amount);
-        setConfirmationStatus("error");
-        setErrorMessage("Solde insuffisant pour cet investissement");
-        return false;
-      }
-
-      // Get project details
-      const { data: project, error: projectError } = await supabase
-        .from('projects')
-        .select('name, yield')
-        .eq('id', projectId)
-        .single();
-
-      if (projectError) {
-        console.error("Error fetching project details:", projectError);
-        setConfirmationStatus("error");
-        setErrorMessage("Impossible de récupérer les détails du projet");
-        return false;
-      }
-
-      // 1. Update wallet balance
-      const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
-        user_id: userId,
-        increment_amount: -amount // Negative to decrease balance
-      });
-
-      if (walletError) {
-        console.error("Error updating wallet balance:", walletError);
-        setConfirmationStatus("error");
-        setErrorMessage("Erreur lors de la mise à jour du solde");
-        return false;
-      }
-
-      // 2. Create investment record
-      const { error: investmentError } = await supabase
-        .from('investments')
-        .insert({
-          user_id: userId,
-          project_id: projectId,
-          amount: amount,
-          status: 'active',
-          yield_rate: project.yield,
-          investment_date: new Date().toISOString()
-        });
-
-      if (investmentError) {
-        console.error("Error creating investment:", investmentError);
-        
-        // Rollback wallet balance change
-        await supabase.rpc('increment_wallet_balance', {
-          user_id: userId,
-          increment_amount: amount
-        });
-        
-        setConfirmationStatus("error");
-        setErrorMessage("Erreur lors de la création de l'investissement");
-        return false;
-      }
-
-      // 3. Update user profile investment stats
-      const { error: updateProfileError } = await supabase.rpc('update_user_profile_investment', {
-        user_id: userId,
-        investment_amount: amount
-      });
-
-      if (updateProfileError) {
-        console.error("Error updating profile stats:", updateProfileError);
-        // Non-critical error, continue
-      }
-
-      // 4. Create wallet transaction record
-      const { error: transactionError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: userId,
-          amount: amount,
-          type: 'investment',
-          status: 'completed',
-          description: `Investissement dans ${project.name}`
-        });
-
-      if (transactionError) {
-        console.error("Error creating transaction record:", transactionError);
-        // Non-critical error, continue
-      }
-
-      // 5. Create notification
-      notificationService.investmentConfirmed(amount, project.name, project.yield);
-
-      // Success!
-      setConfirmationStatus("success");
-      setSuccessAmount(amount);
-      setSuccessProject(project.name);
+      // Step 4: Update wallet balance
+      const { success: balanceSuccess, error: balanceError } = await updateWalletBalance(
+        user.id,
+        currentBalance,
+        investmentAmount
+      );
+      if (!balanceSuccess || balanceError) throw new Error("Erreur lors de la mise à jour du solde");
       
-      return true;
-    } catch (error) {
-      console.error("Investment error:", error);
-      setConfirmationStatus("error");
-      setErrorMessage("Une erreur est survenue lors de la confirmation de l'investissement");
-      return false;
+      // Calculate total expected return
+      const totalReturn = calculateTotalReturn(
+        investmentAmount, 
+        project.yield, 
+        durationMonths
+      );
+      
+      // Store payment schedule if this is not a test/demo environment
+      if (process.env.NODE_ENV !== "development") {
+        await storePaymentSchedule(
+          projectId, 
+          user.id, 
+          investmentAmount, 
+          project.yield, 
+          durationMonths, 
+          firstPaymentDelay
+        );
+      }
+      
+      // Create confirmation notification - always create notification
+      await createConfirmationNotification(investmentAmount, project.name, projectId);
+      
+      toast({
+        title: "Investissement réussi !",
+        description: `Vous avez investi ${investmentAmount}€ dans ${project.name}.`,
+      });
+      
+      // Store recent investment in local storage
+      storeRecentInvestment({
+        projectName: project.name,
+        amount: investmentAmount,
+        expectedReturn: totalReturn,
+      });
+
+      // Close the modal and navigate to dashboard
+      onClose();
+      navigate("/dashboard");
+      
+    } catch (error: any) {
+      console.error("Erreur lors de la confirmation de l'investissement:", error);
+      toast({
+        title: "Erreur d'investissement",
+        description: error.message || "Une erreur est survenue lors de la confirmation de l'investissement.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return {
-    confirmationStatus,
-    loadingMessage,
-    errorMessage,
-    successAmount,
-    successProject,
-    confirmInvestment
+    confirmInvestment,
+    isLoading,
   };
-}
+};
