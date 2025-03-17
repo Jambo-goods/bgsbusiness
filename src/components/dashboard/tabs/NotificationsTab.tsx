@@ -1,285 +1,262 @@
 
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import {
-  Bell,
-  CheckCircle,
-  Info,
-  XCircle,
-  AlertTriangle,
-  Loader2,
-  Eye,
-  Trash2,
-  Check,
-  X,
-} from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Badge } from "@/components/ui/badge"
+import React, { useState, useEffect } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import EmptyNotifications from "./notifications/EmptyNotifications";
+import NotificationsList from "./notifications/NotificationsList";
+import NotificationHeader from "./notifications/NotificationHeader";
+import { Bell, CheckCircle, AlertCircle } from "lucide-react";
 
-interface Notification {
+export type Notification = {
   id: string;
-  user_id: string;
-  type: 'info' | 'success' | 'warning' | 'error';
+  title: string;
   message: string;
+  type: string;
   created_at: string;
-  seen: boolean; // Changed from read to seen to match the database
-}
+  seen: boolean;
+  read: boolean;
+  user_id: string;
+  data?: any;
+};
 
-const NotificationsTab: React.FC = () => {
+const NotificationsTab = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("all");
+  const [hasUnread, setHasUnread] = useState(false);
   
-  // Get userId from session instead of currentUser
-  const [userId, setUserId] = useState<string | null>(null);
-
   useEffect(() => {
-    // Get user ID from session
-    const getUserId = async () => {
-      const { data } = await supabase.auth.getSession();
-      const id = data.session?.user?.id || null;
-      setUserId(id);
-      if (id) {
-        fetchNotifications(id);
-      }
-    };
+    fetchNotifications();
     
-    getUserId();
+    // Setup real-time subscription
+    const notificationsChannel = supabase
+      .channel('notifications_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications'
+      }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(notificationsChannel);
+    };
   }, []);
-
+  
+  // Update hasUnread state whenever notifications change
   useEffect(() => {
-    if (userId) {
-      // Set up real-time listener for new notifications
-      const channel = supabase
-        .channel(`user_notifications:${userId}`)
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-          (payload) => {
-            console.log('New notification received:', payload);
-            fetchNotifications(userId);
-          }
-        )
-        .subscribe();
+    const unreadExists = notifications.some(notification => !notification.read);
+    setHasUnread(unreadExists);
+  }, [notifications]);
 
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [userId]);
-
-  const fetchNotifications = async (userId: string) => {
-    setLoading(true);
+  const fetchNotifications = async () => {
     try {
+      setLoading(true);
+      
+      // Get current user
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user?.id) {
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
+      
+      const userId = sessionData.session.user.id;
+      
+      // Fetch notifications from database
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
-
+      
       if (error) {
         console.error('Error fetching notifications:', error);
-        setError(error.message);
-        toast.error('Failed to load notifications.');
+        toast.error('Impossible de charger les notifications');
+        setNotifications([]);
       } else {
-        // Map to our Notification interface
-        setNotifications(data?.map(item => ({
-          id: item.id,
-          user_id: item.user_id,
-          type: item.type as 'info' | 'success' | 'warning' | 'error',
-          message: item.message,
-          created_at: item.created_at,
-          seen: item.seen || false // Use seen instead of read
-        })) || []);
+        // Convert the data to include the 'read' property
+        const notificationsWithRead = data.map(notif => ({
+          ...notif,
+          read: notif.seen // Use 'seen' as 'read' for compatibility
+        }));
+        setNotifications(notificationsWithRead as Notification[]);
       }
     } catch (err) {
-      console.error('Error fetching notifications:', err);
-      setError('An error occurred while retrieving data');
+      console.error('Error in fetchNotifications:', err);
+      toast.error('Une erreur est survenue');
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const markAsRead = (id: string) => {
-    supabase
-      .from('notifications')
-      .update({ seen: true }) // Change read to seen
-      .eq('id', id)
-      .then(() => {
-        setNotifications((prevNotifications) =>
-          prevNotifications.map((notification) =>
-            notification.id === id ? { ...notification, seen: true } : notification
-          )
-        );
-      })
-      .catch((error) => {
-        console.error('Error marking as read:', error);
-        toast.error('Failed to mark as read.');
-      });
-  };
-
-  const clearAllNotifications = (userId: string) => {
-    supabase
-      .from('notifications')
-      .delete()
-      .eq('user_id', userId)
-      .then(() => {
-        setNotifications([]);
-        toast.success('All notifications cleared.');
-      })
-      .catch((error) => {
-        console.error('Error clearing notifications:', error);
-        toast.error('Failed to clear all notifications.');
-      });
-  };
-
-  const deleteNotification = (id: string) => {
-    supabase
-      .from('notifications')
-      .delete()
-      .eq('id', id)
-      .then(() => {
-        setNotifications((prevNotifications) =>
-          prevNotifications.filter((notification) => notification.id !== id)
-        );
-        toast.success('Notification deleted.');
-      })
-      .catch((error) => {
-        console.error('Error deleting notification:', error);
-        toast.error('Failed to delete notification.');
-      });
-  };
-
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Info className="h-4 w-4 text-blue-500" />;
+  const markAllAsRead = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user?.id) return;
+      
+      const userId = sessionData.session.user.id;
+      
+      // Update all notifications to seen=true in database
+      const { error } = await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('user_id', userId)
+        .eq('seen', false);
+      
+      if (error) {
+        console.error('Error marking all as read:', error);
+        toast.error('Impossible de marquer comme lu');
+        return;
+      }
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, read: true, seen: true }))
+      );
+      
+      toast.success('Toutes les notifications ont été marquées comme lues');
+    } catch (err) {
+      console.error('Error in markAllAsRead:', err);
+      toast.error('Une erreur est survenue');
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-48">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
+  const deleteAllNotifications = async () => {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user?.id) return;
+      
+      const userId = sessionData.session.user.id;
+      
+      // Delete all notifications for user
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (error) {
+        console.error('Error deleting notifications:', error);
+        toast.error('Impossible de supprimer les notifications');
+        return;
+      }
+      
+      // Update local state
+      setNotifications([]);
+      
+      toast.success('Toutes les notifications ont été supprimées');
+    } catch (err) {
+      console.error('Error in deleteAllNotifications:', err);
+      toast.error('Une erreur est survenue');
+    }
+  };
 
-  if (error) {
-    return <div className="text-red-500">Error: {error}</div>;
-  }
+  const markAsRead = async (id: string) => {
+    try {
+      // Update in database
+      const { error } = await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Error marking as read:', error);
+        return;
+      }
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id 
+            ? { ...notification, read: true, seen: true } 
+            : notification
+        )
+      );
+    } catch (err) {
+      console.error('Error in markAsRead:', err);
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      // Delete from database
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        console.error('Error deleting notification:', error);
+        toast.error('Impossible de supprimer la notification');
+        return;
+      }
+      
+      // Update local state
+      setNotifications(prev => prev.filter(notification => notification.id !== id));
+      
+      toast.success('Notification supprimée');
+    } catch (err) {
+      console.error('Error in handleDeleteNotification:', err);
+      toast.error('Une erreur est survenue');
+    }
+  };
+
+  // Filter notifications based on active tab
+  const filteredNotifications = notifications.filter(notification => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'unread') return !notification.read;
+    if (activeTab === 'alerts') return notification.type.includes('alert');
+    if (activeTab === 'info') return notification.type.includes('info');
+    return true;
+  });
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center space-x-2">
-          <Bell className="h-5 w-5" />
-          <span>Notifications</span>
-          <Badge className="ml-2">{notifications.length}</Badge>
-        </CardTitle>
-        <CardDescription>
-          Here are all your latest notifications.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <ScrollArea className="h-[400px] w-full">
-          <div className="p-4 space-y-4">
-            {notifications.length === 0 ? (
-              <div className="text-center text-gray-500">No notifications yet.</div>
-            ) : (
-              notifications.map((notification) => (
-                <div
-                  key={notification.id}
-                  className={`border rounded-md p-3 flex items-start space-x-3 ${notification.seen ? 'bg-gray-50' : 'bg-white'
-                    }`}
-                >
-                  <div className="flex-shrink-0">{getIcon(notification.type)}</div>
-                  <div>
-                    <div className="font-medium">{notification.message}</div>
-                    <div className="text-sm text-gray-500">
-                      {formatDistanceToNow(new Date(notification.created_at), {
-                        addSuffix: true,
-                        locale: fr,
-                      })}
-                    </div>
-                  </div>
-                  <div className="ml-auto flex items-center space-x-2">
-                    {!notification.seen && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">Mark as Read</span>
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => deleteNotification(notification.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Delete</span>
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </ScrollArea>
-      </CardContent>
-      <CardFooter className="justify-between">
-        <Button 
-          variant="outline"
-          onClick={() => {
-            if (userId) {
-              setNotifications(prevNotifications => 
-                prevNotifications.map(n => ({ ...n, seen: true }))
-              );
-              
-              // Update all notifications to seen in the database
-              supabase
-                .from('notifications')
-                .update({ seen: true })
-                .eq('user_id', userId)
-                .then(() => {
-                  toast.success("All notifications marked as read");
-                })
-                .catch(error => {
-                  console.error("Error marking all as read:", error);
-                  toast.error("Failed to mark all as read");
-                });
-            }
-          }}
-        >
-          <Check className="mr-2 h-4 w-4" /> Mark all as read
-        </Button>
-        <Button 
-          onClick={() => userId && clearAllNotifications(userId)}
-        >
-          Clear all <X className="ml-2 h-4 w-4" />
-        </Button>
-      </CardFooter>
-    </Card>
+    <div className="space-y-6">
+      <NotificationHeader 
+        hasUnread={hasUnread}
+        onMarkAllRead={markAllAsRead}
+        onDeleteAll={deleteAllNotifications}
+      />
+      
+      <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="w-full md:w-auto grid grid-cols-4 mb-4">
+          <TabsTrigger value="all" className="px-4">
+            Toutes
+          </TabsTrigger>
+          <TabsTrigger value="unread" className="px-4">
+            Non lues
+          </TabsTrigger>
+          <TabsTrigger value="alerts" className="px-4">
+            <AlertCircle className="h-4 w-4 mr-1" />
+            Alertes
+          </TabsTrigger>
+          <TabsTrigger value="info" className="px-4">
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Infos
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value={activeTab} className="mt-0">
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bgs-blue"></div>
+            </div>
+          ) : filteredNotifications.length > 0 ? (
+            <NotificationsList 
+              notifications={filteredNotifications}
+              onMarkAsRead={markAsRead}
+              onDelete={handleDeleteNotification}
+            />
+          ) : (
+            <EmptyNotifications type={activeTab} />
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 };
 

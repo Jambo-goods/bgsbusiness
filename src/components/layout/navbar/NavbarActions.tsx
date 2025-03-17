@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Bell, Wallet, Home } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import UserMenuDropdown from "./UserMenuDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
-import NotificationDropdown from "./NotificationDropdown";
+import { NotificationDropdown } from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
 

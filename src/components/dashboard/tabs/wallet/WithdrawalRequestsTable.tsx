@@ -1,193 +1,126 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import LoadingState from "./withdrawal-table/LoadingState";
-import EmptyState from "./withdrawal-table/EmptyState";
-import WithdrawalTableRow from "./withdrawal-table/WithdrawalTableRow";
-import { toast } from "sonner";
-import { notificationService } from "@/services/notifications";
 
-interface WithdrawalRequest {
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserSession } from '@/hooks/dashboard/useUserSession';
+import { format } from 'date-fns';
+import StatusBadge from './withdrawal-table/StatusBadge';
+import LoadingState from './withdrawal-table/LoadingState';
+import EmptyState from './withdrawal-table/EmptyState';
+import { fr } from 'date-fns/locale';
+
+type WithdrawalRequest = {
   id: string;
+  user_id: string;
   amount: number;
   status: string;
-  requested_at: string;
+  created_at: string;
+  bank_name: string;
+  account_number: string;
   processed_at: string | null;
-  bank_info: {
-    accountName: string;
-    bankName: string;
-    accountNumber: string;
-  } | Record<string, any>;
-}
+};
 
 export default function WithdrawalRequestsTable() {
-  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
+  const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { userId } = useUserSession();
+  
   useEffect(() => {
-    fetchWithdrawalRequests();
-
-    // Set up real-time listener for withdrawal_requests table
-    const withdrawalChannel = supabase
-      .channel('withdrawal_requests_changes')
+    fetchWithdrawals();
+    
+    // Set up real-time listener
+    const channel = supabase
+      .channel('withdrawal_changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'withdrawal_requests'
-      }, (payload) => {
-        console.log('Withdrawal request change detected:', payload);
-        
-        // If a withdrawal status is changed, send appropriate notification
-        if (payload.eventType === 'UPDATE') {
-          const amount = payload.new.amount;
-          
-          // Check if status changed
-          if (payload.old.status !== payload.new.status) {
-            switch (payload.new.status) {
-              case 'scheduled':
-              case 'sheduled':
-                notificationService.withdrawalScheduled(amount);
-                toast.info(`Votre demande de retrait de ${amount}€ a été programmée`);
-                break;
-              case 'approved':
-                notificationService.withdrawalValidated(amount);
-                toast.success(`Votre demande de retrait de ${amount}€ a été validée`);
-                break;
-              case 'completed':
-                notificationService.withdrawalCompleted(amount);
-                toast.success(`Votre retrait de ${amount}€ a été effectué avec succès`);
-                break;
-              case 'rejected':
-                notificationService.withdrawalRejected(amount);
-                toast.error(`Votre demande de retrait de ${amount}€ a été refusée`);
-                break;
-              case 'received':
-                console.log("Withdrawal request received notification");
-                notificationService.withdrawalReceived(amount);
-                toast.info(`Votre demande de retrait de ${amount}€ a été reçue`, {
-                  description: "Elle est en cours d'examen."
-                });
-                break;
-              case 'confirmed':
-                // Handle confirmed status notification
-                console.log("Withdrawal confirmed notification");
-                notificationService.withdrawalConfirmed(amount)
-                  .then(() => {
-                    console.log(`Notification sent for confirmed withdrawal of ${amount}€`);
-                  })
-                  .catch(error => {
-                    console.error("Error sending confirmed withdrawal notification:", error);
-                  });
-                toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
-                  description: "Elle est en cours de traitement."
-                });
-                break;
-              case 'paid':
-                // Handle paid status notification
-                console.log("Withdrawal paid notification");
-                notificationService.withdrawalPaid(amount);
-                toast.success(`Votre retrait de ${amount}€ a été payé`, {
-                  description: "Le montant a été transféré sur votre compte bancaire."
-                });
-                break;
-            }
-          }
-        }
-        
-        // Refresh the withdrawal requests list
-        fetchWithdrawalRequests();
+        table: 'withdrawal_requests',
+        filter: userId ? `user_id=eq.${userId}` : undefined
+      }, () => {
+        fetchWithdrawals();
       })
       .subscribe();
-
-    // Cleanup function
-    return () => {
-      supabase.removeChannel(withdrawalChannel);
-    };
-  }, []);
-
-  const fetchWithdrawalRequests = async () => {
-    try {
-      setIsLoading(true);
-      const { data: session } = await supabase.auth.getSession();
       
-      if (!session.session) {
-        return;
-      }
-
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
+  
+  const fetchWithdrawals = async () => {
+    if (!userId) {
+      setWithdrawals([]);
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
       const { data, error } = await supabase
         .from('withdrawal_requests')
         .select('*')
-        .eq('user_id', session.session.user.id)
-        .order('requested_at', { ascending: false });
-
-      if (error) throw error;
-      
-      // Transformation des données pour s'assurer que bank_info est correctement formaté
-      const formattedData = data.map(item => ({
-        ...item,
-        bank_info: typeof item.bank_info === 'object' ? item.bank_info : {}
-      }));
-      
-      setWithdrawalRequests(formattedData as WithdrawalRequest[]);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des demandes de retrait:", error);
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error('Error fetching withdrawal requests:', error);
+        setWithdrawals([]);
+      } else {
+        setWithdrawals(data || []);
+      }
+    } catch (err) {
+      console.error('Error in fetchWithdrawals:', err);
+      setWithdrawals([]);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
-
-  const handleViewDetails = () => {
-    // Handle view details logic
+  
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), 'dd MMM yyyy', { locale: fr });
   };
-
-  const handleCancelRequest = () => {
-    // Handle cancel request logic
-  };
-
-  const handleEditRequest = () => {
-    // Handle edit request logic
-  };
-
-  const handleConfirmRequest = () => {
-    // Handle confirm request logic
-  };
-
-  const handleApproveRequest = () => {
-    // Handle approve request logic
-  };
-
-  const handleRejectRequest = () => {
-    // Handle reject request logic
-  };
-
-  if (isLoading) {
+  
+  if (loading) {
     return <LoadingState />;
   }
-
-  if (withdrawalRequests.length === 0) {
+  
+  if (withdrawals.length === 0) {
     return <EmptyState />;
   }
-
+  
   return (
-    <div className="mt-6">
-      <h3 className="font-medium text-lg mb-4">Historique des demandes de retrait</h3>
+    <div className="space-y-4">
+      <h3 className="text-lg font-medium text-bgs-blue">Mes demandes de retrait</h3>
+      
       <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Montant</TableHead>
-              <TableHead>Banque</TableHead>
-              <TableHead>Compte</TableHead>
-              <TableHead>Statut</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {withdrawalRequests.map((request) => (
-              <WithdrawalTableRow key={request.id} request={request} />
+        <table className="w-full table-auto">
+          <thead className="bg-gray-50 text-left">
+            <tr>
+              <th className="px-4 py-3 text-sm font-medium text-gray-500">Date</th>
+              <th className="px-4 py-3 text-sm font-medium text-gray-500">Montant</th>
+              <th className="px-4 py-3 text-sm font-medium text-gray-500">Compte bancaire</th>
+              <th className="px-4 py-3 text-sm font-medium text-gray-500">Statut</th>
+              <th className="px-4 py-3 text-sm font-medium text-gray-500">Date de traitement</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {withdrawals.map((withdrawal) => (
+              <tr key={withdrawal.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 text-sm">{formatDate(withdrawal.created_at)}</td>
+                <td className="px-4 py-3 text-sm font-medium">{withdrawal.amount.toLocaleString('fr-FR')} €</td>
+                <td className="px-4 py-3 text-sm">
+                  <div className="text-gray-900">{withdrawal.bank_name}</div>
+                  <div className="text-gray-500 text-xs">**** {withdrawal.account_number.substring(withdrawal.account_number.length - 4)}</div>
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  <StatusBadge status={withdrawal.status} />
+                </td>
+                <td className="px-4 py-3 text-sm">
+                  {withdrawal.processed_at ? formatDate(withdrawal.processed_at) : '—'}
+                </td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
     </div>
   );
