@@ -58,24 +58,33 @@ export default function ProfilesPage() {
     try {
       setIsLoading(true);
       
-      // First get the total count
+      // First get the total count - without any filters
       const { count, error: countError } = await supabase
         .from("profiles")
         .select('*', { count: 'exact', head: true });
       
-      if (countError) throw countError;
-      setTotalCount(count || 0);
+      if (countError) {
+        console.error("Error getting count:", countError);
+        throw countError;
+      }
       
-      // Then get the data
+      setTotalCount(count || 0);
+      console.log("Total profiles count:", count);
+      
+      // Then get all profiles - no limit
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .order(sortField, { ascending: sortDirection === "asc" });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching profiles:", error);
+        throw error;
+      }
 
+      console.log("Profiles fetched:", data?.length);
       setProfiles(data || []);
-      toast.success("Profils chargés avec succès");
+      toast.success(`${data?.length || 0} profils chargés avec succès`);
     } catch (error) {
       console.error("Error fetching profiles:", error);
       toast.error("Erreur lors du chargement des profils");
