@@ -7,6 +7,7 @@ interface AdminLayoutProps {
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+  console.log("Rendering AdminLayout component", { hasChildren: !!children });
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex flex-col">
