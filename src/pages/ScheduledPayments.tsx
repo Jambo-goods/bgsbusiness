@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
@@ -288,6 +289,11 @@ const ScheduledPaymentsPage = () => {
                     <NavigationMenuLink asChild>
                       <Link to="/projects" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
                         <span>Projets</span>
+                      </Link>
+                    </NavigationMenuLink>
+                    <NavigationMenuLink asChild>
+                      <Link to="/scheduled-payments" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
+                        <span>Paiements Programmés</span>
                       </Link>
                     </NavigationMenuLink>
                   </div>
