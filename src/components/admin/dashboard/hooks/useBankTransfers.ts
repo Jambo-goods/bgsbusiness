@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { BankTransferItem } from "../types/bankTransfer";
-import { bankTransferService } from "../services/bankTransferService";
+import { bankTransferService } from "@/services/bankTransferService";
 import { toast } from "sonner";
 
 export function useBankTransfers(onSuccess: () => void) {

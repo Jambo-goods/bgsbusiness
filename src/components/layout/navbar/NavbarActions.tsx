@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -78,7 +79,7 @@ export default function NavbarActions() {
     <div className="flex items-center gap-3">
       {renderAdminButton()}
       <NotificationDropdown />
-      <UserMenuDropdown onSignOut={handleSignOut} />
+      <UserMenuDropdown handleSignOut={handleSignOut} />
     </div>
   );
 }

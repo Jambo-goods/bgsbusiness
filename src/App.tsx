@@ -23,6 +23,8 @@ const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const WithdrawalRequestsPage = lazy(() => import("./pages/WithdrawalRequestsPage"));
 const BankTransfersPage = lazy(() => import("./pages/BankTransfersPage"));
 const ProfilesPage = lazy(() => import("./pages/ProfilesPage"));
+const BankTransferManagement = lazy(() => import("./pages/admin/BankTransferManagement"));
+const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -66,7 +68,10 @@ const App = () => (
               <Route path="/profiles" element={<ProfilesPage />} />
               
               {/* Admin routes */}
-              <Route path="/admin/projects" element={<AdminProjects />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route path="projects" element={<AdminProjects />} />
+                <Route path="bank-transfers" element={<BankTransferManagement />} />
+              </Route>
               
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -101,7 +101,15 @@ export function useBankTransferData() {
         // Formater les virements bancaires
         let formattedTransfers = (bankTransfersData || []).map(transfer => {
           // FIX: Safely handle the profiles relation
-          const profileData: ProfileData = transfer.profiles || {};
+          const profileData: ProfileData = transfer.profiles ? {
+            first_name: transfer.profiles.first_name || null,
+            last_name: transfer.profiles.last_name || null,
+            email: transfer.profiles.email || null
+          } : {
+            first_name: null,
+            last_name: null,
+            email: null
+          };
           
           return {
             id: transfer.id,
@@ -128,7 +136,15 @@ export function useBankTransferData() {
         if (walletTransactions && walletTransactions.length > 0) {
           const walletTransfers = walletTransactions.map(tx => {
             // FIX: Safely handle the profiles relation
-            const profileData: ProfileData = tx.profiles || {};
+            const profileData: ProfileData = tx.profiles ? {
+              first_name: tx.profiles.first_name || null,
+              last_name: tx.profiles.last_name || null,
+              email: tx.profiles.email || null
+            } : {
+              first_name: null,
+              last_name: null,
+              email: null
+            };
             
             return {
               id: tx.id,

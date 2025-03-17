@@ -9,7 +9,7 @@ import { useBankTransferData } from "@/components/admin/dashboard/hooks/useBankT
 import { supabase } from "@/integrations/supabase/client";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { bankTransferService } from "@/services/bankTransferService";
-import { toast } from "react-toastify";
+import { toast } from "sonner";
 
 export default function BankTransferManagement() {
   const { 
