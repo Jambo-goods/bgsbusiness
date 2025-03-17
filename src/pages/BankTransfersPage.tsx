@@ -3,11 +3,10 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 
 interface BankTransfer {
@@ -39,24 +38,6 @@ export default function BankTransfersPage() {
   useEffect(() => {
     fetchBankTransfers();
     console.log("BankTransfersPage: Composant monté, récupération des virements");
-
-    // Set up real-time listener for the bank_transfers table
-    const bankTransferChannel = supabase
-      .channel("bank_transfers_changes")
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "bank_transfers"
-      }, (payload) => {
-        console.log("Bank transfer change detected:", payload);
-        fetchBankTransfers();
-      })
-      .subscribe();
-
-    return () => {
-      console.log("BankTransfersPage: Composant démonté, nettoyage des abonnements");
-      supabase.removeChannel(bankTransferChannel);
-    };
   }, [sortField, sortDirection]);
 
   const fetchBankTransfers = async () => {
@@ -65,8 +46,7 @@ export default function BankTransfersPage() {
       setError(null);
       console.log("Tentative de récupération des virements bancaires...");
 
-      // Directly query the database without checking for session
-      // This allows admin panel to view data without being logged in
+      // Direct query without authentication check
       const { data, error } = await supabase
         .from("bank_transfers")
         .select("*")
@@ -80,11 +60,10 @@ export default function BankTransfersPage() {
       }
 
       console.log(`Récupération réussie: ${data?.length || 0} virements trouvés`);
-      const transfersData = data || [];
-      setBankTransfers(transfersData as BankTransfer[]);
+      setBankTransfers(data || []);
 
       // Fetch user data for all transfers
-      const userIds = Array.from(new Set(transfersData.map(t => t.user_id)));
+      const userIds = Array.from(new Set((data || []).map(t => t.user_id)));
       if (userIds.length > 0) {
         console.log(`Récupération des données pour ${userIds.length} utilisateurs...`);
         const { data: users, error: userError } = await supabase
@@ -109,8 +88,8 @@ export default function BankTransfersPage() {
         }
       }
 
-      // Si aucun virement n'est trouvé, on affiche un toast pour informer l'utilisateur
-      if (transfersData.length === 0) {
+      // If no transfers found, show a toast
+      if ((data || []).length === 0) {
         toast.info("Aucun virement bancaire trouvé dans la base de données", {
           description: "Si vous venez d'ajouter des virements, ils devraient apparaître rapidement."
         });
@@ -179,39 +158,39 @@ export default function BankTransfersPage() {
            (transfer.amount && String(transfer.amount).includes(searchTerm));
   });
 
-  // Fonction pour créer un virement de test (utile pour le développement/débogage)
+  // Function to create a test transfer
   const createTestTransfer = async () => {
     try {
-      // Générer un ID utilisateur aléatoire pour le test
+      // Generate a random test user ID
       const testUserId = "00000000-0000-0000-0000-000000000000";
       
-      // Créer un virement de test dans la base de données
+      // Create a test transfer in the database
       const { data, error } = await supabase
         .from("bank_transfers")
         .insert({
           user_id: testUserId,
-          amount: Math.floor(Math.random() * 1000) + 100, // Montant aléatoire entre 100 et 1100
+          amount: Math.floor(Math.random() * 1000) + 100, // Random amount between 100 and 1100
           reference: `TEST-${Math.floor(Math.random() * 10000)}`,
           status: "pending",
-          notes: "Virement de test créé pour le développement"
+          notes: "Test transfer created for development"
         })
         .select();
 
       if (error) {
-        console.error("Erreur lors de la création du virement de test:", error);
-        toast.error("Erreur lors de la création du virement de test");
+        console.error("Error creating test transfer:", error);
+        toast.error("Error creating test transfer");
         return;
       }
 
-      toast.success("Virement de test créé avec succès", {
-        description: "Le virement apparaîtra dans la liste après actualisation."
+      toast.success("Test transfer created successfully", {
+        description: "The transfer will appear in the list after refresh."
       });
       
-      // Actualiser la liste des virements
+      // Refresh the transfers list
       fetchBankTransfers();
     } catch (err) {
-      console.error("Erreur inattendue:", err);
-      toast.error("Une erreur inattendue est survenue");
+      console.error("Unexpected error:", err);
+      toast.error("An unexpected error occurred");
     }
   };
 
@@ -221,11 +200,10 @@ export default function BankTransfersPage() {
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Virements Bancaires</h1>
         
         {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Erreur</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-6">
+            <p className="font-medium">Erreur de chargement</p>
+            <p className="text-sm">{error}</p>
+          </div>
         )}
         
         <div className="bg-white rounded-lg shadow p-6">

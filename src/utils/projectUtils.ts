@@ -1,3 +1,4 @@
+
 import { Project } from "@/types";
 
 export const filterProjects = (projects: Project[], searchTerm: string): Project[] => {
