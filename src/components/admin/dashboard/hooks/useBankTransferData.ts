@@ -54,10 +54,10 @@ export function useBankTransferData() {
         console.log("Rôle utilisateur:", userRole);
         console.log("Fetching bank transfers with status filter:", statusFilter);
         
-        // Récupérer les données de la table bank_transfers directement sans filtres RLS initiaux
+        // Récupérer les données de la table bank_transfers
         let { data: bankTransfersData, error: bankTransfersError } = await supabase
           .from("bank_transfers")
-          .select("*, profiles:user_id(first_name, last_name, email)");
+          .select("*");
         
         if (bankTransfersError) {
           console.error("Error fetching from bank_transfers:", bankTransfersError);
@@ -69,21 +69,78 @@ export function useBankTransferData() {
         console.log("Raw bank_transfers data:", bankTransfersData);
         console.log("Nombre de virements trouvés:", bankTransfersData?.length || 0);
         
-        // Récupérer les données de wallet_transactions sans filtres RLS initiaux
+        // Récupérer les données des profils pour obtenir les informations utilisateur
+        const userIds = [...new Set((bankTransfersData || []).map(transfer => transfer.user_id))];
+        let profilesData: Record<string, ProfileData> = {};
+        
+        if (userIds.length > 0) {
+          const { data: profiles, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name, email")
+            .in("id", userIds);
+            
+          if (profilesError) {
+            console.error("Error fetching profiles:", profilesError);
+          } else if (profiles) {
+            // Créer un dictionnaire des profils par ID
+            profiles.forEach(profile => {
+              profilesData[profile.id] = {
+                first_name: profile.first_name,
+                last_name: profile.last_name,
+                email: profile.email
+              };
+            });
+          }
+        }
+        
+        // Récupérer les données de wallet_transactions
         let { data: walletTransactions, error: walletError } = await supabase
           .from("wallet_transactions")
-          .select("*, profiles:user_id(first_name, last_name, email)")
+          .select("*")
           .eq("type", "deposit");
           
         if (walletError) {
           console.error("Error fetching wallet transactions:", walletError);
-          console.error("Error details:", walletError.details, walletError.hint, walletError.code);
           toast.error(`Erreur lors de la récupération des transactions: ${walletError.message}`);
           walletTransactions = []; // Initialize as empty array if there's an error
         }
         
         console.log("Raw wallet_transactions data:", walletTransactions);
         console.log("Nombre de transactions trouvées:", walletTransactions?.length || 0);
+        
+        // Récupérer les IDs utilisateurs des transactions wallet
+        const walletUserIds = [...new Set((walletTransactions || []).map(tx => tx.user_id))];
+        
+        // Ajouter ces IDs à notre liste d'IDs utilisateurs s'ils n'y sont pas déjà
+        for (const id of walletUserIds) {
+          if (!profilesData[id] && !userIds.includes(id)) {
+            userIds.push(id);
+          }
+        }
+        
+        // Récupérer les profils manquants
+        if (walletUserIds.length > 0) {
+          const missingUserIds = walletUserIds.filter(id => !profilesData[id]);
+          if (missingUserIds.length > 0) {
+            const { data: additionalProfiles, error: additionalProfilesError } = await supabase
+              .from("profiles")
+              .select("id, first_name, last_name, email")
+              .in("id", missingUserIds);
+              
+            if (additionalProfilesError) {
+              console.error("Error fetching additional profiles:", additionalProfilesError);
+            } else if (additionalProfiles) {
+              // Ajouter ces profils à notre dictionnaire
+              additionalProfiles.forEach(profile => {
+                profilesData[profile.id] = {
+                  first_name: profile.first_name,
+                  last_name: profile.last_name,
+                  email: profile.email
+                };
+              });
+            }
+          }
+        }
         
         // Si aucune donnée n'a été récupérée, afficher un message approprié
         if ((!bankTransfersData || bankTransfersData.length === 0) && 
@@ -100,8 +157,8 @@ export function useBankTransferData() {
         
         // Formater les virements bancaires
         let formattedTransfers = (bankTransfersData || []).map(transfer => {
-          // Safely access profile data in case the relation wasn't found
-          const profileData: ProfileData = transfer.profiles || {};
+          // Récupérer les données de profil pour cet utilisateur
+          const profileData: ProfileData = profilesData[transfer.user_id] || {};
           
           return {
             id: transfer.id,
@@ -127,8 +184,8 @@ export function useBankTransferData() {
         // Formater les transactions de portefeuille
         if (walletTransactions && walletTransactions.length > 0) {
           const walletTransfers = walletTransactions.map(tx => {
-            // Safely access profile data in case the relation wasn't found
-            const profileData: ProfileData = tx.profiles || {};
+            // Récupérer les données de profil pour cet utilisateur
+            const profileData: ProfileData = profilesData[tx.user_id] || {};
             
             return {
               id: tx.id,

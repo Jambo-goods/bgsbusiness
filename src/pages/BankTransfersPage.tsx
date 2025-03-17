@@ -4,9 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw } from "lucide-react";
+import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { toast } from "sonner";
 
 interface BankTransfer {
   id: string;
@@ -32,9 +34,11 @@ export default function BankTransfersPage() {
   const [sortField, setSortField] = useState<string>("confirmed_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [userData, setUserData] = useState<Record<string, UserData>>({});
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBankTransfers();
+    console.log("BankTransfersPage: Composant monté, récupération des virements");
 
     // Set up real-time listener for the bank_transfers table
     const bankTransferChannel = supabase
@@ -50,6 +54,7 @@ export default function BankTransfersPage() {
       .subscribe();
 
     return () => {
+      console.log("BankTransfersPage: Composant démonté, nettoyage des abonnements");
       supabase.removeChannel(bankTransferChannel);
     };
   }, [sortField, sortDirection]);
@@ -57,25 +62,53 @@ export default function BankTransfersPage() {
   const fetchBankTransfers = async () => {
     try {
       setIsLoading(true);
+      setError(null);
+      console.log("Tentative de récupération des virements bancaires...");
+
+      // Vérifier la session utilisateur
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.error("Erreur de session:", sessionError);
+        setError("Erreur d'authentification. Veuillez vous reconnecter.");
+        return;
+      }
+
+      if (!sessionData.session) {
+        console.warn("Aucune session active trouvée");
+        setError("Vous n'êtes pas authentifié. Veuillez vous connecter.");
+        return;
+      }
+
+      console.log("Session trouvée, utilisateur connecté:", sessionData.session.user.id);
+      
       const { data, error } = await supabase
         .from("bank_transfers")
         .select("*")
         .order(sortField, { ascending: sortDirection === "asc" });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erreur lors de la récupération des virements:", error);
+        setError(`Erreur: ${error.message}`);
+        throw error;
+      }
 
+      console.log(`Récupération réussie: ${data?.length || 0} virements trouvés`);
       const transfersData = data || [];
       setBankTransfers(transfersData as BankTransfer[]);
 
       // Fetch user data for all transfers
       const userIds = Array.from(new Set(transfersData.map(t => t.user_id)));
       if (userIds.length > 0) {
+        console.log(`Récupération des données pour ${userIds.length} utilisateurs...`);
         const { data: users, error: userError } = await supabase
           .from("profiles")
           .select("id, first_name, last_name, email")
           .in("id", userIds);
 
-        if (userError) throw userError;
+        if (userError) {
+          console.error("Erreur lors de la récupération des profils:", userError);
+          throw userError;
+        }
 
         const userMap: Record<string, UserData> = {};
         users?.forEach(user => {
@@ -85,10 +118,19 @@ export default function BankTransfersPage() {
             email: user.email
           };
         });
+        console.log(`Données utilisateur récupérées pour ${Object.keys(userMap).length} profils`);
         setUserData(userMap);
       }
+
+      // Si aucun virement n'est trouvé, on affiche un toast pour informer l'utilisateur
+      if (transfersData.length === 0) {
+        toast.info("Aucun virement bancaire trouvé dans la base de données", {
+          description: "Si vous venez d'ajouter des virements, ils devraient apparaître rapidement."
+        });
+      }
     } catch (error) {
-      console.error("Error fetching bank transfers:", error);
+      console.error("Erreur lors de la récupération des virements:", error);
+      setError("Une erreur est survenue lors de la récupération des données");
     } finally {
       setIsLoading(false);
     }
@@ -112,7 +154,7 @@ export default function BankTransfersPage() {
         return 'Reçu';
       case 'processed':
         return 'Traité';
-      case 'confirmed':
+      case 'completed':
         return 'Confirmé';
       case 'rejected':
         return 'Rejeté';
@@ -129,7 +171,7 @@ export default function BankTransfersPage() {
       case 'reçu':
         return 'bg-blue-100 text-blue-800';
       case 'processed':
-      case 'confirmed':
+      case 'completed':
         return 'bg-green-100 text-green-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
@@ -150,10 +192,60 @@ export default function BankTransfersPage() {
            (transfer.amount && String(transfer.amount).includes(searchTerm));
   });
 
+  // Fonction pour créer un virement de test (utile pour le développement/débogage)
+  const createTestTransfer = async () => {
+    try {
+      // Récupérer l'utilisateur actuel
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Vous devez être connecté pour créer un virement de test");
+        return;
+      }
+
+      const userId = session.user.id;
+      
+      // Créer un virement de test dans la base de données
+      const { data, error } = await supabase
+        .from("bank_transfers")
+        .insert({
+          user_id: userId,
+          amount: Math.floor(Math.random() * 1000) + 100, // Montant aléatoire entre 100 et 1100
+          reference: `TEST-${Math.floor(Math.random() * 10000)}`,
+          status: "pending",
+          notes: "Virement de test créé pour le développement"
+        })
+        .select();
+
+      if (error) {
+        console.error("Erreur lors de la création du virement de test:", error);
+        toast.error("Erreur lors de la création du virement de test");
+        return;
+      }
+
+      toast.success("Virement de test créé avec succès", {
+        description: "Le virement apparaîtra dans la liste après actualisation."
+      });
+      
+      // Actualiser la liste des virements
+      fetchBankTransfers();
+    } catch (err) {
+      console.error("Erreur inattendue:", err);
+      toast.error("Une erreur inattendue est survenue");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-900 mb-6">Virements Bancaires</h1>
+        
+        {error && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Erreur</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
         
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
@@ -167,14 +259,24 @@ export default function BankTransfersPage() {
                 onChange={e => setSearchTerm(e.target.value)} 
               />
             </div>
-            <Button 
-              variant="outline"
-              onClick={fetchBankTransfers}
-              className="flex items-center gap-2"
-            >
-              <RefreshCw className="h-4 w-4" />
-              Actualiser
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={fetchBankTransfers}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Actualiser
+              </Button>
+              
+              <Button 
+                variant="secondary"
+                onClick={createTestTransfer}
+                className="flex items-center gap-2"
+              >
+                Créer un test
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -183,7 +285,17 @@ export default function BankTransfersPage() {
             </div>
           ) : filteredTransfers.length === 0 ? (
             <div className="text-center p-8 text-gray-500">
-              Aucun virement bancaire trouvé
+              <p>Aucun virement bancaire trouvé</p>
+              <p className="text-sm text-gray-400 mt-2">
+                Les virements apparaîtront ici une fois qu'ils seront enregistrés dans la base de données.
+              </p>
+              <Button 
+                className="mt-4" 
+                variant="outline"
+                onClick={createTestTransfer}
+              >
+                Créer un virement de test
+              </Button>
             </div>
           ) : (
             <div className="overflow-x-auto">

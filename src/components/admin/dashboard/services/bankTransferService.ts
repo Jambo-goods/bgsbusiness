@@ -1,146 +1,123 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { BankTransferItem } from "../types/bankTransfer";
-import { notificationService } from "@/services/notifications";
+import { toast } from "sonner";
 
-class BankTransferService {
-  async confirmDeposit(item: BankTransferItem, amount: number): Promise<boolean> {
+export const bankTransferService = {
+  confirmDeposit: async (item: BankTransferItem, amount: number): Promise<boolean> => {
     try {
-      const updates = {
-        status: "completed",
-        amount: amount,
-        processed: true,
-        processed_at: new Date().toISOString()
-      };
-
-      // Update the bank transfer status
+      console.log(`Confirmation du dépôt pour l'ID: ${item.id}, montant: ${amount}`);
+      
+      // Déterminer quelle table mettre à jour en fonction de la source
       if (item.source === "bank_transfers") {
         const { error } = await supabase
           .from("bank_transfers")
-          .update(updates)
+          .update({
+            status: "completed",
+            processed: true,
+            processed_at: new Date().toISOString(),
+            amount: amount
+          })
           .eq("id", item.id);
-
+        
         if (error) {
-          console.error("Error updating bank transfer:", error);
-          return false;
+          console.error("Erreur lors de la mise à jour du virement:", error);
+          throw error;
         }
+        
+        // Mettre à jour le solde du portefeuille de l'utilisateur
+        await supabase.rpc("increment_wallet_balance", {
+          user_id: item.user_id,
+          increment_amount: amount
+        });
       } else if (item.source === "wallet_transactions") {
         const { error } = await supabase
           .from("wallet_transactions")
           .update({
             status: "completed",
-            amount: amount,
-            receipt_confirmed: true
+            receipt_confirmed: true,
+            amount: amount
           })
           .eq("id", item.id);
-
+        
         if (error) {
-          console.error("Error updating wallet transaction:", error);
-          return false;
+          console.error("Erreur lors de la mise à jour de la transaction:", error);
+          throw error;
         }
+        
+        // Mettre à jour le solde du portefeuille de l'utilisateur
+        await supabase.rpc("increment_wallet_balance", {
+          user_id: item.user_id,
+          increment_amount: amount
+        });
       }
-
-      // Update user wallet balance
-      const { error: walletError } = await supabase.rpc("increment_wallet_balance", {
-        user_id: item.user_id,
-        increment_amount: amount
-      });
-
-      if (walletError) {
-        console.error("Error updating wallet balance:", walletError);
-      }
-
-      // Log admin action
-      const { error: logError } = await supabase.from("admin_logs").insert({
-        action_type: "wallet_management",
-        description: `Confirmed deposit of ${amount}€ (ref: ${item.reference})`,
-        user_id: item.user_id,
-        amount: amount
-      });
-
-      if (logError) {
-        console.error("Error logging admin action:", logError);
-      }
-
-      // Send notification to user
-      await notificationService.depositSuccess(amount);
-
+      
       return true;
     } catch (error) {
-      console.error("Error in confirmDeposit:", error);
+      console.error("Erreur lors de la confirmation du dépôt:", error);
+      toast.error("Une erreur est survenue lors du traitement");
       return false;
     }
-  }
+  },
 
-  async rejectDeposit(item: BankTransferItem): Promise<boolean> {
+  rejectDeposit: async (item: BankTransferItem): Promise<boolean> => {
     try {
-      const updates = {
-        status: "rejected",
-        processed: true,
-        processed_at: new Date().toISOString()
-      };
-
+      console.log(`Rejet du dépôt pour l'ID: ${item.id}`);
+      
+      // Déterminer quelle table mettre à jour en fonction de la source
       if (item.source === "bank_transfers") {
         const { error } = await supabase
           .from("bank_transfers")
-          .update(updates)
-          .eq("id", item.id);
-
-        if (error) {
-          console.error("Error rejecting bank transfer:", error);
-          return false;
-        }
-      } else if (item.source === "wallet_transactions") {
-        const { error } = await supabase
-          .from("wallet_transactions")
           .update({
             status: "rejected",
-            receipt_confirmed: true
+            processed: true,
+            processed_at: new Date().toISOString()
           })
           .eq("id", item.id);
-
+        
         if (error) {
-          console.error("Error rejecting wallet transaction:", error);
-          return false;
+          console.error("Erreur lors du rejet du virement:", error);
+          throw error;
+        }
+      } else if (item.source === "wallet_transactions") {
+        const { error } = await supabase
+          .from("wallet_transactions")
+          .update({
+            status: "rejected"
+          })
+          .eq("id", item.id);
+        
+        if (error) {
+          console.error("Erreur lors du rejet de la transaction:", error);
+          throw error;
         }
       }
-
-      // Log admin action
-      const { error: logError } = await supabase.from("admin_logs").insert({
-        action_type: "wallet_management",
-        description: `Rejected deposit request (ref: ${item.reference})`,
-        user_id: item.user_id
-      });
-
-      if (logError) {
-        console.error("Error logging admin action:", logError);
-      }
-
+      
       return true;
     } catch (error) {
-      console.error("Error in rejectDeposit:", error);
+      console.error("Erreur lors du rejet du dépôt:", error);
+      toast.error("Une erreur est survenue lors du traitement");
       return false;
     }
-  }
+  },
 
-  async confirmReceipt(item: BankTransferItem): Promise<boolean> {
+  confirmReceipt: async (item: BankTransferItem): Promise<boolean> => {
     try {
-      const updates = {
-        receipt_confirmed: true,
-        status: "received"
-      };
-
+      console.log(`Confirmation de la réception pour l'ID: ${item.id}`);
+      
+      // Déterminer quelle table mettre à jour en fonction de la source
       if (item.source === "bank_transfers") {
         const { error } = await supabase
           .from("bank_transfers")
           .update({
-            processed: true
+            status: "received",
+            processed: false
           })
           .eq("id", item.id);
-
+        
         if (error) {
-          console.error("Error confirming receipt:", error);
-          return false;
+          console.error("Erreur lors de la confirmation de la réception:", error);
+          throw error;
         }
       } else if (item.source === "wallet_transactions") {
         const { error } = await supabase
@@ -149,30 +126,18 @@ class BankTransferService {
             receipt_confirmed: true
           })
           .eq("id", item.id);
-
+        
         if (error) {
-          console.error("Error confirming receipt:", error);
-          return false;
+          console.error("Erreur lors de la confirmation de la réception de la transaction:", error);
+          throw error;
         }
       }
-
-      // Log admin action
-      const { error: logError } = await supabase.from("admin_logs").insert({
-        action_type: "wallet_management",
-        description: `Confirmed receipt of transfer (ref: ${item.reference})`,
-        user_id: item.user_id
-      });
-
-      if (logError) {
-        console.error("Error logging admin action:", logError);
-      }
-
+      
       return true;
     } catch (error) {
-      console.error("Error in confirmReceipt:", error);
+      console.error("Erreur lors de la confirmation de la réception:", error);
+      toast.error("Une erreur est survenue lors du traitement");
       return false;
     }
   }
-}
-
-export const bankTransferService = new BankTransferService();
+};
