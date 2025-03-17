@@ -57,6 +57,7 @@ export default function ProfilesPage() {
   const fetchProfiles = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching profiles...");
       
       // First get the total count - without any filters
       const { count, error: countError } = await supabase
@@ -71,7 +72,7 @@ export default function ProfilesPage() {
       setTotalCount(count || 0);
       console.log("Total profiles count:", count);
       
-      // Then get all profiles - no limit
+      // Then get all profiles without any limit or paging to make sure we get everything
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -82,7 +83,7 @@ export default function ProfilesPage() {
         throw error;
       }
 
-      console.log("Profiles fetched:", data?.length);
+      console.log("Profiles fetched:", data?.length, "Profile data sample:", data ? data[0] : null);
       setProfiles(data || []);
       toast.success(`${data?.length || 0} profils chargés avec succès`);
     } catch (error) {
