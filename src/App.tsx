@@ -21,6 +21,7 @@ const InvestmentTrackingPage = lazy(() => import("./components/dashboard/investm
 const ScheduledPayments = lazy(() => import("./pages/ScheduledPayments"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const WithdrawalRequestsPage = lazy(() => import("./pages/WithdrawalRequestsPage"));
+const BankTransfersPage = lazy(() => import("./pages/BankTransfersPage"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
               <Route path="/scheduled-payments" element={<ScheduledPayments />} />
               <Route path="/withdrawal-requests" element={<WithdrawalRequestsPage />} />
+              <Route path="/bank-transfers" element={<BankTransfersPage />} />
               
               {/* Admin routes */}
               <Route path="/admin/projects" element={<AdminProjects />} />
