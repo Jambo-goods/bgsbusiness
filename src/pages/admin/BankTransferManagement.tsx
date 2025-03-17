@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from "react";
 import BankTransferTable from "@/components/admin/dashboard/BankTransferTable";
 import { Helmet } from "react-helmet-async";
-import { RefreshCcw } from "lucide-react";
+import { RefreshCcw, AlertTriangle, Database, Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import BankTransferStats from "@/components/admin/dashboard/BankTransferStats";
 import BankTransferFilters from "@/components/admin/dashboard/BankTransferFilters";
 import { useBankTransferData } from "@/components/admin/dashboard/hooks/useBankTransferData";
 import { supabase } from "@/integrations/supabase/client";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function BankTransferManagement() {
   const { 
@@ -17,77 +18,98 @@ export default function BankTransferManagement() {
     statusFilter, 
     setStatusFilter, 
     refetch, 
-    handleManualRefresh 
+    handleManualRefresh,
+    authStatus,
+    userRole
   } = useBankTransferData();
   
   const [rawBankTransfers, setRawBankTransfers] = useState<any[]>([]);
   const [rawWalletTransactions, setRawWalletTransactions] = useState<any[]>([]);
   const [debugInfo, setDebugInfo] = useState<string>("");
+  const [databasePolicies, setDatabasePolicies] = useState<any[]>([]);
 
-  // Directly check both tables on component mount and periodically
+  // Vérifier directement les deux tables au chargement du composant et périodiquement
   useEffect(() => {
     fetchAllTransfers();
     
-    // Set up a timer to periodically check the database
-    const intervalId = setInterval(fetchAllTransfers, 20000);
+    // Configurer un timer pour vérifier périodiquement la base de données
+    const intervalId = setInterval(fetchAllTransfers, 30000);
     
-    // Clear interval on component unmount
+    // Nettoyer l'intervalle lors du démontage du composant
     return () => clearInterval(intervalId);
   }, []);
 
   const fetchAllTransfers = async () => {
     try {
-      setDebugInfo("Fetching all transfers from both tables...");
+      setDebugInfo("Récupération des données de toutes les tables...");
       
-      // Check bank_transfers table
+      // Vérifier le statut d'authentification
+      const { data: authData, error: authError } = await supabase.auth.getSession();
+      if (authError) {
+        setDebugInfo(prev => prev + "\nErreur lors de la vérification de la session: " + authError.message);
+      } else {
+        const hasSession = !!authData.session;
+        setDebugInfo(prev => prev + `\nSession authentifiée: ${hasSession}`);
+        
+        if (hasSession) {
+          setDebugInfo(prev => prev + `\nID User: ${authData.session?.user.id}`);
+          setDebugInfo(prev => prev + `\nEmail User: ${authData.session?.user.email}`);
+          setDebugInfo(prev => prev + `\nRole User: ${authData.session?.user.app_metadata?.role || 'standard'}`);
+          
+          // Tenter de récupérer les polices RLS (nécessite des privilèges admin)
+          try {
+            const { data: policies, error: policiesError } = await supabase
+              .rpc('get_policies_info');
+              
+            if (policiesError) {
+              console.error("Erreur lors de la récupération des politiques RLS:", policiesError);
+            } else if (policies) {
+              setDatabasePolicies(policies);
+              console.log("Policies retrieved:", policies);
+            }
+          } catch (policyError) {
+            console.error("Erreur lors de la tentative de récupération des politiques:", policyError);
+          }
+        }
+      }
+      
+      // Vérifier la table bank_transfers
       const { data: bankTransfers, error: bankTransfersError } = await supabase
         .from("bank_transfers")
         .select("*");
       
       if (bankTransfersError) {
-        console.error("Error fetching all bank_transfers:", bankTransfersError);
-        setDebugInfo(prev => prev + "\nError fetching bank_transfers: " + bankTransfersError.message);
+        console.error("Erreur lors de la récupération des bank_transfers:", bankTransfersError);
+        setDebugInfo(prev => prev + "\nErreur bank_transfers: " + bankTransfersError.message);
+        setDebugInfo(prev => prev + "\nCode: " + bankTransfersError.code);
+        setDebugInfo(prev => prev + "\nDétails: " + bankTransfersError.details);
       } else {
         setRawBankTransfers(bankTransfers || []);
-        console.log("ALL bank_transfers records:", bankTransfers);
-        setDebugInfo(prev => prev + `\nFound ${bankTransfers?.length || 0} records in bank_transfers table`);
+        console.log("TOUS les enregistrements bank_transfers:", bankTransfers);
+        setDebugInfo(prev => prev + `\nTrouvé ${bankTransfers?.length || 0} enregistrements dans la table bank_transfers`);
       }
       
-      // Check wallet_transactions table
+      // Vérifier la table wallet_transactions
       const { data: walletTransactions, error: walletError } = await supabase
         .from("wallet_transactions")
         .select("*")
         .eq("type", "deposit");
       
       if (walletError) {
-        console.error("Error fetching all wallet transactions:", walletError);
-        setDebugInfo(prev => prev + "\nError fetching wallet_transactions: " + walletError.message);
+        console.error("Erreur lors de la récupération des wallet_transactions:", walletError);
+        setDebugInfo(prev => prev + "\nErreur wallet_transactions: " + walletError.message);
+        setDebugInfo(prev => prev + "\nCode: " + walletError.code);
+        setDebugInfo(prev => prev + "\nDétails: " + walletError.details);
       } else {
         setRawWalletTransactions(walletTransactions || []);
-        console.log("ALL wallet_transactions (deposit) records:", walletTransactions);
-        setDebugInfo(prev => prev + `\nFound ${walletTransactions?.length || 0} deposit records in wallet_transactions table`);
-      }
-      
-      // Check database permissions
-      const { data: authData, error: authError } = await supabase.auth.getSession();
-      if (authError) {
-        setDebugInfo(prev => prev + "\nError checking auth session: " + authError.message);
-      } else {
-        const hasSession = !!authData.session;
-        setDebugInfo(prev => prev + `\nAuthenticated session exists: ${hasSession}`);
-        
-        if (hasSession) {
-          setDebugInfo(prev => prev + `\nUser role: ${authData.session?.user.role || 'unknown'}`);
-        }
+        console.log("TOUS les enregistrements wallet_transactions (dépôts):", walletTransactions);
+        setDebugInfo(prev => prev + `\nTrouvé ${walletTransactions?.length || 0} enregistrements de dépôt dans la table wallet_transactions`);
       }
     } catch (error) {
-      console.error("Error in fetchAllTransfers:", error);
-      setDebugInfo(prev => prev + "\nUnexpected error: " + String(error));
+      console.error("Erreur dans fetchAllTransfers:", error);
+      setDebugInfo(prev => prev + "\nErreur inattendue: " + String(error));
     }
   };
-
-  console.log("Bank Transfer Management - Transfers loaded:", pendingTransfers?.length);
-  console.log("Transfer IDs:", pendingTransfers?.map(t => t.id));
 
   return (
     <>
@@ -109,6 +131,42 @@ export default function BankTransferManagement() {
             Actualiser
           </button>
         </div>
+        
+        {/* Alerte d'authentification */}
+        {authStatus !== "authenticated" && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Problème d'authentification</AlertTitle>
+            <AlertDescription>
+              Vous n'êtes pas authentifié ou votre session a expiré. Cela peut empêcher l'accès aux données. 
+              Statut actuel: {authStatus}
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* Alerte de rôle */}
+        {authStatus === "authenticated" && userRole !== "admin" && (
+          <Alert variant="warning">
+            <Shield className="h-4 w-4" />
+            <AlertTitle>Permissions limitées</AlertTitle>
+            <AlertDescription>
+              Vous êtes connecté avec un rôle limité ({userRole}). Certaines données peuvent ne pas être accessibles.
+            </AlertDescription>
+          </Alert>
+        )}
+        
+        {/* Alerte d'absence de données */}
+        {!isLoading && (!rawBankTransfers || rawBankTransfers.length === 0) && 
+         (!rawWalletTransactions || rawWalletTransactions.length === 0) && (
+          <Alert>
+            <Database className="h-4 w-4" />
+            <AlertTitle>Aucune donnée trouvée</AlertTitle>
+            <AlertDescription>
+              Aucun enregistrement n'a été trouvé dans les tables bank_transfers et wallet_transactions.
+              Cela peut être dû à l'absence de données ou à des problèmes de permissions (RLS).
+            </AlertDescription>
+          </Alert>
+        )}
         
         {isError && (
           <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-6">
@@ -141,7 +199,7 @@ export default function BankTransferManagement() {
           </Card>
         </div>
         
-        {/* Enhanced debug information panel */}
+        {/* Panneau d'informations de débogage */}
         <div className="mt-8 p-4 bg-gray-50 rounded-md border border-gray-200">
           <h3 className="text-lg font-semibold mb-2">Informations de débogage détaillées</h3>
           
@@ -162,6 +220,8 @@ export default function BankTransferManagement() {
           
           <div className="bg-blue-50 p-3 border border-blue-200 rounded mb-4">
             <h4 className="text-sm font-semibold text-blue-700">Statut des données</h4>
+            <p className="text-xs text-blue-700">Statut d'authentification: {authStatus}</p>
+            <p className="text-xs text-blue-700">Rôle utilisateur: {userRole}</p>
             <p className="text-xs text-blue-700">Virements chargés dans l'interface: {pendingTransfers?.length || 0}</p>
             <p className="text-xs text-blue-700">Filtre actuel: {statusFilter}</p>
             <p className="text-xs text-blue-700">IDs des virements affichés: {pendingTransfers?.map(t => t.id).join(', ') || 'aucun'}</p>
@@ -170,6 +230,15 @@ export default function BankTransferManagement() {
           <div className="bg-yellow-50 p-3 border border-yellow-200 rounded mb-4">
             <h4 className="text-sm font-semibold text-yellow-700">Journal de débogage</h4>
             <pre className="text-xs text-yellow-700 whitespace-pre-wrap">{debugInfo || "Aucune information de débogage"}</pre>
+          </div>
+          
+          <div className="bg-green-50 p-3 border border-green-200 rounded mb-4">
+            <h4 className="text-sm font-semibold text-green-700">Politiques RLS (si disponibles)</h4>
+            <div className="bg-white p-2 rounded border h-40 overflow-auto">
+              <pre className="text-xs">{databasePolicies.length > 0 ? 
+                JSON.stringify(databasePolicies, null, 2) : 
+                "Aucune politique RLS récupérée. Vous devez avoir les privilèges admin pour voir cette information."}</pre>
+            </div>
           </div>
           
           <button 

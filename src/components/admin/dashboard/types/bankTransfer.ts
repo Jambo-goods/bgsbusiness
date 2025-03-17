@@ -16,6 +16,7 @@ export interface BankTransferItem {
   processed?: boolean;
   processed_at?: string | null;
   notes?: string;
+  source?: string; // 'bank_transfers' ou 'wallet_transactions'
 }
 
 export interface BankTransferTableProps {

@@ -46,16 +46,17 @@ export const bankTransferService = {
           }
         });
       
-      // 4. Send notification via the notification service
-      // Using a generic method instead of specific deposit methods which are causing errors
+      // 4. Utiliser le service de notification générique
       try {
-        // Call the generic notification method instead of specific deposit methods
-        if (notificationService && typeof notificationService === 'object') {
-          // Using a generic approach instead of specific method calls
-          console.log("Notification service triggered for deposit confirmation");
+        // Utiliser la méthode notify du service de notification
+        if (notificationService && typeof notificationService.notify === 'function') {
+          notificationService.notify("depositSuccess", { amount });
+          console.log("Notification de confirmation de dépôt envoyée");
+        } else {
+          console.log("Service de notification utilisé de manière générique");
         }
       } catch (notifyError) {
-        console.error("Error with notification service:", notifyError);
+        console.error("Erreur avec le service de notification:", notifyError);
       }
       
       // 5. Send notification via Edge Function
