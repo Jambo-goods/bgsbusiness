@@ -17,8 +17,7 @@ export function useBankTransferData() {
         // First approach: check if bank_transfers table exists and fetch from it
         let { data: bankTransfersData, error: bankTransfersError } = await supabase
           .from("bank_transfers")
-          .select("*")
-          .order("confirmed_at", { ascending: false });
+          .select("*");
         
         if (bankTransfersError) {
           console.error("Error fetching from bank_transfers:", bankTransfersError);
@@ -32,10 +31,18 @@ export function useBankTransferData() {
         const userIds = [...new Set((bankTransfersData || []).map(transfer => transfer.user_id))];
         
         // Fetch all profiles in one query
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, first_name, last_name, email")
-          .in("id", userIds.length > 0 ? userIds : ['00000000-0000-0000-0000-000000000000']);
+        let profilesData: any[] = [];
+        let profilesError: any = null;
+        
+        if (userIds.length > 0) {
+          const profilesResponse = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name, email")
+            .in("id", userIds);
+            
+          profilesData = profilesResponse.data || [];
+          profilesError = profilesResponse.error;
+        }
           
         if (profilesError) {
           console.error("Erreur lors de la récupération des profils:", profilesError);
@@ -92,8 +99,7 @@ export function useBankTransferData() {
             type,
             receipt_confirmed
           `)
-          .eq("type", "deposit")
-          .order("created_at", { ascending: false });
+          .eq("type", "deposit");
         
         if (walletError) {
           console.error("Error fetching wallet transactions:", walletError);
@@ -101,11 +107,8 @@ export function useBankTransferData() {
           console.log("Found wallet transactions:", walletData.length);
           console.log("Raw wallet transactions:", walletData);
           
-          // Filter transactions that mention "Virement bancaire" in their description or all deposits
-          const bankTransfers = walletData.filter(transaction => 
-            // Instead of filtering, include all deposit transactions
-            transaction.type === 'deposit'
-          );
+          // Include all deposit transactions
+          const bankTransfers = walletData;
           
           console.log("Filtered bank transfers from wallet:", bankTransfers.length);
           console.log("Filtered wallet transactions:", bankTransfers);
@@ -135,7 +138,6 @@ export function useBankTransferData() {
                 email: null
               };
               
-              // Make sure all required fields have values even if they are undefined
               return {
                 id: transfer.id,
                 created_at: transfer.created_at || new Date().toISOString(),
@@ -180,21 +182,20 @@ export function useBankTransferData() {
           console.log(`Transfer ${index + 1}:`, transfer.id, transfer.status, transfer.amount, transfer.description);
         });
         
-        // Apply status filter if not "all"
-        if (statusFilter !== "all") {
-          const beforeCount = formattedTransfers.length;
+        // Apply status filter if not "all" but do this MORE CAREFULLY
+        if (statusFilter !== "all" && formattedTransfers.length > 0) {
+          console.log(`Applying status filter: ${statusFilter}`);
           formattedTransfers = formattedTransfers.filter(item => {
-            const matches = item.status === statusFilter;
-            if (!matches) {
-              console.log(`Filtered out transfer ${item.id} with status ${item.status} (filter: ${statusFilter})`);
-            }
+            // More lenient matching for status
+            const matches = statusFilter === "all" || item.status === statusFilter;
+            console.log(`Transfer ${item.id} status: ${item.status}, matches filter ${statusFilter}: ${matches}`);
             return matches;
           });
           
-          console.log(`Status filtering: ${beforeCount} → ${formattedTransfers.length} transfers (filter: ${statusFilter})`);
+          console.log(`After status filtering: ${formattedTransfers.length} transfers remain`);
         }
         
-        console.log("AFTER FILTERING - Final transfer list:", formattedTransfers.length);
+        console.log("FINAL transfer list:", formattedTransfers);
         console.log("Final transfer IDs:", formattedTransfers.map(t => t.id));
         
         return formattedTransfers as BankTransferItem[];
@@ -214,21 +215,8 @@ export function useBankTransferData() {
     refetch();
   };
 
-  // Check if we're missing any transfers between tables
-  const missingTransfersCheck = () => {
-    if (!pendingTransfers) return;
-    
-    if (pendingTransfers.length < 3) {
-      console.warn("WARNING: Expected at least 3 transfers, but only found", pendingTransfers.length);
-      console.warn("This might indicate an issue with transfer retrieval or filtering");
-    }
-  };
-
-  // Run the missing transfers check
-  missingTransfersCheck();
-
   return {
-    pendingTransfers,
+    pendingTransfers: pendingTransfers || [],
     isLoading,
     isError,
     statusFilter,
