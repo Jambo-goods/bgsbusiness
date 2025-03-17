@@ -51,7 +51,7 @@ export function useBankTransferData() {
         // Récupérer les données de la table bank_transfers directement sans filtres RLS initiaux
         let { data: bankTransfersData, error: bankTransfersError } = await supabase
           .from("bank_transfers")
-          .select("*");
+          .select("*, profiles:user_id(first_name, last_name, email)");
         
         if (bankTransfersError) {
           console.error("Error fetching from bank_transfers:", bankTransfersError);
@@ -65,7 +65,7 @@ export function useBankTransferData() {
         // Récupérer les données de wallet_transactions sans filtres RLS initiaux
         let { data: walletTransactions, error: walletError } = await supabase
           .from("wallet_transactions")
-          .select("*")
+          .select("*, profiles:user_id(first_name, last_name, email)")
           .eq("type", "deposit");
           
         if (walletError) {
@@ -77,52 +77,21 @@ export function useBankTransferData() {
         console.log("Raw wallet_transactions data:", walletTransactions);
         console.log("Nombre de transactions trouvées:", walletTransactions?.length || 0);
         
-        // Si aucune donnée n'a été récupérée, essayer d'utiliser l'API service_role pour contourner RLS
+        // Si aucune donnée n'a été récupérée, afficher un message approprié
         if ((!bankTransfersData || bankTransfersData.length === 0) && 
             (!walletTransactions || walletTransactions.length === 0)) {
           console.log("Aucune donnée trouvée. Cela pourrait être un problème de permissions RLS.");
           toast.warning("Aucune donnée trouvée. Vérifiez les permissions de la base de données.");
-        }
-        
-        // Extraire les IDs utilisateurs uniques
-        const userIdsFromTransfers = (bankTransfersData || []).map(transfer => transfer.user_id);
-        const userIdsFromWallet = (walletTransactions || []).map(tx => tx.user_id);
-        const userIds = [...new Set([...userIdsFromTransfers, ...userIdsFromWallet])];
-        
-        // Récupérer tous les profils en une seule requête
-        let profilesData: any[] = [];
-        let profilesError: any = null;
-        
-        if (userIds.length > 0) {
-          const { data: profiles, error } = await supabase
-            .from("profiles")
-            .select("id, first_name, last_name, email")
-            .in("id", userIds);
-            
-          profilesData = profiles || [];
-          profilesError = error;
           
-          if (profilesError) {
-            console.error("Erreur lors de la récupération des profils:", profilesError);
-            toast.error("Impossible de récupérer les données des utilisateurs");
+          if (authStatus !== "authenticated") {
+            toast.error("Vous n'êtes pas authentifié. Veuillez vous connecter.");
+          } else if (userRole !== "admin") {
+            toast.warning(`Rôle utilisateur insuffisant: ${userRole}. Seuls les administrateurs peuvent voir ces données.`);
           }
         }
         
-        // Créer une map des profils utilisateurs pour une recherche rapide
-        const profilesMap = (profilesData || []).reduce((map, profile) => {
-          map[profile.id] = profile;
-          return map;
-        }, {} as Record<string, any>);
-        
         // Formater les virements bancaires
         let formattedTransfers = (bankTransfersData || []).map(transfer => {
-          const profile = profilesMap[transfer.user_id] || {
-            first_name: "Utilisateur",
-            last_name: "Inconnu",
-            email: null
-          };
-          
-          // S'assurer que tous les champs requis sont présents
           return {
             id: transfer.id,
             created_at: transfer.confirmed_at || new Date().toISOString(),
@@ -137,9 +106,9 @@ export function useBankTransferData() {
             notes: transfer.notes,
             source: "bank_transfers",
             profile: {
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              email: profile.email
+              first_name: transfer.profiles?.first_name || "Utilisateur",
+              last_name: transfer.profiles?.last_name || "Inconnu",
+              email: transfer.profiles?.email || null
             }
           };
         });
@@ -147,12 +116,6 @@ export function useBankTransferData() {
         // Formater les transactions de portefeuille
         if (walletTransactions && walletTransactions.length > 0) {
           const walletTransfers = walletTransactions.map(tx => {
-            const profile = profilesMap[tx.user_id] || {
-              first_name: "Utilisateur",
-              last_name: "Inconnu",
-              email: null
-            };
-            
             return {
               id: tx.id,
               created_at: tx.created_at || new Date().toISOString(),
@@ -167,9 +130,9 @@ export function useBankTransferData() {
               notes: "",
               source: "wallet_transactions",
               profile: {
-                first_name: profile.first_name,
-                last_name: profile.last_name,
-                email: profile.email
+                first_name: tx.profiles?.first_name || "Utilisateur",
+                last_name: tx.profiles?.last_name || "Inconnu",
+                email: tx.profiles?.email || null
               }
             };
           });

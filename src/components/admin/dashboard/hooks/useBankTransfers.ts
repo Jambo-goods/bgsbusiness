@@ -14,6 +14,9 @@ export function useBankTransfers(onSuccess: () => void) {
       const success = await bankTransferService.confirmDeposit(item, amount);
       if (success) {
         onSuccess();
+        toast.success("Dépôt confirmé avec succès", {
+          description: `Le dépôt de ${amount}€ a été validé et ajouté au portefeuille de l'utilisateur.`
+        });
       }
     } catch (error) {
       console.error("Erreur lors de la confirmation du dépôt:", error);
@@ -30,6 +33,9 @@ export function useBankTransfers(onSuccess: () => void) {
       const success = await bankTransferService.rejectDeposit(item);
       if (success) {
         onSuccess();
+        toast.success("Dépôt rejeté", {
+          description: "La demande de dépôt a été rejetée."
+        });
       }
     } catch (error) {
       console.error("Erreur lors du rejet du dépôt:", error);
@@ -46,6 +52,9 @@ export function useBankTransfers(onSuccess: () => void) {
       const success = await bankTransferService.confirmReceipt(item);
       if (success) {
         onSuccess();
+        toast.success("Réception confirmée", {
+          description: "La réception du virement a été confirmée."
+        });
       }
     } catch (error) {
       console.error("Erreur lors de la confirmation de la réception:", error);

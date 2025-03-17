@@ -56,19 +56,23 @@ export default function BankTransferManagement() {
           setDebugInfo(prev => prev + `\nEmail User: ${authData.session?.user.email}`);
           setDebugInfo(prev => prev + `\nRole User: ${authData.session?.user.app_metadata?.role || 'standard'}`);
           
-          // Tenter de récupérer les polices RLS (nécessite des privilèges admin)
+          // Tenter de récupérer les polices RLS (cette fonction rpc n'existe peut-être pas)
           try {
-            const { data: policies, error: policiesError } = await supabase
-              .rpc('get_policies_info');
+            // Utiliser une méthode alternative pour récupérer des informations sur les tables
+            const { data: tableData, error: tableError } = await supabase
+              .from('bank_transfers')
+              .select('id')
+              .limit(1);
               
-            if (policiesError) {
-              console.error("Erreur lors de la récupération des politiques RLS:", policiesError);
-            } else if (policies) {
-              setDatabasePolicies(policies);
-              console.log("Policies retrieved:", policies);
+            if (tableError) {
+              console.error("Erreur d'accès à la table bank_transfers:", tableError);
+              setDebugInfo(prev => prev + "\nErreur d'accès aux tables: " + tableError.message);
+            } else {
+              setDebugInfo(prev => prev + "\nAccès aux tables confirmé");
             }
           } catch (policyError) {
             console.error("Erreur lors de la tentative de récupération des politiques:", policyError);
+            setDebugInfo(prev => prev + "\nErreur lors de la vérification des politiques: " + String(policyError));
           }
         }
       }
@@ -146,7 +150,7 @@ export default function BankTransferManagement() {
         
         {/* Alerte de rôle */}
         {authStatus === "authenticated" && userRole !== "admin" && (
-          <Alert variant="warning">
+          <Alert>
             <Shield className="h-4 w-4" />
             <AlertTitle>Permissions limitées</AlertTitle>
             <AlertDescription>
@@ -232,18 +236,15 @@ export default function BankTransferManagement() {
             <pre className="text-xs text-yellow-700 whitespace-pre-wrap">{debugInfo || "Aucune information de débogage"}</pre>
           </div>
           
-          <div className="bg-green-50 p-3 border border-green-200 rounded mb-4">
-            <h4 className="text-sm font-semibold text-green-700">Politiques RLS (si disponibles)</h4>
-            <div className="bg-white p-2 rounded border h-40 overflow-auto">
-              <pre className="text-xs">{databasePolicies.length > 0 ? 
-                JSON.stringify(databasePolicies, null, 2) : 
-                "Aucune politique RLS récupérée. Vous devez avoir les privilèges admin pour voir cette information."}</pre>
-            </div>
+          <div className="bg-green-50 p-3 border border-green-200 rounded">
+            <h4 className="text-sm font-semibold text-green-700">Politiques de sécurité</h4>
+            <p className="text-xs text-green-700 mb-2">Si vous ne voyez pas de données, veuillez vérifier les politiques de sécurité RLS dans la base de données Supabase.</p>
+            <p className="text-xs text-green-700">Les tables bank_transfers et wallet_transactions doivent avoir des politiques qui permettent aux administrateurs de voir toutes les données.</p>
           </div>
           
           <button 
             onClick={fetchAllTransfers}
-            className="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm hover:bg-gray-300"
+            className="mt-4 px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm hover:bg-gray-300"
           >
             Rafraîchir les données brutes
           </button>

@@ -37,7 +37,7 @@ export default function BankTransferTable({
     );
   }
 
-  // Wrapper functions to handle the Promise<boolean> vs Promise<void> type mismatch
+  // Fonctions wrapper pour gérer les promesses
   const confirmDepositWrapper = async (item: BankTransferItem, amount: number) => {
     await handleConfirmDeposit(item, amount);
   };
