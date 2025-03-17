@@ -19,6 +19,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const InvestmentTrackingPage = lazy(() => import("./components/dashboard/investment-tracking/InvestmentTrackingPage"));
 const ScheduledPayments = lazy(() => import("./pages/ScheduledPayments"));
+const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="/dashboard/*" element={<Dashboard />} />
               <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
               <Route path="/scheduled-payments" element={<ScheduledPayments />} />
+              <Route path="/admin/projects" element={<AdminProjects />} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
