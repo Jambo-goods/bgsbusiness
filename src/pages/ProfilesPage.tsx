@@ -5,9 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, Users } from "lucide-react";
+import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, Users, Database, Info } from "lucide-react";
 import { formatDate } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
 import { calculateInactivityTime } from "@/utils/inactivityCalculator";
+import { toast } from "sonner";
 
 interface Profile {
   id: string;
@@ -20,6 +21,8 @@ interface Profile {
   projects_count: number | null;
   created_at: string | null;
   last_active_at: string | null;
+  referral_code: string | null;
+  address: string | null;
 }
 
 export default function ProfilesPage() {
@@ -28,6 +31,7 @@ export default function ProfilesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortField, setSortField] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [totalCount, setTotalCount] = useState<number>(0);
 
   useEffect(() => {
     fetchProfiles();
@@ -53,6 +57,16 @@ export default function ProfilesPage() {
   const fetchProfiles = async () => {
     try {
       setIsLoading(true);
+      
+      // First get the total count
+      const { count, error: countError } = await supabase
+        .from("profiles")
+        .select('*', { count: 'exact', head: true });
+      
+      if (countError) throw countError;
+      setTotalCount(count || 0);
+      
+      // Then get the data
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -61,8 +75,10 @@ export default function ProfilesPage() {
       if (error) throw error;
 
       setProfiles(data || []);
+      toast.success("Profils chargés avec succès");
     } catch (error) {
       console.error("Error fetching profiles:", error);
+      toast.error("Erreur lors du chargement des profils");
     } finally {
       setIsLoading(false);
     }
@@ -115,21 +131,22 @@ export default function ProfilesPage() {
       (profile.first_name && profile.first_name.toLowerCase().includes(searchLower)) || 
       (profile.last_name && profile.last_name.toLowerCase().includes(searchLower)) || 
       (profile.email && profile.email.toLowerCase().includes(searchLower)) ||
-      (profile.phone && profile.phone.toLowerCase().includes(searchLower))
+      (profile.phone && profile.phone.toLowerCase().includes(searchLower)) ||
+      (profile.referral_code && profile.referral_code.toLowerCase().includes(searchLower))
     );
   });
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Profils des Utilisateurs</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Tous les Profils Utilisateurs</h1>
         
         <Card className="bg-white rounded-lg shadow">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-gray-500" />
-                <span>Liste des profils ({profiles.length})</span>
+                <Database className="h-5 w-5 text-gray-500" />
+                <span>Liste de tous les profils ({totalCount})</span>
               </div>
               <Button 
                 variant="outline"
@@ -148,12 +165,17 @@ export default function ProfilesPage() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <Input 
                   type="text" 
-                  placeholder="Rechercher par nom, email..." 
+                  placeholder="Rechercher par nom, email, téléphone, code de parrainage..." 
                   className="pl-10 w-full" 
                   value={searchTerm} 
                   onChange={e => setSearchTerm(e.target.value)} 
                 />
               </div>
+            </div>
+            
+            <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
+              <Info className="h-4 w-4" />
+              <span>Affichage de {filteredProfiles.length} profils sur {totalCount} au total</span>
             </div>
 
             {isLoading ? (
@@ -223,6 +245,7 @@ export default function ProfilesPage() {
                         </button>
                       </TableHead>
                       <TableHead>Inactivité</TableHead>
+                      <TableHead>Code Parrainage</TableHead>
                       <TableHead>Statut</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -235,6 +258,9 @@ export default function ProfilesPage() {
                             <div className="text-sm text-gray-500">{profile.email}</div>
                             {profile.phone && (
                               <div className="text-xs text-gray-400">{profile.phone}</div>
+                            )}
+                            {profile.address && (
+                              <div className="text-xs text-gray-400">{profile.address}</div>
                             )}
                           </div>
                         </TableCell>
@@ -258,6 +284,9 @@ export default function ProfilesPage() {
                         </TableCell>
                         <TableCell>
                           {calculateInactivityTime(profile.last_active_at, profile.created_at)}
+                        </TableCell>
+                        <TableCell>
+                          {profile.referral_code || "-"}
                         </TableCell>
                         <TableCell>
                           {getStatusBadge(profile.last_active_at, profile.created_at)}
