@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,7 +63,6 @@ const ScheduledPaymentsPage = () => {
   const [editingPayment, setEditingPayment] = useState(null);
   const [availableProjects, setAvailableProjects] = useState([]);
   
-  // Fetch available projects for the dropdown
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -84,7 +82,6 @@ const ScheduledPaymentsPage = () => {
     fetchProjects();
   }, []);
   
-  // Form setup
   const form = useForm({
     defaultValues: {
       project_id: '',
@@ -95,13 +92,11 @@ const ScheduledPaymentsPage = () => {
     }
   });
   
-  // Format currency
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return '—';
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
-  // Get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'paid':
@@ -113,7 +108,6 @@ const ScheduledPaymentsPage = () => {
     }
   };
 
-  // Format status label
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'paid':
@@ -127,7 +121,6 @@ const ScheduledPaymentsPage = () => {
     }
   };
 
-  // Apply filters and sorting
   useEffect(() => {
     if (!scheduledPayments) {
       setFilteredPayments([]);
@@ -136,7 +129,6 @@ const ScheduledPaymentsPage = () => {
 
     let result = [...scheduledPayments];
 
-    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -146,12 +138,10 @@ const ScheduledPaymentsPage = () => {
       );
     }
 
-    // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter(payment => payment.status === statusFilter);
     }
 
-    // Apply sorting
     result.sort((a, b) => {
       if (sortConfig.key === 'payment_date') {
         const dateA = new Date(a.payment_date || 0).getTime();
@@ -185,7 +175,6 @@ const ScheduledPaymentsPage = () => {
     setFilteredPayments(result);
   }, [scheduledPayments, searchQuery, statusFilter, sortConfig]);
 
-  // Handle sort change
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
       key,
@@ -193,7 +182,6 @@ const ScheduledPaymentsPage = () => {
     }));
   };
   
-  // Handle edit payment
   const handleEditPayment = (payment) => {
     setEditingPayment(payment);
     form.reset({
@@ -206,7 +194,6 @@ const ScheduledPaymentsPage = () => {
     setIsAddPaymentOpen(true);
   };
   
-  // Handle add new payment
   const handleAddPayment = () => {
     setEditingPayment(null);
     form.reset({
@@ -219,21 +206,21 @@ const ScheduledPaymentsPage = () => {
     setIsAddPaymentOpen(true);
   };
   
-  // Handle form submission
   const onSubmit = async (data) => {
     try {
       if (editingPayment) {
-        // Update existing payment
         await updatePaymentStatus(editingPayment.id, data.status);
         toast.success('Paiement mis à jour avec succès');
       } else {
-        // Create new payment
         await addScheduledPayment({
           project_id: data.project_id,
           payment_date: data.payment_date,
           status: data.status,
           percentage: parseFloat(data.percentage) || 0,
-          total_scheduled_amount: parseFloat(data.total_scheduled_amount) || 0
+          total_scheduled_amount: parseFloat(data.total_scheduled_amount) || 0,
+          processed_at: null,
+          investors_count: 0,
+          total_invested_amount: null
         });
         toast.success('Paiement programmé avec succès');
       }
@@ -244,7 +231,6 @@ const ScheduledPaymentsPage = () => {
     }
   };
   
-  // Handle change payment status
   const handleChangeStatus = async (paymentId, newStatus) => {
     try {
       await updatePaymentStatus(paymentId, newStatus);
@@ -278,7 +264,6 @@ const ScheduledPaymentsPage = () => {
     <div className="min-h-screen bg-gray-50">
       <Toaster />
       
-      {/* Independent Navigation Menu */}
       <div className="bg-white shadow mb-6">
         <div className="container mx-auto px-4">
           <NavigationMenu className="py-4">
@@ -305,11 +290,6 @@ const ScheduledPaymentsPage = () => {
                         <span>Projets</span>
                       </Link>
                     </NavigationMenuLink>
-                    <NavigationMenuLink asChild>
-                      <Link to="/scheduled-payments" className="flex items-center space-x-2 bg-gray-100 rounded p-2 font-medium">
-                        <span>Paiements Programmés</span>
-                      </Link>
-                    </NavigationMenuLink>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
@@ -323,7 +303,6 @@ const ScheduledPaymentsPage = () => {
           <h1 className="text-2xl font-bold">Paiements Programmés</h1>
           
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-            {/* Add Payment Button */}
             <Button 
               onClick={handleAddPayment}
               className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -332,7 +311,6 @@ const ScheduledPaymentsPage = () => {
               Ajouter un paiement
             </Button>
             
-            {/* Search Box */}
             <div className="relative w-full md:w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
               <Input
@@ -343,7 +321,6 @@ const ScheduledPaymentsPage = () => {
               />
             </div>
             
-            {/* Filter Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full md:w-auto">
@@ -370,7 +347,6 @@ const ScheduledPaymentsPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* Sort Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full md:w-auto">
@@ -518,7 +494,6 @@ const ScheduledPaymentsPage = () => {
         </div>
       </div>
       
-      {/* Add/Edit Payment Dialog */}
       <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
