@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -135,6 +134,30 @@ export default function WithdrawalRequestsTable() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleViewDetails = () => {
+    // Handle view details logic
+  };
+
+  const handleCancelRequest = () => {
+    // Handle cancel request logic
+  };
+
+  const handleEditRequest = () => {
+    // Handle edit request logic
+  };
+
+  const handleConfirmRequest = () => {
+    // Handle confirm request logic
+  };
+
+  const handleApproveRequest = () => {
+    // Handle approve request logic
+  };
+
+  const handleRejectRequest = () => {
+    // Handle reject request logic
   };
 
   if (isLoading) {

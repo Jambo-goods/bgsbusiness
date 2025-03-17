@@ -1,122 +1,143 @@
-
-import React from "react";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState } from "react";
+import { Eye, Plus, Wallet, ChevronsUpDown, ArrowRight, Bank } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { notificationService } from "@/services/notifications";
+import { useUser } from "@/contexts/UserContext";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useDashboard } from "@/contexts/DashboardContext";
 
 interface ActionButtonsProps {
-  onDeposit: () => void;
-  onWithdraw: () => void;
-  refreshBalance?: () => Promise<void>;
+  userId: string;
 }
 
-export default function ActionButtons({
-  onDeposit,
-  onWithdraw,
-  refreshBalance
-}: ActionButtonsProps) {
-  const handleDeposit = async () => {
-    try {
-      const {
-        data: session
-      } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast.error("Veuillez vous connecter pour effectuer un dépôt");
-        return;
-      }
+export function ActionButtons({ userId }: ActionButtonsProps) {
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("wallet");
+  const navigate = useNavigate();
+  const { user } = useUser();
+  const { setShowBankTransferModal } = useDashboard();
 
-      // Ajout d'une transaction de dépôt (simulée pour le test)
-      const depositAmount = 1000; // 1000€ pour test
-
-      // Création de la transaction
-      const {
-        error: transactionError
-      } = await supabase.from('wallet_transactions').insert({
-        user_id: session.session.user.id,
-        amount: depositAmount,
-        type: 'deposit',
-        description: 'Dépôt de fonds'
-      });
-      if (transactionError) throw transactionError;
-
-      // Mise à jour du solde du portefeuille
-      const {
-        error: walletError
-      } = await supabase.rpc('increment_wallet_balance', {
-        user_id: session.session.user.id,
-        increment_amount: depositAmount
-      });
-      if (walletError) throw walletError;
-      
-      // Create notification for deposit success
-      await notificationService.depositSuccess(depositAmount);
-      
-      // Appel de la fonction de rafraîchissement
-      if (refreshBalance) await refreshBalance();
-      onDeposit();
-    } catch (error) {
-      console.error("Erreur lors du dépôt:", error);
-      toast.error("Une erreur s'est produite lors du dépôt des fonds");
-    }
+  const handleShowBankTransfer = (userId: string) => {
+    setShowBankTransferModal(true);
   };
-  
-  const handleWithdraw = async () => {
-    try {
-      const {
-        data: session
-      } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast.error("Veuillez vous connecter pour effectuer un retrait");
-        return;
-      }
 
-      // Récupération du solde actuel
-      const {
-        data: profileData,
-        error: profileError
-      } = await supabase.from('profiles').select('wallet_balance').eq('id', session.session.user.id).single();
-      if (profileError) throw profileError;
-      const withdrawalAmount = 500; // 500€ pour test
-
-      // Vérification que le solde est suffisant
-      if (profileData.wallet_balance < withdrawalAmount) {
-        toast.error("Vous n'avez pas assez de fonds pour effectuer ce retrait");
-        await notificationService.insufficientFunds();
-        return;
-      }
-
-      // Création de la transaction
-      const {
-        error: transactionError
-      } = await supabase.from('wallet_transactions').insert({
-        user_id: session.session.user.id,
-        amount: withdrawalAmount,
-        type: 'withdrawal',
-        description: 'Retrait de fonds'
-      });
-      if (transactionError) throw transactionError;
-
-      // Mise à jour du solde du portefeuille (soustraction)
-      const {
-        error: walletError
-      } = await supabase.rpc('increment_wallet_balance', {
-        user_id: session.session.user.id,
-        increment_amount: -withdrawalAmount
-      });
-      if (walletError) throw walletError;
-      
-      // Create notification for withdrawal
-      await notificationService.withdrawalValidated(withdrawalAmount);
-      
-      // Appel de la fonction de rafraîchissement
-      if (refreshBalance) await refreshBalance();
-      onWithdraw();
-    } catch (error) {
-      console.error("Erreur lors du retrait:", error);
-      toast.error("Une erreur s'est produite lors du retrait des fonds");
-    }
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAmount(e.target.value);
   };
-  
-  // Return an empty fragment as we've removed the button
-  return <></>;
+
+  const handlePaymentMethodChange = (value: string) => {
+    setSelectedPaymentMethod(value);
+  };
+
+  const handleDeposit = () => {
+    if (!amount) {
+      toast.error("Veuillez entrer un montant");
+      return;
+    }
+
+    if (isNaN(Number(amount))) {
+      toast.error("Veuillez entrer un montant valide");
+      return;
+    }
+
+    if (Number(amount) <= 0) {
+      toast.error("Le montant doit être supérieur à zéro");
+      return;
+    }
+
+    toast.success(`Dépôt de ${amount} € via ${selectedPaymentMethod} effectué`);
+    setOpen(false);
+  };
+
+  const handleWithdraw = () => {
+    navigate("/dashboard/wallet");
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+        <Button variant="outline" className="w-full" onClick={() => navigate("/dashboard/invest")}>
+          <Plus className="mr-2 h-4 w-4" />
+          Investir
+        </Button>
+        <Button variant="outline" className="w-full" onClick={() => navigate("/dashboard/wallet")}>
+          <Wallet className="mr-2 h-4 w-4" />
+          Mon Portefeuille
+        </Button>
+        <Button variant="outline" className="w-full" onClick={() => handleShowBankTransfer(userId)}>
+          <Bank className="mr-2 h-4 w-4" />
+          Virement Bancaire
+        </Button>
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button className="w-full">
+            <ChevronsUpDown className="mr-2 h-4 w-4" />
+            Déposer des fonds
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Déposer des fonds</DialogTitle>
+            <DialogDescription>
+              Choisissez le montant et la méthode de paiement pour déposer des fonds sur votre
+              compte.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="amount" className="text-right">
+                Montant
+              </Label>
+              <Input
+                type="number"
+                id="amount"
+                placeholder="0.00"
+                className="col-span-3"
+                value={amount}
+                onChange={handleAmountChange}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="paymentMethod" className="text-right">
+                Méthode de paiement
+              </Label>
+              <Select onValueChange={handlePaymentMethodChange} defaultValue={selectedPaymentMethod}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Sélectionner une méthode de paiement" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="wallet">Portefeuille</SelectItem>
+                  <SelectItem value="creditCard">Carte de crédit</SelectItem>
+                  <SelectItem value="bankTransfer">Virement bancaire</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <Button type="submit" onClick={handleDeposit}>
+            Déposer
+          </Button>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

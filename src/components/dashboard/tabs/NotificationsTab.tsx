@@ -1,168 +1,235 @@
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import {
+  Bell,
+  CheckCircle,
+  Info,
+  XCircle,
+  AlertTriangle,
+  Loader2,
+  Eye,
+  Trash2,
+  Check,
+  X,
+} from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { fr } from 'date-fns/locale';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Badge } from "@/components/ui/badge"
 
-import { useState, useEffect, useCallback } from "react";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { notificationService, Notification } from "@/services/notifications";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import NotificationHeader from "./notifications/NotificationHeader";
-import NotificationActions from "./notifications/NotificationActions";
-import NotificationTabs from "./notifications/NotificationTabs";
-import NotificationsList from "./notifications/NotificationsList";
+interface Notification {
+  id: string;
+  user_id: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  message: string;
+  created_at: string;
+  read: boolean;
+}
 
-export default function NotificationsTab() {
+const NotificationsTab: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const fetchNotifications = useCallback(async () => {
-    setIsRefreshing(true);
-    setError(null);
-    
-    try {
-      console.log("Fetching notifications...");
-      const data = await notificationService.getNotifications(50);
-      console.log("Notifications fetched:", data.length);
-      setNotifications(data);
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-      setError("Impossible de charger les notifications. Veuillez réessayer plus tard.");
-      toast.error("Erreur", { description: "Impossible de charger les notifications" });
-    } finally {
-      setIsRefreshing(false);
-      setIsLoading(false);
-    }
-  }, []);
+  const userId = supabase.auth.currentUser?.id;
 
   useEffect(() => {
-    fetchNotifications();
-    
-    // Set up real-time subscription
-    const unsubscribe = notificationService.setupRealtimeSubscription(() => {
-      console.log("Real-time notification update detected");
-      fetchNotifications();
-    });
-    
-    return () => {
-      unsubscribe();
-    };
-  }, [fetchNotifications]);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-  
-  const filteredNotifications = filter === 'all' 
-    ? notifications 
-    : notifications.filter(n => !n.read);
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await notificationService.markAllAsRead();
-      setNotifications(prev => 
-        prev.map(notification => ({ ...notification, read: true }))
-      );
-      toast.success("Toutes les notifications ont été marquées comme lues");
-    } catch (err) {
-      console.error("Error marking all as read:", err);
-      toast.error("Erreur", { description: "Impossible de marquer toutes les notifications comme lues" });
-    }
-  };
-
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      await notificationService.markAsRead(id);
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === id ? { ...notification, read: true } : notification
+    if (userId) {
+      fetchNotifications(userId);
+      // Set up real-time listener for new notifications
+      const channel = supabase
+        .channel(`user_notifications:${userId}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
+          (payload) => {
+            console.log('New notification received:', payload);
+            fetchNotifications(userId);
+          }
         )
-      );
-    } catch (err) {
-      console.error("Error marking notification as read:", err);
-      toast.error("Erreur", { description: "Impossible de marquer la notification comme lue" });
-    }
-  };
+        .subscribe();
 
-  const handleDeleteNotification = async (id: string) => {
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [userId]);
+
+  const fetchNotifications = async (userId: string) => {
+    setLoading(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('notifications')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
-      
-      setNotifications(prev => 
-        prev.filter(notification => notification.id !== id)
-      );
-      toast.success("Notification supprimée");
-    } catch (error) {
-      console.error("Error deleting notification:", error);
-      toast.error("Erreur", { description: "Impossible de supprimer la notification" });
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        setError(error.message);
+        toast.error('Failed to load notifications.');
+      } else {
+        setNotifications(data || []);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleRefresh = async () => {
-    await fetchNotifications();
-    toast.info("Notifications actualisées");
+  const markAsRead = (id: string) => {
+    supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', id)
+      .then(() => {
+        setNotifications((prevNotifications) =>
+          prevNotifications.map((notification) =>
+            notification.id === id ? { ...notification, read: true } : notification
+          )
+        );
+      })
+      .catch((error) => {
+        console.error('Error marking as read:', error);
+        toast.error('Failed to mark as read.');
+      });
   };
 
-  const handleFilterChange = (newFilter: 'all' | 'unread') => {
-    setFilter(newFilter);
+  const clearAllNotifications = (userId: string) => {
+    supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId)
+      .then(() => {
+        setNotifications([]);
+        toast.success('All notifications cleared.');
+      })
+      .catch((error) => {
+        console.error('Error clearing notifications:', error);
+        toast.error('Failed to clear all notifications.');
+      });
   };
 
-  if (isLoading) {
+  const deleteNotification = (id: string) => {
+    supabase
+      .from('notifications')
+      .delete()
+      .eq('id', id)
+      .then(() => {
+        setNotifications((prevNotifications) =>
+          prevNotifications.filter((notification) => notification.id !== id)
+        );
+        toast.success('Notification deleted.');
+      })
+      .catch((error) => {
+        console.error('Error deleting notification:', error);
+        toast.error('Failed to delete notification.');
+      });
+  };
+
+  const getIcon = (type: string) => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'warning':
+        return <AlertTriangle className="h-4 w-4 text-yellow-500" />;
+      case 'error':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <Info className="h-4 w-4 text-blue-500" />;
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
+      <div className="flex justify-center items-center h-48">
+        <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   }
 
   if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <h3 className="text-lg font-medium text-red-800 mb-2">Erreur de chargement</h3>
-        <p className="text-red-600">{error}</p>
-        <button 
-          onClick={handleRefresh}
-          className="mt-4 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition-colors"
-        >
-          Réessayer
-        </button>
-      </div>
-    );
+    return <div className="text-red-500">Error: {error}</div>;
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <NotificationHeader notificationCount={notifications.length} />
-        <NotificationActions
-          unreadCount={unreadCount}
-          isRefreshing={isRefreshing}
-          onRefresh={handleRefresh}
-          onMarkAllAsRead={handleMarkAllAsRead}
-          totalCount={notifications.length}
-        />
-      </div>
-
-      <Tabs defaultValue="all" className="w-full">
-        <NotificationTabs 
-          totalCount={notifications.length}
-          unreadCount={unreadCount}
-          filter={filter}
-          onFilterChange={handleFilterChange}
-        />
-        
-        <TabsContent value="all" className="mt-4">
-          <NotificationsList 
-            notifications={filteredNotifications}
-            onMarkAsRead={handleMarkAsRead}
-            onDelete={handleDeleteNotification}
-            filter={filter}
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <Bell className="h-5 w-5" />
+          <span>Notifications</span>
+          <Badge className="ml-2">{notifications.length}</Badge>
+        </CardTitle>
+        <CardDescription>
+          Here are all your latest notifications.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <ScrollArea className="h-[400px] w-full">
+          <div className="p-4 space-y-4">
+            {notifications.length === 0 ? (
+              <div className="text-center text-gray-500">No notifications yet.</div>
+            ) : (
+              notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`border rounded-md p-3 flex items-start space-x-3 ${notification.read ? 'bg-gray-50' : 'bg-white'
+                    }`}
+                >
+                  <div className="flex-shrink-0">{getIcon(notification.type)}</div>
+                  <div>
+                    <div className="font-medium">{notification.message}</div>
+                    <div className="text-sm text-gray-500">
+                      {formatDistanceToNow(new Date(notification.created_at), {
+                        addSuffix: true,
+                        locale: fr,
+                      })}
+                    </div>
+                  </div>
+                  <div className="ml-auto flex items-center space-x-2">
+                    {!notification.read && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => markAsRead(notification.id)}
+                      >
+                        <Eye className="h-4 w-4" />
+                        <span className="sr-only">Mark as Read</span>
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteNotification(notification.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Delete</span>
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </ScrollArea>
+      </CardContent>
+      <CardFooter className="justify-between">
+        <Button variant="outline">
+          <Check className="mr-2 h-4 w-4" /> Mark all as read
+        </Button>
+        <Button onClick={() => userId && clearAllNotifications(userId)}>
+          Clear all <X className="ml-2 h-4 w-4" />
+        </Button>
+      </CardFooter>
+    </Card>
   );
-}
+};
+
+export default NotificationsTab;

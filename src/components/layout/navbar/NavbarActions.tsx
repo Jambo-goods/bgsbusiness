@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Bell, Wallet, Home } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -123,6 +122,11 @@ export default function NavbarActions({
       // Not on dashboard, navigate to dashboard with wallet tab
       navigate('/dashboard?tab=wallet');
     }
+  };
+
+  const handleLogout = (event: React.MouseEvent) => {
+    event.preventDefault();
+    supabase.auth.signOut();
   };
 
   const isDashboardPage = location.pathname.includes('/dashboard');

@@ -55,6 +55,7 @@ export function useBankTransferData() {
         console.log("Fetching bank transfers with status filter:", statusFilter);
         
         // Récupérer les données de la table bank_transfers
+        // Modifier pour permettre l'accès même sans authentification
         let { data: bankTransfersData, error: bankTransfersError } = await supabase
           .from("bank_transfers")
           .select("*");
@@ -147,12 +148,6 @@ export function useBankTransferData() {
             (!walletTransactions || walletTransactions.length === 0)) {
           console.log("Aucune donnée trouvée. Cela pourrait être un problème de permissions RLS.");
           toast.warning("Aucune donnée trouvée. Vérifiez les permissions de la base de données.");
-          
-          if (authStatus !== "authenticated") {
-            toast.error("Vous n'êtes pas authentifié. Veuillez vous connecter.");
-          } else if (userRole !== "admin") {
-            toast.warning(`Rôle utilisateur insuffisant: ${userRole}. Seuls les administrateurs peuvent voir ces données.`);
-          }
         }
         
         // Formater les virements bancaires

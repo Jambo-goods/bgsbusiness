@@ -1,86 +1,90 @@
-
 import { useState, useEffect } from "react";
-import { Project } from "@/types/project";
-import { useToast } from "@/hooks/use-toast";
-import { notificationService } from "@/services/notifications";
-import { calculateReturns } from "@/utils/investmentCalculations";
-import { useUserBalance } from "@/hooks/useUserBalance";
-import { useInvestmentConfirmation } from "@/hooks/useInvestmentConfirmation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useUser } from "@/contexts/UserContext";
 
-export const useInvestment = (project: Project, investorCount: number) => {
-  const [investmentAmount, setInvestmentAmount] = useState(project.minInvestment || 500);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [selectedDuration, setSelectedDuration] = useState(
-    project.possibleDurations ? project.possibleDurations[0] : parseInt(project.duration)
-  );
-  const [totalReturn, setTotalReturn] = useState(0);
-  const [monthlyReturn, setMonthlyReturn] = useState(0);
-  const { toast } = useToast();
-  
-  const { userBalance } = useUserBalance();
-  
-  // Extract constants from project
-  const minInvestment = project.minInvestment;
-  const maxInvestment = project.maxInvestment || 10000;
-  const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
-  
-  const durations = project.possibleDurations || 
-    [parseInt(project.duration.split(' ')[0])];
-  
-  // Calculate investment returns when parameters change
-  useEffect(() => {
-    const { monthlyReturn: calculatedMonthlyReturn, totalReturn: calculatedTotalReturn } = 
-      calculateReturns(investmentAmount, project.yield, selectedDuration, firstPaymentDelay);
-    
-    setMonthlyReturn(calculatedMonthlyReturn);
-    setTotalReturn(calculatedTotalReturn);
-  }, [investmentAmount, selectedDuration, project.yield, firstPaymentDelay]);
-  
-  // Validation and confirmation handling
-  const handleInvest = () => {
-    if (userBalance < investmentAmount) {
-      toast({
-        title: "Solde insuffisant",
-        description: `Vous n'avez pas assez de fonds disponibles. Votre solde: ${userBalance}€`,
-        variant: "destructive"
-      });
-      
-      // Create insufficient funds notification
-      notificationService.insufficientFunds();
-      return;
-    }
-    
-    setShowConfirmation(true);
-  };
-  
-  const cancelInvestment = () => {
-    setShowConfirmation(false);
+interface Investment {
+  id: string;
+  amount: number;
+  project_id: string;
+  user_id: string;
+  created_at: string;
+}
+
+export function useInvestment() {
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [investmentId, setInvestmentId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+	const { setUser } = useUser();
+
+  const confirmInvestmentMutation = useMutation({
+    mutationFn: async ({ amount, project_id }: { amount: number; project_id: string }) => {
+      const { data: session } = await supabase.auth.getSession();
+
+      if (!session?.session?.user?.id) {
+        throw new Error("Vous devez être connecté pour investir.");
+      }
+
+      const { data, error } = await supabase
+        .from("investments")
+        .insert([{ amount, project_id, user_id: session.session.user.id }])
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Erreur lors de l'investissement:", error);
+        throw new Error("Impossible de confirmer l'investissement.");
+      }
+
+      return data as Investment;
+    },
+    onSuccess: (data) => {
+      toast.success("Investissement confirmé avec succès !");
+      queryClient.invalidateQueries({ queryKey: ["investments"] });
+      navigate("/dashboard");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Une erreur est survenue lors de la confirmation de l'investissement.");
+    },
+  });
+
+  const handleConfirm = (id: string) => {
+    setInvestmentId(id);
+    setIsConfirming(true);
   };
 
-  // Use the confirmation hook - with corrected parameters
-  const { isLoading: isProcessing, confirmInvestment } = useInvestmentConfirmation(
-    project, 
-    investorCount,
-    project.fundingProgress || 0,
-    () => setShowConfirmation(false)
-  );
+  const handleCancel = () => {
+    setIsConfirming(false);
+    setInvestmentId(null);
+  };
+
+  const handleLogout = (event: React.MouseEvent) => {
+		event.preventDefault();
+		
+    // Remove the user from local storage
+    localStorage.removeItem("user");
+
+    // Update the user context to null
+    setUser(null);
+
+    // Redirect to the home page
+    navigate("/");
+
+    toast.success("Déconnexion réussie!");
+  };
 
   return {
-    investmentAmount,
-    setInvestmentAmount,
-    showConfirmation,
-    setShowConfirmation,
-    isProcessing,
-    selectedDuration,
-    setSelectedDuration,
-    totalReturn,
-    monthlyReturn,
-    minInvestment,
-    maxInvestment,
-    durations,
-    userBalance,
-    handleInvest,
-    cancelInvestment,
-    confirmInvestment
+    isConfirming,
+    investmentId,
+    handleConfirm,
+    handleCancel,
+    confirmInvestment: confirmInvestmentMutation.mutate,
+    isLoading: confirmInvestmentMutation.isLoading,
+    isError: confirmInvestmentMutation.isError,
+    error: confirmInvestmentMutation.error,
+		handleLogout
   };
-};
+}
