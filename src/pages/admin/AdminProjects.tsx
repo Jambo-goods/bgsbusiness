@@ -2,7 +2,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import ProjectManagement from './ProjectManagement';
-import AdminLayout from '@/components/admin/AdminLayout';
+import AdminLayout from '@/layouts/AdminLayout';
 
 const AdminProjects = () => {
   return (
