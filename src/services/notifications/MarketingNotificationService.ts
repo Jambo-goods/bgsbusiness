@@ -2,23 +2,42 @@
 import { BaseNotificationService } from "./BaseNotificationService";
 
 export class MarketingNotificationService extends BaseNotificationService {
-  eventInvitation(eventName: string, date: string): Promise<void> {
+  newPromotion(title: string, details: string): Promise<void> {
     return this.createNotification({
-      title: "Invitation à un événement",
-      description: `Participez à notre webinaire sur ${eventName} ce ${date}.`,
+      title: `Nouvelle promotion: ${title}`,
+      description: details,
       type: 'marketing',
       category: 'info',
-      metadata: { eventName, date }
+      metadata: { promotion: title }
     });
   }
   
-  specialOffer(percentage: number, endDate: string): Promise<void> {
+  platformUpdate(version: string, features: string[]): Promise<void> {
     return this.createNotification({
-      title: "Offre spéciale",
-      description: `Profitez d'un bonus de ${percentage}% sur vos investissements jusqu'au ${endDate}.`,
+      title: `Mise à jour de la plateforme v${version}`,
+      description: `Nouvelles fonctionnalités: ${features.join(", ")}`,
       type: 'marketing',
       category: 'info',
-      metadata: { percentage, endDate }
+      metadata: { version, features }
+    });
+  }
+  
+  newProjectAnnouncement(projectName: string, projectId: string): Promise<void> {
+    return this.createNotification({
+      title: "Nouveau projet d'investissement",
+      description: `Un nouveau projet est disponible: ${projectName}`,
+      type: 'marketing',
+      category: 'info',
+      metadata: { projectName, projectId }
+    });
+  }
+
+  newsletter(title: string): Promise<void> {
+    return this.createNotification({
+      title: "Newsletter",
+      description: title,
+      type: 'marketing',
+      category: 'info'
     });
   }
 }

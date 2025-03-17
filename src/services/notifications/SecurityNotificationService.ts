@@ -30,4 +30,40 @@ export class SecurityNotificationService extends BaseNotificationService {
       metadata: { type, details }
     });
   }
+
+  successfulLogin(): Promise<void> {
+    return this.createNotification({
+      title: "Connexion réussie",
+      description: "Vous vous êtes connecté avec succès à votre compte.",
+      type: 'security',
+      category: 'success'
+    });
+  }
+
+  accountLocked(): Promise<void> {
+    return this.createNotification({
+      title: "Compte verrouillé",
+      description: "Votre compte a été temporairement verrouillé suite à plusieurs tentatives de connexion échouées.",
+      type: 'security',
+      category: 'warning'
+    });
+  }
+
+  deviceChange(): Promise<void> {
+    return this.createNotification({
+      title: "Nouvel appareil détecté",
+      description: "Une connexion a été détectée depuis un nouvel appareil.",
+      type: 'security',
+      category: 'warning'
+    });
+  }
+
+  emailChanged(): Promise<void> {
+    return this.createNotification({
+      title: "Adresse e-mail modifiée",
+      description: "Votre adresse e-mail a été modifiée avec succès.",
+      type: 'security',
+      category: 'success'
+    });
+  }
 }

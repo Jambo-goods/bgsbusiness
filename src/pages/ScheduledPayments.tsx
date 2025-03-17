@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Toaster } from 'sonner';
-import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, FolderOpen, Home, Wallet, Users, Settings, LayoutDashboard, BanknoteIcon, Transfer } from 'lucide-react';
+import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, FolderOpen, Home, Wallet, Users, Settings, LayoutDashboard, BanknoteIcon, ArrowLeftRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -290,7 +291,7 @@ const ScheduledPaymentsPage = () => {
           </Link>
           
           <Link to="/bank-transfers" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-            <Transfer className="h-5 w-5" />
+            <ArrowLeftRight className="h-5 w-5" />
             <span>Virements Bancaires</span>
           </Link>
           

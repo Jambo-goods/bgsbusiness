@@ -1,175 +1,200 @@
 
-import { BaseNotificationService } from "./BaseNotificationService";
+import { supabase } from "@/integrations/supabase/client";
 import { DepositNotificationService } from "./DepositNotificationService";
-import { InvestmentNotificationService } from "./InvestmentNotificationService";
-import { MarketingNotificationService } from "./MarketingNotificationService";
-import { SecurityNotificationService } from "./SecurityNotificationService";
 import { WithdrawalNotificationService } from "./WithdrawalNotificationService";
-import { Notification, NotificationType, NotificationCategory, NotificationCategories } from "./types";
+import { InvestmentNotificationService } from "./InvestmentNotificationService";
+import { SecurityNotificationService } from "./SecurityNotificationService";
+import { MarketingNotificationService } from "./MarketingNotificationService";
+import { DatabaseNotification, NotificationCategory, NotificationData, NotificationType } from "./types";
 
 class NotificationService {
-  private baseNotificationService: BaseNotificationService;
-  private depositNotificationService: DepositNotificationService;
-  private investmentNotificationService: InvestmentNotificationService;
-  private marketingNotificationService: MarketingNotificationService;
-  private securityNotificationService: SecurityNotificationService;
-  private withdrawalNotificationService: WithdrawalNotificationService;
+  private _deposit: DepositNotificationService;
+  private _withdrawal: WithdrawalNotificationService;
+  private _investment: InvestmentNotificationService;
+  private _security: SecurityNotificationService;
+  private _marketing: MarketingNotificationService;
 
   constructor() {
-    this.baseNotificationService = new BaseNotificationService();
-    this.depositNotificationService = new DepositNotificationService();
-    this.investmentNotificationService = new InvestmentNotificationService();
-    this.marketingNotificationService = new MarketingNotificationService();
-    this.securityNotificationService = new SecurityNotificationService();
-    this.withdrawalNotificationService = new WithdrawalNotificationService();
+    this._deposit = new DepositNotificationService();
+    this._withdrawal = new WithdrawalNotificationService();
+    this._investment = new InvestmentNotificationService();
+    this._security = new SecurityNotificationService();
+    this._marketing = new MarketingNotificationService();
   }
 
-  // Base notification methods
-  async createNotification(props) {
-    return this.baseNotificationService.createNotification(props);
+  get deposit(): DepositNotificationService {
+    return this._deposit;
   }
 
-  async markAsRead(notificationId: string) {
-    return this.baseNotificationService.markAsRead(notificationId);
+  get withdrawal(): WithdrawalNotificationService {
+    return this._withdrawal;
   }
 
-  async deleteNotification(notificationId: string) {
-    return this.baseNotificationService.deleteNotification(notificationId);
-  }
-  
-  async getNotifications() {
-    return this.baseNotificationService.getNotifications();
-  }
-  
-  async getUnreadCount() {
-    return this.baseNotificationService.getUnreadCount();
-  }
-  
-  async markAllAsRead() {
-    return this.baseNotificationService.markAllAsRead();
-  }
-  
-  async setupRealtimeSubscription(callback: () => void) {
-    return this.baseNotificationService.setupRealtimeSubscription(callback);
+  get investment(): InvestmentNotificationService {
+    return this._investment;
   }
 
-  // Deposit notification methods
-  async depositRequested(amount: number, reference: string) {
-    return this.depositNotificationService.depositRequested(amount, reference);
+  get security(): SecurityNotificationService {
+    return this._security;
   }
 
-  async depositConfirmed(amount: number) {
-    return this.depositNotificationService.depositConfirmed(amount);
+  get marketing(): MarketingNotificationService {
+    return this._marketing;
   }
 
-  async depositRejected(amount: number, reason: string) {
-    return this.depositNotificationService.depositRejected(amount, reason);
-  }
-  
-  async depositSuccess(amount: number) {
-    return this.depositNotificationService.depositSuccess(amount);
-  }
-  
-  async insufficientFunds(amount: number) {
-    return this.depositNotificationService.insufficientFunds(amount);
+  async markAllAsRead(): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { error } = await supabase
+        .from("notifications")
+        .update({ seen: true })
+        .eq("user_id", user.user.id)
+        .is("seen", false);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+      throw error;
+    }
   }
 
-  // Investment notification methods
-  async investmentConfirmed(projectName: string, amount: number) {
-    return this.investmentNotificationService.investmentConfirmed(projectName, amount);
+  async markAsRead(notificationId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ seen: true })
+        .eq("id", notificationId);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      throw error;
+    }
   }
 
-  async investmentReceived(projectName: string, amount: number) {
-    return this.investmentNotificationService.investmentReceived(projectName, amount);
+  async deleteNotification(notificationId: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("id", notificationId);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      throw error;
+    }
   }
 
-  async projectUpdate(projectName: string, updateType: string, details: string) {
-    return this.investmentNotificationService.projectUpdate(projectName, updateType, details);
+  async deleteAllNotifications(): Promise<void> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user) {
+        throw new Error("User not authenticated");
+      }
+
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("user_id", user.user.id);
+
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error deleting all notifications:", error);
+      throw error;
+    }
   }
 
-  async yieldPaid(projectName: string, amount: number, date: string) {
-    return this.investmentNotificationService.yieldPaid(projectName, amount, date);
+  async getUnreadCount(): Promise<number> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user) {
+        return 0;
+      }
+
+      const { data, error, count } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact" })
+        .eq("user_id", user.user.id)
+        .eq("seen", false);
+
+      if (error) {
+        throw error;
+      }
+
+      return count || 0;
+    } catch (error) {
+      console.error("Error getting unread notifications count:", error);
+      return 0;
+    }
   }
 
-  async investmentMatured(projectName: string, amount: number) {
-    return this.investmentNotificationService.investmentMatured(projectName, amount);
-  }
-  
-  async newInvestmentOpportunity(projectName: string) {
-    return this.investmentNotificationService.newInvestmentOpportunity(projectName);
-  }
-  
-  async projectCompleted(projectName: string, projectId: string) {
-    return this.investmentNotificationService.projectCompleted(projectName, projectId);
-  }
-  
-  async profitReceived(amount: number, projectName: string, projectId: string) {
-    return this.investmentNotificationService.profitReceived(amount, projectName, projectId);
+  async getAllNotifications(): Promise<Notification[]> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user?.user) {
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      return (data || []).map(this.mapDatabaseNotificationToModel);
+    } catch (error) {
+      console.error("Error getting all notifications:", error);
+      return [];
+    }
   }
 
-  // Security notification methods
-  async passwordChanged() {
-    return this.securityNotificationService.passwordChanged();
-  }
-
-  async loginAttemptDetected(device: string, location: string, timestamp: string, success: boolean) {
-    return this.securityNotificationService.loginAttemptDetected(device, location, timestamp, success);
-  }
-
-  async securityAlert(type: string, details: string) {
-    return this.securityNotificationService.securityAlert(type, details);
-  }
-
-  // Withdrawal notification methods
-  async withdrawalRequested(amount: number) {
-    return this.withdrawalNotificationService.withdrawalRequested(amount);
-  }
-
-  async withdrawalPending(amount: number) {
-    return this.withdrawalNotificationService.withdrawalPending(amount);
-  }
-
-  async withdrawalProcessed(amount: number) {
-    return this.withdrawalNotificationService.withdrawalProcessed(amount);
-  }
-
-  async withdrawalRejected(amount: number, reason: string) {
-    return this.withdrawalNotificationService.withdrawalRejected(amount, reason);
-  }
-  
-  async withdrawalScheduled(amount: number) {
-    return this.withdrawalNotificationService.withdrawalScheduled(amount);
-  }
-  
-  async withdrawalValidated(amount: number) {
-    return this.withdrawalNotificationService.withdrawalValidated(amount);
-  }
-  
-  async withdrawalCompleted(amount: number) {
-    return this.withdrawalNotificationService.withdrawalCompleted(amount);
-  }
-  
-  async withdrawalReceived(amount: number) {
-    return this.withdrawalNotificationService.withdrawalReceived(amount);
-  }
-  
-  async withdrawalConfirmed(amount: number) {
-    return this.withdrawalNotificationService.withdrawalConfirmed(amount);
-  }
-  
-  async withdrawalPaid(amount: number) {
-    return this.withdrawalNotificationService.withdrawalPaid(amount);
-  }
-
-  // Marketing notification methods
-  async eventInvitation(eventName: string, date: string) {
-    return this.marketingNotificationService.eventInvitation(eventName, date);
-  }
-
-  async specialOffer(percentage: number, endDate: string) {
-    return this.marketingNotificationService.specialOffer(percentage, endDate);
+  private mapDatabaseNotificationToModel(dbNote: DatabaseNotification): Notification {
+    return {
+      id: dbNote.id,
+      title: dbNote.title,
+      description: dbNote.message,
+      date: new Date(dbNote.created_at),
+      read: dbNote.seen,
+      type: dbNote.type as NotificationType,
+      category: dbNote.data?.category as NotificationCategory || 'info',
+      metadata: dbNote.data || {}
+    };
   }
 }
 
+// Singleton instance
 export const notificationService = new NotificationService();
-export { Notification, NotificationType, NotificationCategory, NotificationCategories };
+
+// Type definitions
+export interface Notification {
+  id: string;
+  title: string;
+  description: string;
+  date: Date;
+  read: boolean;
+  type: NotificationType;
+  category?: NotificationCategory;
+  metadata?: Record<string, any>;
+}
+
+// Re-export types correctly
+export type { NotificationType } from './types';
+export type { NotificationCategory } from './types';
+export { NotificationCategories } from './types';
