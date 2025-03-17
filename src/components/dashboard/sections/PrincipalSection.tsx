@@ -1,7 +1,15 @@
 
 import React from "react";
-import SidebarNavItem from "@/components/dashboard/SidebarNavItem";
-import { BarChart3, Wallet, TrendingUp, Briefcase, Award, Building } from "lucide-react";
+import { 
+  LayoutDashboard, 
+  Wallet, 
+  TrendingUp, 
+  Briefcase, 
+  Award, 
+  BarChart4,
+  Calendar
+} from "lucide-react";
+import SidebarNavItem from "../SidebarNavItem";
 
 interface PrincipalSectionProps {
   activeTab: string;
@@ -9,17 +17,12 @@ interface PrincipalSectionProps {
   expanded: boolean;
 }
 
-export default function PrincipalSection({
-  activeTab,
-  setActiveTab,
-  expanded
-}: PrincipalSectionProps) {
-  
+export default function PrincipalSection({ activeTab, setActiveTab, expanded }: PrincipalSectionProps) {
   return (
-    <div className="space-y-1">
+    <div className="flex flex-col space-y-0.5">
       <SidebarNavItem
-        icon={BarChart3}
-        label="Vue d'ensemble"
+        icon={LayoutDashboard}
+        label="Tableau de bord"
         value="overview"
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -27,7 +30,7 @@ export default function PrincipalSection({
       />
       <SidebarNavItem
         icon={Wallet}
-        label="Portefeuille"
+        label="Solde disponible"
         value="wallet"
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -35,7 +38,7 @@ export default function PrincipalSection({
       />
       <SidebarNavItem
         icon={TrendingUp}
-        label="Rendements"
+        label="Rendement mensuel"
         value="yield"
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -50,20 +53,29 @@ export default function PrincipalSection({
         expanded={expanded}
       />
       <SidebarNavItem
-        icon={Building}
-        label="Projets"
-        value="projects"
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        expanded={expanded}
-      />
-      <SidebarNavItem
         icon={Award}
         label="Opportunités"
         value="opportunities"
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         expanded={expanded}
+      />
+      <SidebarNavItem
+        icon={BarChart4}
+        label="Historique"
+        value="history"
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        expanded={expanded}
+      />
+      <SidebarNavItem
+        icon={Calendar}
+        label="Paiements Programmés"
+        value="scheduled-payments"
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        expanded={expanded}
+        externalLink="/scheduled-payments"
       />
     </div>
   );
