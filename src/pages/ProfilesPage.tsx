@@ -18,10 +18,12 @@ export default function ProfilesPage() {
     refreshProfiles
   } = useProfiles();
 
+  console.log("ProfilesPage: Rendering with", filteredProfiles.length, "filtered profiles out of", totalCount, "total");
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Tous les Profils Utilisateurs</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Tous les Profils Utilisateurs ({totalCount})</h1>
         
         <Card className="bg-white rounded-lg shadow">
           <CardHeader className="pb-2">

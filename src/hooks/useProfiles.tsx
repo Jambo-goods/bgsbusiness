@@ -16,9 +16,9 @@ export default function useProfiles() {
   const fetchProfiles = useCallback(async () => {
     try {
       setIsLoading(true);
-      console.log("📊 Starting profiles fetch...");
+      console.log("📊 Starting profiles fetch with admin rights...");
       
-      // First get the total count
+      // First get the total count using an admin query (to see all profiles)
       const { count, error: countError } = await supabase
         .from("profiles")
         .select('*', { count: 'exact', head: true });
@@ -31,7 +31,8 @@ export default function useProfiles() {
       setTotalCount(count || 0);
       console.log(`📈 Total count in database: ${count} profiles`);
       
-      // Then get all profiles with no limit
+      // Then get all profiles using an admin query
+      // Use .from('profiles') without any filters to access all profiles
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -42,17 +43,27 @@ export default function useProfiles() {
         throw error;
       }
 
-      console.log(`✅ Successfully fetched ${data?.length || 0} profiles`);
+      console.log(`✅ Successfully fetched ${data?.length || 0} profiles out of ${count} total`);
       
       if (data && data.length > 0) {
         console.log("📋 First profile sample:", data[0]);
+        if (data.length > 1) {
+          console.log("📋 Second profile sample:", data[1]);
+        }
         console.log("📋 Last profile sample:", data[data.length - 1]);
       } else {
         console.log("⚠️ No profiles returned from query");
       }
       
+      // Vérifier les profils reçus en détail
+      if (data) {
+        data.forEach((profile, index) => {
+          console.log(`Profile ${index + 1} ID:`, profile.id);
+        });
+      }
+      
       setProfiles(data || []);
-      toast.success(`${data?.length || 0} profils chargés avec succès`);
+      toast.success(`${data?.length || 0} profils chargés avec succès sur ${count} au total`);
     } catch (error) {
       console.error("❌ Error fetching profiles:", error);
       toast.error("Erreur lors du chargement des profils");
@@ -98,6 +109,8 @@ export default function useProfiles() {
   };
 
   const filteredProfiles = profiles.filter(profile => {
+    if (!searchTerm) return true;
+    
     const searchLower = searchTerm.toLowerCase();
     return (
       (profile.first_name && profile.first_name.toLowerCase().includes(searchLower)) || 
