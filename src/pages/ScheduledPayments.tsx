@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Toaster } from 'sonner';
-import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil } from 'lucide-react';
+import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, FolderOpen } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -288,6 +289,12 @@ const ScheduledPaymentsPage = () => {
                     <NavigationMenuLink asChild>
                       <Link to="/projects" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
                         <span>Projets</span>
+                      </Link>
+                    </NavigationMenuLink>
+                    <NavigationMenuLink asChild>
+                      <Link to="/admin/projects" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        <span>Administration des projets</span>
                       </Link>
                     </NavigationMenuLink>
                   </div>
