@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -26,8 +25,8 @@ export const bankTransferService = {
       
       // 2. Ajouter les fonds au portefeuille de l'utilisateur
       const { error: walletError } = await supabase.rpc("increment_wallet_balance", {
-        user_id: item.user_id,
-        increment_amount: amount
+        p_user_id: item.user_id,
+        p_amount: amount
       });
       
       if (walletError) {
