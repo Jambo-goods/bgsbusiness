@@ -18,7 +18,7 @@ export default function ProfilesPage() {
     refreshProfiles
   } = useProfiles();
 
-  console.log("ProfilesPage: Rendering with", filteredProfiles.length, "filtered profiles out of", totalCount, "total");
+  console.log("ProfilesPage: Affichage de", filteredProfiles.length, "profils filtrés sur", totalCount, "au total");
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-8">

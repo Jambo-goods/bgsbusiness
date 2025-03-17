@@ -16,56 +16,54 @@ export default function useProfiles() {
   const fetchProfiles = useCallback(async () => {
     try {
       setIsLoading(true);
-      console.log("📊 Starting profiles fetch with admin rights...");
+      console.log("📊 Chargement de tous les profils sans restriction RLS...");
       
-      // First get the total count using an admin query (to see all profiles)
+      // D'abord obtenir le nombre total de profils
       const { count, error: countError } = await supabase
         .from("profiles")
         .select('*', { count: 'exact', head: true });
       
       if (countError) {
-        console.error("❌ Error getting count:", countError);
+        console.error("❌ Erreur lors du comptage des profils:", countError);
         throw countError;
       }
       
       setTotalCount(count || 0);
-      console.log(`📈 Total count in database: ${count} profiles`);
+      console.log(`📈 Nombre total dans la base de données: ${count} profils`);
       
-      // Then get all profiles using an admin query
-      // Use .from('profiles') without any filters to access all profiles
+      // Puis récupérer tous les profils (RLS est maintenant désactivé)
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
         .order(sortField, { ascending: sortDirection === "asc" });
 
       if (error) {
-        console.error("❌ Error fetching profiles:", error);
+        console.error("❌ Erreur lors du chargement des profils:", error);
         throw error;
       }
 
-      console.log(`✅ Successfully fetched ${data?.length || 0} profiles out of ${count} total`);
+      console.log(`✅ ${data?.length || 0} profils chargés avec succès sur ${count} au total`);
       
       if (data && data.length > 0) {
-        console.log("📋 First profile sample:", data[0]);
+        console.log(`🔍 Nombre de profils récupérés: ${data.length}`);
+        console.log("📋 Premier profil:", data[0]);
         if (data.length > 1) {
-          console.log("📋 Second profile sample:", data[1]);
+          console.log("📋 Deuxième profil:", data[1]);
         }
-        console.log("📋 Last profile sample:", data[data.length - 1]);
-      } else {
-        console.log("⚠️ No profiles returned from query");
-      }
-      
-      // Vérifier les profils reçus en détail
-      if (data) {
+        console.log("📋 Dernier profil:", data[data.length - 1]);
+        
+        // Vérifier les IDs de tous les profils
         data.forEach((profile, index) => {
-          console.log(`Profile ${index + 1} ID:`, profile.id);
+          console.log(`Profil ${index + 1} | ID: ${profile.id} | Nom: ${profile.first_name} ${profile.last_name}`);
         });
+      } else {
+        console.log("⚠️ Aucun profil retourné par la requête malgré la désactivation de RLS");
       }
       
       setProfiles(data || []);
       toast.success(`${data?.length || 0} profils chargés avec succès sur ${count} au total`);
     } catch (error) {
-      console.error("❌ Error fetching profiles:", error);
+      console.error("❌ Erreur lors du chargement des profils:", error);
       toast.error("Erreur lors du chargement des profils");
     } finally {
       setIsLoading(false);
@@ -76,7 +74,7 @@ export default function useProfiles() {
   useEffect(() => {
     fetchProfiles();
 
-    // Set up real-time listener for the profiles table
+    // Configuration de l'écouteur temps réel pour la table profiles
     const profilesChannel = supabase
       .channel("profiles_changes")
       .on("postgres_changes", {
@@ -84,7 +82,7 @@ export default function useProfiles() {
         schema: "public",
         table: "profiles"
       }, (payload) => {
-        console.log("👂 Profile change detected:", payload);
+        console.log("👂 Changement de profil détecté:", payload);
         fetchProfiles();
       })
       .subscribe();
