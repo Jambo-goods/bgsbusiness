@@ -35,6 +35,19 @@ export default function BankTransferTable({
     );
   }
 
+  // Wrapper functions to handle the Promise<boolean> vs Promise<void> type mismatch
+  const confirmDepositWrapper = async (item: BankTransferItem, amount: number) => {
+    await handleConfirmDeposit(item, amount);
+  };
+
+  const rejectDepositWrapper = async (item: BankTransferItem) => {
+    await handleRejectDeposit(item);
+  };
+
+  const confirmReceiptWrapper = async (item: BankTransferItem) => {
+    await handleConfirmReceipt(item);
+  };
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -53,9 +66,9 @@ export default function BankTransferTable({
               key={item.id}
               item={item}
               processingId={processingId}
-              onConfirmDeposit={handleConfirmDeposit}
-              onRejectDeposit={handleRejectDeposit}
-              onConfirmReceipt={handleConfirmReceipt}
+              onConfirmDeposit={confirmDepositWrapper}
+              onRejectDeposit={rejectDepositWrapper}
+              onConfirmReceipt={confirmReceiptWrapper}
             />
           ))}
         </TableBody>

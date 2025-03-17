@@ -2,7 +2,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { notificationService } from "@/services/notifications";
 
 export const useInvestmentSubscriptions = (
   userId: string | null,
@@ -36,7 +35,15 @@ export const useInvestmentSubscriptions = (
               .single();
               
             if (projectData) {
-              await notificationService.projectCompleted(projectData.name, payload.new.project_id);
+              // Create project completed notification directly
+              await supabase.from('notifications').insert({
+                user_id: userId,
+                type: 'project_completed',
+                title: 'Projet terminé',
+                content: `Le projet ${projectData.name} est maintenant terminé.`,
+                project_id: payload.new.project_id,
+                read: false
+              });
               console.log("Notification de projet terminé créée avec succès");
             }
           } catch (error) {
@@ -85,11 +92,16 @@ export const useInvestmentSubscriptions = (
                 .single();
                 
               if (projectData) {
-                await notificationService.profitReceived(
-                  payload.new.amount,
-                  projectName,
-                  projectData.id
-                );
+                // Create profit received notification directly
+                await supabase.from('notifications').insert({
+                  user_id: userId,
+                  type: 'profit_received',
+                  title: 'Profit reçu',
+                  content: `Vous avez reçu un profit de ${payload.new.amount}€ pour le projet ${projectName}.`,
+                  project_id: projectData.id,
+                  amount: payload.new.amount,
+                  read: false
+                });
                 console.log("Notification de profit reçu créée avec succès");
               }
             }

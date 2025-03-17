@@ -20,13 +20,15 @@ export function useBankTransferData() {
           .select("*")
           .order("confirmed_at", { ascending: false });
         
+        if (bankTransfersError) {
+          console.error("Error fetching from bank_transfers:", bankTransfersError);
+          throw bankTransfersError;
+        }
+        
+        console.log("Raw bank_transfers data:", bankTransfersData);
+        
         if (bankTransfersData && bankTransfersData.length > 0) {
           console.log("Using bank_transfers table:", bankTransfersData);
-          
-          // Fetch user profiles in a single batch to reduce number of queries
-          if (bankTransfersData.length === 0) {
-            return [];
-          }
           
           // Extract unique user IDs
           const userIds = [...new Set(bankTransfersData.map(transfer => transfer.user_id))];
@@ -49,19 +51,12 @@ export function useBankTransferData() {
           }, {} as Record<string, any>);
           
           // Map bank transfers to expected format
-          const formattedTransfers = bankTransfersData.map(transfer => {
+          let formattedTransfers = bankTransfersData.map(transfer => {
             const profile = profilesMap[transfer.user_id] || {
               first_name: "Utilisateur",
               last_name: "Inconnu",
               email: null
             };
-            
-            // Apply status filter if not "all"
-            if (statusFilter !== "all") {
-              if (transfer.status !== statusFilter) {
-                return null;
-              }
-            }
             
             return {
               id: transfer.id,
@@ -77,10 +72,15 @@ export function useBankTransferData() {
                 email: profile.email
               }
             };
-          }).filter(item => item !== null) as BankTransferItem[];
+          });
           
-          console.log("Formatted bank transfers:", formattedTransfers);
-          return formattedTransfers;
+          // Apply status filter if not "all"
+          if (statusFilter !== "all") {
+            formattedTransfers = formattedTransfers.filter(item => item.status === statusFilter);
+          }
+          
+          console.log("Formatted bank transfers after filtering:", formattedTransfers);
+          return formattedTransfers as BankTransferItem[];
         }
         
         // Fallback: Use wallet_transactions table (existing code)
