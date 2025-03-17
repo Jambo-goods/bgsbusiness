@@ -5,6 +5,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { BankTransferItem } from "../types/bankTransfer";
 import { toast } from "sonner";
 
+interface ProfileData {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+}
+
 export function useBankTransferData() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [authStatus, setAuthStatus] = useState<string>("checking");
@@ -95,7 +101,7 @@ export function useBankTransferData() {
         // Formater les virements bancaires
         let formattedTransfers = (bankTransfersData || []).map(transfer => {
           // Safely access profile data in case the relation wasn't found
-          const profileData = transfer.profiles || {};
+          const profileData: ProfileData = transfer.profiles || {};
           
           return {
             id: transfer.id,
@@ -122,7 +128,7 @@ export function useBankTransferData() {
         if (walletTransactions && walletTransactions.length > 0) {
           const walletTransfers = walletTransactions.map(tx => {
             // Safely access profile data in case the relation wasn't found
-            const profileData = tx.profiles || {};
+            const profileData: ProfileData = tx.profiles || {};
             
             return {
               id: tx.id,

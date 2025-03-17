@@ -10,6 +10,10 @@ export interface Notification {
   seen: boolean;
   created_at: string;
   data?: any;
+  // Compatibilité avec le code existant
+  read?: boolean;
+  description?: string;
+  date?: string;
 }
 
 export type NotificationType = 
@@ -31,7 +35,7 @@ export const NotificationCategories: Record<NotificationCategory, { icon: string
   warning: { icon: 'warning', color: 'amber' }
 };
 
-class GenericNotificationService {
+class NotificationService {
   private showNotification(title: string, message: string, type: NotificationCategory = "info") {
     switch (type) {
       case "success":
@@ -141,111 +145,117 @@ class GenericNotificationService {
   }
 
   // API compatibility methods for existing components
-  public getNotifications(userId: string, limit = 10) {
+  public getNotifications(userId: string, limit: number = 10): Promise<Notification[]> {
     console.log("Getting notifications for user", userId, "with limit", limit);
     return Promise.resolve([]);
   }
   
-  public getAllNotifications(userId: string) {
+  public getAllNotifications(userId: string): Promise<Notification[]> {
     console.log("Getting all notifications for user", userId);
     return Promise.resolve([]);
   }
   
-  public getUnreadCount(userId: string) {
+  public getUnreadCount(userId: string): Promise<number> {
     console.log("Getting unread count for user", userId);
     return Promise.resolve(0);
   }
   
-  public markAsRead(notificationId: string) {
+  public markAsRead(notificationId: string): Promise<void> {
     console.log("Marking notification as read", notificationId);
     return Promise.resolve();
   }
   
-  public markAllAsRead(userId: string) {
+  public markAllAsRead(userId: string): Promise<void> {
     console.log("Marking all notifications as read for user", userId);
     return Promise.resolve();
   }
 
-  public setupRealtimeSubscription(userId: string, callback: () => void) {
+  public setupRealtimeSubscription(userId: string, callback: () => void): () => void {
     console.log("Setting up realtime subscription for user", userId);
     return () => {}; // Cleanup function
   }
 
   // Direct notification methods for backward compatibility
-  depositRequested(amount: number, reference: string) {
+  depositRequested(amount: number, reference: string): Promise<void> {
     this.notify("depositRequested", { amount, reference });
     return Promise.resolve();
   }
   
-  depositSuccess(amount: number) {
+  depositSuccess(amount: number): Promise<void> {
     this.notify("depositSuccess", { amount });
     return Promise.resolve();
   }
   
-  withdrawalRequested(amount: number) {
+  depositConfirmed(amount: number): Promise<void> {
+    this.notify("depositSuccess", { amount });
+    return Promise.resolve();
+  }
+  
+  depositRejected(amount: number, reason: string): Promise<void> {
+    this.notify("depositRejected", { amount, reason });
+    return Promise.resolve();
+  }
+  
+  withdrawalRequested(amount: number): Promise<void> {
     this.notify("withdrawalRequested", { amount });
     return Promise.resolve();
   }
   
-  withdrawalScheduled() {
+  withdrawalScheduled(): Promise<void> {
     this.notify("withdrawalScheduled");
     return Promise.resolve();
   }
   
-  withdrawalValidated() {
+  withdrawalValidated(): Promise<void> {
     this.notify("withdrawalValidated");
     return Promise.resolve();
   }
   
-  withdrawalCompleted(amount: number) {
+  withdrawalCompleted(amount: number): Promise<void> {
     this.notify("withdrawalCompleted", { amount });
     return Promise.resolve();
   }
   
-  withdrawalRejected() {
+  withdrawalRejected(): Promise<void> {
     this.notify("withdrawalRejected");
     return Promise.resolve();
   }
   
-  withdrawalReceived() {
+  withdrawalReceived(): Promise<void> {
     this.notify("withdrawalReceived");
     return Promise.resolve();
   }
   
-  withdrawalConfirmed() {
+  withdrawalConfirmed(): Promise<void> {
     this.notify("withdrawalConfirmed");
     return Promise.resolve();
   }
   
-  withdrawalPaid() {
+  withdrawalPaid(): Promise<void> {
     this.notify("withdrawalPaid");
     return Promise.resolve();
   }
   
-  insufficientFunds(amount: number) {
+  insufficientFunds(amount: number): Promise<void> {
     this.notify("insufficientFunds", { amount });
     return Promise.resolve();
   }
   
-  investmentConfirmed() {
-    this.notify("investmentConfirmed");
+  investmentConfirmed(amount?: number, project?: string, yield_rate?: number): Promise<void> {
+    this.notify("investmentConfirmed", { amount, project, yield_rate });
     return Promise.resolve();
   }
   
-  newInvestmentOpportunity() {
-    this.notify("newInvestmentOpportunity");
+  newInvestmentOpportunity(project?: string, yield_rate?: number): Promise<void> {
+    this.notify("newInvestmentOpportunity", { project, yield_rate });
     return Promise.resolve();
   }
   
-  // Method for other services
-  public deposit(params: any = {}) {
-    this.notify("depositSuccess", params);
-  }
-
-  public withdrawal(params: any = {}) {
-    this.notify("withdrawalCompleted", params);
+  createNotification(params: any = {}): Promise<void> {
+    this.notify(params.type || "info", params);
+    return Promise.resolve();
   }
 }
 
-// Exporter une instance du service générique
-export const notificationService = new GenericNotificationService();
+// Exporter une instance du service
+export const notificationService = new NotificationService();

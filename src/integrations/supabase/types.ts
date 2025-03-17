@@ -455,12 +455,17 @@ export type Database = {
         }
         Returns: undefined
       }
-      is_admin: {
-        Args: {
-          user_email: string
-        }
-        Returns: boolean
-      }
+      is_admin:
+        | {
+            Args: Record<PropertyKey, never>
+            Returns: boolean
+          }
+        | {
+            Args: {
+              user_email: string
+            }
+            Returns: boolean
+          }
       recalculate_wallet_balance: {
         Args: {
           user_uuid: string
