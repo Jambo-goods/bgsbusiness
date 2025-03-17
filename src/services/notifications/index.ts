@@ -1,156 +1,113 @@
 
 import { BaseNotificationService } from "./BaseNotificationService";
 import { DepositNotificationService } from "./DepositNotificationService";
-import { WithdrawalNotificationService } from "./WithdrawalNotificationService";
 import { InvestmentNotificationService } from "./InvestmentNotificationService";
-import { SecurityNotificationService } from "./SecurityNotificationService";
 import { MarketingNotificationService } from "./MarketingNotificationService";
-import { NotificationCategories } from "./types";
+import { SecurityNotificationService } from "./SecurityNotificationService";
+import { WithdrawalNotificationService } from "./WithdrawalNotificationService";
 
-// Re-export types
-export type { 
-  Notification, 
-  NotificationCategory, 
-  NotificationType 
-} from "./types";
-
-export { NotificationCategories };
-
-// Create a composite notification service that combines all specialized services
-class NotificationService extends BaseNotificationService {
-  private depositService: DepositNotificationService;
-  private withdrawalService: WithdrawalNotificationService;
-  private investmentService: InvestmentNotificationService;
-  private securityService: SecurityNotificationService;
-  private marketingService: MarketingNotificationService;
+class NotificationService {
+  private baseNotificationService: BaseNotificationService;
+  private depositNotificationService: DepositNotificationService;
+  private investmentNotificationService: InvestmentNotificationService;
+  private marketingNotificationService: MarketingNotificationService;
+  private securityNotificationService: SecurityNotificationService;
+  private withdrawalNotificationService: WithdrawalNotificationService;
 
   constructor() {
-    super();
-    this.depositService = new DepositNotificationService();
-    this.withdrawalService = new WithdrawalNotificationService();
-    this.investmentService = new InvestmentNotificationService();
-    this.securityService = new SecurityNotificationService();
-    this.marketingService = new MarketingNotificationService();
+    this.baseNotificationService = new BaseNotificationService();
+    this.depositNotificationService = new DepositNotificationService();
+    this.investmentNotificationService = new InvestmentNotificationService();
+    this.marketingNotificationService = new MarketingNotificationService();
+    this.securityNotificationService = new SecurityNotificationService();
+    this.withdrawalNotificationService = new WithdrawalNotificationService();
   }
 
-  // Get unread count - needed for the NavbarActions component
-  getUnreadCount(): Promise<number> {
-    return super.getUnreadCount();
+  // Base notification methods
+  async createNotification(props) {
+    return this.baseNotificationService.createNotification(props);
   }
 
-  // Deposit Notifications
-  depositSuccess(amount: number): Promise<void> {
-    return this.depositService.depositSuccess(amount);
+  async markAsRead(notificationId: string) {
+    return this.baseNotificationService.markAsRead(notificationId);
   }
 
-  depositPending(amount: number): Promise<void> {
-    return this.depositService.depositPending(amount);
+  async deleteNotification(notificationId: string) {
+    return this.baseNotificationService.deleteNotification(notificationId);
   }
 
-  depositRequested(amount: number, reference: string): Promise<void> {
-    return this.depositService.depositRequested(amount, reference);
+  // Deposit notification methods
+  async depositRequested(amount: number, reference: string) {
+    return this.depositNotificationService.depositRequested(amount, reference);
   }
 
-  depositConfirmed(amount: number): Promise<void> {
-    return this.depositService.depositConfirmed(amount);
+  async depositConfirmed(amount: number) {
+    return this.depositNotificationService.depositConfirmed(amount);
   }
 
-  insufficientFunds(): Promise<void> {
-    return this.depositService.insufficientFunds();
+  async depositRejected(amount: number, reason: string) {
+    return this.depositNotificationService.depositRejected(amount, reason);
   }
 
-  // Withdrawal Notifications
-  withdrawalRequested(amount: number): Promise<void> {
-    return this.withdrawalService.withdrawalRequested(amount);
+  // Investment notification methods
+  async investmentConfirmed(projectName: string, amount: number) {
+    return this.investmentNotificationService.investmentConfirmed(projectName, amount);
   }
 
-  withdrawalValidated(amount: number): Promise<void> {
-    return this.withdrawalService.withdrawalValidated(amount);
+  async investmentReceived(projectName: string, amount: number) {
+    return this.investmentNotificationService.investmentReceived(projectName, amount);
   }
 
-  withdrawalScheduled(amount: number): Promise<void> {
-    return this.withdrawalService.withdrawalScheduled(amount);
+  async projectUpdate(projectName: string, updateType: string, details: string) {
+    return this.investmentNotificationService.projectUpdate(projectName, updateType, details);
   }
 
-  withdrawalCompleted(amount: number): Promise<void> {
-    return this.withdrawalService.withdrawalCompleted(amount);
+  async yieldPaid(projectName: string, amount: number, date: string) {
+    return this.investmentNotificationService.yieldPaid(projectName, amount, date);
   }
 
-  withdrawalRejected(amount: number, reason?: string): Promise<void> {
-    return this.withdrawalService.withdrawalRejected(amount, reason);
-  }
-  
-  withdrawalProcessed(amount: number, status: string): Promise<void> {
-    return this.withdrawalService.withdrawalProcessed(amount, status);
+  async investmentMatured(projectName: string, amount: number) {
+    return this.investmentNotificationService.investmentMatured(projectName, amount);
   }
 
-  withdrawalBalanceDeducted(amount: number): Promise<void> {
-    return this.withdrawalService.withdrawalBalanceDeducted(amount);
-  }
-  
-  withdrawalConfirmed(amount: number): Promise<void> {
-    return this.withdrawalService.withdrawalConfirmed(amount);
-  }
-  
-  withdrawalReceived(amount: number): Promise<void> {
-    return this.withdrawalService.withdrawalReceived(amount);
-  }
-  
-  withdrawalPaid(amount: number): Promise<void> {
-    return this.withdrawalService.withdrawalPaid(amount);
+  // Security notification methods
+  async passwordChanged() {
+    return this.securityNotificationService.passwordChanged();
   }
 
-  // Investment Notifications
-  newInvestmentOpportunity(projectName: string, projectId: string): Promise<void> {
-    return this.investmentService.newInvestmentOpportunity(projectName, projectId);
+  async loginAttemptDetected(device: string, location: string, timestamp: string, success: boolean) {
+    return this.securityNotificationService.loginAttemptDetected(device, location, timestamp, success);
   }
 
-  investmentConfirmed(amount: number, projectName: string, projectId: string): Promise<void> {
-    return this.investmentService.investmentConfirmed(amount, projectName, projectId);
+  async securityAlert(type: string, details: string) {
+    return this.securityNotificationService.securityAlert(type, details);
   }
 
-  profitReceived(amount: number, projectName: string, projectId: string): Promise<void> {
-    return this.investmentService.profitReceived(amount, projectName, projectId);
+  // Withdrawal notification methods
+  async withdrawalRequested(amount: number) {
+    return this.withdrawalNotificationService.withdrawalRequested(amount);
   }
 
-  projectFunded(projectName: string, projectId: string): Promise<void> {
-    return this.investmentService.projectFunded(projectName, projectId);
+  async withdrawalPending(amount: number) {
+    return this.withdrawalNotificationService.withdrawalPending(amount);
   }
 
-  projectCompleted(projectName: string, projectId: string): Promise<void> {
-    return this.investmentService.projectCompleted(projectName, projectId);
-  }
-  
-  newOpportunityAlert(projectName: string, projectId: string, expectedYield: string): Promise<void> {
-    return this.investmentService.newOpportunityAlert(projectName, projectId, expectedYield);
+  async withdrawalProcessed(amount: number) {
+    return this.withdrawalNotificationService.withdrawalProcessed(amount);
   }
 
-  // Security Notifications
-  loginSuccess(device: string): Promise<void> {
-    return this.securityService.loginSuccess(device);
+  async withdrawalRejected(amount: number, reason: string) {
+    return this.withdrawalNotificationService.withdrawalRejected(amount, reason);
   }
 
-  suspiciousLogin(device: string): Promise<void> {
-    return this.securityService.suspiciousLogin(device);
+  // Marketing notification methods
+  async eventInvitation(eventName: string, date: string) {
+    return this.marketingNotificationService.eventInvitation(eventName, date);
   }
 
-  passwordChanged(): Promise<void> {
-    return this.securityService.passwordChanged();
-  }
-
-  // Marketing Notifications
-  eventInvitation(eventName: string, date: string): Promise<void> {
-    return this.marketingService.eventInvitation(eventName, date);
-  }
-
-  specialOffer(percentage: number, endDate: string): Promise<void> {
-    return this.marketingService.specialOffer(percentage, endDate);
-  }
-
-  referralBonus(friendName: string, bonus: number): Promise<void> {
-    return this.marketingService.referralBonus(friendName, bonus);
+  async specialOffer(percentage: number, endDate: string) {
+    return this.marketingNotificationService.specialOffer(percentage, endDate);
   }
 }
 
-// Export the singleton instance
 export const notificationService = new NotificationService();
