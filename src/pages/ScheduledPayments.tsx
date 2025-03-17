@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Toaster } from 'sonner';
-import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, FolderOpen } from 'lucide-react';
+import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, FolderOpen, Home, Wallet, Users, Settings, LayoutDashboard, BanknoteIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -53,6 +53,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 const ScheduledPaymentsPage = () => {
   const { scheduledPayments, isLoading, error, addScheduledPayment, updatePaymentStatus } = useScheduledPayments();
@@ -262,241 +263,244 @@ const ScheduledPaymentsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
       <Toaster />
       
-      <div className="bg-white shadow mb-6">
-        <div className="container mx-auto px-4">
-          <NavigationMenu className="py-4">
-            <NavigationMenuList>
-              <NavigationMenuItem>
-                <NavigationMenuLink asChild>
-                  <Link to="/" className="font-bold text-xl hover:text-blue-500">
-                    Finance App
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-              
-              <NavigationMenuItem>
-                <NavigationMenuTrigger>Navigation</NavigationMenuTrigger>
-                <NavigationMenuContent>
-                  <div className="grid w-[400px] gap-3 p-4">
-                    <NavigationMenuLink asChild>
-                      <Link to="/dashboard" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
-                        <span>Dashboard</span>
-                      </Link>
-                    </NavigationMenuLink>
-                    <NavigationMenuLink asChild>
-                      <Link to="/projects" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
-                        <span>Projets</span>
-                      </Link>
-                    </NavigationMenuLink>
-                    <NavigationMenuLink asChild>
-                      <Link to="/admin/projects" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        <span>Administration des projets</span>
-                      </Link>
-                    </NavigationMenuLink>
-                  </div>
-                </NavigationMenuContent>
-              </NavigationMenuItem>
-            </NavigationMenuList>
-          </NavigationMenu>
-        </div>
-      </div>
-      
-      <div className="container mx-auto py-8 px-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <h1 className="text-2xl font-bold">Paiements Programmés</h1>
-          
-          <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-            <Button 
-              onClick={handleAddPayment}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Ajouter un paiement
-            </Button>
-            
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Rechercher..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full md:w-auto">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filtrer
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Status</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setStatusFilter('all')} className={statusFilter === 'all' ? 'bg-gray-100' : ''}>
-                  Tous
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('paid')} className={statusFilter === 'paid' ? 'bg-gray-100' : ''}>
-                  Payé
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('pending')} className={statusFilter === 'pending' ? 'bg-gray-100' : ''}>
-                  En attente
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter('scheduled')} className={statusFilter === 'scheduled' ? 'bg-gray-100' : ''}>
-                  Programmé
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full md:w-auto">
-                  <ArrowUpDown className="h-4 w-4 mr-2" />
-                  Trier
-                  <ChevronDown className="h-4 w-4 ml-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuLabel>Trier par</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleSort('payment_date')} className={sortConfig.key === 'payment_date' ? 'bg-gray-100' : ''}>
-                  Date {sortConfig.key === 'payment_date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSort('total_scheduled_amount')} className={sortConfig.key === 'total_scheduled_amount' ? 'bg-gray-100' : ''}>
-                  Montant {sortConfig.key === 'total_scheduled_amount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSort('project_name')} className={sortConfig.key === 'project_name' ? 'bg-gray-100' : ''}>
-                  Projet {sortConfig.key === 'project_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleSort('percentage')} className={sortConfig.key === 'percentage' ? 'bg-gray-100' : ''}>
-                  Pourcentage {sortConfig.key === 'percentage' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+      {/* Vertical Menu */}
+      <div className="w-64 bg-white shadow-lg h-screen sticky top-0 border-r border-gray-200">
+        <div className="p-4 border-b border-gray-200">
+          <Link to="/" className="font-bold text-xl text-blue-600 flex items-center">
+            Finance App
+          </Link>
         </div>
         
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-1/4">Projet</TableHead>
-                  <TableHead>Date de paiement</TableHead>
-                  <TableHead>Montant total</TableHead>
-                  <TableHead>Pourcentage</TableHead>
-                  <TableHead>Nombre d'investisseurs</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="w-24">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredPayments.length === 0 ? (
+        <nav className="p-4 space-y-1">
+          <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <LayoutDashboard className="h-5 w-5" />
+            <span>Tableau de bord</span>
+          </Link>
+          
+          <Link to="/projects" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <FolderOpen className="h-5 w-5" />
+            <span>Projets</span>
+          </Link>
+          
+          <Link to="/scheduled-payments" className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg">
+            <BanknoteIcon className="h-5 w-5" />
+            <span>Paiements Programmés</span>
+          </Link>
+          
+          <Link to="/profiles" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <Users className="h-5 w-5" />
+            <span>Profils</span>
+          </Link>
+          
+          <Link to="/wallet" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <Wallet className="h-5 w-5" />
+            <span>Portefeuille</span>
+          </Link>
+          
+          <Link to="/settings" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <Settings className="h-5 w-5" />
+            <span>Paramètres</span>
+          </Link>
+        </nav>
+      </div>
+      
+      <div className="flex-1">
+        <div className="container mx-auto py-8 px-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <h1 className="text-2xl font-bold">Paiements Programmés</h1>
+            
+            <div className="flex gap-3 w-full md:w-auto">
+              <Button 
+                onClick={handleAddPayment}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter un paiement
+              </Button>
+              
+              <div className="relative w-full md:w-64">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Rechercher..."
+                  className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filtrer
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>Status</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setStatusFilter('all')} className={statusFilter === 'all' ? 'bg-gray-100' : ''}>
+                    Tous
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('paid')} className={statusFilter === 'paid' ? 'bg-gray-100' : ''}>
+                    Payé
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('pending')} className={statusFilter === 'pending' ? 'bg-gray-100' : ''}>
+                    En attente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setStatusFilter('scheduled')} className={statusFilter === 'scheduled' ? 'bg-gray-100' : ''}>
+                    Programmé
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <ArrowUpDown className="h-4 w-4 mr-2" />
+                    Trier
+                    <ChevronDown className="h-4 w-4 ml-2" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>Trier par</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleSort('payment_date')} className={sortConfig.key === 'payment_date' ? 'bg-gray-100' : ''}>
+                    Date {sortConfig.key === 'payment_date' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('total_scheduled_amount')} className={sortConfig.key === 'total_scheduled_amount' ? 'bg-gray-100' : ''}>
+                    Montant {sortConfig.key === 'total_scheduled_amount' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('project_name')} className={sortConfig.key === 'project_name' ? 'bg-gray-100' : ''}>
+                    Projet {sortConfig.key === 'project_name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleSort('percentage')} className={sortConfig.key === 'percentage' ? 'bg-gray-100' : ''}>
+                    Pourcentage {sortConfig.key === 'percentage' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4 text-gray-500">
-                      Aucun paiement programmé trouvé
-                    </TableCell>
+                    <TableHead className="w-1/4">Projet</TableHead>
+                    <TableHead>Date de paiement</TableHead>
+                    <TableHead>Montant total</TableHead>
+                    <TableHead>Pourcentage</TableHead>
+                    <TableHead>Nombre d'investisseurs</TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead className="w-24">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  filteredPayments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center">
-                          {payment.projects?.image && (
-                            <img 
-                              src={payment.projects.image} 
-                              alt={payment.projects?.name || 'Projet'} 
-                              className="w-8 h-8 rounded-full mr-2 object-cover"
-                            />
-                          )}
-                          <span>{payment.projects?.name || 'Projet inconnu'}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {payment.payment_date 
-                          ? format(new Date(payment.payment_date), 'dd/MM/yyyy') 
-                          : '—'}
-                      </TableCell>
-                      <TableCell>
-                        {formatCurrency(payment.total_scheduled_amount)}
-                      </TableCell>
-                      <TableCell>
-                        {payment.percentage !== null ? `${payment.percentage}%` : '—'}
-                      </TableCell>
-                      <TableCell>
-                        {payment.investors_count || 0}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          {getStatusIcon(payment.status)}
-                          <span 
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              payment.status === 'paid' 
-                                ? 'bg-green-100 text-green-800' 
-                                : payment.status === 'pending'
-                                ? 'bg-orange-100 text-orange-800'
-                                : 'bg-blue-100 text-blue-800'
-                            }`}
-                          >
-                            {getStatusLabel(payment.status)}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                            onClick={() => handleEditPayment(payment)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                            <span className="sr-only">Modifier</span>
-                          </Button>
-                          
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-8">
-                                Statut <ChevronDown className="h-3 w-3 ml-1" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => handleChangeStatus(payment.id, 'pending')}
-                                className={payment.status === 'pending' ? 'bg-orange-50' : ''}
-                              >
-                                <Clock className="h-4 w-4 mr-2 text-orange-500" />
-                                En attente
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleChangeStatus(payment.id, 'scheduled')}
-                                className={payment.status === 'scheduled' ? 'bg-blue-50' : ''}
-                              >
-                                <AlertCircle className="h-4 w-4 mr-2 text-blue-500" />
-                                Programmé
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => handleChangeStatus(payment.id, 'paid')}
-                                className={payment.status === 'paid' ? 'bg-green-50' : ''}
-                              >
-                                <Check className="h-4 w-4 mr-2 text-green-500" />
-                                Payé
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredPayments.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-4 text-gray-500">
+                        Aucun paiement programmé trouvé
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    filteredPayments.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            {payment.projects?.image && (
+                              <img 
+                                src={payment.projects.image} 
+                                alt={payment.projects?.name || 'Projet'} 
+                                className="w-8 h-8 rounded-full mr-2 object-cover"
+                              />
+                            )}
+                            <span>{payment.projects?.name || 'Projet inconnu'}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {payment.payment_date 
+                            ? format(new Date(payment.payment_date), 'dd/MM/yyyy') 
+                            : '—'}
+                        </TableCell>
+                        <TableCell>
+                          {formatCurrency(payment.total_scheduled_amount)}
+                        </TableCell>
+                        <TableCell>
+                          {payment.percentage !== null ? `${payment.percentage}%` : '—'}
+                        </TableCell>
+                        <TableCell>
+                          {payment.investors_count || 0}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            {getStatusIcon(payment.status)}
+                            <span 
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                payment.status === 'paid' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : payment.status === 'pending'
+                                  ? 'bg-orange-100 text-orange-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {getStatusLabel(payment.status)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              onClick={() => handleEditPayment(payment)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              <span className="sr-only">Modifier</span>
+                            </Button>
+                            
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="h-8">
+                                  Statut <ChevronDown className="h-3 w-3 ml-1" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => handleChangeStatus(payment.id, 'pending')}
+                                  className={payment.status === 'pending' ? 'bg-orange-50' : ''}
+                                >
+                                  <Clock className="h-4 w-4 mr-2 text-orange-500" />
+                                  En attente
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleChangeStatus(payment.id, 'scheduled')}
+                                  className={payment.status === 'scheduled' ? 'bg-blue-50' : ''}
+                                >
+                                  <AlertCircle className="h-4 w-4 mr-2 text-blue-500" />
+                                  Programmé
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleChangeStatus(payment.id, 'paid')}
+                                  className={payment.status === 'paid' ? 'bg-green-50' : ''}
+                                >
+                                  <Check className="h-4 w-4 mr-2 text-green-500" />
+                                  Payé
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
       </div>
