@@ -20,6 +20,7 @@ export function useBankTransferData() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        console.log("Checking authentication status...");
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.error("Erreur d'authentification:", error.message);

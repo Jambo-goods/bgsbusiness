@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import BankTransferTable from "@/components/admin/dashboard/BankTransferTable";
 import { Helmet } from "react-helmet-async";
@@ -12,6 +13,8 @@ import { bankTransferService } from "@/services/bankTransferService";
 import { toast } from "sonner";
 
 export default function BankTransferManagement() {
+  console.log("Rendering BankTransferManagement component");
+  
   const { 
     pendingTransfers, 
     isLoading, 
@@ -31,6 +34,7 @@ export default function BankTransferManagement() {
   const [isCreatingTest, setIsCreatingTest] = useState(false);
 
   useEffect(() => {
+    console.log("BankTransferManagement mounted, fetching transfers...");
     fetchAllTransfers();
     
     const intervalId = setInterval(fetchAllTransfers, 30000);
@@ -40,6 +44,7 @@ export default function BankTransferManagement() {
 
   const fetchAllTransfers = async () => {
     try {
+      console.log("Fetching all transfers...");
       setDebugInfo("Récupération des données de toutes les tables...");
       
       const { data: authData, error: authError } = await supabase.auth.getSession();

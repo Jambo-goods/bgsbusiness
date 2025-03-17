@@ -1,12 +1,13 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
 
 export const bankTransferService = {
   // Confirmer un dépôt
   async confirmDeposit(item: any, amount: number) {
     try {
+      console.log("Confirming deposit:", item, "Amount:", amount);
+      
       // 1. Mettre à jour le statut du virement
       const { error: updateError } = await supabase
         .from(item.source === "bank_transfers" ? "bank_transfers" : "wallet_transactions")
@@ -57,6 +58,8 @@ export const bankTransferService = {
   // Rejeter un dépôt
   async rejectDeposit(item: any) {
     try {
+      console.log("Rejecting deposit:", item);
+      
       // Mettre à jour le statut du virement
       const { error } = await supabase
         .from(item.source === "bank_transfers" ? "bank_transfers" : "wallet_transactions")
@@ -94,6 +97,8 @@ export const bankTransferService = {
   // Confirmer la réception d'un virement
   async confirmReceipt(item: any) {
     try {
+      console.log("Confirming receipt:", item);
+      
       // Mettre à jour le statut du virement à "reçu"
       const { error } = await supabase
         .from(item.source === "bank_transfers" ? "bank_transfers" : "wallet_transactions")
@@ -141,19 +146,23 @@ export const bankTransferService = {
       const reference = `TEST-${Math.floor(100000 + Math.random() * 900000)}`;
       const amount = Math.floor(1000 + Math.random() * 9000);
       
-      const { error } = await supabase.from("bank_transfers").insert({
+      console.log("Creating test transfer:", { userId, reference, amount });
+      
+      const { data, error } = await supabase.from("bank_transfers").insert({
         user_id: userId,
         reference: reference,
         amount: amount,
         status: "pending",
         notes: "Virement de test créé par un administrateur"
-      });
+      }).select();
       
       if (error) {
         console.error("Erreur lors de la création du virement de test:", error);
         toast.error("Erreur lors de la création du virement de test");
         return false;
       }
+      
+      console.log("Test transfer created:", data);
       
       toast.success("Virement de test créé avec succès", {
         description: `Référence: ${reference}, Montant: ${amount}€`

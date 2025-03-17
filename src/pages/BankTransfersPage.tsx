@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
+import { toast } from "sonner";
 
 interface BankTransfer {
   id: string;
@@ -32,8 +33,10 @@ export default function BankTransfersPage() {
   const [sortField, setSortField] = useState<string>("confirmed_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [userData, setUserData] = useState<Record<string, UserData>>({});
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log("BankTransfersPage mounted, fetching data...");
     fetchBankTransfers();
 
     // Set up real-time listener for the bank_transfers table
@@ -57,13 +60,22 @@ export default function BankTransfersPage() {
   const fetchBankTransfers = async () => {
     try {
       setIsLoading(true);
+      setError(null);
+      console.log("Fetching bank transfers...");
+      
       const { data, error } = await supabase
         .from("bank_transfers")
         .select("*")
         .order(sortField, { ascending: sortDirection === "asc" });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching bank transfers:", error);
+        setError(`Erreur: ${error.message}`);
+        toast.error("Erreur lors du chargement des virements");
+        throw error;
+      }
 
+      console.log("Bank transfers fetched:", data);
       const transfersData = data || [];
       setBankTransfers(transfersData as BankTransfer[]);
 
@@ -75,7 +87,10 @@ export default function BankTransfersPage() {
           .select("id, first_name, last_name, email")
           .in("id", userIds);
 
-        if (userError) throw userError;
+        if (userError) {
+          console.error("Error fetching user data:", userError);
+          throw userError;
+        }
 
         const userMap: Record<string, UserData> = {};
         users?.forEach(user => {
@@ -88,7 +103,7 @@ export default function BankTransfersPage() {
         setUserData(userMap);
       }
     } catch (error) {
-      console.error("Error fetching bank transfers:", error);
+      console.error("Error in fetchBankTransfers:", error);
     } finally {
       setIsLoading(false);
     }
@@ -176,6 +191,12 @@ export default function BankTransfersPage() {
               Actualiser
             </Button>
           </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-4">
+              {error}
+            </div>
+          )}
 
           {isLoading ? (
             <div className="flex justify-center items-center p-12">
