@@ -1,5 +1,5 @@
 
-import { Project } from "@/types";
+import { Project } from "@/types/project";
 
 export const filterProjects = (projects: Project[], searchTerm: string): Project[] => {
   const lowerSearchTerm = searchTerm.toLowerCase();
@@ -51,4 +51,16 @@ export const calculateTotalPages = (totalItems: number, itemsPerPage: number): n
   ? Math.ceil(totalItems / parseInt(itemsPerPage, 10)) 
   : Math.ceil(totalItems / itemsPerPage);
   return totalPages;
+};
+
+// Add fetchProjectsFromDatabase function to fix related errors
+export const fetchProjectsFromDatabase = async (): Promise<Project[]> => {
+  try {
+    // This is a temporary function that returns an empty array
+    // You can implement the actual database fetching later
+    return [];
+  } catch (error) {
+    console.error("Error fetching projects from database:", error);
+    return [];
+  }
 };

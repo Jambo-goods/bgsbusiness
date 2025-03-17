@@ -37,14 +37,14 @@ export default function BankTransfersPage() {
 
   useEffect(() => {
     fetchBankTransfers();
-    console.log("BankTransfersPage: Composant monté, récupération des virements");
+    console.log("BankTransfersPage: Component mounted, fetching transfers");
   }, [sortField, sortDirection]);
 
   const fetchBankTransfers = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      console.log("Tentative de récupération des virements bancaires...");
+      console.log("Attempting to fetch bank transfers...");
 
       // Direct query without authentication check
       const { data, error } = await supabase
@@ -53,27 +53,27 @@ export default function BankTransfersPage() {
         .order(sortField, { ascending: sortDirection === "asc" });
 
       if (error) {
-        console.error("Erreur lors de la récupération des virements:", error);
-        setError(`Erreur: ${error.message}`);
-        toast.error(`Erreur lors de la récupération des virements: ${error.message}`);
+        console.error("Error fetching transfers:", error);
+        setError(`Error: ${error.message}`);
+        toast.error(`Error fetching transfers: ${error.message}`);
         return;
       }
 
-      console.log(`Récupération réussie: ${data?.length || 0} virements trouvés`);
+      console.log(`Successfully fetched: ${data?.length || 0} transfers found`);
       setBankTransfers(data || []);
 
       // Fetch user data for all transfers
       const userIds = Array.from(new Set((data || []).map(t => t.user_id)));
       if (userIds.length > 0) {
-        console.log(`Récupération des données pour ${userIds.length} utilisateurs...`);
+        console.log(`Fetching data for ${userIds.length} users...`);
         const { data: users, error: userError } = await supabase
           .from("profiles")
           .select("id, first_name, last_name, email")
           .in("id", userIds);
 
         if (userError) {
-          console.error("Erreur lors de la récupération des profils:", userError);
-          toast.warning("Impossible de récupérer les informations des utilisateurs");
+          console.error("Error fetching profiles:", userError);
+          toast.warning("Unable to retrieve user information");
         } else {
           const userMap: Record<string, UserData> = {};
           users?.forEach(user => {
@@ -83,20 +83,20 @@ export default function BankTransfersPage() {
               email: user.email
             };
           });
-          console.log(`Données utilisateur récupérées pour ${Object.keys(userMap).length} profils`);
+          console.log(`User data retrieved for ${Object.keys(userMap).length} profiles`);
           setUserData(userMap);
         }
       }
 
       // If no transfers found, show a toast
       if ((data || []).length === 0) {
-        toast.info("Aucun virement bancaire trouvé dans la base de données", {
-          description: "Si vous venez d'ajouter des virements, ils devraient apparaître rapidement."
+        toast.info("No bank transfers found in the database", {
+          description: "If you just added transfers, they should appear shortly."
         });
       }
     } catch (error) {
-      console.error("Erreur lors de la récupération des virements:", error);
-      setError("Une erreur est survenue lors de la récupération des données");
+      console.error("Error fetching transfers:", error);
+      setError("An error occurred while retrieving data");
     } finally {
       setIsLoading(false);
     }
@@ -114,18 +114,18 @@ export default function BankTransfersPage() {
   const getStatusLabel = (status: string | null) => {
     switch (status) {
       case 'pending':
-        return 'En attente';
+        return 'Pending';
       case 'received':
       case 'reçu':
-        return 'Reçu';
+        return 'Received';
       case 'processed':
-        return 'Traité';
+        return 'Processed';
       case 'completed':
-        return 'Confirmé';
+        return 'Confirmed';
       case 'rejected':
-        return 'Rejeté';
+        return 'Rejected';
       default:
-        return status || 'Inconnu';
+        return status || 'Unknown';
     }
   };
 
@@ -197,11 +197,11 @@ export default function BankTransfersPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Virements Bancaires</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Bank Transfers</h1>
         
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-6">
-            <p className="font-medium">Erreur de chargement</p>
+            <p className="font-medium">Loading Error</p>
             <p className="text-sm">{error}</p>
           </div>
         )}
@@ -212,7 +212,7 @@ export default function BankTransfersPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <Input 
                 type="text" 
-                placeholder="Rechercher par utilisateur, référence..." 
+                placeholder="Search by user, reference..." 
                 className="pl-10 w-full md:w-80" 
                 value={searchTerm} 
                 onChange={e => setSearchTerm(e.target.value)} 
@@ -225,7 +225,7 @@ export default function BankTransfersPage() {
                 className="flex items-center gap-2"
               >
                 <RefreshCw className="h-4 w-4" />
-                Actualiser
+                Refresh
               </Button>
               
               <Button 
@@ -233,7 +233,7 @@ export default function BankTransfersPage() {
                 onClick={createTestTransfer}
                 className="flex items-center gap-2"
               >
-                Créer un test
+                Create Test
               </Button>
             </div>
           </div>
@@ -244,16 +244,16 @@ export default function BankTransfersPage() {
             </div>
           ) : filteredTransfers.length === 0 ? (
             <div className="text-center p-8 text-gray-500">
-              <p>Aucun virement bancaire trouvé</p>
+              <p>No bank transfers found</p>
               <p className="text-sm text-gray-400 mt-2">
-                Les virements apparaîtront ici une fois qu'ils seront enregistrés dans la base de données.
+                Transfers will appear here once they are recorded in the database.
               </p>
               <Button 
                 className="mt-4" 
                 variant="outline"
                 onClick={createTestTransfer}
               >
-                Créer un virement de test
+                Create a test transfer
               </Button>
             </div>
           ) : (
@@ -261,13 +261,13 @@ export default function BankTransfersPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Utilisateur</TableHead>
+                    <TableHead>User</TableHead>
                     <TableHead>
                       <button 
                         className="flex items-center space-x-1 hover:text-gray-700" 
                         onClick={() => handleSort("reference")}
                       >
-                        <span>Référence</span>
+                        <span>Reference</span>
                         {sortField === "reference" && (
                           sortDirection === "asc" ? 
                             <ArrowUp className="h-4 w-4" /> : 
@@ -280,7 +280,7 @@ export default function BankTransfersPage() {
                         className="flex items-center space-x-1 hover:text-gray-700" 
                         onClick={() => handleSort("amount")}
                       >
-                        <span>Montant</span>
+                        <span>Amount</span>
                         {sortField === "amount" && (
                           sortDirection === "asc" ? 
                             <ArrowUp className="h-4 w-4" /> : 
@@ -293,7 +293,7 @@ export default function BankTransfersPage() {
                         className="flex items-center space-x-1 hover:text-gray-700" 
                         onClick={() => handleSort("confirmed_at")}
                       >
-                        <span>Date de Confirmation</span>
+                        <span>Confirmation Date</span>
                         {sortField === "confirmed_at" && (
                           sortDirection === "asc" ? 
                             <ArrowUp className="h-4 w-4" /> : 
@@ -301,7 +301,7 @@ export default function BankTransfersPage() {
                         )}
                       </button>
                     </TableHead>
-                    <TableHead>Statut</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>

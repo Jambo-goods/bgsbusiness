@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+
+import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useUser } from "@/contexts/UserContext";
 
 interface Investment {
   id: string;
@@ -18,36 +18,43 @@ export function useInvestment() {
   const [investmentId, setInvestmentId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-	const { setUser } = useUser();
 
   const confirmInvestmentMutation = useMutation({
     mutationFn: async ({ amount, project_id }: { amount: number; project_id: string }) => {
       const { data: session } = await supabase.auth.getSession();
 
       if (!session?.session?.user?.id) {
-        throw new Error("Vous devez être connecté pour investir.");
+        throw new Error("You must be logged in to invest.");
       }
 
+      // Fix the insert operation to use a single object instead of array to address the TS error
       const { data, error } = await supabase
         .from("investments")
-        .insert([{ amount, project_id, user_id: session.session.user.id }])
+        .insert({ 
+          amount, 
+          project_id, 
+          user_id: session.session.user.id,
+          // Adding necessary fields to match the Investment type
+          duration: 12, // Default duration in months
+          yield_rate: 5.0 // Default yield rate
+        })
         .select()
         .single();
 
       if (error) {
-        console.error("Erreur lors de l'investissement:", error);
-        throw new Error("Impossible de confirmer l'investissement.");
+        console.error("Error during investment:", error);
+        throw new Error("Unable to confirm investment.");
       }
 
       return data as Investment;
     },
     onSuccess: (data) => {
-      toast.success("Investissement confirmé avec succès !");
+      toast.success("Investment confirmed successfully!");
       queryClient.invalidateQueries({ queryKey: ["investments"] });
       navigate("/dashboard");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Une erreur est survenue lors de la confirmation de l'investissement.");
+      toast.error(error.message || "An error occurred while confirming the investment.");
     },
   });
 
@@ -62,18 +69,15 @@ export function useInvestment() {
   };
 
   const handleLogout = (event: React.MouseEvent) => {
-		event.preventDefault();
-		
+    event.preventDefault();
+    
     // Remove the user from local storage
     localStorage.removeItem("user");
-
-    // Update the user context to null
-    setUser(null);
 
     // Redirect to the home page
     navigate("/");
 
-    toast.success("Déconnexion réussie!");
+    toast.success("Logout successful!");
   };
 
   return {
@@ -82,9 +86,9 @@ export function useInvestment() {
     handleConfirm,
     handleCancel,
     confirmInvestment: confirmInvestmentMutation.mutate,
-    isLoading: confirmInvestmentMutation.isLoading,
+    isLoading: confirmInvestmentMutation.isPending, // Fixed property name
     isError: confirmInvestmentMutation.isError,
     error: confirmInvestmentMutation.error,
-		handleLogout
+    handleLogout
   };
 }
