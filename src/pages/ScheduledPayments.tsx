@@ -290,6 +290,11 @@ const ScheduledPaymentsPage = () => {
                         <span>Projets</span>
                       </Link>
                     </NavigationMenuLink>
+                    <NavigationMenuLink asChild>
+                      <Link to="/scheduled-payments" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
+                        <span>Paiements Programmés</span>
+                      </Link>
+                    </NavigationMenuLink>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
