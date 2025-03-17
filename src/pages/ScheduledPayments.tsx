@@ -62,7 +62,7 @@ const ScheduledPaymentsPage = () => {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [availableProjects, setAvailableProjects] = useState([]);
-
+  
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -81,7 +81,7 @@ const ScheduledPaymentsPage = () => {
     
     fetchProjects();
   }, []);
-
+  
   const form = useForm({
     defaultValues: {
       project_id: '',
@@ -91,7 +91,7 @@ const ScheduledPaymentsPage = () => {
       total_scheduled_amount: 0
     }
   });
-
+  
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return '—';
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -181,7 +181,7 @@ const ScheduledPaymentsPage = () => {
       direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
-
+  
   const handleEditPayment = (payment) => {
     setEditingPayment(payment);
     form.reset({
@@ -193,7 +193,7 @@ const ScheduledPaymentsPage = () => {
     });
     setIsAddPaymentOpen(true);
   };
-
+  
   const handleAddPayment = () => {
     setEditingPayment(null);
     form.reset({
@@ -205,7 +205,7 @@ const ScheduledPaymentsPage = () => {
     });
     setIsAddPaymentOpen(true);
   };
-
+  
   const onSubmit = async (data) => {
     try {
       if (editingPayment) {
@@ -230,7 +230,7 @@ const ScheduledPaymentsPage = () => {
       toast.error(`Erreur: ${err.message || 'Une erreur est survenue'}`);
     }
   };
-
+  
   const handleChangeStatus = async (paymentId, newStatus) => {
     try {
       await updatePaymentStatus(paymentId, newStatus);

@@ -12,7 +12,6 @@ interface SidebarNavItemProps {
   setActiveTab: (tab: string) => void;
   expanded: boolean;
   labelPosition?: "right" | "tooltip";
-  externalLink?: string;
 }
 
 export default function SidebarNavItem({
@@ -22,20 +21,13 @@ export default function SidebarNavItem({
   activeTab,
   setActiveTab,
   expanded,
-  labelPosition = "right",
-  externalLink
+  labelPosition = "right"
 }: SidebarNavItemProps) {
   const navigate = useNavigate();
   
   const handleClick = () => {
     console.log(`SidebarNavItem clicked: ${value}`);
     setActiveTab(value);
-    
-    // If it's an external link, navigate there directly
-    if (externalLink) {
-      navigate(externalLink);
-      return;
-    }
     
     // Update URL with query parameter for direct access
     if (value === 'overview') {
