@@ -19,6 +19,9 @@ export default function BankTransferManagement() {
     handleManualRefresh 
   } = useBankTransferData();
 
+  console.log("Bank Transfer Management - Transfers loaded:", pendingTransfers?.length);
+  console.log("Bank Transfer Data:", pendingTransfers);
+
   return (
     <>
       <Helmet>
@@ -67,6 +70,16 @@ export default function BankTransferManagement() {
             </CardContent>
           </Card>
         </div>
+        
+        {/* Debugging information - Can be removed in production */}
+        {pendingTransfers && pendingTransfers.length > 0 && (
+          <div className="mt-8 p-4 bg-gray-50 rounded-md border border-gray-200">
+            <h3 className="text-sm font-semibold mb-2">Données de débogage ({pendingTransfers.length} virements)</h3>
+            <pre className="text-xs overflow-auto max-h-40 p-2 bg-white rounded border border-gray-200">
+              {JSON.stringify(pendingTransfers, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
     </>
   );

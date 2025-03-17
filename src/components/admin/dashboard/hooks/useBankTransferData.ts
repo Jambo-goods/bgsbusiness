@@ -14,6 +14,76 @@ export function useBankTransferData() {
       try {
         console.log("Fetching bank transfers with status filter:", statusFilter);
         
+        // First approach: check if bank_transfers table exists and fetch from it
+        let { data: bankTransfersData, error: bankTransfersError } = await supabase
+          .from("bank_transfers")
+          .select("*")
+          .order("confirmed_at", { ascending: false });
+        
+        if (bankTransfersData && bankTransfersData.length > 0) {
+          console.log("Using bank_transfers table:", bankTransfersData);
+          
+          // Fetch user profiles in a single batch to reduce number of queries
+          if (bankTransfersData.length === 0) {
+            return [];
+          }
+          
+          // Extract unique user IDs
+          const userIds = [...new Set(bankTransfersData.map(transfer => transfer.user_id))];
+          
+          // Fetch all profiles in one query
+          const { data: profilesData, error: profilesError } = await supabase
+            .from("profiles")
+            .select("id, first_name, last_name, email")
+            .in("id", userIds);
+            
+          if (profilesError) {
+            console.error("Erreur lors de la récupération des profils:", profilesError);
+            toast.error("Impossible de récupérer les données des utilisateurs");
+          }
+          
+          // Create a map of user profiles for quick lookup
+          const profilesMap = (profilesData || []).reduce((map, profile) => {
+            map[profile.id] = profile;
+            return map;
+          }, {} as Record<string, any>);
+          
+          // Map bank transfers to expected format
+          const formattedTransfers = bankTransfersData.map(transfer => {
+            const profile = profilesMap[transfer.user_id] || {
+              first_name: "Utilisateur",
+              last_name: "Inconnu",
+              email: null
+            };
+            
+            // Apply status filter if not "all"
+            if (statusFilter !== "all") {
+              if (transfer.status !== statusFilter) {
+                return null;
+              }
+            }
+            
+            return {
+              id: transfer.id,
+              created_at: transfer.confirmed_at,
+              user_id: transfer.user_id,
+              amount: transfer.amount || 0,
+              description: `Virement bancaire (réf: ${transfer.reference})`,
+              status: transfer.status || "pending",
+              receipt_confirmed: transfer.processed || false,
+              profile: {
+                first_name: profile.first_name,
+                last_name: profile.last_name,
+                email: profile.email
+              }
+            };
+          }).filter(item => item !== null) as BankTransferItem[];
+          
+          console.log("Formatted bank transfers:", formattedTransfers);
+          return formattedTransfers;
+        }
+        
+        // Fallback: Use wallet_transactions table (existing code)
         // Build the query for fetching bank transfers
         let query = supabase
           .from("wallet_transactions")

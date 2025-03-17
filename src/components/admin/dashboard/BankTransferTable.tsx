@@ -17,6 +17,8 @@ export default function BankTransferTable({
     handleConfirmReceipt
   } = useBankTransfers(refreshData);
 
+  console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers.length);
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-48">
