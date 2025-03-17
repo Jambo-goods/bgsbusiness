@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/sonner';
 import { logAdminAction } from '@/services/adminAuthService';
 import { validateProjectForm, FormDataType } from '@/components/admin/projects/ProjectFormValidator';
 
@@ -91,7 +91,7 @@ export const useProjectManagement = (adminUserId?: string) => {
   const handleSubmitProject = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!adminUserId) return;
+    console.log("Handling submit project");
     
     // Validate the form
     if (!validateForm()) {
@@ -131,14 +131,16 @@ export const useProjectManagement = (adminUserId?: string) => {
         }
         result = data?.[0];
         
-        // Log admin action
-        await logAdminAction(
-          adminUserId,
-          'project_management',
-          `Modification du projet "${formData.name}"`,
-          undefined,
-          editingProject.id
-        );
+        // Log admin action if adminUserId is provided
+        if (adminUserId) {
+          await logAdminAction(
+            adminUserId,
+            'project_management',
+            `Modification du projet "${formData.name}"`,
+            undefined,
+            editingProject.id
+          );
+        }
         
         toast.success(`Le projet ${formData.name} a été mis à jour`);
       } else {
@@ -154,14 +156,16 @@ export const useProjectManagement = (adminUserId?: string) => {
         }
         result = data?.[0];
         
-        // Log admin action
-        await logAdminAction(
-          adminUserId,
-          'project_management',
-          `Création du projet "${formData.name}"`,
-          undefined,
-          result?.id
-        );
+        // Log admin action if adminUserId is provided
+        if (adminUserId) {
+          await logAdminAction(
+            adminUserId,
+            'project_management',
+            `Création du projet "${formData.name}"`,
+            undefined,
+            result?.id
+          );
+        }
         
         toast.success(`Le projet ${formData.name} a été créé`);
       }
