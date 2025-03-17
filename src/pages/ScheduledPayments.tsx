@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Table, 
   TableBody, 
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Toaster } from 'sonner';
-import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown } from 'lucide-react';
+import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -30,14 +31,69 @@ import {
   NavigationMenuList,
   NavigationMenuTrigger,
 } from '@/components/ui/navigation-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormDescription,
+  FormMessage
+} from '@/components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const ScheduledPaymentsPage = () => {
-  const { scheduledPayments, isLoading, error } = useScheduledPayments();
+  const { scheduledPayments, isLoading, error, addScheduledPayment, updatePaymentStatus } = useScheduledPayments();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState({ key: 'payment_date', direction: 'desc' });
   const [filteredPayments, setFilteredPayments] = useState([]);
+  const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState(null);
+  const [availableProjects, setAvailableProjects] = useState([]);
+  
+  // Fetch available projects for the dropdown
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, name, company_name')
+          .order('name');
+          
+        if (error) throw error;
+        setAvailableProjects(data || []);
+      } catch (err) {
+        console.error('Error fetching projects:', err);
+        toast.error('Erreur lors du chargement des projets');
+      }
+    };
+    
+    fetchProjects();
+  }, []);
+  
+  // Form setup
+  const form = useForm({
+    defaultValues: {
+      project_id: '',
+      payment_date: new Date().toISOString().split('T')[0],
+      status: 'scheduled',
+      percentage: 0,
+      total_scheduled_amount: 0
+    }
+  });
   
   // Format currency
   const formatCurrency = (amount: number | null) => {
@@ -136,6 +192,68 @@ const ScheduledPaymentsPage = () => {
       direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
     }));
   };
+  
+  // Handle edit payment
+  const handleEditPayment = (payment) => {
+    setEditingPayment(payment);
+    form.reset({
+      project_id: payment.project_id,
+      payment_date: payment.payment_date,
+      status: payment.status,
+      percentage: payment.percentage || 0,
+      total_scheduled_amount: payment.total_scheduled_amount || 0
+    });
+    setIsAddPaymentOpen(true);
+  };
+  
+  // Handle add new payment
+  const handleAddPayment = () => {
+    setEditingPayment(null);
+    form.reset({
+      project_id: '',
+      payment_date: new Date().toISOString().split('T')[0],
+      status: 'scheduled',
+      percentage: 0,
+      total_scheduled_amount: 0
+    });
+    setIsAddPaymentOpen(true);
+  };
+  
+  // Handle form submission
+  const onSubmit = async (data) => {
+    try {
+      if (editingPayment) {
+        // Update existing payment
+        await updatePaymentStatus(editingPayment.id, data.status);
+        toast.success('Paiement mis à jour avec succès');
+      } else {
+        // Create new payment
+        await addScheduledPayment({
+          project_id: data.project_id,
+          payment_date: data.payment_date,
+          status: data.status,
+          percentage: parseFloat(data.percentage) || 0,
+          total_scheduled_amount: parseFloat(data.total_scheduled_amount) || 0
+        });
+        toast.success('Paiement programmé avec succès');
+      }
+      setIsAddPaymentOpen(false);
+    } catch (err) {
+      console.error('Error saving payment:', err);
+      toast.error(`Erreur: ${err.message || 'Une erreur est survenue'}`);
+    }
+  };
+  
+  // Handle change payment status
+  const handleChangeStatus = async (paymentId, newStatus) => {
+    try {
+      await updatePaymentStatus(paymentId, newStatus);
+      toast.success(`Statut mis à jour: ${getStatusLabel(newStatus)}`);
+    } catch (err) {
+      console.error('Error updating status:', err);
+      toast.error(`Erreur: ${err.message || 'Une erreur est survenue'}`);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -205,6 +323,15 @@ const ScheduledPaymentsPage = () => {
           <h1 className="text-2xl font-bold">Paiements Programmés</h1>
           
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+            {/* Add Payment Button */}
+            <Button 
+              onClick={handleAddPayment}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter un paiement
+            </Button>
+            
             {/* Search Box */}
             <div className="relative w-full md:w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
@@ -283,12 +410,13 @@ const ScheduledPaymentsPage = () => {
                   <TableHead>Pourcentage</TableHead>
                   <TableHead>Nombre d'investisseurs</TableHead>
                   <TableHead>Statut</TableHead>
+                  <TableHead className="w-24">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPayments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4 text-gray-500">
+                    <TableCell colSpan={7} className="text-center py-4 text-gray-500">
                       Aucun paiement programmé trouvé
                     </TableCell>
                   </TableRow>
@@ -337,6 +465,50 @@ const ScheduledPaymentsPage = () => {
                           </span>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleEditPayment(payment)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            <span className="sr-only">Modifier</span>
+                          </Button>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8">
+                                Statut <ChevronDown className="h-3 w-3 ml-1" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleChangeStatus(payment.id, 'pending')}
+                                className={payment.status === 'pending' ? 'bg-orange-50' : ''}
+                              >
+                                <Clock className="h-4 w-4 mr-2 text-orange-500" />
+                                En attente
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleChangeStatus(payment.id, 'scheduled')}
+                                className={payment.status === 'scheduled' ? 'bg-blue-50' : ''}
+                              >
+                                <AlertCircle className="h-4 w-4 mr-2 text-blue-500" />
+                                Programmé
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleChangeStatus(payment.id, 'paid')}
+                                className={payment.status === 'paid' ? 'bg-green-50' : ''}
+                              >
+                                <Check className="h-4 w-4 mr-2 text-green-500" />
+                                Payé
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -345,6 +517,118 @@ const ScheduledPaymentsPage = () => {
           </div>
         </div>
       </div>
+      
+      {/* Add/Edit Payment Dialog */}
+      <Dialog open={isAddPaymentOpen} onOpenChange={setIsAddPaymentOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingPayment ? 'Modifier le paiement' : 'Ajouter un paiement programmé'}</DialogTitle>
+            <DialogDescription>
+              {editingPayment 
+                ? 'Modifiez les détails du paiement programmé.' 
+                : 'Remplissez les informations pour programmer un nouveau paiement.'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-1 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="project_id" className="text-sm font-medium">Projet</label>
+                  <select
+                    id="project_id"
+                    className="w-full p-2 border rounded"
+                    {...form.register('project_id', { required: 'Le projet est requis' })}
+                    disabled={!!editingPayment}
+                  >
+                    <option value="">Sélectionner un projet</option>
+                    {availableProjects.map(project => (
+                      <option key={project.id} value={project.id}>
+                        {project.name} ({project.company_name})
+                      </option>
+                    ))}
+                  </select>
+                  {form.formState.errors.project_id && (
+                    <p className="text-sm text-red-500">{form.formState.errors.project_id.message}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="payment_date" className="text-sm font-medium">Date de paiement</label>
+                  <input
+                    id="payment_date"
+                    type="date"
+                    className="w-full p-2 border rounded"
+                    {...form.register('payment_date', { required: 'La date est requise' })}
+                  />
+                  {form.formState.errors.payment_date && (
+                    <p className="text-sm text-red-500">{form.formState.errors.payment_date.message}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="percentage" className="text-sm font-medium">Pourcentage (%)</label>
+                  <input
+                    id="percentage"
+                    type="number"
+                    step="0.01"
+                    className="w-full p-2 border rounded"
+                    {...form.register('percentage', { 
+                      valueAsNumber: true,
+                      min: { value: 0, message: 'Le pourcentage doit être positif' }
+                    })}
+                  />
+                  {form.formState.errors.percentage && (
+                    <p className="text-sm text-red-500">{form.formState.errors.percentage.message}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="total_scheduled_amount" className="text-sm font-medium">Montant total (€)</label>
+                  <input
+                    id="total_scheduled_amount"
+                    type="number"
+                    step="0.01"
+                    className="w-full p-2 border rounded"
+                    {...form.register('total_scheduled_amount', { 
+                      valueAsNumber: true,
+                      min: { value: 0, message: 'Le montant doit être positif' }
+                    })}
+                  />
+                  {form.formState.errors.total_scheduled_amount && (
+                    <p className="text-sm text-red-500">{form.formState.errors.total_scheduled_amount.message}</p>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="status" className="text-sm font-medium">Statut</label>
+                  <select
+                    id="status"
+                    className="w-full p-2 border rounded"
+                    {...form.register('status', { required: 'Le statut est requis' })}
+                  >
+                    <option value="scheduled">Programmé</option>
+                    <option value="pending">En attente</option>
+                    <option value="paid">Payé</option>
+                  </select>
+                  {form.formState.errors.status && (
+                    <p className="text-sm text-red-500">{form.formState.errors.status.message}</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <DialogFooter className="flex justify-end gap-2">
+              <DialogClose asChild>
+                <Button type="button" variant="outline">Annuler</Button>
+              </DialogClose>
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                {editingPayment ? 'Mettre à jour' : 'Ajouter'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
