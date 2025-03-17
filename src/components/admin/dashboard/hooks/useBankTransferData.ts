@@ -100,7 +100,7 @@ export function useBankTransferData() {
         
         // Formater les virements bancaires
         let formattedTransfers = (bankTransfersData || []).map(transfer => {
-          // Safely access profile data in case the relation wasn't found
+          // FIX: Safely handle the profiles relation
           const profileData: ProfileData = transfer.profiles || {};
           
           return {
@@ -127,7 +127,7 @@ export function useBankTransferData() {
         // Formater les transactions de portefeuille
         if (walletTransactions && walletTransactions.length > 0) {
           const walletTransfers = walletTransactions.map(tx => {
-            // Safely access profile data in case the relation wasn't found
+            // FIX: Safely handle the profiles relation
             const profileData: ProfileData = tx.profiles || {};
             
             return {

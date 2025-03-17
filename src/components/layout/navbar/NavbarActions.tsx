@@ -1,177 +1,84 @@
-
-import { useState, useEffect } from "react";
-import { Bell, Wallet, Home } from "lucide-react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import UserMenuDropdown from "./UserMenuDropdown";
-import DashboardMenuDropdown from "./DashboardMenuDropdown";
-import NotificationDropdown from "./NotificationDropdown";
+import { Button } from "@/components/ui/button";
+import { Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { notificationService } from "@/services/notifications";
+import { toast } from "sonner";
+import UserMenuDropdown from "./UserMenuDropdown";
+import NotificationDropdown from "./NotificationDropdown";
 
-interface NavbarActionsProps {
-  isActive: (path: string) => boolean;
-}
-
-export default function NavbarActions({
-  isActive
-}: NavbarActionsProps) {
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
+export default function NavbarActions() {
+  const { pathname } = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const location = useLocation();
   const navigate = useNavigate();
-
+  
   useEffect(() => {
     const checkAuth = async () => {
-      setIsLoading(true);
-      try {
-        const {
-          data
-        } = await supabase.auth.getSession();
-        const hasSession = !!data.session;
-        setIsAuthenticated(hasSession);
-        
-        if (hasSession) {
-          try {
-            const { data: profileData, error } = await supabase
-              .from('profiles')
-              .select('wallet_balance')
-              .eq('id', data.session.user.id)
-              .maybeSingle();
-              
-            if (!error && profileData) {
-              setWalletBalance(profileData.wallet_balance || 0);
-            } else {
-              console.error("Error fetching wallet balance:", error);
-              setWalletBalance(0);
-            }
-          } catch (err) {
-            console.error("Failed to fetch wallet balance:", err);
-            setWalletBalance(0);
-          }
-        }
-      } catch (error) {
-        console.error("Error checking authentication:", error);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+      
+      if (session) {
+        // Check if user is admin
+        const { data } = await supabase.auth.getUser();
+        const userRole = data.user?.app_metadata?.role;
+        setIsAdmin(userRole === 'admin');
       }
     };
     
     checkAuth();
-
-    const authCheckInterval = setInterval(checkAuth, 60000);
-    return () => {
-      clearInterval(authCheckInterval);
-    };
-  }, [location.pathname]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchUnreadCount();
-      
-      const notificationCheckInterval = setInterval(fetchUnreadCount, 30000);
-      return () => {
-        clearInterval(notificationCheckInterval);
-      };
-    }
-  }, [isAuthenticated]);
-
-  const fetchUnreadCount = async () => {
+  }, []);
+  
+  const handleSignOut = async () => {
     try {
-      const count = await notificationService.getUnreadCount();
-      setUnreadNotificationCount(count);
+      await supabase.auth.signOut();
+      
+      // Show confirmation toast
+      toast.success("Déconnexion réussie");
+      
+      // Redirect to home page
+      navigate("/");
     } catch (error) {
-      console.error("Error fetching unread count:", error);
+      console.error("Erreur lors de la déconnexion:", error);
+      toast.error("Une erreur est survenue lors de la déconnexion");
     }
   };
-
-  useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (isNotificationOpen || isUserMenuOpen || isDashboardMenuOpen) {
-        const target = event.target as HTMLElement;
-        if (!target.closest('.notification-dropdown') && !target.closest('.user-dropdown') && !target.closest('.dashboard-menu-dropdown')) {
-          setIsNotificationOpen(false);
-          setIsUserMenuOpen(false);
-          setIsDashboardMenuOpen(false);
-        }
-      }
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
-
-  const handleCloseNotifications = () => {
-    setIsNotificationOpen(false);
-  };
-
-  const handleWalletClick = () => {
-    console.log("Wallet button clicked, navigating to wallet tab");
-    if (location.pathname.includes('/dashboard')) {
-      // Already on dashboard, just update the search params
-      const searchParams = new URLSearchParams(location.search);
-      searchParams.set('tab', 'wallet');
-      navigate({
-        pathname: '/dashboard',
-        search: searchParams.toString()
-      }, { replace: true });
-    } else {
-      // Not on dashboard, navigate to dashboard with wallet tab
-      navigate('/dashboard?tab=wallet');
-    }
-  };
-
-  const isDashboardPage = location.pathname.includes('/dashboard');
-
-  if (isLoading) {
-    return null;
-  }
-
-  if (isDashboardPage) {
+  
+  // Return to admin dashboard button
+  const renderAdminButton = () => {
+    if (!isAdmin || pathname.includes('/admin')) return null;
+    
     return (
-      <div className="flex items-center space-x-2">
-        <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-          <Home className="h-5 w-5 text-bgs-blue" />
+      <Button 
+        variant="outline" 
+        className="hidden md:flex items-center gap-2"
+        onClick={() => navigate('/admin/dashboard')}
+      >
+        <Shield className="h-4 w-4" />
+        <span>Admin</span>
+      </Button>
+    );
+  };
+  
+  // Show login button if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center gap-4">
+        <Link to="/login" className="text-gray-600 hover:text-gray-900">
+          Connexion
         </Link>
-        
-        <button 
-          onClick={handleWalletClick}
-          className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1"
-          aria-label="Voir le portefeuille"
-          title="Voir le portefeuille"
-        >
-          <Wallet className="h-5 w-5 text-bgs-blue" />
-          {walletBalance !== null && (
-            <span className="text-xs font-medium text-bgs-blue">
-              {walletBalance.toLocaleString('fr-FR')}€
-            </span>
-          )}
-        </button>
-
-        <div className="relative notification-dropdown">
-          <button onClick={() => {
-            setIsNotificationOpen(!isNotificationOpen);
-            if (isUserMenuOpen) setIsUserMenuOpen(false);
-            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-          }} className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
-            <Bell className="h-5 w-5 text-bgs-blue" />
-            {unreadNotificationCount > 0 && (
-              <span className="absolute top-1 right-1 h-2 w-2 bg-bgs-orange rounded-full"></span>
-            )}
-          </button>
-          
-          <NotificationDropdown 
-            isOpen={isNotificationOpen} 
-            onClose={handleCloseNotifications}
-          />
-        </div>
+        <Button asChild>
+          <Link to="/register">S'inscrire</Link>
+        </Button>
       </div>
     );
   }
 
-  return null;
+  return (
+    <div className="flex items-center gap-3">
+      {renderAdminButton()}
+      <NotificationDropdown />
+      <UserMenuDropdown onSignOut={handleSignOut} />
+    </div>
+  );
 }

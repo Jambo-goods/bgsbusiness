@@ -1,212 +1,185 @@
 
-import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { 
-  Bell, 
-  Check, 
-  Wallet, 
-  Briefcase, 
-  Shield, 
-  Megaphone, 
-  CheckCircle, 
-  AlertTriangle, 
-  Info, 
-  XCircle
-} from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Bell } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { notificationService, Notification, NotificationType } from "@/services/notifications";
+import { Notification } from "@/services/notifications";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
-interface NotificationDropdownProps {
-  isOpen: boolean;
-  onClose?: () => void;
-}
-
-export default function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
+export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchNotifications();
-    }
-    
-    // Add real-time notification listener to improve notification visibility
-    const notificationChannel = supabase
-      .channel('real-time-notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications'
-      }, (payload) => {
-        console.log("New notification detected, refreshing list:", payload);
-        fetchNotifications();
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'notifications'
-      }, (payload) => {
-        console.log("Notification updated, refreshing list:", payload);
-        fetchNotifications();
-      })
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(notificationChannel);
-    };
-  }, [isOpen]);
-
   const fetchNotifications = async () => {
-    setIsLoading(true);
     try {
-      console.log("Fetching latest notifications");
-      const data = await notificationService.getNotifications(5);
-      console.log("Latest notifications fetched:", data);
-      setNotifications(data);
+      setIsLoading(true);
+      
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // Récupérer les 5 dernières notifications
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+        
+      if (error) {
+        console.error("Erreur lors de la récupération des notifications:", error);
+        return;
+      }
+
+      // Format notifications for compatibility with the interface
+      const formattedNotifications = data.map(notification => ({
+        ...notification,
+        // For compatibility with old code
+        read: notification.seen,
+        description: notification.message,
+        date: notification.created_at
+      })) as Notification[];
+      
+      setNotifications(formattedNotifications);
+      
+      // Compter les notifications non lues
+      const { count, error: countError } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', session.session.user.id)
+        .eq('seen', false);
+        
+      if (!countError && count !== null) {
+        setUnreadCount(count);
+      }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      console.error("Erreur:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleMarkAsRead = async (id: string) => {
-    await notificationService.markAsRead(id);
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
+  const markAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('id', id);
+        
+      if (error) {
+        console.error("Erreur lors du marquage comme lu:", error);
+        return;
+      }
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notif => 
+          notif.id === id ? { ...notif, seen: true, read: true } : notif
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Erreur:", error);
+    }
   };
 
-  const handleMarkAllAsRead = async () => {
-    await notificationService.markAllAsRead();
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
-  };
-
-  const handleViewAllClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (onClose) onClose();
+  const handleViewAll = () => {
     navigate("/dashboard?tab=notifications");
   };
 
-  const getTypeIcon = (type: NotificationType) => {
-    switch (type) {
-      case 'deposit':
-      case 'withdrawal':
-        return <Wallet className="h-4 w-4 text-blue-500" />;
-      case 'investment':
-        return <Briefcase className="h-4 w-4 text-green-500" />;
-      case 'security':
-        return <Shield className="h-4 w-4 text-purple-500" />;
-      case 'marketing':
-        return <Megaphone className="h-4 w-4 text-orange-500" />;
-      default:
-        return <Bell className="h-4 w-4 text-gray-500" />;
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Set up realtime subscription for new notifications
+    const channel = supabase
+      .channel('notifications_dropdown')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications'
+      }, () => {
+        fetchNotifications();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Format the date
+  const formatNotificationDate = (dateStr: string) => {
+    try {
+      return formatDistanceToNow(new Date(dateStr), { addSuffix: true, locale: fr });
+    } catch (e) {
+      return "récemment";
     }
   };
 
-  const getCategoryIcon = (category?: string) => {
-    switch (category) {
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'info':
-      default:
-        return <Info className="h-4 w-4 text-blue-500" />;
-    }
-  };
-
-  const formatDate = (date: Date) => {
-    return formatDistanceToNow(date, {
-      addSuffix: true,
-      locale: fr
-    });
-  };
-
-  if (!isOpen) return null;
-  
-  const unreadCount = notifications.filter(n => !n.read).length;
-  
   return (
-    <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-lg z-50 p-4 border border-gray-100 animate-fade-in">
-      <div className="flex justify-between items-center mb-3">
-        <h3 className="font-medium text-bgs-blue">Notifications</h3>
-        {unreadCount > 0 && (
-          <span className="text-xs bg-bgs-orange/10 text-bgs-orange px-2 py-0.5 rounded-full font-medium">
-            {unreadCount} {unreadCount === 1 ? 'nouvelle' : 'nouvelles'}
-          </span>
-        )}
-      </div>
-      
-      {unreadCount > 0 && (
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full mb-2 text-xs"
-          onClick={handleMarkAllAsRead}
-        >
-          <Check className="h-3 w-3 mr-1" /> Tout marquer comme lu
-        </Button>
-      )}
-      
-      <Separator className="my-2" />
-      
-      <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button className="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
+          <Bell className="h-5 w-5 text-gray-600" />
+          {unreadCount > 0 && (
+            <span className="absolute top-0 right-0 bg-bgs-blue text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-80 p-0">
+        <div className="p-3 border-b border-gray-100">
+          <h3 className="font-semibold">Notifications</h3>
+        </div>
+        
         {isLoading ? (
-          <div className="py-8 text-center text-sm text-gray-500">
-            Chargement...
+          <div className="flex justify-center p-4">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-bgs-blue"></div>
           </div>
         ) : notifications.length === 0 ? (
-          <div className="py-8 text-center text-sm text-gray-500">
-            Aucune notification
+          <div className="p-4 text-center text-gray-500">
+            <p>Aucune notification</p>
           </div>
         ) : (
-          notifications.map((notification) => (
-            <div 
-              key={notification.id} 
-              className={`py-3 hover:bg-gray-50 cursor-pointer rounded-md px-3 transition-colors ${notification.read ? '' : 'bg-blue-50'}`}
-              onClick={() => !notification.read && handleMarkAsRead(notification.id)}
-            >
-              <div className="flex items-start gap-2">
-                <div className="mt-0.5">
-                  {getTypeIcon(notification.type)}
+          <div className="max-h-96 overflow-auto divide-y divide-gray-100">
+            {notifications.map((notification) => (
+              <div 
+                key={notification.id} 
+                className={`p-3 hover:bg-gray-50 cursor-pointer ${!notification.seen ? 'bg-blue-50' : ''}`}
+                onClick={() => markAsRead(notification.id)}
+              >
+                <div className="flex justify-between items-start">
+                  <h4 className="font-medium text-sm">{notification.title}</h4>
+                  <span className="text-xs text-gray-500">
+                    {formatNotificationDate(notification.created_at)}
+                  </span>
                 </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <p className={`text-sm font-medium ${notification.read ? 'text-gray-900' : 'text-blue-800'}`}>
-                      {notification.title}
-                    </p>
-                    <span className="text-xs text-gray-500 ml-2 whitespace-nowrap">
-                      {formatDate(notification.date)}
-                    </span>
-                  </div>
-                  <p className={`text-xs mt-0.5 ${notification.read ? 'text-gray-500' : 'text-blue-700'}`}>
-                    {notification.description}
-                  </p>
-                </div>
+                <p className="text-sm text-gray-600 mt-1">{notification.message}</p>
               </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
-      </div>
-      
-      <button 
-        onClick={handleViewAllClick}
-        className="block w-full text-center text-sm text-bgs-blue hover:text-bgs-blue-dark mt-3 font-medium transition-colors"
-      >
-        Voir toutes les notifications
-      </button>
-    </div>
+        
+        <div className="p-2 border-t border-gray-100 text-center">
+          <button 
+            onClick={handleViewAll}
+            className="text-sm text-bgs-blue hover:text-bgs-blue-dark w-full py-1 hover:bg-gray-50 rounded"
+          >
+            Voir toutes les notifications
+          </button>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

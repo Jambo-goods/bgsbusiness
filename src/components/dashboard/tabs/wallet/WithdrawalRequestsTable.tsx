@@ -1,171 +1,163 @@
-
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import LoadingState from "./withdrawal-table/LoadingState";
-import EmptyState from "./withdrawal-table/EmptyState";
-import WithdrawalTableRow from "./withdrawal-table/WithdrawalTableRow";
+import React from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { WithdrawalRequest } from "@/types";
+import { formatDate, formatTime } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
+import { LoadingState, EmptyState } from "@/components/dashboard/tabs/wallet/withdrawal-table/RequestStates";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
 
-interface WithdrawalRequest {
-  id: string;
-  amount: number;
-  status: string;
-  requested_at: string;
-  processed_at: string | null;
-  bank_info: {
-    accountName: string;
-    bankName: string;
-    accountNumber: string;
-  } | Record<string, any>;
+interface WithdrawalRequestsTableProps {
+  withdrawalRequests: WithdrawalRequest[];
+  isLoading: boolean;
 }
 
-export default function WithdrawalRequestsTable() {
-  const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchWithdrawalRequests();
-
-    // Set up real-time listener for withdrawal_requests table
-    const withdrawalChannel = supabase
-      .channel('withdrawal_requests_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'withdrawal_requests'
-      }, (payload) => {
-        console.log('Withdrawal request change detected:', payload);
-        
-        // If a withdrawal status is changed, send appropriate notification
-        if (payload.eventType === 'UPDATE') {
-          const amount = payload.new.amount;
-          
-          // Check if status changed
-          if (payload.old.status !== payload.new.status) {
-            switch (payload.new.status) {
-              case 'scheduled':
-              case 'sheduled':
-                notificationService.withdrawalScheduled(amount);
-                toast.info(`Votre demande de retrait de ${amount}€ a été programmée`);
-                break;
-              case 'approved':
-                notificationService.withdrawalValidated(amount);
-                toast.success(`Votre demande de retrait de ${amount}€ a été validée`);
-                break;
-              case 'completed':
-                notificationService.withdrawalCompleted(amount);
-                toast.success(`Votre retrait de ${amount}€ a été effectué avec succès`);
-                break;
-              case 'rejected':
-                notificationService.withdrawalRejected(amount);
-                toast.error(`Votre demande de retrait de ${amount}€ a été refusée`);
-                break;
-              case 'received':
-                console.log("Withdrawal request received notification");
-                notificationService.withdrawalReceived(amount);
-                toast.info(`Votre demande de retrait de ${amount}€ a été reçue`, {
-                  description: "Elle est en cours d'examen."
-                });
-                break;
-              case 'confirmed':
-                // Handle confirmed status notification
-                console.log("Withdrawal confirmed notification");
-                notificationService.withdrawalConfirmed(amount)
-                  .then(() => {
-                    console.log(`Notification sent for confirmed withdrawal of ${amount}€`);
-                  })
-                  .catch(error => {
-                    console.error("Error sending confirmed withdrawal notification:", error);
-                  });
-                toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
-                  description: "Elle est en cours de traitement."
-                });
-                break;
-              case 'paid':
-                // Handle paid status notification
-                console.log("Withdrawal paid notification");
-                notificationService.withdrawalPaid(amount);
-                toast.success(`Votre retrait de ${amount}€ a été payé`, {
-                  description: "Le montant a été transféré sur votre compte bancaire."
-                });
-                break;
-            }
-          }
-        }
-        
-        // Refresh the withdrawal requests list
-        fetchWithdrawalRequests();
-      })
-      .subscribe();
-
-    // Cleanup function
-    return () => {
-      supabase.removeChannel(withdrawalChannel);
-    };
-  }, []);
-
-  const fetchWithdrawalRequests = async () => {
-    try {
-      setIsLoading(true);
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from('withdrawal_requests')
-        .select('*')
-        .eq('user_id', session.session.user.id)
-        .order('requested_at', { ascending: false });
-
-      if (error) throw error;
-      
-      // Transformation des données pour s'assurer que bank_info est correctement formaté
-      const formattedData = data.map(item => ({
-        ...item,
-        bank_info: typeof item.bank_info === 'object' ? item.bank_info : {}
-      }));
-      
-      setWithdrawalRequests(formattedData as WithdrawalRequest[]);
-    } catch (error) {
-      console.error("Erreur lors de la récupération des demandes de retrait:", error);
-    } finally {
-      setIsLoading(false);
-    }
+export default function WithdrawalRequestsTable({ withdrawalRequests, isLoading }: WithdrawalRequestsTableProps) {
+  const navigate = useNavigate();
+  
+  const handleNewWithdrawal = () => {
+    navigate("/dashboard?tab=wallet&action=withdraw");
   };
-
+  
   if (isLoading) {
     return <LoadingState />;
   }
-
-  if (withdrawalRequests.length === 0) {
-    return <EmptyState />;
+  
+  if (!withdrawalRequests || withdrawalRequests.length === 0) {
+    return (
+      <EmptyState onNewWithdrawal={handleNewWithdrawal} />
+    );
   }
+  
+  // Function to get CSS class based on status
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'text-amber-700 bg-amber-100';
+      case 'scheduled':
+        return 'text-blue-700 bg-blue-100';
+      case 'processing':
+        return 'text-purple-700 bg-purple-100';
+      case 'completed':
+        return 'text-green-700 bg-green-100';
+      case 'rejected':
+        return 'text-red-700 bg-red-100';
+      default:
+        return 'text-gray-700 bg-gray-100';
+    }
+  };
+  
+  // Function to get human-readable status label
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'En attente';
+      case 'scheduled':
+        return 'Planifié';
+      case 'processing':
+        return 'En traitement';
+      case 'completed':
+        return 'Complété';
+      case 'rejected':
+        return 'Rejeté';
+      default:
+        return status;
+    }
+  };
+  
+  // Function to determine if a withdrawal is cancelable
+  const isCancelable = (status: string) => {
+    return ['pending', 'scheduled'].includes(status);
+  };
+  
+  const cancelWithdrawal = async (id: string) => {
+    try {
+      // Update the withdrawal status to 'canceled'
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .update({ status: 'canceled' })
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Show success message
+      toast.success("Retrait annulé avec succès");
+      
+      // Create notification
+      notificationService.createNotification({
+        type: 'withdrawal',
+        title: 'Retrait annulé',
+        message: 'Votre demande de retrait a été annulée.'
+      });
+    } catch (error) {
+      console.error("Erreur lors de l'annulation du retrait:", error);
+      toast.error("Une erreur est survenue lors de l'annulation");
+    }
+  };
 
   return (
-    <div className="mt-6">
-      <h3 className="font-medium text-lg mb-4">Historique des demandes de retrait</h3>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Date</TableHead>
-              <TableHead>Montant</TableHead>
-              <TableHead>Banque</TableHead>
-              <TableHead>Compte</TableHead>
-              <TableHead>Statut</TableHead>
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Montant</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Date de traitement</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {withdrawalRequests.map((request) => (
+            <TableRow key={request.id}>
+              <TableCell>
+                <div className="font-medium">{formatDate(request.created_at)}</div>
+                <div className="text-sm text-muted-foreground">
+                  {formatTime(request.created_at)}
+                </div>
+              </TableCell>
+              <TableCell className="font-medium">
+                {request.amount} €
+              </TableCell>
+              <TableCell>
+                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(request.status)}`}>
+                  {getStatusLabel(request.status)}
+                </div>
+              </TableCell>
+              <TableCell>
+                {request.processed_at ? (
+                  <div>
+                    <div className="font-medium">{formatDate(request.processed_at)}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {formatTime(request.processed_at)}
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-gray-500">-</span>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                {isCancelable(request.status) ? (
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => cancelWithdrawal(request.id)}
+                    className="text-red-600 hover:text-red-800 hover:bg-red-100"
+                  >
+                    Annuler
+                  </Button>
+                ) : (
+                  <span className="text-sm text-gray-500">-</span>
+                )}
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {withdrawalRequests.map((request) => (
-              <WithdrawalTableRow key={request.id} request={request} />
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -31,7 +30,6 @@ export default function BankTransferInstructions() {
   };
 
   const handleTransferAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Ne garder que les chiffres
     const value = e.target.value.replace(/[^0-9]/g, "");
     setTransferAmount(value);
   };
@@ -45,7 +43,6 @@ export default function BankTransferInstructions() {
 
       setIsConfirming(true);
       
-      // Get current user session
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData.session?.user.id;
       const userEmail = sessionData.session?.user.email;
@@ -55,7 +52,6 @@ export default function BankTransferInstructions() {
         return;
       }
       
-      // Create a notification in the database
       await supabase.from('notifications').insert({
         user_id: userId,
         title: "Virement bancaire confirmé",
@@ -69,11 +65,8 @@ export default function BankTransferInstructions() {
         }
       });
       
-      // Send a notification using the notification service
-      // Fix: Use depositRequested directly from notificationService
       await notificationService.depositRequested(parseInt(transferAmount), bankDetails.reference);
       
-      // Enregistrer le virement bancaire dans la nouvelle table bank_transfers
       await supabase.from('bank_transfers').insert({
         user_id: userId,
         reference: bankDetails.reference,
@@ -82,7 +75,6 @@ export default function BankTransferInstructions() {
         notes: 'Confirmation de virement par l\'utilisateur'
       });
       
-      // Add a record to the wallet_transactions table
       await supabase.from('wallet_transactions').insert({
         user_id: userId,
         amount: parseInt(transferAmount),
@@ -91,7 +83,6 @@ export default function BankTransferInstructions() {
         description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
       });
       
-      // Fetch user profile data for email notification
       const { data: profileData } = await supabase
         .from('profiles')
         .select('first_name, last_name')
@@ -100,7 +91,6 @@ export default function BankTransferInstructions() {
       
       const userName = profileData ? `${profileData.first_name} ${profileData.last_name}` : "Utilisateur";
       
-      // Send email notification
       const { error: notificationError } = await supabase.functions.invoke('send-bank-transfer-notification', {
         body: {
           userName: userName,

@@ -2,8 +2,74 @@
 import { supabase } from "@/integrations/supabase/client";
 import { BankTransferItem } from "../types/bankTransfer";
 import { notificationService } from "@/services/notifications";
+import { toast } from "sonner";
 
 class BankTransferService {
+  // Vérifier si l'utilisateur est admin
+  async isAdmin(): Promise<boolean> {
+    try {
+      const { data } = await supabase.auth.getUser();
+      return data?.user?.app_metadata?.role === 'admin';
+    } catch (error) {
+      console.error("Erreur lors de la vérification du rôle admin:", error);
+      return false;
+    }
+  }
+
+  // Créer un virement bancaire de test (pour les développeurs)
+  async createTestBankTransfer(): Promise<boolean> {
+    try {
+      // Vérifier si l'utilisateur est admin
+      const isAdmin = await this.isAdmin();
+      if (!isAdmin) {
+        toast.error("Seuls les administrateurs peuvent créer des virements de test");
+        return false;
+      }
+
+      // Obtenir tous les utilisateurs
+      const { data: users, error: usersError } = await supabase
+        .from('profiles')
+        .select('id')
+        .limit(1);
+        
+      if (usersError || !users || users.length === 0) {
+        toast.error("Impossible de trouver des utilisateurs");
+        return false;
+      }
+      
+      const userId = users[0].id;
+      const amount = Math.floor(Math.random() * 1000) + 100;
+      const reference = `TEST-${Math.floor(100000 + Math.random() * 900000)}`;
+      
+      // Insérer un virement de test
+      const { error } = await supabase
+        .from('bank_transfers')
+        .insert({
+          user_id: userId,
+          amount: amount,
+          reference: reference,
+          status: 'pending',
+          confirmed_at: new Date().toISOString()
+        });
+        
+      if (error) {
+        console.error("Erreur lors de la création du virement de test:", error);
+        toast.error(`Erreur lors de la création du virement: ${error.message}`);
+        return false;
+      }
+      
+      toast.success("Virement de test créé avec succès", {
+        description: `Montant: ${amount}€, Référence: ${reference}`
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Erreur lors de la création du virement de test:", error);
+      toast.error("Une erreur est survenue");
+      return false;
+    }
+  }
+
   async confirmDeposit(item: BankTransferItem, amount: number): Promise<boolean> {
     try {
       const updates = {
