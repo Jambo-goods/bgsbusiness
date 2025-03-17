@@ -22,6 +22,7 @@ const ScheduledPayments = lazy(() => import("./pages/ScheduledPayments"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const WithdrawalRequestsPage = lazy(() => import("./pages/WithdrawalRequestsPage"));
 const BankTransfersPage = lazy(() => import("./pages/BankTransfersPage"));
+const ProfilesPage = lazy(() => import("./pages/ProfilesPage"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -62,6 +63,7 @@ const App = () => (
               <Route path="/scheduled-payments" element={<ScheduledPayments />} />
               <Route path="/withdrawal-requests" element={<WithdrawalRequestsPage />} />
               <Route path="/bank-transfers" element={<BankTransfersPage />} />
+              <Route path="/profiles" element={<ProfilesPage />} />
               
               {/* Admin routes */}
               <Route path="/admin/projects" element={<AdminProjects />} />
