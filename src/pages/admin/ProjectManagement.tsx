@@ -126,6 +126,17 @@ export default function ProjectManagement() {
       errors.profitability = 'Doit être un nombre';
     }
     
+    // Validate possible_durations format if provided
+    if (formData.possible_durations) {
+      const durationItems = formData.possible_durations.split(',').map(item => item.trim());
+      for (const item of durationItems) {
+        if (isNaN(Number(item))) {
+          errors.possible_durations = 'Doit être une liste de nombres séparés par des virgules';
+          break;
+        }
+      }
+    }
+    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -152,8 +163,10 @@ export default function ProjectManagement() {
         funding_progress: parseInt(formData.funding_progress) || 0,
         possible_durations: formData.possible_durations ? 
           formData.possible_durations.split(',').map(d => parseInt(d.trim())) : 
-          null
+          [] // Ensure it's always an array, empty if no values
       };
+      
+      console.log("Submitting project data:", projectData);
       
       let result;
       
@@ -165,7 +178,10 @@ export default function ProjectManagement() {
           .eq('id', editingProject.id)
           .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error updating project:", error);
+          throw error;
+        }
         result = data?.[0];
         
         // Log admin action
@@ -676,11 +692,13 @@ export default function ProjectManagement() {
                     <Input
                       id="possible_durations"
                       name="possible_durations"
-                      className="pl-10"
+                      className={`pl-10 ${formErrors.possible_durations ? 'border-red-500' : ''}`}
                       placeholder="ex: 12, 18, 24"
                       value={formData.possible_durations}
                       onChange={handleFormChange}
                     />
+                    {formErrors.possible_durations && <p className="text-red-500 text-xs mt-1">{formErrors.possible_durations}</p>}
+                    <p className="text-xs text-gray-500 mt-1">Entrez des nombres séparés par des virgules</p>
                   </div>
                 </div>
                 
