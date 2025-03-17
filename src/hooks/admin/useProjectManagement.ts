@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { logAdminAction } from '@/services/adminAuthService';
 import { validateProjectForm, FormDataType } from '@/components/admin/projects/ProjectFormValidator';
 
@@ -95,7 +94,7 @@ export const useProjectManagement = (adminUserId?: string) => {
     
     // Validate the form
     if (!validateForm()) {
-      toast.error("Veuillez corriger les erreurs du formulaire");
+      toast("Veuillez corriger les erreurs du formulaire");
       return;
     }
     
@@ -142,7 +141,7 @@ export const useProjectManagement = (adminUserId?: string) => {
           );
         }
         
-        toast.success(`Le projet ${formData.name} a été mis à jour`);
+        toast(`Le projet ${formData.name} a été mis à jour`);
       } else {
         // Create new project
         const { data, error } = await supabase
@@ -167,7 +166,7 @@ export const useProjectManagement = (adminUserId?: string) => {
           );
         }
         
-        toast.success(`Le projet ${formData.name} a été créé`);
+        toast(`Le projet ${formData.name} a été créé`);
       }
       
       // Reset form and close modal
@@ -178,7 +177,7 @@ export const useProjectManagement = (adminUserId?: string) => {
       
     } catch (error) {
       console.error("Erreur lors de la sauvegarde du projet:", error);
-      toast.error("Une erreur s'est produite lors de la sauvegarde du projet");
+      toast("Une erreur s'est produite lors de la sauvegarde du projet");
     }
   };
 
