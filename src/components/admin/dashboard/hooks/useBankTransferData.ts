@@ -26,6 +26,7 @@ export function useBankTransferData() {
         }
         
         console.log("Raw bank_transfers data:", bankTransfersData);
+        console.log("Number of transfers from bank_transfers:", bankTransfersData?.length || 0);
         
         // Extract unique user IDs
         const userIds = [...new Set((bankTransfersData || []).map(transfer => transfer.user_id))];
@@ -128,6 +129,7 @@ export function useBankTransferData() {
                 email: null
               };
               
+              // Make sure all required fields have values even if they are undefined
               return {
                 id: transfer.id,
                 created_at: transfer.created_at,
@@ -136,6 +138,10 @@ export function useBankTransferData() {
                 description: transfer.description || "Virement bancaire",
                 status: transfer.status || "pending",
                 receipt_confirmed: transfer.receipt_confirmed || false,
+                reference: "Auto-" + transfer.id.substring(0, 8),
+                processed: false,
+                processed_at: null,
+                notes: "",
                 profile: {
                   first_name: profile.first_name,
                   last_name: profile.last_name,
@@ -155,9 +161,17 @@ export function useBankTransferData() {
           }
         }
         
-        // Apply status filter if not "all"
+        // IMPORTANT: Log each transfer to see what we have before filtering
+        console.log("Before filtering - All formatted transfers:", formattedTransfers.length);
+        formattedTransfers.forEach((transfer, index) => {
+          console.log(`Transfer ${index + 1}:`, transfer.id, transfer.status, transfer.amount);
+        });
+        
+        // Apply status filter if not "all" - THIS MIGHT BE HIDING THE THIRD TRANSFER
         if (statusFilter !== "all") {
+          const beforeCount = formattedTransfers.length;
           formattedTransfers = formattedTransfers.filter(item => item.status === statusFilter);
+          console.log(`Status filtering: ${beforeCount} → ${formattedTransfers.length} transfers (filter: ${statusFilter})`);
         }
         
         console.log("All formatted transfers after filtering:", formattedTransfers.length);

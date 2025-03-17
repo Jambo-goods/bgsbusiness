@@ -40,9 +40,9 @@ export const useInvestmentSubscriptions = (
                 user_id: userId,
                 type: 'project_completed',
                 title: 'Projet terminé',
-                content: `Le projet ${projectData.name} est maintenant terminé.`,
+                message: `Le projet ${projectData.name} est maintenant terminé.`,
                 project_id: payload.new.project_id,
-                read: false
+                seen: false
               });
               console.log("Notification de projet terminé créée avec succès");
             }
@@ -97,10 +97,12 @@ export const useInvestmentSubscriptions = (
                   user_id: userId,
                   type: 'profit_received',
                   title: 'Profit reçu',
-                  content: `Vous avez reçu un profit de ${payload.new.amount}€ pour le projet ${projectName}.`,
-                  project_id: projectData.id,
-                  amount: payload.new.amount,
-                  read: false
+                  message: `Vous avez reçu un profit de ${payload.new.amount}€ pour le projet ${projectName}.`,
+                  data: {
+                    project_id: projectData.id,
+                    amount: payload.new.amount
+                  },
+                  seen: false
                 });
                 console.log("Notification de profit reçu créée avec succès");
               }

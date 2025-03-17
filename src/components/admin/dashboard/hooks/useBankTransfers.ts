@@ -18,7 +18,7 @@ export function useBankTransfers(refreshData: () => void) {
         .from("bank_transfers")
         .select("*")
         .eq("id", item.id)
-        .single();
+        .maybeSingle();
       
       if (bankTransfer) {
         // Update in the bank_transfers table
@@ -42,11 +42,17 @@ export function useBankTransfers(refreshData: () => void) {
         return true;
       } else {
         // Use the regular service
-        const success = await bankTransferService.confirmDeposit(item, amount);
-        if (success) {
-          refreshData();
+        try {
+          const success = await bankTransferService.confirmDeposit(item, amount);
+          if (success) {
+            refreshData();
+          }
+          return success;
+        } catch (error) {
+          console.error("Error in bankTransferService.confirmDeposit:", error);
+          toast.error("Erreur lors de la confirmation via le service");
+          return false;
         }
-        return success;
       }
     } catch (error) {
       console.error("Error confirming deposit:", error);
@@ -67,7 +73,7 @@ export function useBankTransfers(refreshData: () => void) {
         .from("bank_transfers")
         .select("*")
         .eq("id", item.id)
-        .single();
+        .maybeSingle();
       
       if (bankTransfer) {
         // Update in the bank_transfers table
@@ -92,11 +98,17 @@ export function useBankTransfers(refreshData: () => void) {
         return true;
       } else {
         // Use the regular service
-        const success = await bankTransferService.rejectDeposit(item);
-        if (success) {
-          refreshData();
+        try {
+          const success = await bankTransferService.rejectDeposit(item);
+          if (success) {
+            refreshData();
+          }
+          return success;
+        } catch (error) {
+          console.error("Error in bankTransferService.rejectDeposit:", error);
+          toast.error("Erreur lors du rejet via le service");
+          return false;
         }
-        return success;
       }
     } catch (error) {
       console.error("Error rejecting deposit:", error);
@@ -117,7 +129,7 @@ export function useBankTransfers(refreshData: () => void) {
         .from("bank_transfers")
         .select("*")
         .eq("id", item.id)
-        .single();
+        .maybeSingle();
       
       if (bankTransfer) {
         // Update in the bank_transfers table
@@ -141,11 +153,17 @@ export function useBankTransfers(refreshData: () => void) {
         return true;
       } else {
         // Use the regular service
-        const success = await bankTransferService.confirmReceipt(item);
-        if (success) {
-          refreshData();
+        try {
+          const success = await bankTransferService.confirmReceipt(item);
+          if (success) {
+            refreshData();
+          }
+          return success;
+        } catch (error) {
+          console.error("Error in bankTransferService.confirmReceipt:", error);
+          toast.error("Erreur lors de la confirmation via le service");
+          return false;
         }
-        return success;
       }
     } catch (error) {
       console.error("Error confirming receipt:", error);

@@ -77,9 +77,26 @@ export default function BankTransferManagement() {
           <div className="text-xs mb-2">
             <span className="font-semibold">IDs des virements:</span> {pendingTransfers?.map(t => t.id).join(', ')}
           </div>
-          <pre className="text-xs overflow-auto max-h-60 p-2 bg-white rounded border border-gray-200">
-            {JSON.stringify(pendingTransfers, null, 2)}
-          </pre>
+          <div className="text-xs mb-2">
+            <span className="font-semibold">Filtrage actuel:</span> {statusFilter}
+          </div>
+          <div className="space-y-2">
+            {pendingTransfers?.map((transfer, index) => (
+              <div key={transfer.id} className="p-2 bg-white rounded border border-gray-200">
+                <h4 className="font-semibold">Virement #{index + 1}: {transfer.id}</h4>
+                <p>Statut: <span className="font-semibold">{transfer.status}</span></p>
+                <p>Montant: {transfer.amount}€</p>
+                <p>Utilisateur: {transfer.profile?.first_name} {transfer.profile?.last_name}</p>
+                <p>Référence: {transfer.reference || 'Non spécifiée'}</p>
+              </div>
+            ))}
+          </div>
+          <details className="mt-4">
+            <summary className="text-xs font-semibold cursor-pointer">Voir les données JSON complètes</summary>
+            <pre className="text-xs overflow-auto max-h-60 p-2 bg-white rounded border border-gray-200 mt-2">
+              {JSON.stringify(pendingTransfers, null, 2)}
+            </pre>
+          </details>
         </div>
       </div>
     </>

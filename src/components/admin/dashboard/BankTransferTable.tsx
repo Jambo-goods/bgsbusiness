@@ -18,6 +18,7 @@ export default function BankTransferTable({
   } = useBankTransfers(refreshData);
 
   console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers.length);
+  console.log("Transfer IDs in Table:", pendingTransfers.map(t => t.id));
 
   if (isLoading) {
     return (
@@ -27,7 +28,7 @@ export default function BankTransferTable({
     );
   }
 
-  if (pendingTransfers.length === 0) {
+  if (!pendingTransfers || pendingTransfers.length === 0) {
     return (
       <div className="text-center p-8 border rounded-lg bg-gray-50">
         <p className="text-gray-500">Aucun virement bancaire en attente de confirmation</p>
