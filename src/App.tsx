@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -23,7 +22,7 @@ const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-b-2 border-bgs-blue"></div>
   </div>
 );
 
@@ -58,6 +57,7 @@ const App = () => (
               <Route path="/dashboard/*" element={<Dashboard />} />
               <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
               <Route path="/scheduled-payments" element={<ScheduledPayments />} />
+              <Route path="/admin/*" element={<AdminProjects />} />
               <Route path="/admin/projects" element={<AdminProjects />} />
               
               <Route path="*" element={<NotFound />} />
