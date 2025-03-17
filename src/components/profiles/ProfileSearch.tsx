@@ -15,7 +15,7 @@ export default function ProfileSearch({ searchTerm, setSearchTerm }: ProfileSear
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
         <Input 
           type="text" 
-          placeholder="Rechercher par nom, email, téléphone, code de parrainage..." 
+          placeholder="Rechercher par nom, email, téléphone..." 
           className="pl-10 w-full" 
           value={searchTerm} 
           onChange={e => setSearchTerm(e.target.value)} 

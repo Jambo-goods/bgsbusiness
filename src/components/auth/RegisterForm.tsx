@@ -10,8 +10,6 @@ import TermsCheckbox from "./TermsCheckbox";
 import { registerUser } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
@@ -20,21 +18,10 @@ export default function RegisterForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [referralCode, setReferralCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
-
-  // Extract referral code from URL if present
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const ref = params.get('ref');
-    if (ref) {
-      setReferralCode(ref);
-    }
-  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,13 +51,12 @@ export default function RegisterForm() {
     setIsLoading(true);
     
     try {
-      console.log("Tentative d'inscription avec:", { firstName, lastName, email, referralCode });
+      console.log("Tentative d'inscription avec:", { firstName, lastName, email });
       const result = await registerUser({
         firstName,
         lastName,
         email,
-        password,
-        referralCode
+        password
       });
 
       if (result.success) {
@@ -122,22 +108,6 @@ export default function RegisterForm() {
           setPassword={setPassword} 
           setConfirmPassword={setConfirmPassword} 
         />
-
-        <div className="space-y-2">
-          <Label htmlFor="referralCode">Code de parrainage (optionnel)</Label>
-          <Input
-            id="referralCode"
-            placeholder="Entrez le code de parrainage si vous en avez un"
-            value={referralCode}
-            onChange={(e) => setReferralCode(e.target.value)}
-            className="w-full"
-          />
-          {referralCode && (
-            <p className="text-green-600 text-xs mt-1">
-              Code de parrainage détecté. Vous recevrez un bonus de 25€ sur votre premier investissement !
-            </p>
-          )}
-        </div>
         
         <TermsCheckbox 
           termsAccepted={termsAccepted} 

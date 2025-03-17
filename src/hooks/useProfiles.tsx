@@ -114,8 +114,7 @@ export default function useProfiles() {
       (profile.first_name && profile.first_name.toLowerCase().includes(searchLower)) || 
       (profile.last_name && profile.last_name.toLowerCase().includes(searchLower)) || 
       (profile.email && profile.email.toLowerCase().includes(searchLower)) ||
-      (profile.phone && profile.phone.toLowerCase().includes(searchLower)) ||
-      (profile.referral_code && profile.referral_code.toLowerCase().includes(searchLower))
+      (profile.phone && profile.phone.toLowerCase().includes(searchLower))
     );
   });
 

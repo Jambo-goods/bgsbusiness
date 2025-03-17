@@ -37,7 +37,6 @@ export default function ProfileList({ profiles, isLoading }: ProfileListProps) {
             <TableHead>Projets</TableHead>
             <TableHead>Date d'inscription</TableHead>
             <TableHead>Inactivité</TableHead>
-            <TableHead>Code Parrainage</TableHead>
             <TableHead>Statut</TableHead>
           </TableRow>
         </TableHeader>
@@ -76,9 +75,6 @@ export default function ProfileList({ profiles, isLoading }: ProfileListProps) {
               </TableCell>
               <TableCell>
                 {calculateInactivityTime(profile.last_active_at, profile.created_at)}
-              </TableCell>
-              <TableCell>
-                {profile.referral_code || "-"}
               </TableCell>
               <TableCell>
                 {getStatusBadge(profile.last_active_at, profile.created_at)}
