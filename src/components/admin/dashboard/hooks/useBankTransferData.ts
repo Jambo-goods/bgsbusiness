@@ -57,6 +57,7 @@ export function useBankTransferData() {
           console.error("Error fetching from bank_transfers:", bankTransfersError);
           console.error("Error details:", bankTransfersError.details, bankTransfersError.hint, bankTransfersError.code);
           toast.error(`Erreur lors de la récupération des virements: ${bankTransfersError.message}`);
+          bankTransfersData = []; // Initialize as empty array if there's an error
         }
         
         console.log("Raw bank_transfers data:", bankTransfersData);
@@ -72,6 +73,7 @@ export function useBankTransferData() {
           console.error("Error fetching wallet transactions:", walletError);
           console.error("Error details:", walletError.details, walletError.hint, walletError.code);
           toast.error(`Erreur lors de la récupération des transactions: ${walletError.message}`);
+          walletTransactions = []; // Initialize as empty array if there's an error
         }
         
         console.log("Raw wallet_transactions data:", walletTransactions);
@@ -92,6 +94,9 @@ export function useBankTransferData() {
         
         // Formater les virements bancaires
         let formattedTransfers = (bankTransfersData || []).map(transfer => {
+          // Safely access profile data in case the relation wasn't found
+          const profileData = transfer.profiles || {};
+          
           return {
             id: transfer.id,
             created_at: transfer.confirmed_at || new Date().toISOString(),
@@ -106,9 +111,9 @@ export function useBankTransferData() {
             notes: transfer.notes,
             source: "bank_transfers",
             profile: {
-              first_name: transfer.profiles?.first_name || "Utilisateur",
-              last_name: transfer.profiles?.last_name || "Inconnu",
-              email: transfer.profiles?.email || null
+              first_name: profileData.first_name || "Utilisateur",
+              last_name: profileData.last_name || "Inconnu",
+              email: profileData.email || null
             }
           };
         });
@@ -116,6 +121,9 @@ export function useBankTransferData() {
         // Formater les transactions de portefeuille
         if (walletTransactions && walletTransactions.length > 0) {
           const walletTransfers = walletTransactions.map(tx => {
+            // Safely access profile data in case the relation wasn't found
+            const profileData = tx.profiles || {};
+            
             return {
               id: tx.id,
               created_at: tx.created_at || new Date().toISOString(),
@@ -130,9 +138,9 @@ export function useBankTransferData() {
               notes: "",
               source: "wallet_transactions",
               profile: {
-                first_name: tx.profiles?.first_name || "Utilisateur",
-                last_name: tx.profiles?.last_name || "Inconnu",
-                email: tx.profiles?.email || null
+                first_name: profileData.first_name || "Utilisateur",
+                last_name: profileData.last_name || "Inconnu",
+                email: profileData.email || null
               }
             };
           });
