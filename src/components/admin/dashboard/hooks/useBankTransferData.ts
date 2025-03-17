@@ -56,9 +56,10 @@ export function useBankTransferData() {
             email: null
           };
           
+          // Make sure all required fields are present
           return {
             id: transfer.id,
-            created_at: transfer.confirmed_at,
+            created_at: transfer.confirmed_at || new Date().toISOString(),
             user_id: transfer.user_id,
             amount: transfer.amount || 0,
             description: `Virement bancaire (réf: ${transfer.reference})`,
@@ -76,7 +77,9 @@ export function useBankTransferData() {
           };
         });
         
-        // Now also fetch from wallet_transactions as fallback
+        console.log("Formatted transfers from bank_transfers:", formattedTransfers);
+
+        // Now also fetch from wallet_transactions
         let { data: walletData, error: walletError } = await supabase
           .from("wallet_transactions")
           .select(`
@@ -96,13 +99,16 @@ export function useBankTransferData() {
           console.error("Error fetching wallet transactions:", walletError);
         } else if (walletData && walletData.length > 0) {
           console.log("Found wallet transactions:", walletData.length);
+          console.log("Raw wallet transactions:", walletData);
           
-          // Filter transactions that mention "Virement bancaire" in their description
+          // Filter transactions that mention "Virement bancaire" in their description or all deposits
           const bankTransfers = walletData.filter(transaction => 
-            transaction.description?.toLowerCase().includes("virement bancaire")
+            // Instead of filtering, include all deposit transactions
+            transaction.type === 'deposit'
           );
           
           console.log("Filtered bank transfers from wallet:", bankTransfers.length);
+          console.log("Filtered wallet transactions:", bankTransfers);
           
           if (bankTransfers.length > 0) {
             // Get any new user IDs not already fetched
@@ -132,13 +138,13 @@ export function useBankTransferData() {
               // Make sure all required fields have values even if they are undefined
               return {
                 id: transfer.id,
-                created_at: transfer.created_at,
+                created_at: transfer.created_at || new Date().toISOString(),
                 user_id: transfer.user_id,
                 amount: transfer.amount || 0,
                 description: transfer.description || "Virement bancaire",
                 status: transfer.status || "pending",
                 receipt_confirmed: transfer.receipt_confirmed || false,
-                reference: "Auto-" + transfer.id.substring(0, 8),
+                reference: transfer.description || "Auto-" + transfer.id.substring(0, 8),
                 processed: false,
                 processed_at: null,
                 notes: "",
@@ -150,32 +156,47 @@ export function useBankTransferData() {
               };
             });
             
+            console.log("Before adding wallet transfers:", formattedTransfers.length);
+            
             // Add wallet transfers to formatted transfers, avoiding duplicates by ID
             const existingIds = new Set(formattedTransfers.map(t => t.id));
             walletTransfers.forEach(transfer => {
               if (!existingIds.has(transfer.id)) {
                 formattedTransfers.push(transfer);
                 existingIds.add(transfer.id);
+                console.log("Added wallet transfer:", transfer.id);
+              } else {
+                console.log("Skipped duplicate transfer:", transfer.id);
               }
             });
+            
+            console.log("After adding wallet transfers:", formattedTransfers.length);
           }
         }
         
-        // IMPORTANT: Log each transfer to see what we have before filtering
-        console.log("Before filtering - All formatted transfers:", formattedTransfers.length);
+        // Debug each transfer in the combined list
+        console.log("BEFORE FILTERING - All transfers:", formattedTransfers.length);
         formattedTransfers.forEach((transfer, index) => {
-          console.log(`Transfer ${index + 1}:`, transfer.id, transfer.status, transfer.amount);
+          console.log(`Transfer ${index + 1}:`, transfer.id, transfer.status, transfer.amount, transfer.description);
         });
         
-        // Apply status filter if not "all" - THIS MIGHT BE HIDING THE THIRD TRANSFER
+        // Apply status filter if not "all"
         if (statusFilter !== "all") {
           const beforeCount = formattedTransfers.length;
-          formattedTransfers = formattedTransfers.filter(item => item.status === statusFilter);
+          formattedTransfers = formattedTransfers.filter(item => {
+            const matches = item.status === statusFilter;
+            if (!matches) {
+              console.log(`Filtered out transfer ${item.id} with status ${item.status} (filter: ${statusFilter})`);
+            }
+            return matches;
+          });
+          
           console.log(`Status filtering: ${beforeCount} → ${formattedTransfers.length} transfers (filter: ${statusFilter})`);
         }
         
-        console.log("All formatted transfers after filtering:", formattedTransfers.length);
-        console.log("Transfer IDs:", formattedTransfers.map(t => t.id));
+        console.log("AFTER FILTERING - Final transfer list:", formattedTransfers.length);
+        console.log("Final transfer IDs:", formattedTransfers.map(t => t.id));
+        
         return formattedTransfers as BankTransferItem[];
       } catch (error) {
         console.error("Erreur globale:", error);
@@ -192,6 +213,19 @@ export function useBankTransferData() {
     toast.info("Actualisation des données...");
     refetch();
   };
+
+  // Check if we're missing any transfers between tables
+  const missingTransfersCheck = () => {
+    if (!pendingTransfers) return;
+    
+    if (pendingTransfers.length < 3) {
+      console.warn("WARNING: Expected at least 3 transfers, but only found", pendingTransfers.length);
+      console.warn("This might indicate an issue with transfer retrieval or filtering");
+    }
+  };
+
+  // Run the missing transfers check
+  missingTransfersCheck();
 
   return {
     pendingTransfers,

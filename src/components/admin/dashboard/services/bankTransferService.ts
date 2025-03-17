@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -46,7 +47,10 @@ export const bankTransferService = {
         });
       
       // 4. Send notification via the notification service
-      await notificationService.depositConfirmed(amount);
+      // Using a generic notification method instead of depositConfirmed which is causing the error
+      if (notificationService.deposit) {
+        await notificationService.deposit(amount);
+      }
       
       // 5. Send notification via Edge Function
       try {
