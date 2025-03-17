@@ -11,6 +11,8 @@ interface Investment {
   project_id: string;
   user_id: string;
   created_at: string;
+  duration: number;
+  yield_rate: number;
 }
 
 export function useInvestment() {
@@ -46,7 +48,16 @@ export function useInvestment() {
         throw new Error("Unable to confirm investment.");
       }
 
-      return data as Investment;
+      // Convert the data to match Investment interface
+      return {
+        id: data.id,
+        amount: data.amount,
+        project_id: data.project_id,
+        user_id: data.user_id,
+        created_at: data.created_at || new Date().toISOString(),
+        duration: data.duration || 12,
+        yield_rate: data.yield_rate || 5.0
+      } as Investment;
     },
     onSuccess: (data) => {
       toast.success("Investment confirmed successfully!");

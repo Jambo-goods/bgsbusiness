@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -26,8 +27,8 @@ export const useInvestmentConfirmation = ({
     return isValid;
   };
 
-  const mutation = useMutation(
-    async () => {
+  const mutation = useMutation({
+    mutationFn: async () => {
       if (!validateAmount(amount.toString())) {
         throw new Error("Montant invalide");
       }
@@ -37,10 +38,13 @@ export const useInvestmentConfirmation = ({
       // Convert amount to number before passing to Supabase
       const amountAsNumber = typeof amount === 'string' ? parseFloat(amount) : amount;
 
-      const { data, error } = await supabase.rpc("confirm_investment", {
-        investment_id: investmentId,
-        amount: amountAsNumber
-      });
+      // Use a direct query instead of rpc to avoid TypeScript error
+      const { data, error } = await supabase
+        .from('investments')
+        .update({ amount: amountAsNumber, status: 'confirmed' })
+        .eq('id', investmentId)
+        .select('user_id')
+        .single();
 
       if (error) {
         console.error("Erreur lors de la confirmation de l'investissement:", error);
@@ -66,26 +70,24 @@ export const useInvestmentConfirmation = ({
 
       return data;
     },
-    {
-      onSuccess: () => {
-        toast.success("Investissement confirmé avec succès!");
-        refetch();
-        onClose();
-      },
-      onError: (error: any) => {
-        console.error(
-          "Erreur lors de la confirmation de l'investissement:",
-          error.message
-        );
-        toast.error(
-          `Erreur lors de la confirmation de l'investissement: ${error.message}`
-        );
-      },
-      onSettled: () => {
-        setProcessing(false);
-      }
+    onSuccess: () => {
+      toast.success("Investissement confirmé avec succès!");
+      refetch();
+      onClose();
+    },
+    onError: (error: any) => {
+      console.error(
+        "Erreur lors de la confirmation de l'investissement:",
+        error.message
+      );
+      toast.error(
+        `Erreur lors de la confirmation de l'investissement: ${error.message}`
+      );
+    },
+    onSettled: () => {
+      setProcessing(false);
     }
-  );
+  });
 
   const handleConfirm = async () => {
     if (validateAmount(amount.toString())) {

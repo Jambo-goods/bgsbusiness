@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -33,18 +34,33 @@ interface Notification {
   type: 'info' | 'success' | 'warning' | 'error';
   message: string;
   created_at: string;
-  read: boolean;
+  seen: boolean; // Changed from read to seen to match the database
 }
 
 const NotificationsTab: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const userId = supabase.auth.currentUser?.id;
+  
+  // Get userId from session instead of currentUser
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get user ID from session
+    const getUserId = async () => {
+      const { data } = await supabase.auth.getSession();
+      const id = data.session?.user?.id || null;
+      setUserId(id);
+      if (id) {
+        fetchNotifications(id);
+      }
+    };
+    
+    getUserId();
+  }, []);
 
   useEffect(() => {
     if (userId) {
-      fetchNotifications(userId);
       // Set up real-time listener for new notifications
       const channel = supabase
         .channel(`user_notifications:${userId}`)
@@ -78,8 +94,19 @@ const NotificationsTab: React.FC = () => {
         setError(error.message);
         toast.error('Failed to load notifications.');
       } else {
-        setNotifications(data || []);
+        // Map to our Notification interface
+        setNotifications(data?.map(item => ({
+          id: item.id,
+          user_id: item.user_id,
+          type: item.type as 'info' | 'success' | 'warning' | 'error',
+          message: item.message,
+          created_at: item.created_at,
+          seen: item.seen || false // Use seen instead of read
+        })) || []);
       }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError('An error occurred while retrieving data');
     } finally {
       setLoading(false);
     }
@@ -88,12 +115,12 @@ const NotificationsTab: React.FC = () => {
   const markAsRead = (id: string) => {
     supabase
       .from('notifications')
-      .update({ read: true })
+      .update({ seen: true }) // Change read to seen
       .eq('id', id)
       .then(() => {
         setNotifications((prevNotifications) =>
           prevNotifications.map((notification) =>
-            notification.id === id ? { ...notification, read: true } : notification
+            notification.id === id ? { ...notification, seen: true } : notification
           )
         );
       })
@@ -181,7 +208,7 @@ const NotificationsTab: React.FC = () => {
               notifications.map((notification) => (
                 <div
                   key={notification.id}
-                  className={`border rounded-md p-3 flex items-start space-x-3 ${notification.read ? 'bg-gray-50' : 'bg-white'
+                  className={`border rounded-md p-3 flex items-start space-x-3 ${notification.seen ? 'bg-gray-50' : 'bg-white'
                     }`}
                 >
                   <div className="flex-shrink-0">{getIcon(notification.type)}</div>
@@ -195,7 +222,7 @@ const NotificationsTab: React.FC = () => {
                     </div>
                   </div>
                   <div className="ml-auto flex items-center space-x-2">
-                    {!notification.read && (
+                    {!notification.seen && (
                       <Button
                         variant="ghost"
                         size="icon"
@@ -221,10 +248,34 @@ const NotificationsTab: React.FC = () => {
         </ScrollArea>
       </CardContent>
       <CardFooter className="justify-between">
-        <Button variant="outline">
+        <Button 
+          variant="outline"
+          onClick={() => {
+            if (userId) {
+              setNotifications(prevNotifications => 
+                prevNotifications.map(n => ({ ...n, seen: true }))
+              );
+              
+              // Update all notifications to seen in the database
+              supabase
+                .from('notifications')
+                .update({ seen: true })
+                .eq('user_id', userId)
+                .then(() => {
+                  toast.success("All notifications marked as read");
+                })
+                .catch(error => {
+                  console.error("Error marking all as read:", error);
+                  toast.error("Failed to mark all as read");
+                });
+            }
+          }}
+        >
           <Check className="mr-2 h-4 w-4" /> Mark all as read
         </Button>
-        <Button onClick={() => userId && clearAllNotifications(userId)}>
+        <Button 
+          onClick={() => userId && clearAllNotifications(userId)}
+        >
           Clear all <X className="ml-2 h-4 w-4" />
         </Button>
       </CardFooter>
