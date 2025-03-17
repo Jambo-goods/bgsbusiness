@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { 
@@ -39,13 +38,11 @@ const ScheduledPaymentsPage = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'payment_date', direction: 'desc' });
   const [filteredPayments, setFilteredPayments] = useState([]);
   
-  // Format currency
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return '—';
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
   };
 
-  // Get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'paid':
@@ -57,7 +54,6 @@ const ScheduledPaymentsPage = () => {
     }
   };
 
-  // Format status label
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'paid':
@@ -71,7 +67,6 @@ const ScheduledPaymentsPage = () => {
     }
   };
 
-  // Apply filters and sorting
   useEffect(() => {
     if (!scheduledPayments) {
       setFilteredPayments([]);
@@ -80,7 +75,6 @@ const ScheduledPaymentsPage = () => {
 
     let result = [...scheduledPayments];
 
-    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -90,12 +84,10 @@ const ScheduledPaymentsPage = () => {
       );
     }
 
-    // Apply status filter
     if (statusFilter !== 'all') {
       result = result.filter(payment => payment.status === statusFilter);
     }
 
-    // Apply sorting
     result.sort((a, b) => {
       if (sortConfig.key === 'payment_date') {
         const dateA = new Date(a.payment_date || 0).getTime();
@@ -129,7 +121,6 @@ const ScheduledPaymentsPage = () => {
     setFilteredPayments(result);
   }, [scheduledPayments, searchQuery, statusFilter, sortConfig]);
 
-  // Handle sort change
   const handleSort = (key: string) => {
     setSortConfig(prevConfig => ({
       key,
@@ -160,7 +151,6 @@ const ScheduledPaymentsPage = () => {
     <div className="min-h-screen bg-gray-50">
       <Toaster />
       
-      {/* Independent Navigation Menu */}
       <div className="bg-white shadow mb-6">
         <div className="container mx-auto px-4">
           <NavigationMenu className="py-4">
@@ -192,6 +182,11 @@ const ScheduledPaymentsPage = () => {
                         <span>Paiements Programmés</span>
                       </Link>
                     </NavigationMenuLink>
+                    <NavigationMenuLink asChild>
+                      <Link to="/projects-management" className="flex items-center space-x-2 hover:bg-gray-100 rounded p-2">
+                        <span>Gestion des Projets</span>
+                      </Link>
+                    </NavigationMenuLink>
                   </div>
                 </NavigationMenuContent>
               </NavigationMenuItem>
@@ -205,7 +200,6 @@ const ScheduledPaymentsPage = () => {
           <h1 className="text-2xl font-bold">Paiements Programmés</h1>
           
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-            {/* Search Box */}
             <div className="relative w-full md:w-64">
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
               <Input
@@ -216,7 +210,6 @@ const ScheduledPaymentsPage = () => {
               />
             </div>
             
-            {/* Filter Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full md:w-auto">
@@ -243,7 +236,6 @@ const ScheduledPaymentsPage = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* Sort Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="w-full md:w-auto">
