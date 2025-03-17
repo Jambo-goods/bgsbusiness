@@ -5,6 +5,7 @@ import { InvestmentNotificationService } from "./InvestmentNotificationService";
 import { MarketingNotificationService } from "./MarketingNotificationService";
 import { SecurityNotificationService } from "./SecurityNotificationService";
 import { WithdrawalNotificationService } from "./WithdrawalNotificationService";
+import { Notification, NotificationType, NotificationCategory, NotificationCategories } from "./types";
 
 class NotificationService {
   private baseNotificationService: BaseNotificationService;
@@ -35,6 +36,22 @@ class NotificationService {
   async deleteNotification(notificationId: string) {
     return this.baseNotificationService.deleteNotification(notificationId);
   }
+  
+  async getNotifications() {
+    return this.baseNotificationService.getNotifications();
+  }
+  
+  async getUnreadCount() {
+    return this.baseNotificationService.getUnreadCount();
+  }
+  
+  async markAllAsRead() {
+    return this.baseNotificationService.markAllAsRead();
+  }
+  
+  async setupRealtimeSubscription(callback: () => void) {
+    return this.baseNotificationService.setupRealtimeSubscription(callback);
+  }
 
   // Deposit notification methods
   async depositRequested(amount: number, reference: string) {
@@ -47,6 +64,14 @@ class NotificationService {
 
   async depositRejected(amount: number, reason: string) {
     return this.depositNotificationService.depositRejected(amount, reason);
+  }
+  
+  async depositSuccess(amount: number) {
+    return this.depositNotificationService.depositSuccess(amount);
+  }
+  
+  async insufficientFunds(amount: number) {
+    return this.depositNotificationService.insufficientFunds(amount);
   }
 
   // Investment notification methods
@@ -68,6 +93,18 @@ class NotificationService {
 
   async investmentMatured(projectName: string, amount: number) {
     return this.investmentNotificationService.investmentMatured(projectName, amount);
+  }
+  
+  async newInvestmentOpportunity(projectName: string) {
+    return this.investmentNotificationService.newInvestmentOpportunity(projectName);
+  }
+  
+  async projectCompleted(projectName: string, projectId: string) {
+    return this.investmentNotificationService.projectCompleted(projectName, projectId);
+  }
+  
+  async profitReceived(amount: number, projectName: string, projectId: string) {
+    return this.investmentNotificationService.profitReceived(amount, projectName, projectId);
   }
 
   // Security notification methods
@@ -99,6 +136,30 @@ class NotificationService {
   async withdrawalRejected(amount: number, reason: string) {
     return this.withdrawalNotificationService.withdrawalRejected(amount, reason);
   }
+  
+  async withdrawalScheduled(amount: number) {
+    return this.withdrawalNotificationService.withdrawalScheduled(amount);
+  }
+  
+  async withdrawalValidated(amount: number) {
+    return this.withdrawalNotificationService.withdrawalValidated(amount);
+  }
+  
+  async withdrawalCompleted(amount: number) {
+    return this.withdrawalNotificationService.withdrawalCompleted(amount);
+  }
+  
+  async withdrawalReceived(amount: number) {
+    return this.withdrawalNotificationService.withdrawalReceived(amount);
+  }
+  
+  async withdrawalConfirmed(amount: number) {
+    return this.withdrawalNotificationService.withdrawalConfirmed(amount);
+  }
+  
+  async withdrawalPaid(amount: number) {
+    return this.withdrawalNotificationService.withdrawalPaid(amount);
+  }
 
   // Marketing notification methods
   async eventInvitation(eventName: string, date: string) {
@@ -111,3 +172,4 @@ class NotificationService {
 }
 
 export const notificationService = new NotificationService();
+export { Notification, NotificationType, NotificationCategory, NotificationCategories };

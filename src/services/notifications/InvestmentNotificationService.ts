@@ -2,64 +2,83 @@
 import { BaseNotificationService } from "./BaseNotificationService";
 
 export class InvestmentNotificationService extends BaseNotificationService {
-  newInvestmentOpportunity(projectName: string, projectId: string): Promise<void> {
-    console.log(`Creating new investment opportunity notification for ${projectName}`);
-    return this.createNotification({
-      title: "Nouvelle opportunité d'investissement",
-      description: `Un nouveau projet ${projectName} est disponible ! Investissez dès maintenant.`,
-      type: 'investment',
-      category: 'info',
-      metadata: { projectName, projectId }
-    });
-  }
-  
-  investmentConfirmed(amount: number, projectName: string, projectId: string): Promise<void> {
+  investmentConfirmed(projectName: string, amount: number): Promise<void> {
     return this.createNotification({
       title: "Investissement confirmé",
-      description: `Votre investissement de ${amount}€ dans ${projectName} a été confirmé.`,
+      description: `Votre investissement de ${amount}€ dans le projet "${projectName}" a été confirmé.`,
       type: 'investment',
       category: 'success',
-      metadata: { amount, projectName, projectId }
+      metadata: { projectName, amount }
     });
   }
   
-  profitReceived(amount: number, projectName: string, projectId: string): Promise<void> {
+  investmentReceived(projectName: string, amount: number): Promise<void> {
     return this.createNotification({
-      title: "Rentabilité reçue",
-      description: `Vous avez reçu ${amount}€ de bénéfices pour votre investissement dans ${projectName}.`,
+      title: "Investissement reçu",
+      description: `Nous avons reçu votre investissement de ${amount}€ pour le projet "${projectName}".`,
       type: 'investment',
       category: 'success',
-      metadata: { amount, projectName, projectId }
+      metadata: { projectName, amount }
     });
   }
   
-  projectFunded(projectName: string, projectId: string): Promise<void> {
+  projectUpdate(projectName: string, updateType: string, details: string): Promise<void> {
     return this.createNotification({
-      title: "Projet financé",
-      description: `Le projet ${projectName} a atteint son financement et démarre bientôt !`,
+      title: `Mise à jour: ${projectName}`,
+      description: `${updateType}: ${details}`,
       type: 'investment',
       category: 'info',
-      metadata: { projectName, projectId }
+      metadata: { projectName, updateType, details }
+    });
+  }
+  
+  yieldPaid(projectName: string, amount: number, date: string): Promise<void> {
+    return this.createNotification({
+      title: "Rendement payé",
+      description: `Un rendement de ${amount}€ pour votre investissement dans "${projectName}" a été payé le ${date}.`,
+      type: 'investment',
+      category: 'success',
+      metadata: { projectName, amount, date }
+    });
+  }
+  
+  investmentMatured(projectName: string, amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Investissement arrivé à échéance",
+      description: `Votre investissement de ${amount}€ dans "${projectName}" est arrivé à échéance.`,
+      type: 'investment',
+      category: 'info',
+      metadata: { projectName, amount }
+    });
+  }
+  
+  newInvestmentOpportunity(projectName: string): Promise<void> {
+    return this.createNotification({
+      title: "Nouvelle opportunité",
+      description: `Une nouvelle opportunité d'investissement est disponible: "${projectName}".`,
+      type: 'investment',
+      category: 'info',
+      metadata: { projectName }
     });
   }
   
   projectCompleted(projectName: string, projectId: string): Promise<void> {
     return this.createNotification({
       title: "Projet terminé",
-      description: `Votre investissement dans ${projectName} est terminé. Vérifiez vos bénéfices !`,
+      description: `Le projet "${projectName}" est maintenant terminé.`,
       type: 'investment',
-      category: 'info',
+      category: 'success',
       metadata: { projectName, projectId }
     });
   }
   
-  newOpportunityAlert(projectName: string, projectId: string, expectedYield: string): Promise<void> {
+  profitReceived(amount: number, projectName: string, projectId: string): Promise<void> {
     return this.createNotification({
-      title: "Nouvelle opportunité à saisir !",
-      description: `Découvrez notre nouveau projet d'investissement ${projectName} avec un rendement attendu de ${expectedYield}. Ne manquez pas cette opportunité !`,
+      title: "Profit reçu",
+      description: `Vous avez reçu ${amount}€ de profit pour votre investissement dans "${projectName}".`,
       type: 'investment',
-      category: 'info',
-      metadata: { projectName, projectId, expectedYield }
+      category: 'success',
+      metadata: { amount, projectName, projectId }
     });
   }
 }

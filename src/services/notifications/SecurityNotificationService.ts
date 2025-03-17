@@ -2,32 +2,32 @@
 import { BaseNotificationService } from "./BaseNotificationService";
 
 export class SecurityNotificationService extends BaseNotificationService {
-  loginSuccess(device: string): Promise<void> {
-    return this.createNotification({
-      title: "Connexion réussie",
-      description: `Connexion réussie depuis ${device}.`,
-      type: 'security',
-      category: 'info',
-      metadata: { device }
-    });
-  }
-  
-  suspiciousLogin(device: string): Promise<void> {
-    return this.createNotification({
-      title: "Tentative de connexion suspecte",
-      description: `Alerte : Nouvelle connexion suspecte sur votre compte depuis ${device}. Si ce n'est pas vous, changez votre mot de passe.`,
-      type: 'security',
-      category: 'warning',
-      metadata: { device }
-    });
-  }
-  
   passwordChanged(): Promise<void> {
     return this.createNotification({
-      title: "Mot de passe changé",
+      title: "Mot de passe modifié",
       description: "Votre mot de passe a été modifié avec succès.",
       type: 'security',
       category: 'success'
+    });
+  }
+  
+  loginAttemptDetected(device: string, location: string, timestamp: string, success: boolean): Promise<void> {
+    return this.createNotification({
+      title: success ? "Connexion réussie" : "Tentative de connexion",
+      description: `${success ? 'Connexion' : 'Tentative de connexion'} détectée depuis ${device} à ${location} le ${timestamp}.`,
+      type: 'security',
+      category: success ? 'info' : 'warning',
+      metadata: { device, location, timestamp, success }
+    });
+  }
+  
+  securityAlert(type: string, details: string): Promise<void> {
+    return this.createNotification({
+      title: "Alerte de sécurité",
+      description: `${type}: ${details}`,
+      type: 'security',
+      category: 'warning',
+      metadata: { type, details }
     });
   }
 }

@@ -4,6 +4,10 @@
 
 import { 
   notificationService, 
+  Notification,
+  NotificationType,
+  NotificationCategory,
+  NotificationCategories
 } from "./notifications";
 
 // Re-export everything to maintain backward compatibility
@@ -12,5 +16,5 @@ export type {
   Notification, 
   NotificationType, 
   NotificationCategory, 
-} from "./notifications";
-export { NotificationCategories } from "./notifications";
+};
+export { NotificationCategories };

@@ -1,193 +1,104 @@
+
 import { BaseNotificationService } from "./BaseNotificationService";
 
 export class WithdrawalNotificationService extends BaseNotificationService {
-  /**
-   * Notification when a withdrawal request is submitted
-   */
   withdrawalRequested(amount: number): Promise<void> {
     return this.createNotification({
-      title: "Demande de retrait soumise",
-      description: `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`,
+      title: "Demande de retrait",
+      description: `Votre demande de retrait de ${amount}€ a été enregistrée.`,
       type: 'withdrawal',
       category: 'info',
-      metadata: { amount, status: 'submitted' }
+      metadata: { amount }
     });
   }
   
-  /**
-   * Notification when a withdrawal request is validated
-   */
-  withdrawalValidated(amount: number): Promise<void> {
+  withdrawalPending(amount: number): Promise<void> {
     return this.createNotification({
-      title: "Retrait validé",
-      description: `Votre demande de retrait de ${amount}€ est en cours de traitement.`,
+      title: "Retrait en attente",
+      description: `Votre retrait de ${amount}€ est en cours de traitement.`,
       type: 'withdrawal',
       category: 'info',
-      metadata: { amount, status: 'validated' }
+      metadata: { amount }
     });
   }
   
-  /**
-   * Notification when a withdrawal is scheduled
-   */
+  withdrawalProcessed(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait traité",
+      description: `Votre retrait de ${amount}€ a été traité et sera bientôt dans votre compte bancaire.`,
+      type: 'withdrawal',
+      category: 'success',
+      metadata: { amount }
+    });
+  }
+  
+  withdrawalRejected(amount: number, reason: string): Promise<void> {
+    return this.createNotification({
+      title: "Retrait rejeté",
+      description: `Votre retrait de ${amount}€ a été rejeté. Raison: ${reason}`,
+      type: 'withdrawal',
+      category: 'error',
+      metadata: { amount, reason }
+    });
+  }
+  
   withdrawalScheduled(amount: number): Promise<void> {
     return this.createNotification({
       title: "Retrait programmé",
-      description: `Votre retrait de ${amount}€ a été programmé et sera traité prochainement.`,
+      description: `Votre retrait de ${amount}€ a été programmé.`,
       type: 'withdrawal',
-      category: 'success',
-      metadata: { amount, status: 'scheduled' }
+      category: 'info',
+      metadata: { amount }
     });
   }
   
-  /**
-   * Notification when a withdrawal is completed
-   */
+  withdrawalValidated(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait validé",
+      description: `Votre retrait de ${amount}€ a été validé et sera traité prochainement.`,
+      type: 'withdrawal',
+      category: 'success',
+      metadata: { amount }
+    });
+  }
+  
   withdrawalCompleted(amount: number): Promise<void> {
     return this.createNotification({
-      title: "Retrait effectué",
-      description: `Votre retrait de ${amount}€ a été effectué avec succès.`,
+      title: "Retrait finalisé",
+      description: `Votre retrait de ${amount}€ a été finalisé et devrait apparaître sur votre compte bancaire.`,
       type: 'withdrawal',
       category: 'success',
-      metadata: { amount, status: 'completed' }
+      metadata: { amount }
     });
   }
   
-  /**
-   * Notification when a withdrawal is rejected
-   */
-  withdrawalRejected(amount: number, reason?: string): Promise<void> {
-    const reasonText = reason ? ` Raison: ${reason}` : "";
-    return this.createNotification({
-      title: "Retrait refusé",
-      description: `Votre demande de retrait de ${amount}€ a été refusée.${reasonText}`,
-      type: 'withdrawal',
-      category: 'error',
-      metadata: { amount, status: 'rejected', reason }
-    });
-  }
-  
-  /**
-   * Notification when a withdrawal request is processed
-   */
-  withdrawalProcessed(amount: number, status: string): Promise<void> {
-    return this.createNotification({
-      title: "Demande de retrait traitée",
-      description: `Votre demande de retrait de ${amount}€ a été traitée. Statut: ${status}.`,
-      type: 'withdrawal',
-      category: status === 'rejected' ? 'error' : 'success',
-      metadata: { amount, status, processed: true }
-    });
-  }
-
-  /**
-   * Notification for specific withdrawal statuses
-   */
-  withdrawalStatusUpdated(amount: number, status: string, reason?: string): Promise<void> {
-    let title = "";
-    let description = "";
-    let category: 'info' | 'success' | 'warning' | 'error' = 'info';
-    
-    switch (status) {
-      case 'submitted':
-        title = "Demande de retrait soumise";
-        description = `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`;
-        break;
-      case 'validated':
-      case 'approved':
-        title = "Retrait validé";
-        description = `Votre demande de retrait de ${amount}€ a été validée et sera traitée prochainement.`;
-        category = 'success';
-        break;
-      case 'scheduled':
-        title = "Retrait programmé";
-        description = `Votre retrait de ${amount}€ a été programmé et sera envoyé sur votre compte.`;
-        category = 'success';
-        break;
-      case 'completed':
-        title = "Retrait effectué";
-        description = `Votre retrait de ${amount}€ a été effectué avec succès.`;
-        category = 'success';
-        break;
-      case 'rejected':
-        title = "Retrait refusé";
-        description = `Votre demande de retrait de ${amount}€ a été refusée.${reason ? ` Raison: ${reason}` : ''}`;
-        category = 'error';
-        break;
-      case 'paid':
-        title = "Retrait payé";
-        description = `Votre retrait de ${amount}€ a été payé et le montant a été transféré sur votre compte bancaire.`;
-        category = 'success';
-        break;
-      default:
-        title = "Statut de retrait mis à jour";
-        description = `Le statut de votre retrait de ${amount}€ a été mis à jour: ${status}.`;
-    }
-    
-    return this.createNotification({
-      title,
-      description,
-      type: 'withdrawal',
-      category,
-      metadata: { amount, status, reason }
-    });
-  }
-
-  /**
-   * Notification when withdrawal amount is deducted from wallet balance
-   */
-  withdrawalBalanceDeducted(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Retrait débité",
-      description: `Le montant de ${amount}€ a été débité de votre solde pour votre demande de retrait.`,
-      type: 'withdrawal',
-      category: 'info',
-      metadata: { amount, status: 'balance_deducted' }
-    });
-  }
-  
-  /**
-   * Notification when a withdrawal request is confirmed (processed_at field is filled)
-   */
-  withdrawalConfirmed(amount: number): Promise<void> {
-    console.log(`Creating withdrawal confirmed notification for amount: ${amount}`);
-    return this.createNotification({
-      title: "Demande de retrait confirmée",
-      description: `Votre demande de retrait de ${amount}€ a été confirmée et est en cours de traitement.`,
-      type: 'withdrawal',
-      category: 'success',
-      metadata: { amount, status: 'confirmed' }
-    }).then(() => {
-      console.log(`Successfully created withdrawal confirmed notification for amount: ${amount}`);
-    }).catch(error => {
-      console.error(`Error creating withdrawal confirmed notification: ${error.message}`);
-      throw error;
-    });
-  }
-  
-  /**
-   * Notification when a withdrawal request is received
-   */
   withdrawalReceived(amount: number): Promise<void> {
     return this.createNotification({
-      title: "Demande de retrait reçue",
-      description: `Votre demande de retrait de ${amount}€ a bien été reçue et est en cours d'examen.`,
+      title: "Retrait reçu",
+      description: `Votre retrait de ${amount}€ a été reçu sur votre compte bancaire.`,
       type: 'withdrawal',
-      category: 'info',
-      metadata: { amount, status: 'received' }
+      category: 'success',
+      metadata: { amount }
     });
   }
   
-  /**
-   * Notification when a withdrawal has been paid
-   */
+  withdrawalConfirmed(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait confirmé",
+      description: `La confirmation de votre retrait de ${amount}€ a été enregistrée.`,
+      type: 'withdrawal',
+      category: 'success',
+      metadata: { amount }
+    });
+  }
+  
   withdrawalPaid(amount: number): Promise<void> {
     return this.createNotification({
       title: "Retrait payé",
-      description: `Votre retrait de ${amount}€ a été payé et le montant a été transféré sur votre compte bancaire.`,
+      description: `Votre retrait de ${amount}€ a été payé.`,
       type: 'withdrawal',
       category: 'success',
-      metadata: { amount, status: 'paid' }
+      metadata: { amount }
     });
   }
 }
