@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { 
   LayoutDashboard, Users, ArrowLeftRight, 
-  BanknoteIcon, LogOut, Settings 
+  BanknoteIcon, LogOut, Settings, CalendarIcon
 } from 'lucide-react';
 
 export default function AdminDashboard() {
@@ -46,7 +46,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Paiements programmés",
-      icon: <BanknoteIcon className="h-8 w-8 text-amber-600" />,
+      icon: <CalendarIcon className="h-8 w-8 text-amber-600" />,
       description: "Gérer les paiements à venir",
       link: "/admin/scheduled-payments"
     },

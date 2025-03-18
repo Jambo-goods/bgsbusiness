@@ -41,28 +41,28 @@ export default function ScheduledPayments() {
                   <tbody>
                     {scheduledPayments.map((payment) => (
                       <tr key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="px-4 py-4">{payment.project_name}</td>
-                        <td className="px-4 py-4">{payment.payment_type}</td>
-                        <td className="px-4 py-4">{payment.amount} €</td>
+                        <td className="px-4 py-4">{payment.projects?.name || "Projet inconnu"}</td>
+                        <td className="px-4 py-4">Rendement</td>
+                        <td className="px-4 py-4">{payment.total_scheduled_amount || 0} €</td>
                         <td className="px-4 py-4">
-                          {new Date(payment.scheduled_date).toLocaleDateString('fr-FR')}
+                          {new Date(payment.payment_date).toLocaleDateString('fr-FR')}
                         </td>
                         <td className="px-4 py-4">
                           <span 
                             className={`px-2 py-1 rounded-full text-xs ${
                               payment.status === 'pending' 
                                 ? 'bg-yellow-100 text-yellow-800'
-                                : payment.status === 'completed' 
+                                : payment.status === 'paid' 
                                 ? 'bg-green-100 text-green-800'
-                                : payment.status === 'failed'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-blue-100 text-blue-800'
+                                : payment.status === 'scheduled'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-red-100 text-red-800'
                             }`}
                           >
                             {payment.status === 'pending' ? 'En attente' 
-                              : payment.status === 'completed' ? 'Complété'
-                              : payment.status === 'failed' ? 'Échoué'
-                              : 'Programmé'}
+                              : payment.status === 'paid' ? 'Payé'
+                              : payment.status === 'scheduled' ? 'Programmé'
+                              : 'Inconnu'}
                           </span>
                         </td>
                       </tr>

@@ -1,11 +1,11 @@
 
 import React, { useState } from 'react';
-import { Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logoutAdmin } from '@/services/adminAuthService';
 import { 
   Database, ArrowLeftRight, 
-  LayoutDashboard, LogOut, Menu, X, Bell, Users, BanknoteIcon
+  LayoutDashboard, LogOut, Menu, X, Bell, Users, BanknoteIcon, CalendarIcon
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -13,6 +13,7 @@ export default function AdminLayout() {
   const { adminUser, setAdminUser } = useAdmin();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // If no admin user is logged in, redirect to login
   if (!adminUser) {
@@ -54,7 +55,7 @@ export default function AdminLayout() {
     },
     { 
       label: 'Paiements programmés', 
-      icon: <BanknoteIcon className="w-5 h-5" />, 
+      icon: <CalendarIcon className="w-5 h-5" />, 
       path: '/admin/scheduled-payments' 
     },
   ];

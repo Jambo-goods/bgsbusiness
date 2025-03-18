@@ -71,13 +71,14 @@ const App = () => (
                 
                 {/* Protected Admin Routes */}
                 <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<Navigate to="/admin/dashboard" replace />} />
                   <Route path="dashboard" element={<AdminDashboard />} />
                   <Route path="projects" element={<AdminProjects />} />
-                  <Route path="settings" element={<div>Paramètres</div>} />
                   <Route path="scheduled-payments" element={<ScheduledPayments />} />
                   <Route path="withdrawal-requests" element={<WithdrawalRequestsPage />} />
                   <Route path="bank-transfers" element={<BankTransfersPage />} />
                   <Route path="profiles" element={<ProfilesPage />} />
+                  <Route path="settings" element={<div>Paramètres</div>} />
                 </Route>
                 
                 <Route path="*" element={<NotFound />} />
