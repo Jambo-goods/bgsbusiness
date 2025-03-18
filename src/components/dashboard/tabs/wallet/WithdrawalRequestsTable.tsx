@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserSession } from '@/hooks/dashboard/useUserSession';
@@ -17,6 +16,10 @@ type WithdrawalRequest = {
   bank_name: string;
   account_number: string;
   processed_at: string | null;
+  bank_info?: any;
+  requested_at?: string;
+  notes?: string;
+  admin_id?: string;
 };
 
 export default function WithdrawalRequestsTable() {
@@ -64,8 +67,23 @@ export default function WithdrawalRequestsTable() {
       if (error) {
         console.error('Error fetching withdrawal requests:', error);
         setWithdrawals([]);
-      } else {
-        setWithdrawals(data || []);
+      } else if (data) {
+        const formattedData: WithdrawalRequest[] = data.map(item => ({
+          id: item.id,
+          user_id: item.user_id,
+          amount: item.amount,
+          status: item.status,
+          created_at: item.requested_at || new Date().toISOString(),
+          bank_name: item.bank_info?.bank_name || "Banque",
+          account_number: item.bank_info?.account_number || "0000",
+          processed_at: item.processed_at,
+          bank_info: item.bank_info,
+          requested_at: item.requested_at,
+          notes: item.notes,
+          admin_id: item.admin_id
+        }));
+        
+        setWithdrawals(formattedData);
       }
     } catch (err) {
       console.error('Error in fetchWithdrawals:', err);

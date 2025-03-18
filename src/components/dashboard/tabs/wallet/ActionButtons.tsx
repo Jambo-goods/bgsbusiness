@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import WithdrawFundsForm from './WithdrawFundsForm';
 import { useUserSession } from '@/hooks/dashboard/useUserSession';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 export function ActionButtons() {
   const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
@@ -96,11 +97,15 @@ export function ActionButtons() {
         </Button>
       </div>
       
-      {isWithdrawModalOpen && (
-        <WithdrawFundsForm 
-          onClose={() => setIsWithdrawModalOpen(false)} 
-        />
-      )}
+      <Dialog open={isWithdrawModalOpen} onOpenChange={setIsWithdrawModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          {isWithdrawModalOpen && (
+            <WithdrawFundsForm 
+              onClose={() => setIsWithdrawModalOpen(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

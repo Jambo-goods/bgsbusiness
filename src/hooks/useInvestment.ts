@@ -1,105 +1,91 @@
 
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserSession } from '@/hooks/dashboard/useUserSession';
+import { useToast } from '@/hooks/use-toast';
 
-interface Investment {
+export interface Investment {
   id: string;
   amount: number;
-  project_id: string;
   user_id: string;
-  created_at: string;
-  duration: number;
+  project_id: string;
   yield_rate: number;
+  duration: number;
+  status: string;
+  date: string;
+  end_date: string;
+  created_at?: string; // Make created_at optional
 }
 
-export function useInvestment() {
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [investmentId, setInvestmentId] = useState<string | null>(null);
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
+export const useInvestment = () => {
+  const [investment, setInvestment] = useState<Investment | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { projectId } = useParams<{ projectId: string }>();
+  const { userId } = useUserSession();
+  const { toast } = useToast();
 
-  const confirmInvestmentMutation = useMutation({
-    mutationFn: async ({ amount, project_id }: { amount: number; project_id: string }) => {
-      const { data: session } = await supabase.auth.getSession();
+  useEffect(() => {
+    if (userId && projectId) {
+      fetchInvestment();
+    } else {
+      setIsLoading(false);
+    }
+  }, [userId, projectId]);
 
-      if (!session?.session?.user?.id) {
-        throw new Error("You must be logged in to invest.");
-      }
+  const fetchInvestment = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-      // Fix the insert operation to use a single object instead of array to address the TS error
       const { data, error } = await supabase
-        .from("investments")
-        .insert({ 
-          amount, 
-          project_id, 
-          user_id: session.session.user.id,
-          // Adding necessary fields to match the Investment type
-          duration: 12, // Default duration in months
-          yield_rate: 5.0 // Default yield rate
-        })
-        .select()
+        .from('investments')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('project_id', projectId)
         .single();
 
       if (error) {
-        console.error("Error during investment:", error);
-        throw new Error("Unable to confirm investment.");
+        if (error.code === 'PGRST116') {  // No rows returned
+          setInvestment(null);
+        } else {
+          console.error('Error fetching investment:', error);
+          setError('Une erreur est survenue lors de la récupération de votre investissement.');
+          toast({
+            variant: "destructive",
+            title: "Erreur",
+            description: "Impossible de récupérer les détails de votre investissement."
+          });
+        }
+      } else if (data) {
+        // Ensure the data has all required fields
+        const investmentData: Investment = {
+          id: data.id,
+          amount: data.amount,
+          user_id: data.user_id,
+          project_id: data.project_id,
+          yield_rate: data.yield_rate,
+          duration: data.duration,
+          status: data.status,
+          date: data.date || new Date().toISOString(),
+          end_date: data.end_date || '',
+          created_at: data.date || new Date().toISOString() // Use date as created_at if needed
+        };
+        setInvestment(investmentData);
       }
-
-      // Convert the data to match Investment interface
-      return {
-        id: data.id,
-        amount: data.amount,
-        project_id: data.project_id,
-        user_id: data.user_id,
-        created_at: data.created_at || new Date().toISOString(),
-        duration: data.duration || 12,
-        yield_rate: data.yield_rate || 5.0
-      } as Investment;
-    },
-    onSuccess: (data) => {
-      toast.success("Investment confirmed successfully!");
-      queryClient.invalidateQueries({ queryKey: ["investments"] });
-      navigate("/dashboard");
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "An error occurred while confirming the investment.");
-    },
-  });
-
-  const handleConfirm = (id: string) => {
-    setInvestmentId(id);
-    setIsConfirming(true);
-  };
-
-  const handleCancel = () => {
-    setIsConfirming(false);
-    setInvestmentId(null);
-  };
-
-  const handleLogout = (event: React.MouseEvent) => {
-    event.preventDefault();
-    
-    // Remove the user from local storage
-    localStorage.removeItem("user");
-
-    // Redirect to the home page
-    navigate("/");
-
-    toast.success("Logout successful!");
+    } catch (err) {
+      console.error('Error in fetchInvestment:', err);
+      setError('Une erreur inattendue est survenue.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return {
-    isConfirming,
-    investmentId,
-    handleConfirm,
-    handleCancel,
-    confirmInvestment: confirmInvestmentMutation.mutate,
-    isLoading: confirmInvestmentMutation.isPending, // Fixed property name
-    isError: confirmInvestmentMutation.isError,
-    error: confirmInvestmentMutation.error,
-    handleLogout
+    investment,
+    isLoading,
+    error,
+    refetch: fetchInvestment
   };
-}
+};
