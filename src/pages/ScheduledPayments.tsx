@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
@@ -298,11 +297,6 @@ const ScheduledPaymentsPage = () => {
           <Link to="/profiles" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
             <Users className="h-5 w-5" />
             <span>Profils</span>
-          </Link>
-          
-          <Link to="/wallet" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-            <Wallet className="h-5 w-5" />
-            <span>Portefeuille</span>
           </Link>
           
           <Link to="/settings" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
