@@ -24,30 +24,58 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       console.log("Fetching bank transfers with status filter:", statusFilter);
 
-      // First, get the bank transfers data
-      let query = supabase
+      // Get all transfers from both bank_transfers and wallet_transactions tables
+      const fetchBankTransfersPromise = supabase
         .from('bank_transfers')
-        .select('*');
+        .select('*')
+        .order('confirmed_at', { ascending: false });
 
-      // Apply filter if needed
-      if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
-      }
+      const fetchWalletTransactionsPromise = supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('type', 'deposit');
 
-      // Execute the query
-      const { data: transfersData, error: transfersError } = await query.order('confirmed_at', { ascending: false });
+      // Execute both queries in parallel
+      const [bankTransfersResult, walletTransactionsResult] = await Promise.all([
+        fetchBankTransfersPromise,
+        fetchWalletTransactionsPromise
+      ]);
 
-      if (transfersError) {
-        console.error("Error fetching bank transfers:", transfersError);
+      // Check for errors in bank transfers query
+      if (bankTransfersResult.error) {
+        console.error("Error fetching bank transfers:", bankTransfersResult.error);
         toast.error("Erreur lors du chargement des virements bancaires", {
-          description: transfersError.message
+          description: bankTransfersResult.error.message
         });
         setIsLoading(false);
         return;
       }
 
-      // Fetch user profiles separately
-      const userIds = transfersData.map(transfer => transfer.user_id);
+      // Check for errors in wallet transactions query
+      if (walletTransactionsResult.error) {
+        console.error("Error fetching wallet transactions:", walletTransactionsResult.error);
+        toast.error("Erreur lors du chargement des transactions", {
+          description: walletTransactionsResult.error.message
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const transfersData = bankTransfersResult.data || [];
+      const walletData = walletTransactionsResult.data || [];
+
+      console.log("Fetched bank transfers:", transfersData.length);
+      console.log("Fetched wallet transactions:", walletData.length);
+
+      // Combine user IDs from both sources for profile fetch
+      const userIds = [
+        ...new Set([
+          ...transfersData.map(transfer => transfer.user_id),
+          ...walletData.map(tx => tx.user_id)
+        ])
+      ];
+
+      // Fetch user profiles for all IDs
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, first_name, last_name, email')
@@ -65,33 +93,63 @@ export default function BankTransfersPage() {
         });
       }
 
-      console.log("Fetched bank transfers:", transfersData?.length || 0);
-      
-      if (transfersData) {
-        // Format the data to match BankTransferItem interface
-        const formattedData: BankTransferItem[] = transfersData.map(item => {
-          const userProfile = profilesMap[item.user_id] || {};
-          
-          return {
-            id: item.id,
-            created_at: item.confirmed_at || new Date().toISOString(),
-            user_id: item.user_id,
-            amount: item.amount || 0,
-            description: item.notes || "Virement bancaire",
-            status: item.status || "pending",
-            receipt_confirmed: item.processed || false,
-            reference: item.reference || "",
-            profile: {
-              first_name: userProfile.first_name || "Utilisateur",
-              last_name: userProfile.last_name || "Inconnu",
-              email: userProfile.email || ""
-            }
-          };
-        });
+      // Format bank transfers
+      const formattedBankTransfers: BankTransferItem[] = transfersData.map(item => {
+        const userProfile = profilesMap[item.user_id] || {};
+        
+        return {
+          id: item.id,
+          created_at: item.confirmed_at || new Date().toISOString(),
+          user_id: item.user_id,
+          amount: item.amount || 0,
+          description: item.notes || "Virement bancaire",
+          status: item.status || "pending",
+          receipt_confirmed: item.processed || false,
+          reference: item.reference || "",
+          source: "bank_transfers",
+          profile: {
+            first_name: userProfile.first_name || "Utilisateur",
+            last_name: userProfile.last_name || "Inconnu",
+            email: userProfile.email || ""
+          }
+        };
+      });
 
-        setBankTransfers(formattedData);
-        setTotalCount(formattedData.length);
-      }
+      // Format wallet transactions as bank transfers
+      const formattedWalletTransfers: BankTransferItem[] = walletData.map(item => {
+        const userProfile = profilesMap[item.user_id] || {};
+        
+        return {
+          id: item.id,
+          created_at: item.created_at || new Date().toISOString(),
+          user_id: item.user_id,
+          amount: item.amount || 0,
+          description: item.description || "Dépôt",
+          status: item.status || "pending",
+          receipt_confirmed: item.receipt_confirmed || false,
+          reference: `Wallet-${item.id.substring(0, 8)}`,
+          source: "wallet_transactions",
+          profile: {
+            first_name: userProfile.first_name || "Utilisateur",
+            last_name: userProfile.last_name || "Inconnu",
+            email: userProfile.email || ""
+          }
+        };
+      });
+
+      // Combine both types of transfers
+      const allTransfers = [...formattedBankTransfers, ...formattedWalletTransfers];
+      
+      // Apply status filter if needed
+      const filteredTransfers = statusFilter === "all" 
+        ? allTransfers 
+        : allTransfers.filter(item => item.status === statusFilter);
+
+      console.log("Combined transfers count:", allTransfers.length);
+      console.log("Filtered transfers count:", filteredTransfers.length);
+      
+      setBankTransfers(filteredTransfers);
+      setTotalCount(filteredTransfers.length);
     } catch (err) {
       console.error("Unexpected error fetching bank transfers:", err);
       toast.error("Une erreur est survenue lors du chargement des données");
