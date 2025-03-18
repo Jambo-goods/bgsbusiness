@@ -22,7 +22,7 @@ interface BankTransfer {
   id: string;
   user_id: string;
   amount: number;
-  status: 'pending' | 'completed' | 'rejected';
+  status: string; // Changed from enum to string to handle any status value
   description?: string;
   reference: string;
   created_at: string;
@@ -64,7 +64,7 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       console.log("Tentative de récupération de tous les virements bancaires");
       
-      // Récupération de tous les virements bancaires
+      // Récupération de tous les virements bancaires sans filtrage de statut
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
         .select('*')
@@ -109,7 +109,7 @@ export default function BankTransfersPage() {
           id: transfer.id,
           user_id: transfer.user_id,
           amount: transfer.amount || 0,
-          status: (transfer.status as 'pending' | 'completed' | 'rejected') || 'pending',
+          status: transfer.status || 'pending', // Accept any status string
           description: transfer.notes || '',
           reference: transfer.reference || 'REF-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
           created_at: transfer.confirmed_at || new Date().toISOString(),
@@ -149,15 +149,18 @@ export default function BankTransfersPage() {
 
   // Obtenir le badge de statut
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">En attente</span>;
-      case 'completed':
-        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">Complété</span>;
-      case 'rejected':
-        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Rejeté</span>;
-      default:
-        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">{status}</span>;
+    // Normalize the status for display
+    const normalizedStatus = status.toLowerCase();
+    
+    if (normalizedStatus.includes('pend') || normalizedStatus === 'en attente') {
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">En attente</span>;
+    } else if (normalizedStatus.includes('compl') || normalizedStatus.includes('reçu') || normalizedStatus.includes('rece') || normalizedStatus === 'completed') {
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">Reçu</span>;
+    } else if (normalizedStatus.includes('reject') || normalizedStatus === 'rejeté') {
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Rejeté</span>;
+    } else {
+      // Default badge for any other status
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">{status}</span>;
     }
   };
 
