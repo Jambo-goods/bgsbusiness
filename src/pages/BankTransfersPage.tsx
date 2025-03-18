@@ -15,7 +15,7 @@ export default function BankTransfersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [totalCount, setTotalCount] = useState(0);
-  const { userRole } = useUserSession();
+  const { userId } = useUserSession();
 
   useEffect(() => {
     fetchBankTransfers();
@@ -25,9 +25,8 @@ export default function BankTransfersPage() {
     try {
       setIsLoading(true);
       console.log("Fetching bank transfers with status filter:", statusFilter);
-      console.log("User role:", userRole);
 
-      // First, get the bank transfers data
+      // Get only the bank transfers data (not wallet transactions)
       let query = supabase
         .from('bank_transfers')
         .select('*');
@@ -49,32 +48,17 @@ export default function BankTransfersPage() {
 
       console.log("Bank transfers data count:", transfersData?.length || 0);
       
-      // Fetch wallet transactions (deposits)
-      let walletQuery = supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('type', 'deposit');
-        
-      if (statusFilter !== "all") {
-        walletQuery = walletQuery.eq('status', statusFilter);
+      if (!transfersData || transfersData.length === 0) {
+        console.log("No bank transfers found");
+        setBankTransfers([]);
+        setTotalCount(0);
+        setIsLoading(false);
+        return;
       }
-      
-      const { data: walletData, error: walletError } = await walletQuery.order('created_at', { ascending: false });
-      
-      if (walletError) {
-        console.error("Error fetching wallet transactions:", walletError);
-        toast.error("Erreur lors du chargement des transactions");
-        // Continue with bank transfers only
-      }
-      
-      console.log("Wallet transactions data count:", walletData?.length || 0);
 
-      // Fetch user profiles separately - get all unique user IDs from both datasets
+      // Fetch user profiles separately - get all unique user IDs
       const userIds = [
-        ...new Set([
-          ...(transfersData?.map(transfer => transfer.user_id) || []),
-          ...(walletData?.map(wallet => wallet.user_id) || [])
-        ])
+        ...new Set(transfersData?.map(transfer => transfer.user_id) || [])
       ].filter(Boolean); // Remove any null/undefined
       
       console.log("Unique user IDs count:", userIds.length);
@@ -110,7 +94,7 @@ export default function BankTransfersPage() {
       // Format bank transfers
       const formattedTransfers: BankTransferItem[] = [];
       
-      // Add bank transfers
+      // Add only bank transfers (not wallet transactions)
       if (transfersData) {
         const bankItems = transfersData.map(item => {
           const userProfile = profilesMap[item.user_id] || {};
@@ -135,37 +119,6 @@ export default function BankTransfersPage() {
         
         formattedTransfers.push(...bankItems);
       }
-      
-      // Add wallet transactions if available
-      if (walletData) {
-        const walletItems = walletData.map(item => {
-          const userProfile = profilesMap[item.user_id] || {};
-          
-          return {
-            id: item.id,
-            created_at: item.created_at || new Date().toISOString(),
-            user_id: item.user_id,
-            amount: item.amount || 0,
-            description: item.description || "Dépôt bancaire",
-            status: item.status || "pending",
-            receipt_confirmed: item.receipt_confirmed || false,
-            reference: item.description || `Auto-${item.id.substring(0, 8)}`,
-            source: "wallet_transactions",
-            profile: {
-              first_name: userProfile.first_name || "Utilisateur",
-              last_name: userProfile.last_name || "Inconnu",
-              email: userProfile.email || ""
-            }
-          };
-        });
-        
-        formattedTransfers.push(...walletItems);
-      }
-
-      // Sort by date
-      formattedTransfers.sort((a, b) => {
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
 
       console.log("Total formatted transfers:", formattedTransfers.length);
       console.log("Transfers IDs:", formattedTransfers.map(t => t.id).join(', '));
