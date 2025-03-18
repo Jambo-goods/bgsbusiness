@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Toaster } from 'sonner';
-import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, FolderOpen, Home, Wallet, Users, Settings, LayoutDashboard, BanknoteIcon } from 'lucide-react';
+import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, FolderOpen, Users, Settings, BanknoteIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -274,11 +274,6 @@ const ScheduledPaymentsPage = () => {
         </div>
         
         <nav className="p-4 space-y-1">
-          <Link to="/dashboard" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-            <LayoutDashboard className="h-5 w-5" />
-            <span>Tableau de bord</span>
-          </Link>
-          
           <Link to="/projects" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
             <FolderOpen className="h-5 w-5" />
             <span>Projets</span>
