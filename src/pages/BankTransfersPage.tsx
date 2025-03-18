@@ -38,6 +38,7 @@ export default function BankTransfersPage() {
   const [bankTransfers, setBankTransfers] = useState<BankTransfer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [rawTransfers, setRawTransfers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchBankTransfers();
@@ -64,7 +65,7 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       console.log("Tentative de récupération de tous les virements bancaires");
       
-      // Récupération de tous les virements bancaires sans filtrage de statut
+      // Récupération de tous les virements bancaires sans aucun filtrage
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
         .select('*');
@@ -74,7 +75,9 @@ export default function BankTransfersPage() {
         throw transfersError;
       }
       
-      console.log("Données des virements reçues:", transfersData);
+      console.log("Données brutes des virements reçues:", transfersData);
+      setRawTransfers(transfersData || []);
+      console.log("Nombre total de virements récupérés de la base de données:", transfersData?.length || 0);
       
       // Récupérer les profils des utilisateurs
       if (transfersData && transfersData.length > 0) {
@@ -121,7 +124,9 @@ export default function BankTransfersPage() {
         }));
         
         console.log("Tous les virements formatés:", formattedTransfers);
-        console.log("Nombre total de virements:", formattedTransfers.length);
+        console.log("Nombre total de virements formatés:", formattedTransfers.length);
+        console.log("IDs des virements:", formattedTransfers.map(t => t.id).join(', '));
+        console.log("Statuts des virements:", formattedTransfers.map(t => t.status).join(', '));
         setBankTransfers(formattedTransfers);
       } else {
         console.log("Aucun virement trouvé dans la base de données");
@@ -223,6 +228,16 @@ export default function BankTransfersPage() {
                   <Button variant="outline" size="icon" title="Filtres">
                     <Filter className="h-4 w-4" />
                   </Button>
+                </div>
+                
+                {/* Résumé des données brutes pour débogage */}
+                <div className="mb-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+                  <h3 className="text-sm font-semibold mb-2">Informations de débogage</h3>
+                  <p className="text-xs text-gray-600">Nombre de virements bruts: {rawTransfers.length}</p>
+                  <p className="text-xs text-gray-600">Nombre de virements formatés: {bankTransfers.length}</p>
+                  <p className="text-xs text-gray-600">Nombre de virements filtrés: {filteredTransfers.length}</p>
+                  <p className="text-xs text-gray-600">IDs des virements bruts: {rawTransfers.map(t => t.id).join(', ')}</p>
+                  <p className="text-xs text-gray-600">Statuts des virements bruts: {rawTransfers.map(t => t.status).join(', ')}</p>
                 </div>
                 
                 {isLoading ? (
