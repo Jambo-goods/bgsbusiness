@@ -88,9 +88,9 @@ export default function BankTransfersPage() {
       console.log("Nombre total de virements récupérés de la base de données:", transfersData?.length || 0);
       
       // Récupérer les profils des utilisateurs pour tous les virements
-      const userIds = [...new Set((transfersData || []).map(transfer => transfer.user_id))];
       let profilesById: Record<string, BankTransferUserProfile> = {};
       
+      const userIds = [...new Set((transfersData || []).map(transfer => transfer.user_id))];
       if (userIds.length > 0) {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
@@ -100,51 +100,47 @@ export default function BankTransfersPage() {
         if (profilesError) {
           console.error('Erreur lors de la récupération des profils:', profilesError);
           toast.error('Erreur lors de la récupération des profils');
-        } else {
+        } else if (profilesData) {
           console.log("Données des profils reçues:", profilesData);
           
           // Créer un dictionnaire des profils par ID
-          if (profilesData) {
-            profilesData.forEach(profile => {
-              profilesById[profile.id] = {
-                first_name: profile.first_name,
-                last_name: profile.last_name,
-                email: profile.email
-              };
-            });
-          }
+          profilesData.forEach(profile => {
+            profilesById[profile.id] = {
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              email: profile.email
+            };
+          });
         }
       }
       
       // Formater tous les transferts avec les informations de profil
-      if (transfersData) {
-        const formattedTransfers: BankTransfer[] = transfersData.map(transfer => ({
-          id: transfer.id,
-          user_id: transfer.user_id,
-          amount: transfer.amount || 0,
-          status: transfer.status || 'pending',
-          description: transfer.notes || '',
-          reference: transfer.reference || '',
-          created_at: transfer.confirmed_at || new Date().toISOString(),
-          confirmed_at: transfer.confirmed_at,
-          rejected_at: transfer.rejected_at,
-          processed_at: transfer.processed_at,
-          notes: transfer.notes,
-          processed: transfer.processed,
-          user_profile: profilesById[transfer.user_id] || null
-        }));
-        
-        console.log("Tous les virements formatés:", formattedTransfers);
-        console.log("Nombre total de virements formatés:", formattedTransfers.length);
+      const formattedTransfers: BankTransfer[] = (transfersData || []).map(transfer => ({
+        id: transfer.id,
+        user_id: transfer.user_id,
+        amount: transfer.amount || 0,
+        status: transfer.status || 'pending',
+        description: transfer.notes || '',
+        reference: transfer.reference || '',
+        created_at: transfer.confirmed_at || transfer.created_at || new Date().toISOString(),
+        confirmed_at: transfer.confirmed_at,
+        rejected_at: transfer.rejected_at,
+        processed_at: transfer.processed_at,
+        notes: transfer.notes,
+        processed: transfer.processed,
+        user_profile: profilesById[transfer.user_id] || null
+      }));
+      
+      console.log("Tous les virements formatés:", formattedTransfers);
+      console.log("Nombre total de virements formatés:", formattedTransfers.length);
+      
+      if (formattedTransfers.length > 0) {
         console.log("IDs des virements:", formattedTransfers.map(t => t.id).join(', '));
         console.log("Statuts des virements:", formattedTransfers.map(t => t.status).join(', '));
-        
-        // Définir tous les virements sans filtrage
-        setBankTransfers(formattedTransfers);
-      } else {
-        console.log("Aucun virement trouvé dans la base de données");
-        setBankTransfers([]);
       }
+      
+      // Définir tous les virements sans filtrage
+      setBankTransfers(formattedTransfers);
     } catch (err) {
       console.error('Erreur lors de la récupération des virements bancaires:', err);
       toast.error('Impossible de charger les virements bancaires');
