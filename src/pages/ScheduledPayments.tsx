@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Toaster } from 'sonner';
-import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, Users, Settings, BanknoteIcon } from 'lucide-react';
+import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, Users, Settings, BanknoteIcon, Wallet } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -277,6 +278,11 @@ const ScheduledPaymentsPage = () => {
           <Link to="/scheduled-payments" className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg">
             <BanknoteIcon className="h-5 w-5" />
             <span>Paiements Programmés</span>
+          </Link>
+          
+          <Link to="/withdrawal-requests" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <Wallet className="h-5 w-5" />
+            <span>Demandes de retrait</span>
           </Link>
           
           <Link to="/profiles" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
