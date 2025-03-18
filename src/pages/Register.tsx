@@ -1,12 +1,13 @@
 
 import { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import RegisterForm from "@/components/auth/RegisterForm";
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -29,6 +30,11 @@ export default function Register() {
               <h1 className="text-3xl font-bold text-bgs-blue mb-2">Créer un compte</h1>
               <p className="text-bgs-blue/70">
                 Rejoignez BGS Business Club et commencez à investir dans des projets à fort potentiel
+                {location.search.includes('ref=') && (
+                  <span className="block mt-2 text-sm font-medium text-bgs-orange">
+                    Vous avez été parrainé ! Votre code de parrainage sera automatiquement appliqué.
+                  </span>
+                )}
               </p>
             </div>
             

@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowRight, AlertCircle } from "lucide-react";
+import { ArrowRight, AlertCircle, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NameFields from "./NameFields";
 import EmailField from "./EmailField";
@@ -10,6 +10,9 @@ import TermsCheckbox from "./TermsCheckbox";
 import { registerUser } from "@/services/authService";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
@@ -17,15 +20,44 @@ export default function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [referralCode, setReferralCode] = useState("");
+  const [referralError, setReferralError] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const location = useLocation();
+
+  // Extract referral code from URL if present
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const codeFromUrl = params.get('ref');
+    if (codeFromUrl) {
+      setReferralCode(codeFromUrl);
+    }
+  }, [location]);
+
+  const validateReferralCode = async (code: string) => {
+    if (!code) return true; // No code is valid
+    
+    try {
+      const { data, error } = await supabase
+        .rpc('verify_referral_code', { code });
+        
+      if (error) throw error;
+      
+      return !!data; // True if referrer found, false otherwise
+    } catch (err) {
+      console.error("Error verifying referral code:", err);
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setReferralError("");
 
     // Validation
     if (!firstName.trim() || !lastName.trim()) {
@@ -48,22 +80,36 @@ export default function RegisterForm() {
       return;
     }
 
+    // Validate referral code if provided
+    if (referralCode) {
+      setIsLoading(true);
+      const isValidReferral = await validateReferralCode(referralCode);
+      if (!isValidReferral) {
+        setReferralError("Code de parrainage invalide");
+        setIsLoading(false);
+        return;
+      }
+    }
+
     setIsLoading(true);
     
     try {
-      console.log("Tentative d'inscription avec:", { firstName, lastName, email });
+      console.log("Tentative d'inscription avec:", { firstName, lastName, email, referralCode });
       const result = await registerUser({
         firstName,
         lastName,
         email,
-        password
+        password,
+        referralCode
       });
 
       if (result.success) {
         console.log("Inscription réussie:", result.data);
         toast({
           title: "Inscription réussie",
-          description: "Votre compte a été créé avec succès"
+          description: referralCode 
+            ? "Votre compte a été créé avec succès et le code de parrainage a été appliqué" 
+            : "Votre compte a été créé avec succès"
         });
         
         // Redirection vers le tableau de bord après inscription réussie
@@ -108,6 +154,29 @@ export default function RegisterForm() {
           setPassword={setPassword} 
           setConfirmPassword={setConfirmPassword} 
         />
+        
+        <div className="space-y-2">
+          <Label htmlFor="referralCode">Code de parrainage (optionnel)</Label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Users className="h-4 w-4 text-gray-400" />
+            </div>
+            <Input
+              id="referralCode"
+              type="text"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value)}
+              placeholder="Entrez le code de parrainage"
+              className="pl-10"
+            />
+          </div>
+          {referralError && (
+            <p className="text-sm font-medium text-red-500">{referralError}</p>
+          )}
+          <p className="text-xs text-gray-500">
+            Si vous avez été parrainé, veuillez entrer le code de parrainage.
+          </p>
+        </div>
         
         <TermsCheckbox 
           termsAccepted={termsAccepted} 
