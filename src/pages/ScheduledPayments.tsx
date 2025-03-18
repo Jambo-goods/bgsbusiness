@@ -32,7 +32,7 @@ export default function ScheduledPayments() {
                   <thead>
                     <tr className="border-b border-gray-200">
                       <th className="px-4 py-3 text-left font-medium text-gray-500">Projet</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Type</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500">Pourcentage</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-500">Montant</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-500">Date prévue</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-500">Statut</th>
@@ -42,7 +42,7 @@ export default function ScheduledPayments() {
                     {scheduledPayments.map((payment) => (
                       <tr key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="px-4 py-4">{payment.projects?.name || "Projet inconnu"}</td>
-                        <td className="px-4 py-4">Rendement</td>
+                        <td className="px-4 py-4">{payment.percentage}%</td>
                         <td className="px-4 py-4">{payment.total_scheduled_amount || 0} €</td>
                         <td className="px-4 py-4">
                           {new Date(payment.payment_date).toLocaleDateString('fr-FR')}
