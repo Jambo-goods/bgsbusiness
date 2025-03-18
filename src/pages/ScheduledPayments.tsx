@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,7 +63,7 @@ const ScheduledPaymentsPage = () => {
   const [isAddPaymentOpen, setIsAddPaymentOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState(null);
   const [availableProjects, setAvailableProjects] = useState([]);
-  
+
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -83,7 +82,7 @@ const ScheduledPaymentsPage = () => {
     
     fetchProjects();
   }, []);
-  
+
   const form = useForm({
     defaultValues: {
       project_id: '',
@@ -93,7 +92,7 @@ const ScheduledPaymentsPage = () => {
       total_scheduled_amount: 0
     }
   });
-  
+
   const formatCurrency = (amount: number | null) => {
     if (amount === null) return '—';
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
@@ -283,6 +282,11 @@ const ScheduledPaymentsPage = () => {
           <Link to="/withdrawal-requests" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
             <Wallet className="h-5 w-5" />
             <span>Demandes de retrait</span>
+          </Link>
+          
+          <Link to="/bank-transfers" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
+            <BanknoteIcon className="h-5 w-5" />
+            <span>Virements Bancaires</span>
           </Link>
           
           <Link to="/profiles" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
@@ -610,4 +614,3 @@ const ScheduledPaymentsPage = () => {
 };
 
 export default ScheduledPaymentsPage;
-
