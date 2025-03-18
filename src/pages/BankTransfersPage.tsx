@@ -10,7 +10,26 @@ import { Button } from '@/components/ui/button';
 import { FileText, Download, RotateCcw, Search, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { formatCurrency, formatDate } from '@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+
+// Fonction de formatage de la monnaie
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2
+  }).format(amount);
+};
+
+// Fonction de formatage de date
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+};
 
 interface BankTransfer {
   id: string;
@@ -39,7 +58,7 @@ export default function BankTransfersPage() {
     if (userId) {
       fetchBankTransfers();
       
-      // Set up realtime subscription
+      // Mise en place d'un abonnement en temps réel
       const channel = supabase
         .channel('bank-transfers-changes')
         .on('postgres_changes', {
@@ -64,7 +83,7 @@ export default function BankTransfersPage() {
     try {
       setIsLoading(true);
       
-      // Fetch bank transfers with user profile information
+      // Récupération des virements bancaires avec les informations de profil
       const { data, error } = await supabase
         .from('bank_transfers')
         .select(`
@@ -80,14 +99,19 @@ export default function BankTransfersPage() {
         
       if (error) throw error;
       
-      const formattedTransfers = data?.map(transfer => ({
-        ...transfer,
-        user_profile: transfer.profiles
-      })) || [];
-      
-      setBankTransfers(formattedTransfers);
+      if (data) {
+        const formattedTransfers: BankTransfer[] = data.map(transfer => ({
+          ...transfer,
+          user_profile: transfer.profiles as any,
+          description: transfer.description || '',
+          reference: transfer.reference || '',
+          status: transfer.status as 'pending' | 'completed' | 'rejected'
+        }));
+        
+        setBankTransfers(formattedTransfers);
+      }
     } catch (err) {
-      console.error('Error fetching bank transfers:', err);
+      console.error('Erreur lors de la récupération des virements bancaires:', err);
       toast.error('Impossible de charger vos virements bancaires');
     } finally {
       setIsLoading(false);
@@ -99,13 +123,13 @@ export default function BankTransfersPage() {
     toast.success('Données actualisées');
   };
 
-  // Filter transfers based on search term
+  // Filtrer les virements en fonction du terme de recherche
   const filteredTransfers = bankTransfers.filter(transfer => 
     transfer.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
     transfer.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Get status badge
+  // Obtenir le badge de statut
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -171,7 +195,7 @@ export default function BankTransfersPage() {
                 
                 {isLoading ? (
                   <div className="flex justify-center py-10">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
+                    <LoadingSpinner size="lg" color="blue" />
                   </div>
                 ) : filteredTransfers.length > 0 ? (
                   <div className="overflow-x-auto">
