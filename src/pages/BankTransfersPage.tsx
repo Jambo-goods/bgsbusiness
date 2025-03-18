@@ -71,57 +71,59 @@ export default function BankTransfersPage() {
   const fetchBankTransfers = async () => {
     try {
       setIsLoading(true);
-      console.log("Tentative de récupération de tous les virements bancaires");
+      console.log("⭐ DÉBOGAGE: Tentative de récupération de TOUS les virements bancaires sans filtrage");
       
-      // Important: No WHERE clause here to get ALL transfers
+      // Récupérer TOUS les virements sans filtrage par utilisateur
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
         .select('*');
       
       if (transfersError) {
         console.error('Erreur SQL:', transfersError);
+        toast.error('Erreur SQL: ' + transfersError.message);
         throw transfersError;
       }
       
-      console.log("Données brutes des virements reçues:", transfersData);
+      console.log("⭐ DÉBOGAGE: Données brutes des virements reçues:", transfersData);
       setRawTransfers(transfersData || []);
-      console.log("Nombre total de virements récupérés de la base de données:", transfersData?.length || 0);
+      console.log("⭐ DÉBOGAGE: Nombre total de virements récupérés de la base de données:", transfersData?.length || 0);
       
-      // Profils des utilisateurs
-      let profilesById: Record<string, BankTransferUserProfile> = {};
+      // Récupérer TOUS les profils utilisateurs sans filtrage
+      const { data: allProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email');
       
-      // Extraire les IDs utilisateurs uniques de tous les virements
-      const userIds = [...new Set((transfersData || []).map(transfer => transfer.user_id))];
-      console.log("IDs utilisateurs uniques:", userIds);
-      
-      if (userIds.length > 0) {
-        // Récupérer les profils de tous les utilisateurs concernés
-        const { data: profilesData, error: profilesError } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, email')
-          .in('id', userIds);
-          
-        if (profilesError) {
-          console.error('Erreur lors de la récupération des profils:', profilesError);
-          toast.error('Erreur lors de la récupération des profils');
-        } else if (profilesData) {
-          console.log("Données des profils reçues:", profilesData);
-          console.log("Nombre de profils récupérés:", profilesData.length);
-          
-          // Créer un dictionnaire des profils par ID
-          profilesData.forEach(profile => {
-            profilesById[profile.id] = {
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              email: profile.email
-            };
-          });
-        }
+      if (profilesError) {
+        console.error('Erreur lors de la récupération de TOUS les profils:', profilesError);
+        toast.error('Erreur de récupération des profils: ' + profilesError.message);
+        throw profilesError;
       }
+      
+      console.log("⭐ DÉBOGAGE: TOUS les profils récupérés:", allProfiles);
+      console.log("⭐ DÉBOGAGE: Nombre total de profils récupérés:", allProfiles?.length || 0);
+      
+      // Créer un dictionnaire de tous les profils par ID
+      let profilesById: Record<string, BankTransferUserProfile> = {};
+      if (allProfiles) {
+        allProfiles.forEach(profile => {
+          profilesById[profile.id] = {
+            first_name: profile.first_name,
+            last_name: profile.last_name,
+            email: profile.email
+          };
+        });
+      }
+      
+      console.log("⭐ DÉBOGAGE: Dictionnaire des profils créé:", Object.keys(profilesById).length, "profils");
       
       // Formater tous les transferts avec les informations de profil
       const formattedTransfers: BankTransfer[] = (transfersData || []).map(transfer => {
-        console.log(`Formatage du transfert ${transfer.id} pour l'utilisateur ${transfer.user_id}`);
+        console.log(`⭐ DÉBOGAGE: Formatage du transfert ${transfer.id} pour l'utilisateur ${transfer.user_id}`);
+        console.log("⭐ DÉBOGAGE: Détails du transfert:", transfer);
+        
+        // Vérifier si le profil utilisateur existe
+        const userProfile = profilesById[transfer.user_id];
+        console.log("⭐ DÉBOGAGE: Profil trouvé pour l'utilisateur:", userProfile || "Aucun profil trouvé");
         
         return {
           id: transfer.id,
@@ -136,7 +138,7 @@ export default function BankTransfersPage() {
           processed_at: transfer.processed_at,
           notes: transfer.notes,
           processed: transfer.processed,
-          user_profile: profilesById[transfer.user_id] || {
+          user_profile: userProfile || {
             first_name: "Utilisateur",
             last_name: "Inconnu",
             email: null
@@ -144,12 +146,13 @@ export default function BankTransfersPage() {
         };
       });
       
-      console.log("Tous les virements formatés:", formattedTransfers);
-      console.log("Nombre total de virements formatés:", formattedTransfers.length);
+      console.log("⭐ DÉBOGAGE: Tous les virements formatés:", formattedTransfers);
+      console.log("⭐ DÉBOGAGE: Nombre total de virements formatés:", formattedTransfers.length);
       
       if (formattedTransfers.length > 0) {
-        console.log("IDs des virements:", formattedTransfers.map(t => t.id).join(', '));
-        console.log("Statuts des virements:", formattedTransfers.map(t => t.status).join(', '));
+        console.log("⭐ DÉBOGAGE: IDs des virements:", formattedTransfers.map(t => t.id).join(', '));
+        console.log("⭐ DÉBOGAGE: Statuts des virements:", formattedTransfers.map(t => t.status).join(', '));
+        console.log("⭐ DÉBOGAGE: Utilisateurs des virements:", formattedTransfers.map(t => t.user_id).join(', '));
       }
       
       // Définir tous les virements sans filtrage par utilisateur
@@ -262,6 +265,7 @@ export default function BankTransfersPage() {
                   <p className="text-xs text-gray-600">Nombre de virements bruts: {rawTransfers.length}</p>
                   <p className="text-xs text-gray-600">Nombre de virements formatés: {bankTransfers.length}</p>
                   <p className="text-xs text-gray-600">Nombre de virements filtrés: {filteredTransfers.length}</p>
+                  <p className="text-xs text-gray-600">IDs utilisateurs: {[...new Set(bankTransfers.map(t => t.user_id))].join(', ')}</p>
                 </div>
                 
                 {isLoading ? (
