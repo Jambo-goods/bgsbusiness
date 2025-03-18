@@ -1,5 +1,6 @@
+
 import React from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Home, LayoutDashboard, Settings, User, CreditCard, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,19 +12,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "next-auth/react";
 import { cn } from "@/lib/utils";
 
 interface DashboardSidebarProps {
-  isOpen: boolean;
-  userData: {
+  isSidebarOpen: boolean;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  toggleSidebar?: () => void;
+  handleLogout: () => void;
+  userData?: {
     firstName: string;
     lastName: string;
     email: string;
     phone?: string;
     address?: string;
-    investmentTotal: number;
-    projectsCount: number;
+    investmentTotal?: number;
+    projectsCount?: number;
     walletBalance?: number;
   };
 }
@@ -63,21 +67,26 @@ const SidebarSection: React.FC<SidebarSectionProps> = ({ title, children }) => (
   </div>
 );
 
-export default function DashboardSidebar({ isOpen, userData }) {
-  const pathname = usePathname();
-  const router = useRouter();
-
-  const activeTab = pathname ? pathname.split("/").pop() : "overview";
+export default function DashboardSidebar({ 
+  isSidebarOpen, 
+  activeTab,
+  setActiveTab,
+  toggleSidebar,
+  handleLogout,
+  userData = {}
+}: DashboardSidebarProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const handleTabChange = (tab: string) => {
-    router.push(`/dashboard/${tab}`);
+    setActiveTab(tab);
   };
 
   return (
     <aside
       className={cn(
         "fixed inset-y-0 left-0 z-50 w-64 flex-col bg-white border-r border-gray-200 transition-transform duration-300",
-        isOpen ? "translate-x-0" : "-translate-x-full",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         "md:relative md:translate-x-0 md:border-r"
       )}
     >
@@ -93,8 +102,8 @@ export default function DashboardSidebar({ isOpen, userData }) {
                 <Button variant="ghost" className="justify-start px-4 py-2 w-full font-normal text-bgs-blue/70">
                   <div className="flex items-center space-x-2">
                     <Avatar>
-                      <AvatarImage src="https://github.com/shadcn.png" alt={userData.firstName} />
-                      <AvatarFallback>{userData.firstName?.charAt(0)}{userData.lastName?.charAt(0)}</AvatarFallback>
+                      <AvatarImage src="https://github.com/shadcn.png" alt={userData.firstName || 'User'} />
+                      <AvatarFallback>{(userData.firstName?.charAt(0) || '') + (userData.lastName?.charAt(0) || '')}</AvatarFallback>
                     </Avatar>
                     <div className="flex flex-col items-start">
                       <span className="text-sm font-medium text-bgs-blue">{userData.firstName} {userData.lastName}</span>
@@ -110,7 +119,7 @@ export default function DashboardSidebar({ isOpen, userData }) {
                   <span>Profile</span>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => signOut()}>
+                <DropdownMenuItem onClick={handleLogout}>
                   Se déconnecter
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -145,7 +154,7 @@ export default function DashboardSidebar({ isOpen, userData }) {
           </SidebarSection>
         </div>
         <div className="p-4">
-          <Button variant="outline" className="w-full" onClick={() => router.push("/")}>
+          <Button variant="outline" className="w-full" onClick={() => navigate("/")}>
             Retour au site
           </Button>
         </div>
