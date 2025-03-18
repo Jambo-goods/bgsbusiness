@@ -1,74 +1,157 @@
 
-import { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import React from "react";
+import { 
+  User, 
+  Bell, 
+  Home, 
+  Settings, 
+  LogOut, 
+  ChevronRight,
+  Wallet,
+  LineChart,
+  BarChart3,
+  Briefcase,
+  Sparkles,
+  Users
+} from "lucide-react";
+import SidebarNavItem from "./SidebarNavItem";
 import SidebarSection from "./SidebarSection";
-import PrincipalSection from "./sections/PrincipalSection";
-import AccountSection from "./sections/AccountSection";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   isSidebarOpen: boolean;
   handleLogout: () => void;
-  toggleSidebar?: () => void;
+  toggleSidebar: () => void;
 }
 
-export default function Sidebar({
-  activeTab,
-  setActiveTab,
-  isSidebarOpen,
+const Sidebar: React.FC<SidebarProps> = ({ 
+  activeTab, 
+  setActiveTab, 
+  isSidebarOpen, 
   handleLogout,
   toggleSidebar
-}: SidebarProps) {
-  // Add keyboard shortcut listener
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for Ctrl/Cmd+B
-      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
-        e.preventDefault(); // Prevent default browser behavior
-        if (toggleSidebar) {
-          toggleSidebar();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-
-    // Clean up event listener on component unmount
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [toggleSidebar]);
-  
+}) => {
   return (
-    <div className={cn(
-      "flex flex-col h-full transition-all duration-300 bg-white border-r relative overflow-y-auto", 
-      isSidebarOpen ? "w-64" : "w-16"
-    )}>
-      {toggleSidebar && (
-        <button 
-          onClick={toggleSidebar}
-          className={cn(
-            "absolute top-4 right-0 z-10 h-8 w-8 flex items-center justify-center bg-white shadow-sm rounded-l-md -mr-4 transition-all",
-            "text-bgs-blue hover:text-bgs-orange focus:outline-none",
-            "md:flex hidden" // Hide on mobile, show on desktop
-          )}
-          aria-label={isSidebarOpen ? "Réduire le menu" : "Agrandir le menu"}
-          title={isSidebarOpen ? "Réduire le menu (Ctrl+B)" : "Agrandir le menu (Ctrl+B)"}
-        >
-          {isSidebarOpen ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-        </button>
-      )}
-      
-      <div className="flex flex-col py-6 flex-grow">
-        <SidebarSection title="PRINCIPAL" expanded={isSidebarOpen}>
-          <PrincipalSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} />
+    <div className="h-full flex flex-col justify-between py-4 overflow-y-auto">
+      {/* Main Navigation */}
+      <div className="flex-1 px-3 py-2 space-y-4">
+        <SidebarSection title="Tableau de bord" isOpen={isSidebarOpen}>
+          <SidebarNavItem 
+            icon={<Home size={20} />}
+            label="Vue d'ensemble"
+            isActive={activeTab === "overview"}
+            onClick={() => setActiveTab("overview")}
+            isOpen={isSidebarOpen}
+          />
+          
+          <SidebarNavItem 
+            icon={<Wallet size={20} />}
+            label="Portefeuille"
+            isActive={activeTab === "wallet"}
+            onClick={() => setActiveTab("wallet")}
+            isOpen={isSidebarOpen}
+          />
+          
+          <SidebarNavItem 
+            icon={<LineChart size={20} />}
+            label="Rendements"
+            isActive={activeTab === "yield"}
+            onClick={() => setActiveTab("yield")}
+            isOpen={isSidebarOpen}
+          />
         </SidebarSection>
         
-        <SidebarSection title="COMPTE" expanded={isSidebarOpen}>
-          <AccountSection activeTab={activeTab} setActiveTab={setActiveTab} expanded={isSidebarOpen} handleLogout={handleLogout} />
+        <SidebarSection title="Investissements" isOpen={isSidebarOpen}>
+          <SidebarNavItem 
+            icon={<BarChart3 size={20} />}
+            label="Mes investissements"
+            isActive={activeTab === "investments"}
+            onClick={() => setActiveTab("investments")}
+            isOpen={isSidebarOpen}
+          />
+          
+          <SidebarNavItem 
+            icon={<Briefcase size={20} />}
+            label="Projets"
+            isActive={activeTab === "projects"}
+            onClick={() => setActiveTab("projects")}
+            isOpen={isSidebarOpen}
+            badge="Nouveau"
+            badgeColor="bg-green-500"
+          />
+          
+          <SidebarNavItem 
+            icon={<Sparkles size={20} />}
+            label="Opportunités"
+            isActive={activeTab === "opportunities"}
+            onClick={() => setActiveTab("opportunities")}
+            isOpen={isSidebarOpen}
+            badge="Hot"
+            badgeColor="bg-red-500"
+          />
         </SidebarSection>
+        
+        <SidebarSection title="Programmes" isOpen={isSidebarOpen}>
+          <SidebarNavItem 
+            icon={<Users size={20} />}
+            label="Parrainage"
+            isActive={activeTab === "referral"}
+            onClick={() => setActiveTab("referral")}
+            isOpen={isSidebarOpen}
+            badge="10%"
+            badgeColor="bg-amber-500"
+          />
+        </SidebarSection>
+      </div>
+      
+      {/* User Navigation */}
+      <div className="px-3 py-2 border-t border-gray-100">
+        <SidebarNavItem 
+          icon={<User size={20} />}
+          label="Mon Profil"
+          isActive={activeTab === "profile"}
+          onClick={() => setActiveTab("profile")}
+          isOpen={isSidebarOpen}
+        />
+        
+        <SidebarNavItem 
+          icon={<Bell size={20} />}
+          label="Notifications"
+          isActive={activeTab === "notifications"}
+          onClick={() => setActiveTab("notifications")}
+          isOpen={isSidebarOpen}
+        />
+        
+        <SidebarNavItem 
+          icon={<Settings size={20} />}
+          label="Paramètres"
+          isActive={activeTab === "settings"}
+          onClick={() => setActiveTab("settings")}
+          isOpen={isSidebarOpen}
+        />
+        
+        <SidebarNavItem 
+          icon={<LogOut size={20} />}
+          label="Déconnexion"
+          isActive={false}
+          onClick={handleLogout}
+          isOpen={isSidebarOpen}
+        />
+      </div>
+      
+      {/* Mobile Sidebar Toggle */}
+      <div className="md:hidden px-3 pt-2 border-t border-gray-100">
+        <button
+          onClick={toggleSidebar}
+          className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-600 hover:text-bgs-blue hover:bg-bgs-blue/5 rounded-md transition-colors"
+        >
+          <span>Fermer le menu</span>
+          <ChevronRight size={16} />
+        </button>
       </div>
     </div>
   );
-}
+};
+
+export default Sidebar;
