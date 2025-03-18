@@ -63,6 +63,13 @@ export default function WithdrawalRequestsPage() {
       setIsLoading(true);
       console.log("Fetching all withdrawal requests...");
       
+      // Debug: Check the Supabase client
+      if (!supabase) {
+        console.error("Supabase client is not initialized");
+        toast.error("Erreur de connexion à la base de données");
+        return;
+      }
+
       // Requête sans filtre par utilisateur pour récupérer toutes les demandes de retrait
       const { data, error } = await supabase
         .from("withdrawal_requests")
@@ -76,13 +83,20 @@ export default function WithdrawalRequestsPage() {
       }
 
       console.log(`Retrieved ${data?.length || 0} withdrawal requests`);
+      console.log("Withdrawal data:", data);
+      
       const withdrawalData = data || [];
       setWithdrawalRequests(withdrawalData as WithdrawalRequest[]);
+
+      if (withdrawalData.length === 0) {
+        console.log("No withdrawal requests found in the database");
+      }
 
       // Fetch user data for all requests
       const userIds = Array.from(new Set(withdrawalData.map(w => w.user_id)));
       if (userIds.length > 0) {
         console.log(`Fetching profile data for ${userIds.length} users`);
+        console.log("User IDs:", userIds);
         
         // Récupérer toutes les données de profil sans restriction
         const { data: users, error: userError } = await supabase
@@ -152,6 +166,15 @@ export default function WithdrawalRequestsPage() {
                 onChange={e => setSearchTerm(e.target.value)} 
               />
             </div>
+            
+            <Button 
+              onClick={fetchWithdrawalRequests} 
+              variant="outline" 
+              className="flex items-center gap-2"
+            >
+              <Loader2 className={isLoading ? "animate-spin h-4 w-4" : "h-4 w-4"} />
+              Actualiser
+            </Button>
           </div>
 
           {isLoading ? (
