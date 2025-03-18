@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export function useDashboardState() {
   // Extract tab from URL if available
   const location = useLocation();
+  const navigate = useNavigate();
   const pathParts = location.pathname.split('/');
   const tabFromPath = pathParts.length > 2 ? pathParts[2] : null;
   
@@ -15,10 +16,11 @@ export function useDashboardState() {
 
   // Update URL when tab changes
   useEffect(() => {
-    // Optional: update URL when tab changes
-    // Use this if you want to maintain tab state in URL
-    // history.push(`/dashboard/${activeTab}`);
-  }, [activeTab]);
+    if (activeTab) {
+      // Update URL when tab changes to maintain state in URL
+      navigate(`/dashboard/${activeTab}`, { replace: true });
+    }
+  }, [activeTab, navigate]);
 
   return {
     activeTab,

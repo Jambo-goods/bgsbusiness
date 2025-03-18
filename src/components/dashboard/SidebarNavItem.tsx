@@ -1,74 +1,53 @@
 
 import React from "react";
-import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
-import { LucideIcon } from "lucide-react";
 
 interface SidebarNavItemProps {
-  icon: LucideIcon;
+  icon: React.ReactNode;
   label: string;
-  value: string;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  expanded: boolean;
-  labelPosition?: "right" | "tooltip";
+  isActive: boolean;
+  onClick: () => void;
+  isOpen: boolean;
+  badge?: string;
+  badgeColor?: string;
 }
 
-export default function SidebarNavItem({
-  icon: Icon,
-  label,
-  value,
-  activeTab,
-  setActiveTab,
-  expanded,
-  labelPosition = "right"
-}: SidebarNavItemProps) {
-  const navigate = useNavigate();
-  
-  const handleClick = () => {
-    console.log(`SidebarNavItem clicked: ${value}`);
-    setActiveTab(value);
-    
-    // Update URL with query parameter for direct access
-    if (value === 'overview') {
-      navigate('/dashboard');
-    } else {
-      navigate(`/dashboard?tab=${value}`);
-    }
-  };
-
-  const isActive = activeTab === value;
-  console.log(`SidebarNavItem ${value} - isActive: ${isActive}, activeTab: ${activeTab}`);
-
+const SidebarNavItem: React.FC<SidebarNavItemProps> = ({ 
+  icon, 
+  label, 
+  isActive, 
+  onClick, 
+  isOpen,
+  badge,
+  badgeColor = "bg-bgs-blue"
+}) => {
   return (
     <button
-      onClick={handleClick}
-      className={cn(
-        "flex items-center w-full py-2 px-3 my-1 rounded-lg text-left transition-colors duration-200",
-        "text-sm font-medium",
-        "hover:bg-gray-100",
-        isActive ? "bg-blue-50 text-bgs-blue" : "text-gray-700"
-      )}
-      title={expanded ? undefined : label}
+      onClick={onClick}
+      className={`
+        w-full flex items-center px-3 py-2 rounded-md transition-colors
+        ${isActive 
+          ? "bg-bgs-blue/10 text-bgs-blue font-medium" 
+          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+        }
+      `}
     >
-      <Icon
-        className={cn(
-          "h-5 w-5 flex-shrink-0",
-          isActive ? "text-bgs-blue" : "text-gray-500"
-        )}
-      />
+      <div className="flex-shrink-0">
+        {icon}
+      </div>
       
-      {(expanded || labelPosition === "tooltip") && (
-        <span 
-          className={cn(
-            "transition-all duration-200",
-            expanded ? "ml-3 opacity-100" : "opacity-0 absolute",
-            labelPosition === "tooltip" && !expanded ? "ml-8 bg-gray-800 text-white py-1 px-2 rounded text-xs" : ""
+      {isOpen && (
+        <div className="ml-3 flex-1 flex justify-between items-center">
+          <span>{label}</span>
+          
+          {badge && (
+            <span className={`${badgeColor} text-white text-xs px-1.5 py-0.5 rounded-full ml-2`}>
+              {badge}
+            </span>
           )}
-        >
-          {label}
-        </span>
+        </div>
       )}
     </button>
   );
-}
+};
+
+export default SidebarNavItem;

@@ -13,23 +13,14 @@ const preloadInvestments = () => import("./Investments");
 const preloadReferralTab = () => import("./tabs/ReferralTab");
 
 // Lazy load tabs that aren't used as frequently
-const WalletTab = lazy(() => {
-  // Trigger preload on import
-  return preloadWalletTab();
-});
+const WalletTab = lazy(() => preloadWalletTab());
 const YieldTab = lazy(() => import("./tabs/YieldTab"));
-const Investments = lazy(() => {
-  // Trigger preload on import
-  return preloadInvestments();
-});
+const Investments = lazy(() => preloadInvestments());
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
 const OpportunitiesTab = lazy(() => import("./tabs/OpportunitiesTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
 const NotificationsTab = lazy(() => import("./tabs/NotificationsTab"));
-const ReferralTab = lazy(() => {
-  // Trigger preload on import
-  return preloadReferralTab();
-});
+const ReferralTab = lazy(() => preloadReferralTab());
 
 interface TabContentProps {
   activeTab: string;
@@ -37,16 +28,6 @@ interface TabContentProps {
   userInvestments: any[];
   setActiveTab: (tab: string) => void;
   refreshData?: () => Promise<void>;
-}
-
-interface OverviewProps {
-  userData: any;
-  userInvestments: any[];
-  setActiveTab: (tab: string) => void;
-}
-
-interface ProfileTabProps {
-  userData: any;
 }
 
 // Optimized loading fallback component
