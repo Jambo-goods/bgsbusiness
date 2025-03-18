@@ -73,29 +73,13 @@ const App = () => (
                 <Route path="/admin" element={<AdminLayout />}>
                   <Route path="dashboard" element={<AdminDashboard />} />
                   <Route path="projects" element={<AdminProjects />} />
+                  <Route path="settings" element={<div>Paramètres</div>} />
+                  {/* Nested Routes */}
+                  <Route path="../scheduled-payments" element={<ScheduledPayments />} />
+                  <Route path="../withdrawal-requests" element={<WithdrawalRequestsPage />} />
+                  <Route path="../bank-transfers" element={<BankTransfersPage />} />
+                  <Route path="../profiles" element={<ProfilesPage />} />
                 </Route>
-                
-                {/* Protected Admin Pages */}
-                <Route path="/scheduled-payments" element={
-                  <AdminLayout>
-                    <ScheduledPayments />
-                  </AdminLayout>
-                } />
-                <Route path="/withdrawal-requests" element={
-                  <AdminLayout>
-                    <WithdrawalRequestsPage />
-                  </AdminLayout>
-                } />
-                <Route path="/bank-transfers" element={
-                  <AdminLayout>
-                    <BankTransfersPage />
-                  </AdminLayout>
-                } />
-                <Route path="/profiles" element={
-                  <AdminLayout>
-                    <ProfilesPage />
-                  </AdminLayout>
-                } />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
