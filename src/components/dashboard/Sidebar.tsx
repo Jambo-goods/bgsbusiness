@@ -60,7 +60,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             isOpen={isSidebarOpen}
           />
         
-          {/* Investment items (without the section header) */}
+          {/* Investment items */}
           <SidebarNavItem 
             icon={<BarChart3 size={18} />}
             label="Mes investissements"
@@ -79,7 +79,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             badgeColor="bg-green-500"
           />
           
-          {/* Program items (without the section header) */}
+          {/* Program items */}
           <SidebarNavItem 
             icon={<Users size={18} />}
             label="Parrainage"
@@ -90,7 +90,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             badgeColor="bg-amber-500"
           />
           
-          {/* Moved user navigation items here */}
+          {/* User navigation items */}
           <SidebarNavItem 
             icon={<User size={18} />}
             label="Mon Profil"

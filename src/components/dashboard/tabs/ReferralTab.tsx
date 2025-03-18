@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, Users, CreditCard, CheckCircle } from "lucide-react";
+import { Copy, Users, CreditCard, CheckCircle, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -109,6 +109,23 @@ export default function ReferralTab() {
     }, 3000);
   };
 
+  const shareReferralLink = () => {
+    const link = `${window.location.origin}/register?ref=${referralCode}`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: 'Rejoignez BGS Business Club',
+        text: 'Inscrivez-vous à BGS Business Club avec mon code de parrainage et recevez des avantages exclusifs !',
+        url: link,
+      })
+      .then(() => toast.success("Merci d'avoir partagé !"))
+      .catch((error) => console.log('Error sharing:', error));
+    } else {
+      // Fallback to copy if sharing is not supported
+      copyReferralLink();
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center py-10">
@@ -164,42 +181,66 @@ export default function ReferralTab() {
         </Card>
       </div>
       
-      {/* Referral Link */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Votre lien de parrainage</CardTitle>
+      {/* Referral Link and Code */}
+      <Card className="overflow-hidden border-2 border-amber-100">
+        <CardHeader className="bg-amber-50">
+          <CardTitle className="text-amber-800">Votre code de parrainage</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <input 
-                type="text" 
-                value={`${window.location.origin}/register?ref=${referralCode}`}
-                className="w-full px-4 py-2 border rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-bgs-blue/30"
-                readOnly
-              />
+        <CardContent className="pt-6">
+          <div className="space-y-6">
+            <div className="bg-amber-50 p-4 rounded-lg text-center">
+              <span className="text-2xl font-bold tracking-wider text-amber-800">{referralCode}</span>
             </div>
-            <Button 
-              onClick={copyReferralLink}
-              className="flex items-center gap-2"
-              variant={copied ? "outline" : "default"}
-            >
-              {copied ? (
-                <>
-                  <CheckCircle className="h-4 w-4" />
-                  Copié
-                </>
-              ) : (
-                <>
-                  <Copy className="h-4 w-4" />
-                  Copier le lien
-                </>
-              )}
-            </Button>
+            
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <input 
+                  type="text" 
+                  value={`${window.location.origin}/register?ref=${referralCode}`}
+                  className="w-full px-4 py-2 border rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-bgs-blue/30"
+                  readOnly
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={copyReferralLink}
+                  className="flex items-center gap-2"
+                  variant={copied ? "outline" : "default"}
+                >
+                  {copied ? (
+                    <>
+                      <CheckCircle className="h-4 w-4" />
+                      Copié
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4" />
+                      Copier
+                    </>
+                  )}
+                </Button>
+                
+                <Button 
+                  onClick={shareReferralLink}
+                  className="flex items-center gap-2"
+                  variant="secondary"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Partager
+                </Button>
+              </div>
+            </div>
+            
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h3 className="font-medium text-blue-800 mb-2">Comment ça marche ?</h3>
+              <ol className="list-decimal list-inside space-y-2 text-sm text-blue-700">
+                <li>Partagez votre code de parrainage ou votre lien avec vos amis</li>
+                <li>Ils s'inscrivent en utilisant votre code</li>
+                <li>Vous recevez 10% de commission sur tous leurs rendements</li>
+                <li>Les commissions sont créditées directement sur votre portefeuille</li>
+              </ol>
+            </div>
           </div>
-          <p className="mt-3 text-sm text-gray-500">
-            Partagez ce lien avec vos amis. Pour chaque personne qui s'inscrit avec votre code, vous recevrez 10% de leurs rendements.
-          </p>
         </CardContent>
       </Card>
       
@@ -246,7 +287,7 @@ export default function ReferralTab() {
             <div className="text-center py-10 bg-gray-50 rounded-lg">
               <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-gray-800">Aucun filleul pour le moment</h3>
-              <p className="text-gray-500 mt-1">Partagez votre lien pour commencer à parrainer</p>
+              <p className="text-gray-500 mt-1">Partagez votre code pour commencer à parrainer</p>
             </div>
           )}
         </TabsContent>

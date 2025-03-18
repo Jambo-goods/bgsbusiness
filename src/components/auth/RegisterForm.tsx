@@ -110,7 +110,7 @@ export default function RegisterForm() {
         console.log("Inscription réussie:", result.data);
         toast({
           title: "Inscription réussie",
-          description: "Votre compte a été créé avec succès"
+          description: "Votre compte a été créé avec succès. Vous pourrez trouver votre code de parrainage dans la section Parrainage du tableau de bord."
         });
         
         // Redirection vers le tableau de bord après inscription réussie
@@ -175,7 +175,9 @@ export default function RegisterForm() {
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-bgs-blue/60" />
           </div>
           {referralError && <p className="text-red-500 text-sm mt-1">{referralError}</p>}
-          <p className="text-sm text-bgs-blue/70">Si quelqu'un vous a parrainé, entrez son code ici</p>
+          <p className="text-sm text-bgs-blue/70">
+            Si quelqu'un vous a parrainé, entrez son code ici. Après inscription, vous obtiendrez votre propre code de parrainage.
+          </p>
         </div>
         
         <TermsCheckbox 

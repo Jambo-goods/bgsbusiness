@@ -129,6 +129,8 @@ export default function TabContent({
             </div>
           )}
           
+          {activeTab === "referral" && <ReferralTab />}
+          
           {activeTab === "profile" && (
             <ProfileTab userData={userData} />
           )}
@@ -136,8 +138,6 @@ export default function TabContent({
           {activeTab === "settings" && <SettingsTab />}
           
           {activeTab === "notifications" && <NotificationsTab />}
-          
-          {activeTab === "referral" && <ReferralTab />}
         </Suspense>
       )}
     </div>

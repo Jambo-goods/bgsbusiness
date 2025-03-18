@@ -32,6 +32,24 @@ export const registerUser = async (userData: UserRegistrationData) => {
     // Manually create the profile after successful registration
     if (data?.user?.id) {
       console.log("Creating user profile with ID:", data.user.id);
+      
+      // First check if the referral code is valid to get the referrer's ID
+      let referrerId = null;
+      if (userData.referralCode) {
+        const { data: referrerData } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('referral_code', userData.referralCode)
+          .single();
+          
+        if (referrerData) {
+          referrerId = referrerData.id;
+        }
+      }
+      
+      // Generate a unique referral code for the new user
+      const referralCode = `${userData.firstName.substring(0, 1)}${userData.lastName.substring(0, 1)}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -41,7 +59,9 @@ export const registerUser = async (userData: UserRegistrationData) => {
           email: userData.email,
           investment_total: 0,
           projects_count: 0,
-          wallet_balance: 0
+          wallet_balance: 0,
+          referral_code: referralCode,
+          referred_by: referrerId
         });
         
       if (profileError) {
@@ -50,7 +70,22 @@ export const registerUser = async (userData: UserRegistrationData) => {
         console.error("Profile creation error details:", JSON.stringify(profileError));
         // Continue anyway, as the auth trigger should handle this in production
       } else {
-        console.log("User profile created successfully");
+        console.log("User profile created successfully with referral code:", referralCode);
+        
+        // If this user was referred by someone, create a referral record
+        if (referrerId) {
+          const { error: referralError } = await supabase
+            .from('referrals')
+            .insert({
+              referrer_id: referrerId,
+              referred_id: data.user.id,
+              status: 'pending'
+            });
+            
+          if (referralError) {
+            console.error("Error creating referral record:", referralError);
+          }
+        }
       }
     }
     
