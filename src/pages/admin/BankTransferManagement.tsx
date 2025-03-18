@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import BankTransferTable from "@/components/admin/dashboard/BankTransferTable";
 import { Helmet } from "react-helmet-async";
@@ -58,13 +57,14 @@ export default function BankTransferManagement() {
           
           // Tenter de récupérer les polices RLS (nécessite des privilèges admin)
           try {
+            // Using a different function that exists in the database
             const { data: policies, error: policiesError } = await supabase
-              .rpc('get_policies_info');
+              .rpc('is_admin');
               
             if (policiesError) {
               console.error("Erreur lors de la récupération des politiques RLS:", policiesError);
             } else if (policies) {
-              setDatabasePolicies(policies);
+              setDatabasePolicies(Array.isArray(policies) ? policies : []);
               console.log("Policies retrieved:", policies);
             }
           } catch (policyError) {
@@ -146,7 +146,7 @@ export default function BankTransferManagement() {
         
         {/* Alerte de rôle */}
         {authStatus === "authenticated" && userRole !== "admin" && (
-          <Alert variant="warning">
+          <Alert>
             <Shield className="h-4 w-4" />
             <AlertTitle>Permissions limitées</AlertTitle>
             <AlertDescription>

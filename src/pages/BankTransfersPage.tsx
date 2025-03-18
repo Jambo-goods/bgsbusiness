@@ -2,11 +2,9 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
-import SidebarMenu from "@/components/layout/SidebarMenu";
 import { Toaster } from "sonner";
 
 interface BankTransfer {
@@ -152,126 +150,122 @@ export default function BankTransfersPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50">
       <Toaster />
       
-      <SidebarMenu />
-      
-      <div className="flex-1">
-        <div className="container mx-auto py-8 px-4">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Virements Bancaires</h1>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <Input 
-                  type="text" 
-                  placeholder="Rechercher par utilisateur, référence..." 
-                  className="pl-10 w-full md:w-80" 
-                  value={searchTerm} 
-                  onChange={e => setSearchTerm(e.target.value)} 
-                />
-              </div>
-              <Button 
-                variant="outline"
-                onClick={fetchBankTransfers}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Actualiser
-              </Button>
+      <div className="container mx-auto py-8 px-4">
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Virements Bancaires</h1>
+        
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <Input 
+                type="text" 
+                placeholder="Rechercher par utilisateur, référence..." 
+                className="pl-10 w-full md:w-80" 
+                value={searchTerm} 
+                onChange={e => setSearchTerm(e.target.value)} 
+              />
             </div>
-
-            {isLoading ? (
-              <div className="flex justify-center items-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-              </div>
-            ) : filteredTransfers.length === 0 ? (
-              <div className="text-center p-8 text-gray-500">
-                Aucun virement bancaire trouvé
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Utilisateur</TableHead>
-                      <TableHead>
-                        <button 
-                          className="flex items-center space-x-1 hover:text-gray-700" 
-                          onClick={() => handleSort("reference")}
-                        >
-                          <span>Référence</span>
-                          {sortField === "reference" && (
-                            sortDirection === "asc" ? 
-                              <ArrowUp className="h-4 w-4" /> : 
-                              <ArrowDown className="h-4 w-4" />
-                          )}
-                        </button>
-                      </TableHead>
-                      <TableHead>
-                        <button 
-                          className="flex items-center space-x-1 hover:text-gray-700" 
-                          onClick={() => handleSort("amount")}
-                        >
-                          <span>Montant</span>
-                          {sortField === "amount" && (
-                            sortDirection === "asc" ? 
-                              <ArrowUp className="h-4 w-4" /> : 
-                              <ArrowDown className="h-4 w-4" />
-                          )}
-                        </button>
-                      </TableHead>
-                      <TableHead>
-                        <button 
-                          className="flex items-center space-x-1 hover:text-gray-700" 
-                          onClick={() => handleSort("confirmed_at")}
-                        >
-                          <span>Date de Confirmation</span>
-                          {sortField === "confirmed_at" && (
-                            sortDirection === "asc" ? 
-                              <ArrowUp className="h-4 w-4" /> : 
-                              <ArrowDown className="h-4 w-4" />
-                          )}
-                        </button>
-                      </TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTransfers.map(transfer => {
-                      const user = userData[transfer.user_id] || { first_name: null, last_name: null, email: null };
-                      return (
-                        <TableRow key={transfer.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{user.first_name} {user.last_name}</div>
-                              <div className="text-sm text-gray-500">{user.email}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-mono">{transfer.reference}</TableCell>
-                          <TableCell className="font-medium">{transfer.amount?.toLocaleString()} €</TableCell>
-                          <TableCell>{transfer.confirmed_at ? formatDate(transfer.confirmed_at) : "-"}</TableCell>
-                          <TableCell>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(transfer.status)}`}>
-                              {getStatusLabel(transfer.status)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-xs truncate">
-                              {transfer.notes || "-"}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <Button 
+              variant="outline"
+              onClick={fetchBankTransfers}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Actualiser
+            </Button>
           </div>
+
+          {isLoading ? (
+            <div className="flex justify-center items-center p-12">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+            </div>
+          ) : filteredTransfers.length === 0 ? (
+            <div className="text-center p-8 text-gray-500">
+              Aucun virement bancaire trouvé
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Utilisateur</TableHead>
+                    <TableHead>
+                      <button 
+                        className="flex items-center space-x-1 hover:text-gray-700" 
+                        onClick={() => handleSort("reference")}
+                      >
+                        <span>Référence</span>
+                        {sortField === "reference" && (
+                          sortDirection === "asc" ? 
+                            <ArrowUp className="h-4 w-4" /> : 
+                            <ArrowDown className="h-4 w-4" />
+                        )}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button 
+                        className="flex items-center space-x-1 hover:text-gray-700" 
+                        onClick={() => handleSort("amount")}
+                      >
+                        <span>Montant</span>
+                        {sortField === "amount" && (
+                          sortDirection === "asc" ? 
+                            <ArrowUp className="h-4 w-4" /> : 
+                            <ArrowDown className="h-4 w-4" />
+                        )}
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button 
+                        className="flex items-center space-x-1 hover:text-gray-700" 
+                        onClick={() => handleSort("confirmed_at")}
+                      >
+                        <span>Date de Confirmation</span>
+                        {sortField === "confirmed_at" && (
+                          sortDirection === "asc" ? 
+                            <ArrowUp className="h-4 w-4" /> : 
+                            <ArrowDown className="h-4 w-4" />
+                        )}
+                      </button>
+                    </TableHead>
+                    <TableHead>Statut</TableHead>
+                    <TableHead>Notes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransfers.map(transfer => {
+                    const user = userData[transfer.user_id] || { first_name: null, last_name: null, email: null };
+                    return (
+                      <TableRow key={transfer.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{user.first_name} {user.last_name}</div>
+                            <div className="text-sm text-gray-500">{user.email}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-mono">{transfer.reference}</TableCell>
+                        <TableCell className="font-medium">{transfer.amount?.toLocaleString()} €</TableCell>
+                        <TableCell>{transfer.confirmed_at ? formatDate(transfer.confirmed_at) : "-"}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(transfer.status)}`}>
+                            {getStatusLabel(transfer.status)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="max-w-xs truncate">
+                            {transfer.notes || "-"}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </div>
       </div>
     </div>
