@@ -68,7 +68,7 @@ export default function BankTransfersPage() {
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('confirmed_at', { ascending: false });
         
       if (transfersError) {
         console.error('Erreur SQL:', transfersError);
