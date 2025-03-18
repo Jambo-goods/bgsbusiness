@@ -1,204 +1,212 @@
 
-import React, { useState, useEffect } from 'react';
-import { BellRing, Check, Trash2, Mail, Bell } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useUserSession } from '@/hooks/dashboard/useUserSession';
-import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { 
+  Bell, 
+  Check, 
+  Wallet, 
+  Briefcase, 
+  Shield, 
+  Megaphone, 
+  CheckCircle, 
+  AlertTriangle, 
+  Info, 
+  XCircle
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { notificationService, Notification, NotificationType } from "@/services/notifications";
+import { formatDistanceToNow } from "date-fns";
+import { fr } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 
 interface NotificationDropdownProps {
-  unreadCount: number;
-  onMarkAllRead: () => void;
+  isOpen: boolean;
+  onClose?: () => void;
 }
 
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  seen: boolean;
-  created_at: string;
-  type: string;
-}
-
-export function NotificationDropdown({ unreadCount, onMarkAllRead }: NotificationDropdownProps) {
+export default function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const { userId } = useUserSession();
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
-    if (userId) {
+    if (isOpen) {
       fetchNotifications();
     }
-  }, [userId]);
-  
-  const fetchNotifications = async () => {
-    if (!userId) return;
     
+    // Add real-time notification listener to improve notification visibility
+    const notificationChannel = supabase
+      .channel('real-time-notifications')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications'
+      }, (payload) => {
+        console.log("New notification detected, refreshing list:", payload);
+        fetchNotifications();
+      })
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'notifications'
+      }, (payload) => {
+        console.log("Notification updated, refreshing list:", payload);
+        fetchNotifications();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(notificationChannel);
+    };
+  }, [isOpen]);
+
+  const fetchNotifications = async () => {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(5);
-        
-      if (error) throw error;
-      
-      setNotifications(data || []);
-    } catch (err) {
-      console.error('Error fetching notifications:', err);
+      console.log("Fetching latest notifications");
+      const data = await notificationService.getNotifications(5);
+      console.log("Latest notifications fetched:", data);
+      setNotifications(data);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
     } finally {
       setIsLoading(false);
     }
   };
-  
-  const markAllAsRead = async () => {
-    if (!userId) return;
-    
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ seen: true })
-        .eq('user_id', userId)
-        .eq('seen', false);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setNotifications(prev => prev.map(notification => ({ ...notification, seen: true })));
-      
-      // Call the callback to update unread count in parent component
-      onMarkAllRead();
-      
-      toast.success('Toutes les notifications marquées comme lues');
-    } catch (err) {
-      console.error('Error marking notifications as read:', err);
-      toast.error('Une erreur est survenue');
-    }
-  };
-  
-  const markAsRead = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ seen: true })
-        .eq('id', id);
-        
-      if (error) throw error;
-      
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === id ? { ...notification, seen: true } : notification
-        )
-      );
-      
-      // Call the callback to update unread count in parent component
-      onMarkAllRead();
-    } catch (err) {
-      console.error('Error marking notification as read:', err);
-    }
-  };
-  
-  const viewAllNotifications = () => {
-    navigate('/dashboard', { state: { activeTab: 'notifications' } });
+
+  const handleMarkAsRead = async (id: string) => {
+    await notificationService.markAsRead(id);
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === id ? { ...notification, read: true } : notification
+      )
+    );
   };
 
+  const handleMarkAllAsRead = async () => {
+    await notificationService.markAllAsRead();
+    setNotifications(prev => 
+      prev.map(notification => ({ ...notification, read: true }))
+    );
+  };
+
+  const handleViewAllClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (onClose) onClose();
+    navigate("/dashboard?tab=notifications");
+  };
+
+  const getTypeIcon = (type: NotificationType) => {
+    switch (type) {
+      case 'deposit':
+      case 'withdrawal':
+        return <Wallet className="h-4 w-4 text-blue-500" />;
+      case 'investment':
+        return <Briefcase className="h-4 w-4 text-green-500" />;
+      case 'security':
+        return <Shield className="h-4 w-4 text-purple-500" />;
+      case 'marketing':
+        return <Megaphone className="h-4 w-4 text-orange-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
+  const getCategoryIcon = (category?: string) => {
+    switch (category) {
+      case 'success':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'warning':
+        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
+      case 'error':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'info':
+      default:
+        return <Info className="h-4 w-4 text-blue-500" />;
+    }
+  };
+
+  const formatDate = (date: Date) => {
+    return formatDistanceToNow(date, {
+      addSuffix: true,
+      locale: fr
+    });
+  };
+
+  if (!isOpen) return null;
+  
+  const unreadCount = notifications.filter(n => !n.read).length;
+  
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
-          <BellRing className="h-5 w-5" />
-          {unreadCount > 0 && (
-            <Badge className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-red-500 text-white text-xs">
-              {unreadCount}
-            </Badge>
-          )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80" align="end">
-        <DropdownMenuLabel className="flex justify-between items-center">
-          <span>Notifications</span>
-          {unreadCount > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 px-2 text-xs" 
-              onClick={markAllAsRead}
-            >
-              <Check className="h-3 w-3 mr-1" />
-              Tout marquer comme lu
-            </Button>
-          )}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        
-        {isLoading ? (
-          <div className="p-4 text-center">
-            <div className="animate-spin h-6 w-6 border-2 border-bgs-blue border-t-transparent rounded-full mx-auto"></div>
-            <p className="text-sm text-gray-500 mt-2">Chargement des notifications...</p>
-          </div>
-        ) : notifications.length > 0 ? (
-          <DropdownMenuGroup>
-            {notifications.map(notification => (
-              <DropdownMenuItem key={notification.id} className="p-0">
-                <button 
-                  className={`w-full text-left p-3 hover:bg-gray-50 ${!notification.seen ? 'bg-blue-50' : ''}`}
-                  onClick={() => markAsRead(notification.id)}
-                >
-                  <div className="flex items-start">
-                    <div className="mr-3 mt-0.5">
-                      {notification.type === 'message' ? (
-                        <Mail className="h-5 w-5 text-bgs-blue" />
-                      ) : (
-                        <Bell className="h-5 w-5 text-bgs-orange" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{notification.title}</p>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notification.message}</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {new Date(notification.created_at).toLocaleDateString('fr-FR', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                    {!notification.seen && (
-                      <div className="w-2 h-2 bg-bgs-blue rounded-full"></div>
-                    )}
-                  </div>
-                </button>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-        ) : (
-          <div className="p-4 text-center">
-            <p className="text-sm text-gray-500">Aucune notification</p>
-          </div>
+    <div className="absolute right-0 mt-2 w-80 bg-white shadow-lg rounded-lg z-50 p-4 border border-gray-100 animate-fade-in">
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="font-medium text-bgs-blue">Notifications</h3>
+        {unreadCount > 0 && (
+          <span className="text-xs bg-bgs-orange/10 text-bgs-orange px-2 py-0.5 rounded-full font-medium">
+            {unreadCount} {unreadCount === 1 ? 'nouvelle' : 'nouvelles'}
+          </span>
         )}
-        
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="justify-center" onClick={viewAllNotifications}>
-          <Button variant="link" className="w-full h-9">Voir toutes les notifications</Button>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </div>
+      
+      {unreadCount > 0 && (
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="w-full mb-2 text-xs"
+          onClick={handleMarkAllAsRead}
+        >
+          <Check className="h-3 w-3 mr-1" /> Tout marquer comme lu
+        </Button>
+      )}
+      
+      <Separator className="my-2" />
+      
+      <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
+        {isLoading ? (
+          <div className="py-8 text-center text-sm text-gray-500">
+            Chargement...
+          </div>
+        ) : notifications.length === 0 ? (
+          <div className="py-8 text-center text-sm text-gray-500">
+            Aucune notification
+          </div>
+        ) : (
+          notifications.map((notification) => (
+            <div 
+              key={notification.id} 
+              className={`py-3 hover:bg-gray-50 cursor-pointer rounded-md px-3 transition-colors ${notification.read ? '' : 'bg-blue-50'}`}
+              onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+            >
+              <div className="flex items-start gap-2">
+                <div className="mt-0.5">
+                  {getTypeIcon(notification.type)}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <p className={`text-sm font-medium ${notification.read ? 'text-gray-900' : 'text-blue-800'}`}>
+                      {notification.title}
+                    </p>
+                    <span className="text-xs text-gray-500 ml-2 whitespace-nowrap">
+                      {formatDate(notification.date)}
+                    </span>
+                  </div>
+                  <p className={`text-xs mt-0.5 ${notification.read ? 'text-gray-500' : 'text-blue-700'}`}>
+                    {notification.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      
+      <button 
+        onClick={handleViewAllClick}
+        className="block w-full text-center text-sm text-bgs-blue hover:text-bgs-blue-dark mt-3 font-medium transition-colors"
+      >
+        Voir toutes les notifications
+      </button>
+    </div>
   );
 }

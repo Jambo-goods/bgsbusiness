@@ -1,126 +1,97 @@
 
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useUserSession } from './useUserSession';
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { WalletChange } from "./types";
+import { toast } from "sonner";
 
-export type WalletChange = {
-  amount: number;
-  percentage: number;
-  direction: 'increase' | 'decrease' | 'neutral';
-};
-
-export const useWalletData = () => {
-  const [walletBalance, setWalletBalance] = useState(0);
+export const useWalletData = (
+  userId: string | null,
+  walletBalance?: number
+): { walletChange: WalletChange } => {
   const [walletChange, setWalletChange] = useState<WalletChange>({
-    amount: 0,
-    percentage: 0,
-    direction: 'neutral'
+    percentage: "0%",
+    value: "0€",
   });
-  const [isLoading, setIsLoading] = useState(true);
-  const { userId } = useUserSession();
 
   useEffect(() => {
-    if (userId) {
-      fetchWalletData();
-      
-      // Set up realtime subscription for wallet changes
-      const channel = supabase
-        .channel('wallet-balance-changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'profiles',
-          filter: `id=eq.${userId}`
-        }, () => {
-          fetchWalletData();
-        })
-        .subscribe();
-        
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [userId]);
-
-  const fetchWalletData = async () => {
     if (!userId) return;
-    
-    try {
-      setIsLoading(true);
-      
-      // Fetch current wallet balance
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', userId)
-        .single();
-        
-      if (profileError) throw profileError;
-      
-      const currentBalance = profileData?.wallet_balance || 0;
-      setWalletBalance(currentBalance);
-      
-      // Fetch recent transactions to calculate change
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const { data: recentTransactions, error: txError } = await supabase
-        .from('wallet_transactions')
-        .select('amount, type, created_at')
-        .eq('user_id', userId)
-        .gte('created_at', thirtyDaysAgo.toISOString())
-        .order('created_at', { ascending: false });
-        
-      if (txError) throw txError;
-      
-      // Calculate wallet change
-      calculateWalletChange(recentTransactions || []);
-      
-    } catch (err) {
-      console.error('Error fetching wallet data:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const calculateWalletChange = (transactions: any[]) => {
-    if (transactions.length === 0) {
-      setWalletChange({
-        amount: 0,
-        percentage: 0,
-        direction: 'neutral'
-      });
-      return;
-    }
-    
-    // Sum deposits and withdrawals
-    let netChange = 0;
-    
-    transactions.forEach(tx => {
-      if (tx.type === 'deposit' || tx.type === 'yield') {
-        netChange += tx.amount;
-      } else if (tx.type === 'withdrawal' || tx.type === 'investment') {
-        netChange -= tx.amount;
+    const fetchWalletTransactions = async () => {
+      try {
+        // Get wallet transactions for the last month
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
+        const { data: walletData, error: walletError } = await supabase
+          .from("wallet_transactions")
+          .select("amount, type, created_at")
+          .eq("user_id", userId)
+          .gte("created_at", oneMonthAgo.toISOString());
+
+        if (walletError) {
+          console.error("Error fetching wallet data:", walletError);
+          return;
+        }
+
+        if (walletData && walletData.length > 0) {
+          console.log(`Found ${walletData.length} wallet transactions in the last month`);
+          const depositsLastMonth = walletData
+            .filter((t) => t.type === "deposit")
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          const withdrawalsLastMonth = walletData
+            .filter((t) => t.type === "withdrawal")
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          const netChange = depositsLastMonth - withdrawalsLastMonth;
+
+          // Only calculate percentage if we have balance data and it's not zero
+          if (walletBalance && walletBalance > 0) {
+            const percentChange = Math.round((netChange / walletBalance) * 100);
+            setWalletChange({
+              percentage: `${netChange >= 0 ? "+" : ""}${Math.abs(percentChange)}%`,
+              value: `${netChange >= 0 ? "↑" : "↓"} ${Math.abs(netChange)}€`,
+            });
+          } else {
+            // Just show absolute change if we can't calculate percentage
+            setWalletChange({
+              percentage: `${netChange >= 0 ? "+" : ""}${Math.abs(netChange)}€`,
+              value: `${netChange >= 0 ? "↑" : "↓"} ${Math.abs(netChange)}€`,
+            });
+          }
+        } else {
+          // No transactions found, set neutral values
+          setWalletChange({
+            percentage: "0%",
+            value: "0€",
+          });
+        }
+      } catch (error) {
+        console.error("Error in fetchWalletTransactions:", error);
+        toast.error("Erreur lors de la récupération des données de votre portefeuille");
       }
-    });
-    
-    // Calculate percentage change
-    const previousBalance = walletBalance - netChange;
-    const percentageChange = previousBalance > 0 
-      ? (netChange / previousBalance) * 100 
-      : 0;
-    
-    setWalletChange({
-      amount: Math.abs(netChange),
-      percentage: Math.abs(percentageChange),
-      direction: netChange > 0 ? 'increase' : netChange < 0 ? 'decrease' : 'neutral'
-    });
-  };
+    };
 
-  return {
-    walletBalance,
-    walletChange,
-    isLoading,
-    refreshWalletData: fetchWalletData
-  };
+    fetchWalletTransactions();
+    
+    // Set up real-time subscription for wallet transactions
+    const walletChannel = supabase
+      .channel('wallet_data_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'wallet_transactions',
+        filter: `user_id=eq.${userId}`
+      }, () => {
+        console.log('Wallet transaction detected, refreshing wallet data...');
+        fetchWalletTransactions();
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(walletChannel);
+    };
+  }, [userId, walletBalance]);
+
+  return { walletChange };
 };

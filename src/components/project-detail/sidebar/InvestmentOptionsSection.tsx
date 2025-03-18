@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
 import { useInvestment } from "@/hooks/useInvestment";
@@ -19,52 +19,22 @@ export default function InvestmentOptionsSection({
   project,
   investorCount
 }: InvestmentOptionsSectionProps) {
-  // Add local state since useInvestment doesn't provide all needed properties
-  const [investmentAmount, setInvestmentAmount] = useState(1000);
-  const [selectedDuration, setSelectedDuration] = useState(12); // Default 12 months
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  
-  // Calculate returns based on project and selected options
-  const yieldRate = project.yield || 7; // Default yield 7%
-  const monthlyReturn = (investmentAmount * (yieldRate / 100)) / 12;
-  const totalReturn = monthlyReturn * selectedDuration;
-  
-  // Define investment limits
-  const minInvestment = 500;
-  const maxInvestment = 50000;
-  
-  // Available durations
-  const durations = [6, 12, 24, 36];
-  
-  // Get investment functions from hook
   const {
-    confirmInvestment,
-    isLoading,
-    isError,
-    error,
-    handleCancel: cancelConfirmation
-  } = useInvestment();
-
-  // Handler for invest button
-  const handleInvest = () => {
-    setShowConfirmation(true);
-  };
-  
-  // Handler for cancel
-  const cancelInvestment = () => {
-    setShowConfirmation(false);
-    cancelConfirmation();
-  };
-  
-  // Handler for confirm investment
-  const confirmInvestmentHandler = () => {
-    setIsProcessing(true);
-    confirmInvestment({ 
-      amount: investmentAmount,
-      project_id: project.id
-    });
-  };
+    investmentAmount,
+    setInvestmentAmount,
+    showConfirmation,
+    isProcessing,
+    selectedDuration,
+    setSelectedDuration,
+    totalReturn,
+    monthlyReturn,
+    minInvestment,
+    maxInvestment,
+    durations,
+    handleInvest,
+    cancelInvestment,
+    confirmInvestment
+  } = useInvestment(project, investorCount);
 
   return (
     <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100 transform transition-all duration-300 hover:shadow-lg">
@@ -112,8 +82,8 @@ export default function InvestmentOptionsSection({
           project={project}
           investmentAmount={investmentAmount}
           selectedDuration={selectedDuration}
-          isProcessing={isProcessing || isLoading}
-          onConfirm={confirmInvestmentHandler}
+          isProcessing={isProcessing}
+          onConfirm={confirmInvestment}
           onCancel={cancelInvestment}
           monthlyReturn={monthlyReturn}
           totalReturn={totalReturn}

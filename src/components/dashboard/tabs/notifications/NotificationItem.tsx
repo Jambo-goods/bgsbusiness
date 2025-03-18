@@ -1,3 +1,4 @@
+
 import React from "react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -59,9 +60,11 @@ export default function NotificationItem({
     }
   };
 
-  const formatDate = (date: string) => {
-    const formattedDate = formatDistanceToNow(new Date(date), { addSuffix: true });
-    return formattedDate;
+  const formatDate = (date: Date) => {
+    return formatDistanceToNow(date, {
+      addSuffix: true,
+      locale: fr
+    });
   };
 
   return (

@@ -1,87 +1,86 @@
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useUserSession } from '@/hooks/dashboard/useUserSession';
-import { useToast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { Project } from "@/types/project";
+import { useToast } from "@/hooks/use-toast";
+import { notificationService } from "@/services/notifications";
+import { calculateReturns } from "@/utils/investmentCalculations";
+import { useUserBalance } from "@/hooks/useUserBalance";
+import { useInvestmentConfirmation } from "@/hooks/useInvestmentConfirmation";
 
-export interface Investment {
-  id: string;
-  amount: number;
-  user_id: string;
-  project_id: string;
-  yield_rate: number;
-  duration: number;
-  status: string;
-  date: string;
-  end_date: string;
-  created_at?: string; // Make created_at optional
-}
-
-export const useInvestment = () => {
-  const [investment, setInvestment] = useState<Investment | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { projectId } = useParams<{ projectId: string }>();
-  const { userId } = useUserSession();
+export const useInvestment = (project: Project, investorCount: number) => {
+  const [investmentAmount, setInvestmentAmount] = useState(project.minInvestment || 500);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState(
+    project.possibleDurations ? project.possibleDurations[0] : parseInt(project.duration)
+  );
+  const [totalReturn, setTotalReturn] = useState(0);
+  const [monthlyReturn, setMonthlyReturn] = useState(0);
   const { toast } = useToast();
-
+  
+  const { userBalance } = useUserBalance();
+  
+  // Extract constants from project
+  const minInvestment = project.minInvestment;
+  const maxInvestment = project.maxInvestment || 10000;
+  const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
+  
+  const durations = project.possibleDurations || 
+    [parseInt(project.duration.split(' ')[0])];
+  
+  // Calculate investment returns when parameters change
   useEffect(() => {
-    if (userId && projectId) {
-      fetchInvestment();
-    } else {
-      setIsLoading(false);
+    const { monthlyReturn: calculatedMonthlyReturn, totalReturn: calculatedTotalReturn } = 
+      calculateReturns(investmentAmount, project.yield, selectedDuration, firstPaymentDelay);
+    
+    setMonthlyReturn(calculatedMonthlyReturn);
+    setTotalReturn(calculatedTotalReturn);
+  }, [investmentAmount, selectedDuration, project.yield, firstPaymentDelay]);
+  
+  // Validation and confirmation handling
+  const handleInvest = () => {
+    if (userBalance < investmentAmount) {
+      toast({
+        title: "Solde insuffisant",
+        description: `Vous n'avez pas assez de fonds disponibles. Votre solde: ${userBalance}€`,
+        variant: "destructive"
+      });
+      
+      // Create insufficient funds notification
+      notificationService.insufficientFunds();
+      return;
     }
-  }, [userId, projectId]);
-
-  const fetchInvestment = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const { data, error } = await supabase
-        .from('investments')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('project_id', projectId)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching investment:', error);
-        setError('Une erreur est survenue lors de la récupération de votre investissement.');
-        toast({
-          variant: "destructive",
-          title: "Erreur",
-          description: "Impossible de récupérer les détails de votre investissement."
-        });
-      } else if (data) {
-        // Ensure the data has all required fields
-        const investmentData: Investment = {
-          id: data.id,
-          amount: data.amount,
-          user_id: data.user_id,
-          project_id: data.project_id,
-          yield_rate: data.yield_rate,
-          duration: data.duration,
-          status: data.status,
-          date: data.date || new Date().toISOString(),
-          end_date: data.end_date || '',
-          created_at: data.date || new Date().toISOString() // Use date as created_at if needed
-        };
-        setInvestment(investmentData);
-      }
-    } catch (err) {
-      console.error('Error in fetchInvestment:', err);
-      setError('Une erreur inattendue est survenue.');
-    } finally {
-      setIsLoading(false);
-    }
+    
+    setShowConfirmation(true);
+  };
+  
+  const cancelInvestment = () => {
+    setShowConfirmation(false);
   };
 
+  // Use the confirmation hook - with corrected parameters
+  const { isLoading: isProcessing, confirmInvestment } = useInvestmentConfirmation(
+    project, 
+    investorCount,
+    project.fundingProgress || 0,
+    () => setShowConfirmation(false)
+  );
+
   return {
-    investment,
-    isLoading,
-    error,
-    refetch: fetchInvestment
+    investmentAmount,
+    setInvestmentAmount,
+    showConfirmation,
+    setShowConfirmation,
+    isProcessing,
+    selectedDuration,
+    setSelectedDuration,
+    totalReturn,
+    monthlyReturn,
+    minInvestment,
+    maxInvestment,
+    durations,
+    userBalance,
+    handleInvest,
+    cancelInvestment,
+    confirmInvestment
   };
 };

@@ -1,109 +1,122 @@
 
-import { useState } from 'react';
-import { CreditCard, ArrowDownToLine, ArrowUpFromLine, CircleDollarSign } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import WithdrawFundsForm from './WithdrawFundsForm';
-import { useUserSession } from '@/hooks/dashboard/useUserSession';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import React from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 
-export function ActionButtons() {
-  const [isWithdrawModalOpen, setIsWithdrawModalOpen] = useState(false);
-  const { toast } = useToast();
-  const { userId } = useUserSession();
+interface ActionButtonsProps {
+  onDeposit: () => void;
+  onWithdraw: () => void;
+  refreshBalance?: () => Promise<void>;
+}
 
-  const handleAddFunds = async () => {
+export default function ActionButtons({
+  onDeposit,
+  onWithdraw,
+  refreshBalance
+}: ActionButtonsProps) {
+  const handleDeposit = async () => {
     try {
-      if (!userId) {
-        toast({
-          variant: "destructive",
-          title: "Erreur",
-          description: "Vous devez être connecté pour ajouter des fonds",
-        });
+      const {
+        data: session
+      } = await supabase.auth.getSession();
+      if (!session.session) {
+        toast.error("Veuillez vous connecter pour effectuer un dépôt");
         return;
       }
 
-      // Create a bank transfer record
-      const { data, error } = await supabase
-        .from('bank_transfers')
-        .insert({
-          user_id: userId,
-          amount: 1000, // Demo amount of 1000€
-          status: 'pending',
-          reference: `BGS-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-          description: "Dépôt de fonds (démo)"
-        })
-        .select()
-        .single();
+      // Ajout d'une transaction de dépôt (simulée pour le test)
+      const depositAmount = 1000; // 1000€ pour test
 
-      if (error) {
-        console.error('Error creating bank transfer:', error);
-        toast({
-          variant: "destructive",
-          title: "Erreur",
-          description: "Impossible d'ajouter des fonds pour le moment",
-        });
-        return;
-      }
-
-      // Create wallet transaction record
-      await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: userId,
-          type: 'deposit',
-          amount: 1000,
-          status: 'pending',
-          description: `Dépôt de fonds via virement bancaire (réf: ${data.reference})`,
-          transaction_id: data.id
-        });
-
-      toast({
-        title: "Demande enregistrée",
-        description: "Votre demande de dépôt a été enregistrée. Un administrateur traitera votre demande.",
+      // Création de la transaction
+      const {
+        error: transactionError
+      } = await supabase.from('wallet_transactions').insert({
+        user_id: session.session.user.id,
+        amount: depositAmount,
+        type: 'deposit',
+        description: 'Dépôt de fonds'
       });
-    } catch (err) {
-      console.error('Error in handleAddFunds:', err);
-      toast({
-        variant: "destructive",
-        title: "Erreur",
-        description: "Une erreur est survenue",
+      if (transactionError) throw transactionError;
+
+      // Mise à jour du solde du portefeuille
+      const {
+        error: walletError
+      } = await supabase.rpc('increment_wallet_balance', {
+        user_id: session.session.user.id,
+        increment_amount: depositAmount
       });
+      if (walletError) throw walletError;
+      
+      // Create notification for deposit success
+      await notificationService.depositSuccess(depositAmount);
+      
+      // Appel de la fonction de rafraîchissement
+      if (refreshBalance) await refreshBalance();
+      onDeposit();
+    } catch (error) {
+      console.error("Erreur lors du dépôt:", error);
+      toast.error("Une erreur s'est produite lors du dépôt des fonds");
     }
   };
+  
+  const handleWithdraw = async () => {
+    try {
+      const {
+        data: session
+      } = await supabase.auth.getSession();
+      if (!session.session) {
+        toast.error("Veuillez vous connecter pour effectuer un retrait");
+        return;
+      }
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-      <h3 className="text-lg font-medium mb-4 text-bgs-blue">Actions rapides</h3>
+      // Récupération du solde actuel
+      const {
+        data: profileData,
+        error: profileError
+      } = await supabase.from('profiles').select('wallet_balance').eq('id', session.session.user.id).single();
+      if (profileError) throw profileError;
+      const withdrawalAmount = 500; // 500€ pour test
+
+      // Vérification que le solde est suffisant
+      if (profileData.wallet_balance < withdrawalAmount) {
+        toast.error("Vous n'avez pas assez de fonds pour effectuer ce retrait");
+        await notificationService.insufficientFunds();
+        return;
+      }
+
+      // Création de la transaction
+      const {
+        error: transactionError
+      } = await supabase.from('wallet_transactions').insert({
+        user_id: session.session.user.id,
+        amount: withdrawalAmount,
+        type: 'withdrawal',
+        description: 'Retrait de fonds'
+      });
+      if (transactionError) throw transactionError;
+
+      // Mise à jour du solde du portefeuille (soustraction)
+      const {
+        error: walletError
+      } = await supabase.rpc('increment_wallet_balance', {
+        user_id: session.session.user.id,
+        increment_amount: -withdrawalAmount
+      });
+      if (walletError) throw walletError;
       
-      <div className="grid grid-cols-2 gap-3">
-        <Button 
-          variant="outline" 
-          className="flex flex-col items-center justify-center h-24 border-gray-200 hover:border-bgs-blue hover:bg-blue-50 transition-all" 
-          onClick={handleAddFunds}
-        >
-          <ArrowDownToLine className="h-6 w-6 mb-2 text-bgs-blue" />
-          <span className="text-sm font-medium">Ajouter des fonds</span>
-        </Button>
-        
-        <Button 
-          variant="outline" 
-          className="flex flex-col items-center justify-center h-24 border-gray-200 hover:border-bgs-orange hover:bg-orange-50 transition-all" 
-          onClick={() => setIsWithdrawModalOpen(true)}
-        >
-          <ArrowUpFromLine className="h-6 w-6 mb-2 text-bgs-orange" />
-          <span className="text-sm font-medium">Retirer des fonds</span>
-        </Button>
-      </div>
+      // Create notification for withdrawal
+      await notificationService.withdrawalValidated(withdrawalAmount);
       
-      <Dialog open={isWithdrawModalOpen} onOpenChange={setIsWithdrawModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          {isWithdrawModalOpen && (
-            <WithdrawFundsForm />
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+      // Appel de la fonction de rafraîchissement
+      if (refreshBalance) await refreshBalance();
+      onWithdraw();
+    } catch (error) {
+      console.error("Erreur lors du retrait:", error);
+      toast.error("Une erreur s'est produite lors du retrait des fonds");
+    }
+  };
+  
+  // Return an empty fragment as we've removed the button
+  return <></>;
 }
