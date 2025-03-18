@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { Suspense, lazy } from "react";
+import { AdminProvider } from "@/contexts/AdminContext";
 import Index from "./pages/Index";
 
 const Opportunite = lazy(() => import("./pages/Projects"));
@@ -23,6 +24,9 @@ const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const WithdrawalRequestsPage = lazy(() => import("./pages/WithdrawalRequestsPage"));
 const BankTransfersPage = lazy(() => import("./pages/BankTransfersPage"));
 const ProfilesPage = lazy(() => import("./pages/ProfilesPage"));
+const AdminApp = lazy(() => import("./pages/admin/AdminApp"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -42,38 +46,64 @@ const queryClient = new QueryClient({
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <HelmetProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/projects" element={<Opportunite />} />
-              <Route path="/project/:id" element={<ProjectDetail />} />
-              <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/dashboard/*" element={<Dashboard />} />
-              <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
-              <Route path="/scheduled-payments" element={<ScheduledPayments />} />
-              <Route path="/withdrawal-requests" element={<WithdrawalRequestsPage />} />
-              <Route path="/bank-transfers" element={<BankTransfersPage />} />
-              <Route path="/profiles" element={<ProfilesPage />} />
-              
-              {/* Admin routes */}
-              <Route path="/admin/projects" element={<AdminProjects />} />
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </TooltipProvider>
-    </HelmetProvider>
+    <AdminProvider>
+      <HelmetProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/projects" element={<Opportunite />} />
+                <Route path="/project/:id" element={<ProjectDetail />} />
+                <Route path="/how-it-works" element={<HowItWorks />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard/*" element={<Dashboard />} />
+                <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
+                
+                {/* Admin Login */}
+                <Route path="/admin/login" element={<AdminApp />} />
+                
+                {/* Protected Admin Routes */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route path="dashboard" element={<AdminDashboard />} />
+                  <Route path="projects" element={<AdminProjects />} />
+                </Route>
+                
+                {/* Protected Admin Pages */}
+                <Route path="/scheduled-payments" element={
+                  <AdminLayout>
+                    <ScheduledPayments />
+                  </AdminLayout>
+                } />
+                <Route path="/withdrawal-requests" element={
+                  <AdminLayout>
+                    <WithdrawalRequestsPage />
+                  </AdminLayout>
+                } />
+                <Route path="/bank-transfers" element={
+                  <AdminLayout>
+                    <BankTransfersPage />
+                  </AdminLayout>
+                } />
+                <Route path="/profiles" element={
+                  <AdminLayout>
+                    <ProfilesPage />
+                  </AdminLayout>
+                } />
+                
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+        </TooltipProvider>
+      </HelmetProvider>
+    </AdminProvider>
   </QueryClientProvider>
 );
 
