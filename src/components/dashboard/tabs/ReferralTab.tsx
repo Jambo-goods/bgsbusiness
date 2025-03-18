@@ -273,16 +273,6 @@ export default function ReferralTab() {
                 </div>
               </CardContent>
             </Card>
-            
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-medium text-blue-800 mb-2">Comment ça marche ?</h3>
-              <ol className="list-decimal list-inside space-y-2 text-sm text-blue-700">
-                <li>Partagez votre code de parrainage ou votre lien avec vos amis</li>
-                <li>Ils s'inscrivent en utilisant votre code</li>
-                <li>Vous recevez 10% de commission sur tous leurs rendements</li>
-                <li>Les commissions sont créditées directement sur votre portefeuille</li>
-              </ol>
-            </div>
           </div>
         </CardContent>
       </Card>
