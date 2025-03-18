@@ -1,9 +1,9 @@
 
 import React from 'react';
-import { ProjectForm } from '@/components/admin/projects/ProjectForm';
-import { ProjectList } from '@/components/admin/projects/ProjectList';
+import ProjectForm from '@/components/admin/projects/ProjectForm';
+import ProjectList from '@/components/admin/projects/ProjectList';
 import { useProjectManagement } from '@/hooks/admin/useProjectManagement';
-import { SearchBar } from '@/components/admin/projects/SearchBar';
+import SearchBar from '@/components/admin/projects/SearchBar';
 import SidebarMenu from '@/components/layout/SidebarMenu';
 import { Toaster } from 'sonner';
 
@@ -11,14 +11,21 @@ export default function AdminProjects() {
   const {
     projects,
     isLoading,
-    selectedProject,
+    editingProject,
     searchTerm,
     setSearchTerm,
-    handleProjectSelect,
-    handleProjectDelete,
-    handleProjectSubmit,
-    isFormOpen,
-    setIsFormOpen,
+    handleEditProject,
+    handleDeleteProject,
+    handleSubmitProject,
+    isAddProjectModalOpen,
+    setIsAddProjectModalOpen,
+    formData,
+    handleFormChange,
+    formErrors,
+    resetForm,
+    sortField,
+    sortDirection,
+    handleSort
   } = useProjectManagement();
   
   return (
@@ -40,19 +47,41 @@ export default function AdminProjects() {
                 <ProjectList 
                   projects={projects} 
                   isLoading={isLoading} 
-                  onProjectSelect={handleProjectSelect}
-                  onProjectDelete={handleProjectDelete}
+                  sortField={sortField}
+                  sortDirection={sortDirection}
+                  handleSort={handleSort}
+                  handleEditProject={handleEditProject}
+                  handleDeleteProject={handleDeleteProject}
                 />
               </div>
             </div>
             
             <div className="md:col-span-5">
-              <ProjectForm 
-                selectedProject={selectedProject}
-                onSubmit={handleProjectSubmit}
-                isOpen={isFormOpen}
-                setIsOpen={setIsFormOpen}
-              />
+              {isAddProjectModalOpen && (
+                <ProjectForm 
+                  formData={formData}
+                  handleFormChange={handleFormChange}
+                  handleSubmitProject={handleSubmitProject}
+                  formErrors={formErrors}
+                  editingProject={editingProject}
+                  onCancel={resetForm}
+                />
+              )}
+              
+              {!isAddProjectModalOpen && (
+                <div className="bg-white p-6 rounded-lg shadow">
+                  <h2 className="text-xl font-semibold mb-4">Ajouter un projet</h2>
+                  <p className="text-gray-600 mb-4">
+                    Cliquez sur le bouton ci-dessous pour ajouter un nouveau projet.
+                  </p>
+                  <button
+                    onClick={() => setIsAddProjectModalOpen(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
+                  >
+                    Ajouter un projet
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
