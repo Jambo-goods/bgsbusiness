@@ -99,19 +99,20 @@ export default function BankTransfersPage() {
           
         if (profilesError) {
           console.error('Erreur lors de la récupération des profils:', profilesError);
-        }
-        
-        console.log("Données des profils reçues:", profilesData);
-        
-        // Créer un dictionnaire des profils par ID
-        if (profilesData) {
-          profilesData.forEach(profile => {
-            profilesById[profile.id] = {
-              first_name: profile.first_name,
-              last_name: profile.last_name,
-              email: profile.email
-            };
-          });
+          toast.error('Erreur lors de la récupération des profils');
+        } else {
+          console.log("Données des profils reçues:", profilesData);
+          
+          // Créer un dictionnaire des profils par ID
+          if (profilesData) {
+            profilesData.forEach(profile => {
+              profilesById[profile.id] = {
+                first_name: profile.first_name,
+                last_name: profile.last_name,
+                email: profile.email
+              };
+            });
+          }
         }
       }
       
@@ -123,10 +124,10 @@ export default function BankTransfersPage() {
           amount: transfer.amount || 0,
           status: transfer.status || 'pending',
           description: transfer.notes || '',
-          reference: transfer.reference || 'REF-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+          reference: transfer.reference || '',
           created_at: transfer.confirmed_at || new Date().toISOString(),
           confirmed_at: transfer.confirmed_at,
-          rejected_at: null,
+          rejected_at: transfer.rejected_at,
           processed_at: transfer.processed_at,
           notes: transfer.notes,
           processed: transfer.processed,
