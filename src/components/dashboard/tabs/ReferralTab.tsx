@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,19 +33,14 @@ export default function ReferralTab() {
         
         const userId = session.session.user.id;
         
-        // Get user profile to get referral code
         const { data: profile } = await supabase
           .from('profiles')
           .select('referral_code')
           .eq('id', userId)
           .single();
         
-        // If user doesn't have a referral code, generate one
         if (!profile?.referral_code) {
-          // Generate a random code based on user id and timestamp
           const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-          
-          // Save the referral code to user profile
           await supabase
             .from('profiles')
             .update({ referral_code: randomCode })
@@ -57,7 +51,6 @@ export default function ReferralTab() {
           setReferralCode(profile.referral_code);
         }
         
-        // Get referrals
         const { data: referralsData } = await supabase
           .from('profiles')
           .select('id, first_name, last_name, created_at, wallet_balance')
@@ -72,7 +65,6 @@ export default function ReferralTab() {
           }));
         }
         
-        // Get commission transactions
         const { data: commissionsData } = await supabase
           .from('wallet_transactions')
           .select('*')
@@ -121,7 +113,6 @@ export default function ReferralTab() {
       .then(() => toast.success("Merci d'avoir partagé !"))
       .catch((error) => console.log('Error sharing:', error));
     } else {
-      // Fallback to copy if sharing is not supported
       copyReferralLink();
     }
   };
@@ -139,7 +130,7 @@ export default function ReferralTab() {
       <h2 className="text-2xl font-semibold text-bgs-blue">Programme de Parrainage</h2>
       
       <p className="text-gray-600">
-        Parrainez vos amis et recevez 10% de commission sur leurs rendements. Plus vous parrainez, plus vous gagnez !
+        Parrainez vos amis et recevez 10% de commission sur leurs rendements.
       </p>
       
       {/* Referral Stats */}
@@ -240,34 +231,13 @@ export default function ReferralTab() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="text-blue-800">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium mb-2">Option 1: Partager votre lien de parrainage</h4>
-                    <ol className="list-decimal list-inside space-y-2 text-sm pl-2">
-                      <li>Copiez votre lien de parrainage en cliquant sur le bouton "Copier" ci-dessus</li>
-                      <li>Partagez ce lien avec vos amis par email, SMS ou réseaux sociaux</li>
-                      <li>Quand ils cliqueront sur le lien, ils seront dirigés vers la page d'inscription</li>
-                      <li>Votre code de parrainage sera automatiquement rempli dans le formulaire</li>
-                    </ol>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium mb-2">Option 2: Partager votre code de parrainage</h4>
-                    <ol className="list-decimal list-inside space-y-2 text-sm pl-2">
-                      <li>Communiquez votre code de parrainage à vos amis ({referralCode})</li>
-                      <li>Ils devront se rendre sur la page d'inscription: {window.location.origin}/register</li>
-                      <li>Dans le formulaire d'inscription, ils devront saisir votre code dans le champ "Code parrain"</li>
-                      <li>Une fois inscrits, ils apparaîtront dans votre liste de filleuls ci-dessous</li>
-                    </ol>
-                  </div>
-                  
-                  <div className="bg-white p-3 rounded-md border border-blue-200">
-                    <p className="text-sm font-medium">Important:</p>
-                    <ul className="list-disc list-inside text-sm pl-2">
-                      <li>Vos filleuls doivent utiliser votre code lors de leur inscription</li>
-                      <li>Vous recevrez 10% de commission sur leurs rendements automatiquement</li>
-                      <li>Les commissions seront créditées directement sur votre portefeuille</li>
-                      <li>Vous pouvez suivre vos commissions dans l'onglet "Historique des commissions"</li>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Partager votre lien ou code</h4>
+                    <ul className="list-disc list-inside text-sm pl-2 space-y-1">
+                      <li>Copiez le lien ci-dessus ou partagez votre code: <span className="font-bold">{referralCode}</span></li>
+                      <li>Vos filleuls s'inscrivent via ce lien ou utilisent votre code</li>
+                      <li>Vous recevez 10% de commission sur leurs rendements</li>
                     </ul>
                   </div>
                 </div>
