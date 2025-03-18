@@ -1,39 +1,40 @@
 
 import React, { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import NotificationHeader from './notifications/NotificationHeader';
-import NotificationsList from './notifications/NotificationsList';
-import EmptyNotifications from './notifications/EmptyNotifications';
+import { ReceiptText, Check, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import NotificationHeader from './notifications/NotificationHeader';
+import NotificationItem from './notifications/NotificationItem';
+import EmptyNotifications from './notifications/EmptyNotifications';
 import { useUserSession } from '@/hooks/dashboard/useUserSession';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { NotificationType } from '@/services/notifications/types';
 
-// Define the notification interface for this component
+// Define notification type compatible with the imported type
 interface Notification {
   id: string;
+  user_id: string;
   title: string;
   message: string;
-  type: string;
+  type: NotificationType;
   seen: boolean;
   created_at: string;
-  user_id: string;
-  data?: any;
+  metadata?: any;
 }
 
 export default function NotificationsTab() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [isLoading, setIsLoading] = useState(true);
   const { userId } = useUserSession();
-  const { toast } = useToast();
+  const hasUnread = notifications.some(notification => !notification.seen);
 
   useEffect(() => {
     if (userId) {
       fetchNotifications();
-
-      // Set up real-time notifications
+      
       const channel = supabase
         .channel('notifications-changes')
         .on('postgres_changes', {
@@ -45,7 +46,7 @@ export default function NotificationsTab() {
           fetchNotifications();
         })
         .subscribe();
-
+        
       return () => {
         supabase.removeChannel(channel);
       };
@@ -54,185 +55,210 @@ export default function NotificationsTab() {
 
   const fetchNotifications = async () => {
     if (!userId) return;
-
+    
     try {
       setIsLoading(true);
+      
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
-
+        
       if (error) {
-        console.error('Error fetching notifications:', error);
-        toast({
-          variant: "destructive",
-          title: "Erreur",
-          description: "Impossible de récupérer vos notifications"
-        });
-      } else {
-        setNotifications(data || []);
+        throw error;
       }
+      
+      setNotifications(data || []);
     } catch (err) {
-      console.error('Error in fetchNotifications:', err);
+      console.error('Error fetching notifications:', err);
+      toast.error('Impossible de charger vos notifications');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ seen: true })
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error marking notification as read:', error);
-        return;
-      }
-
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === id 
-            ? { ...notification, seen: true } 
-            : notification
-        )
-      );
-    } catch (err) {
-      console.error('Error in handleMarkAsRead:', err);
-    }
-  };
-
-  const handleMarkAllRead = async () => {
+  const markAllRead = async () => {
     if (!userId || notifications.length === 0) return;
-
+    
     try {
       const { error } = await supabase
         .from('notifications')
         .update({ seen: true })
         .eq('user_id', userId)
         .eq('seen', false);
-
+        
       if (error) {
-        console.error('Error marking all notifications as read:', error);
-        toast({
-          variant: "destructive", 
-          title: "Erreur", 
-          description: "Impossible de marquer les notifications comme lues"
-        });
-        return;
+        throw error;
       }
-
+      
+      // Update local state
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, seen: true }))
       );
-
-      toast({
-        title: "Succès",
-        description: "Toutes les notifications ont été marquées comme lues"
-      });
+      
+      toast.success('Toutes les notifications marquées comme lues');
     } catch (err) {
-      console.error('Error in handleMarkAllRead:', err);
+      console.error('Error marking notifications as read:', err);
+      toast.error('Impossible de marquer les notifications comme lues');
     }
   };
 
-  const handleDeleteNotification = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id);
-
-      if (error) {
-        console.error('Error deleting notification:', error);
-        return;
-      }
-
-      setNotifications(prev => prev.filter(notification => notification.id !== id));
-    } catch (err) {
-      console.error('Error in handleDeleteNotification:', err);
-    }
-  };
-
-  const handleDeleteAll = async () => {
+  const deleteAllNotifications = async () => {
     if (!userId || notifications.length === 0) return;
-
+    
     try {
       const { error } = await supabase
         .from('notifications')
         .delete()
         .eq('user_id', userId);
-
+        
       if (error) {
-        console.error('Error deleting all notifications:', error);
-        toast({
-          variant: "destructive", 
-          title: "Erreur", 
-          description: "Impossible de supprimer les notifications"
-        });
-        return;
+        throw error;
       }
-
+      
+      // Update local state
       setNotifications([]);
       
-      toast({
-        title: "Succès",
-        description: "Toutes les notifications ont été supprimées"
-      });
+      toast.success('Toutes les notifications ont été supprimées');
     } catch (err) {
-      console.error('Error in handleDeleteAll:', err);
+      console.error('Error deleting notifications:', err);
+      toast.error('Impossible de supprimer les notifications');
     }
   };
 
-  const hasUnreadNotifications = notifications.some(notification => !notification.seen);
-
-  const filterNotifications = (type: string) => {
-    if (type === 'all') return notifications;
-    return notifications.filter(notification => notification.type === type);
+  const deleteNotification = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setNotifications(prev => prev.filter(notification => notification.id !== id));
+      
+      toast.success('Notification supprimée');
+    } catch (err) {
+      console.error('Error deleting notification:', err);
+      toast.error('Impossible de supprimer la notification');
+    }
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
+  const markAsRead = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id ? { ...notification, seen: true } : notification
+        )
+      );
+    } catch (err) {
+      console.error('Error marking notification as read:', err);
+      toast.error('Impossible de marquer la notification comme lue');
+    }
+  };
+
+  const filteredNotifications = notifications.filter(notification => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'unread') return !notification.seen;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold text-bgs-blue">Notifications</h1>
-
-      <NotificationHeader 
-        hasUnread={hasUnreadNotifications} 
-        onMarkAllRead={handleMarkAllRead} 
-        onDeleteAll={handleDeleteAll} 
-      />
-
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-semibold text-bgs-blue">Mes notifications</h2>
+          <p className="text-gray-600 mt-1">Consultez toutes vos notifications et messages importants</p>
+        </div>
+        
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm"
+            disabled={!hasUnread}
+            onClick={markAllRead}
+            className="flex items-center"
+          >
+            <Check className="h-4 w-4 mr-1" />
+            Tout marquer comme lu
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm"
+            disabled={notifications.length === 0}
+            onClick={deleteAllNotifications}
+            className="flex items-center text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Tout supprimer
+          </Button>
+        </div>
+      </div>
+      
       <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-6">
+        <TabsList>
           <TabsTrigger value="all">Toutes</TabsTrigger>
-          <TabsTrigger value="account">Compte</TabsTrigger>
-          <TabsTrigger value="deposit">Dépôts</TabsTrigger>
-          <TabsTrigger value="withdrawal">Retraits</TabsTrigger>
-          <TabsTrigger value="investment">Investissements</TabsTrigger>
-          <TabsTrigger value="system">Système</TabsTrigger>
+          <TabsTrigger value="unread">
+            Non lues {hasUnread && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{notifications.filter(n => !n.seen).length}</span>}
+          </TabsTrigger>
         </TabsList>
-
-        {Object.keys({ all: 'Toutes', account: 'Compte', deposit: 'Dépôts', withdrawal: 'Retraits', investment: 'Investissements', system: 'Système' }).map(tabValue => (
-          <TabsContent key={tabValue} value={tabValue} className="mt-0">
-            {filterNotifications(tabValue).length > 0 ? (
-              <NotificationsList 
-                notifications={filterNotifications(tabValue)} 
-                onMarkAsRead={handleMarkAsRead}
-                onDelete={handleDeleteNotification}
-              />
-            ) : (
-              <EmptyNotifications notificationType={tabValue as NotificationType} />
-            )}
-          </TabsContent>
-        ))}
+        
+        <TabsContent value="all" className="mt-4">
+          {isLoading ? (
+            <div className="flex justify-center py-10">
+              <LoadingSpinner />
+            </div>
+          ) : filteredNotifications.length > 0 ? (
+            <div className="space-y-4">
+              {filteredNotifications.map(notification => (
+                <NotificationItem
+                  key={notification.id}
+                  notification={notification}
+                  onDelete={() => deleteNotification(notification.id)}
+                  onMarkAsRead={() => markAsRead(notification.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyNotifications />
+          )}
+        </TabsContent>
+        
+        <TabsContent value="unread" className="mt-4">
+          {isLoading ? (
+            <div className="flex justify-center py-10">
+              <LoadingSpinner />
+            </div>
+          ) : filteredNotifications.length > 0 ? (
+            <div className="space-y-4">
+              {filteredNotifications.map(notification => (
+                <NotificationItem
+                  key={notification.id}
+                  notification={notification}
+                  onDelete={() => deleteNotification(notification.id)}
+                  onMarkAsRead={() => markAsRead(notification.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyNotifications />
+          )}
+        </TabsContent>
       </Tabs>
     </div>
   );

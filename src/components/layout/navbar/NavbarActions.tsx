@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { LogOut, User, UserCircle2, Settings, Mail, HelpCircle, BellRing, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import UserMenuDropdown from './UserMenuDropdown';
-import NotificationDropdown from './NotificationDropdown';
+import { NotificationDropdown } from './NotificationDropdown';
 import DashboardMenuDropdown from './DashboardMenuDropdown';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserSession } from '@/hooks/dashboard/useUserSession';
@@ -12,7 +12,7 @@ import { useUserSession } from '@/hooks/dashboard/useUserSession';
 export default function NavbarActions() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const { userId } = useUserSession();
+  const { userId, handleLogout } = useUserSession();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -76,16 +76,6 @@ export default function NavbarActions() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      navigate('/');
-      window.location.reload();
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
-
   if (isAuthenticated === null) {
     return <div className="flex items-center gap-2"></div>; // Loading state
   }
@@ -93,14 +83,14 @@ export default function NavbarActions() {
   if (isAuthenticated) {
     return (
       <div className="flex items-center gap-2">
-        <DashboardMenuDropdown />
+        <DashboardMenuDropdown isOpen={false} isActive={() => false} />
         
         <NotificationDropdown 
           unreadCount={unreadNotifications} 
           onMarkAllRead={fetchUnreadNotificationsCount}
         />
         
-        <UserMenuDropdown onLogout={handleLogout} />
+        <UserMenuDropdown />
       </div>
     );
   }

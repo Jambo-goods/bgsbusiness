@@ -1,247 +1,232 @@
 
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, RefreshCw, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
+import { useEffect, useState } from 'react';
+import { Helmet } from 'react-helmet-async';
+import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserSession } from '@/hooks/dashboard/useUserSession';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import { Button } from '@/components/ui/button';
+import { FileText, Download, RotateCcw, Search, Filter } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { formatCurrency, formatDate } from '@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils';
 
-// Simple interface for bank transfers
 interface BankTransfer {
   id: string;
   user_id: string;
-  amount: number | null;
+  amount: number;
+  status: 'pending' | 'completed' | 'rejected';
+  description: string;
   reference: string;
-  status: string | null;
-  confirmed_at: string | null;
-  processed_at: string | null;
-  notes: string | null;
-}
-
-// Simple interface for user data
-interface UserData {
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
+  created_at: string;
+  confirmed_at?: string;
+  rejected_at?: string;
+  user_profile?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
 }
 
 export default function BankTransfersPage() {
-  const [transfers, setTransfers] = useState<BankTransfer[]>([]);
+  const [bankTransfers, setBankTransfers] = useState<BankTransfer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [userData, setUserData] = useState<Record<string, UserData>>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const { userId } = useUserSession();
 
   useEffect(() => {
-    console.log("BankTransfersPage mounted, fetching data...");
-    fetchTransfers();
-  }, []);
+    if (userId) {
+      fetchBankTransfers();
+      
+      // Set up realtime subscription
+      const channel = supabase
+        .channel('bank-transfers-changes')
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'bank_transfers',
+          filter: `user_id=eq.${userId}`
+        }, () => {
+          fetchBankTransfers();
+        })
+        .subscribe();
+        
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [userId]);
 
-  const fetchTransfers = async () => {
+  const fetchBankTransfers = async () => {
+    if (!userId) return;
+    
     try {
       setIsLoading(true);
-      console.log("Fetching bank transfers...");
-
+      
+      // Fetch bank transfers with user profile information
       const { data, error } = await supabase
-        .from("bank_transfers")
-        .select("*");
-
-      if (error) {
-        console.error("Error fetching transfers:", error);
-        toast.error("Erreur lors du chargement des transferts");
-        setTransfers([]);
-      } else {
-        console.log(`Found ${data.length} transfers:`, data);
-        setTransfers(data || []);
+        .from('bank_transfers')
+        .select(`
+          *,
+          profiles:user_id (
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
         
-        // Get user information if transfers exist
-        if (data && data.length > 0) {
-          fetchUserData(data.map(t => t.user_id));
-        }
-      }
+      if (error) throw error;
+      
+      const formattedTransfers = data?.map(transfer => ({
+        ...transfer,
+        user_profile: transfer.profiles
+      })) || [];
+      
+      setBankTransfers(formattedTransfers);
     } catch (err) {
-      console.error("Unexpected error:", err);
-      toast.error("Une erreur inattendue s'est produite");
+      console.error('Error fetching bank transfers:', err);
+      toast.error('Impossible de charger vos virements bancaires');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchUserData = async (userIds: string[]) => {
-    try {
-      // Get unique user IDs
-      const uniqueUserIds = [...new Set(userIds)];
-      
-      if (uniqueUserIds.length === 0) return;
+  const handleRefresh = () => {
+    fetchBankTransfers();
+    toast.success('Données actualisées');
+  };
 
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, first_name, last_name, email")
-        .in("id", uniqueUserIds);
+  // Filter transfers based on search term
+  const filteredTransfers = bankTransfers.filter(transfer => 
+    transfer.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    transfer.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-      if (error) {
-        console.error("Error fetching user data:", error);
-      } else if (data) {
-        // Create a map of user data
-        const userMap: Record<string, UserData> = {};
-        data.forEach(user => {
-          userMap[user.id] = {
-            first_name: user.first_name,
-            last_name: user.last_name,
-            email: user.email
-          };
-        });
-        setUserData(userMap);
-      }
-    } catch (err) {
-      console.error("Error fetching user data:", err);
+  // Get status badge
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">En attente</span>;
+      case 'completed':
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">Complété</span>;
+      case 'rejected':
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Rejeté</span>;
+      default:
+        return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-700">{status}</span>;
     }
   };
 
-  // Format date in a simple way
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "—";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR');
-  };
-
-  // Simple filtering
-  const filteredTransfers = transfers.filter(transfer => {
-    const searchLower = searchTerm.toLowerCase();
-    const user = userData[transfer.user_id] || {};
-    const userName = `${user.first_name || ""} ${user.last_name || ""}`.toLowerCase();
-    
-    return userName.includes(searchLower) || 
-           (transfer.reference && transfer.reference.toLowerCase().includes(searchLower)) ||
-           (transfer.amount && String(transfer.amount).includes(searchTerm));
-  });
-
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Transferts Bancaires</h1>
-        
-        <Card className="overflow-hidden">
-          <CardHeader className="bg-white border-b">
-            <div className="flex flex-col md:flex-row gap-4 justify-between">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                <Input 
-                  type="text" 
-                  placeholder="Rechercher un transfert..." 
-                  className="pl-10 w-full md:w-80" 
-                  value={searchTerm} 
-                  onChange={e => setSearchTerm(e.target.value)} 
-                />
+    <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>Virements Bancaires | BGS Invest</title>
+        <meta name="description" content="Suivez vos virements bancaires avec BGS Invest" />
+      </Helmet>
+      
+      <Navbar />
+      
+      <main className="flex-1 pt-24 pb-12">
+        <div className="container px-4 mx-auto">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+              <div>
+                <h1 className="text-2xl font-bold text-bgs-blue">Virements Bancaires</h1>
+                <p className="text-gray-600 mt-1">Consultez l'historique de vos virements bancaires</p>
               </div>
-              <Button 
-                variant="outline"
-                onClick={fetchTransfers}
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Rafraîchir
-              </Button>
+              
+              <div className="mt-4 md:mt-0 flex items-center gap-3">
+                <Button variant="outline" size="sm" onClick={handleRefresh}>
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Actualiser
+                </Button>
+                <Button variant="default" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exporter
+                </Button>
+              </div>
             </div>
-          </CardHeader>
-          
-          <CardContent className="p-0">
-            {isLoading ? (
-              <div className="flex justify-center items-center p-12">
-                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-              </div>
-            ) : filteredTransfers.length === 0 ? (
-              <div className="text-center p-12">
-                <p className="text-gray-500 font-medium">Aucun transfert bancaire trouvé</p>
-                <p className="text-sm text-gray-400 mt-2">
-                  {searchTerm ? "Essayez de modifier votre recherche" : "Les transferts apparaîtront ici une fois enregistrés"}
-                </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Utilisateur</TableHead>
-                      <TableHead>Référence</TableHead>
-                      <TableHead>Montant</TableHead>
-                      <TableHead>Statut</TableHead>
-                      <TableHead>Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTransfers.map(transfer => {
-                      const user = userData[transfer.user_id] || {};
-                      return (
-                        <TableRow key={transfer.id} className="hover:bg-gray-50">
-                          <TableCell>{formatDate(transfer.confirmed_at)}</TableCell>
-                          <TableCell>
-                            {user.first_name || user.last_name ? (
-                              <div>
-                                <div className="font-medium">{user.first_name} {user.last_name}</div>
-                                <div className="text-sm text-gray-500">{user.email}</div>
+            
+            <Card className="mb-6">
+              <CardHeader className="pb-3">
+                <CardTitle>Vos virements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4 flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Rechercher par référence ou description..."
+                      className="pl-9"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <Button variant="outline" size="icon" title="Filtres">
+                    <Filter className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {isLoading ? (
+                  <div className="flex justify-center py-10">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
+                  </div>
+                ) : filteredTransfers.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 text-gray-600 text-sm">
+                        <tr>
+                          <th className="px-5 py-3 text-left font-medium">Référence</th>
+                          <th className="px-5 py-3 text-left font-medium">Date</th>
+                          <th className="px-5 py-3 text-left font-medium">Montant</th>
+                          <th className="px-5 py-3 text-left font-medium">Description</th>
+                          <th className="px-5 py-3 text-left font-medium">Statut</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredTransfers.map((transfer) => (
+                          <tr key={transfer.id} className="text-gray-700 hover:bg-gray-50">
+                            <td className="px-5 py-4">
+                              <div className="flex items-center">
+                                <FileText className="h-4 w-4 text-gray-400 mr-2" />
+                                <span>{transfer.reference}</span>
                               </div>
-                            ) : (
-                              <span className="text-gray-500">Utilisateur inconnu</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="font-mono text-sm">{transfer.reference}</TableCell>
-                          <TableCell className="font-medium">
-                            {transfer.amount ? `${transfer.amount} €` : '—'}
-                          </TableCell>
-                          <TableCell>
-                            <StatusBadge status={transfer.status} />
-                          </TableCell>
-                          <TableCell>
-                            <div className="max-w-xs truncate">
-                              {transfer.notes || "—"}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                            </td>
+                            <td className="px-5 py-4">{formatDate(transfer.created_at)}</td>
+                            <td className="px-5 py-4 font-medium">{formatCurrency(transfer.amount)}</td>
+                            <td className="px-5 py-4">
+                              <span className="line-clamp-1">{transfer.description}</span>
+                            </td>
+                            <td className="px-5 py-4">
+                              {getStatusBadge(transfer.status)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <div className="mb-3">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100">
+                        <FileText className="h-6 w-6 text-gray-400" />
+                      </div>
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">Aucun virement trouvé</h3>
+                    <p className="text-gray-500 max-w-md mx-auto">
+                      Vous n'avez pas encore effectué de virements bancaires ou aucun virement ne correspond à votre recherche.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+      
+      <Footer />
     </div>
-  );
-}
-
-// Status badge component
-function StatusBadge({ status }: { status: string | null }) {
-  let bgColor = "bg-gray-100 text-gray-800";
-  let label = status || "Inconnu";
-
-  switch (status) {
-    case 'pending':
-      bgColor = "bg-yellow-100 text-yellow-800";
-      label = "En attente";
-      break;
-    case 'received':
-    case 'reçu':
-      bgColor = "bg-blue-100 text-blue-800";
-      label = "Reçu";
-      break;
-    case 'processed':
-    case 'completed':
-      bgColor = "bg-green-100 text-green-800";
-      label = "Confirmé";
-      break;
-    case 'rejected':
-      bgColor = "bg-red-100 text-red-800";
-      label = "Rejeté";
-      break;
-  }
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor}`}>
-      {label}
-    </span>
   );
 }

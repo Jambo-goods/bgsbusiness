@@ -44,20 +44,16 @@ export const useInvestment = () => {
         .select('*')
         .eq('user_id', userId)
         .eq('project_id', projectId)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {  // No rows returned
-          setInvestment(null);
-        } else {
-          console.error('Error fetching investment:', error);
-          setError('Une erreur est survenue lors de la récupération de votre investissement.');
-          toast({
-            variant: "destructive",
-            title: "Erreur",
-            description: "Impossible de récupérer les détails de votre investissement."
-          });
-        }
+        console.error('Error fetching investment:', error);
+        setError('Une erreur est survenue lors de la récupération de votre investissement.');
+        toast({
+          variant: "destructive",
+          title: "Erreur",
+          description: "Impossible de récupérer les détails de votre investissement."
+        });
       } else if (data) {
         // Ensure the data has all required fields
         const investmentData: Investment = {

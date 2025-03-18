@@ -1,199 +1,204 @@
 
-import React, { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { Bell, Check, Trash, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import React, { useState, useEffect } from 'react';
+import { BellRing, Check, Trash2, Mail, Bell } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useUserSession } from '@/hooks/dashboard/useUserSession';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-export type Json = any;
+interface NotificationDropdownProps {
+  unreadCount: number;
+  onMarkAllRead: () => void;
+}
 
-export type Notification = {
+interface Notification {
   id: string;
   title: string;
   message: string;
-  type: string;
-  created_at: string;
   seen: boolean;
-  read: boolean;
-  user_id: string;
-  data?: Json;
-};
-
-interface NotificationDropdownProps {
-  isOpen: boolean;
-  onClose: () => void;
+  created_at: string;
+  type: string;
 }
 
-export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownProps) {
+export function NotificationDropdown({ unreadCount, onMarkAllRead }: NotificationDropdownProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { userId } = useUserSession();
   const navigate = useNavigate();
-
+  
   useEffect(() => {
-    if (isOpen) {
+    if (userId) {
       fetchNotifications();
     }
-  }, [isOpen]);
-
+  }, [userId]);
+  
   const fetchNotifications = async () => {
+    if (!userId) return;
+    
     try {
-      setLoading(true);
-      
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session?.user?.id) {
-        return;
-      }
-      
-      const userId = sessionData.session.user.id;
+      setIsLoading(true);
       
       const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
+        .from('notifications')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
         .limit(5);
         
-      if (error) {
-        console.error("Error fetching notifications:", error);
-      } else {
-        // Convert seen property to read for compatibility
-        const notificationsWithRead = data.map(notif => ({
-          ...notif,
-          read: notif.seen
-        })) as Notification[];
-        setNotifications(notificationsWithRead);
-      }
+      if (error) throw error;
+      
+      setNotifications(data || []);
     } catch (err) {
-      console.error("Error in fetchNotifications:", err);
+      console.error('Error fetching notifications:', err);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
-
+  
+  const markAllAsRead = async () => {
+    if (!userId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('user_id', userId)
+        .eq('seen', false);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setNotifications(prev => prev.map(notification => ({ ...notification, seen: true })));
+      
+      // Call the callback to update unread count in parent component
+      onMarkAllRead();
+      
+      toast.success('Toutes les notifications marquées comme lues');
+    } catch (err) {
+      console.error('Error marking notifications as read:', err);
+      toast.error('Une erreur est survenue');
+    }
+  };
+  
   const markAsRead = async (id: string) => {
     try {
       const { error } = await supabase
-        .from("notifications")
+        .from('notifications')
         .update({ seen: true })
-        .eq("id", id);
+        .eq('id', id);
         
-      if (error) {
-        console.error("Error marking notification as read:", error);
-      } else {
-        setNotifications(prev => 
-          prev.map(notification => 
-            notification.id === id 
-              ? { ...notification, seen: true, read: true } 
-              : notification
-          )
-        );
-      }
+      if (error) throw error;
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id ? { ...notification, seen: true } : notification
+        )
+      );
+      
+      // Call the callback to update unread count in parent component
+      onMarkAllRead();
     } catch (err) {
-      console.error("Error in markAsRead:", err);
+      console.error('Error marking notification as read:', err);
     }
   };
-
-  const handleViewAll = () => {
-    navigate("/dashboard?tab=notifications");
-    onClose();
+  
+  const viewAllNotifications = () => {
+    navigate('/dashboard', { state: { activeTab: 'notifications' } });
   };
-
-  const formatDate = (dateString: string) => {
-    return format(new Date(dateString), "d MMM, HH:mm", { locale: fr });
-  };
-
-  const getNotificationIcon = (type: string) => {
-    const bgColorClass = type.includes("alert") ? "bg-red-100" : "bg-blue-100";
-    const textColorClass = type.includes("alert") ? "text-red-500" : "text-bgs-blue";
-    
-    return (
-      <div className={`${bgColorClass} p-2 rounded-full`}>
-        <Bell className={`w-4 h-4 ${textColorClass}`} />
-      </div>
-    );
-  };
-
-  if (!isOpen) return null;
 
   return (
-    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg overflow-hidden z-50 border border-gray-100">
-      <div className="p-3 border-b border-gray-100 flex items-center justify-between">
-        <h3 className="font-medium text-gray-800">Notifications</h3>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-      
-      <ScrollArea className="max-h-[70vh] overflow-y-auto">
-        {loading ? (
-          <div className="flex justify-center py-6">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-bgs-blue"></div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="relative">
+          <BellRing className="h-5 w-5" />
+          {unreadCount > 0 && (
+            <Badge className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-red-500 text-white text-xs">
+              {unreadCount}
+            </Badge>
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-80" align="end">
+        <DropdownMenuLabel className="flex justify-between items-center">
+          <span>Notifications</span>
+          {unreadCount > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 px-2 text-xs" 
+              onClick={markAllAsRead}
+            >
+              <Check className="h-3 w-3 mr-1" />
+              Tout marquer comme lu
+            </Button>
+          )}
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        
+        {isLoading ? (
+          <div className="p-4 text-center">
+            <div className="animate-spin h-6 w-6 border-2 border-bgs-blue border-t-transparent rounded-full mx-auto"></div>
+            <p className="text-sm text-gray-500 mt-2">Chargement des notifications...</p>
           </div>
-        ) : notifications.length === 0 ? (
-          <div className="py-6 text-center text-gray-500">
-            <Bell className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-            <p>Pas de notifications</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {notifications.map((notification) => (
-              <div 
-                key={notification.id}
-                className={`p-3 hover:bg-gray-50 transition-colors ${!notification.read ? "bg-blue-50/30" : ""}`}
-              >
-                <div className="flex gap-3">
-                  {getNotificationIcon(notification.type)}
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-gray-900 truncate">
-                      {notification.title}
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {notification.message}
-                    </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-400">
-                        {formatDate(notification.created_at)}
-                      </span>
-                      <div className="flex gap-1">
-                        {!notification.read && (
-                          <button 
-                            onClick={() => markAsRead(notification.id)}
-                            className="p-1 hover:bg-gray-100 rounded"
-                            title="Marquer comme lu"
-                          >
-                            <Check className="w-3 h-3 text-bgs-blue" />
-                          </button>
-                        )}
-                        <button 
-                          className="p-1 hover:bg-gray-100 rounded"
-                          title="Supprimer"
-                        >
-                          <Trash className="w-3 h-3 text-red-500" />
-                        </button>
-                      </div>
+        ) : notifications.length > 0 ? (
+          <DropdownMenuGroup>
+            {notifications.map(notification => (
+              <DropdownMenuItem key={notification.id} className="p-0">
+                <button 
+                  className={`w-full text-left p-3 hover:bg-gray-50 ${!notification.seen ? 'bg-blue-50' : ''}`}
+                  onClick={() => markAsRead(notification.id)}
+                >
+                  <div className="flex items-start">
+                    <div className="mr-3 mt-0.5">
+                      {notification.type === 'message' ? (
+                        <Mail className="h-5 w-5 text-bgs-blue" />
+                      ) : (
+                        <Bell className="h-5 w-5 text-bgs-orange" />
+                      )}
                     </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{notification.title}</p>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{notification.message}</p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {new Date(notification.created_at).toLocaleDateString('fr-FR', {
+                          day: 'numeric',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                    </div>
+                    {!notification.seen && (
+                      <div className="w-2 h-2 bg-bgs-blue rounded-full"></div>
+                    )}
                   </div>
-                </div>
-              </div>
+                </button>
+              </DropdownMenuItem>
             ))}
+          </DropdownMenuGroup>
+        ) : (
+          <div className="p-4 text-center">
+            <p className="text-sm text-gray-500">Aucune notification</p>
           </div>
         )}
-      </ScrollArea>
-      
-      <div className="p-3 border-t border-gray-100">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="w-full text-bgs-blue"
-          onClick={handleViewAll}
-        >
-          Voir toutes les notifications
-        </Button>
-      </div>
-    </div>
+        
+        <DropdownMenuSeparator />
+        <DropdownMenuItem className="justify-center" onClick={viewAllNotifications}>
+          <Button variant="link" className="w-full h-9">Voir toutes les notifications</Button>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

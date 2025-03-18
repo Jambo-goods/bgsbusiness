@@ -100,9 +100,7 @@ export function ActionButtons() {
       <Dialog open={isWithdrawModalOpen} onOpenChange={setIsWithdrawModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           {isWithdrawModalOpen && (
-            <WithdrawFundsForm 
-              onClose={() => setIsWithdrawModalOpen(false)} 
-            />
+            <WithdrawFundsForm />
           )}
         </DialogContent>
       </Dialog>

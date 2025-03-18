@@ -8,7 +8,7 @@ import WalletHistory from './wallet/WalletHistory';
 import { useWalletData } from '@/hooks/dashboard/useWalletData';
 
 export default function WalletTab() {
-  const { walletBalance } = useWalletData();
+  const { walletBalance, walletChange } = useWalletData();
   
   return (
     <div className="space-y-8">
@@ -16,7 +16,7 @@ export default function WalletTab() {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <WalletBalance balance={walletBalance} />
+          <WalletBalance balance={walletBalance} change={walletChange} />
         </div>
         <div className="lg:col-span-1">
           <ActionButtons />
