@@ -11,6 +11,14 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { formatCurrency, formatDate } from '@/utils/formatUtils';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from '@/components/ui/table';
 
 interface BankTransferUserProfile {
   first_name: string | null;
@@ -22,7 +30,7 @@ interface BankTransfer {
   id: string;
   user_id: string;
   amount: number;
-  status: string; // Using string to handle any status value
+  status: string;
   description?: string;
   reference: string;
   created_at: string;
@@ -160,12 +168,12 @@ export default function BankTransfersPage() {
 
   // Obtenir le badge de statut
   const getStatusBadge = (status: string) => {
-    // Normalize the status for display
+    // Standardize the status for better handling
     const normalizedStatus = status.toLowerCase();
     
     if (normalizedStatus.includes('pend') || normalizedStatus === 'en attente') {
       return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-700">En attente</span>;
-    } else if (normalizedStatus.includes('compl') || normalizedStatus.includes('reçu') || normalizedStatus.includes('rece') || normalizedStatus === 'completed') {
+    } else if (normalizedStatus.includes('compl') || normalizedStatus.includes('reçu') || normalizedStatus.includes('rece') || normalizedStatus === 'completed' || normalizedStatus === 'receveid') {
       return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">Reçu</span>;
     } else if (normalizedStatus.includes('reject') || normalizedStatus === 'rejeté') {
       return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-700">Rejeté</span>;
@@ -242,8 +250,6 @@ export default function BankTransfersPage() {
                   <p className="text-xs text-gray-600">Nombre de virements bruts: {rawTransfers.length}</p>
                   <p className="text-xs text-gray-600">Nombre de virements formatés: {bankTransfers.length}</p>
                   <p className="text-xs text-gray-600">Nombre de virements filtrés: {filteredTransfers.length}</p>
-                  <p className="text-xs text-gray-600">IDs des virements bruts: {rawTransfers.map(t => t.id).join(', ')}</p>
-                  <p className="text-xs text-gray-600">Statuts des virements bruts: {rawTransfers.map(t => t.status).join(', ')}</p>
                 </div>
                 
                 {isLoading ? (
@@ -252,46 +258,46 @@ export default function BankTransfersPage() {
                   </div>
                 ) : filteredTransfers.length > 0 ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50 text-gray-600 text-sm">
-                        <tr>
-                          <th className="px-5 py-3 text-left font-medium">Référence</th>
-                          <th className="px-5 py-3 text-left font-medium">Utilisateur</th>
-                          <th className="px-5 py-3 text-left font-medium">Date</th>
-                          <th className="px-5 py-3 text-left font-medium">Montant</th>
-                          <th className="px-5 py-3 text-left font-medium">Description</th>
-                          <th className="px-5 py-3 text-left font-medium">Statut</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Référence</TableHead>
+                          <TableHead>Utilisateur</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Montant</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Statut</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
                         {filteredTransfers.map((transfer) => (
-                          <tr key={transfer.id} className="text-gray-700 hover:bg-gray-50">
-                            <td className="px-5 py-4">
+                          <TableRow key={transfer.id}>
+                            <TableCell>
                               <div className="flex items-center">
                                 <FileText className="h-4 w-4 text-gray-400 mr-2" />
                                 <span>{transfer.reference}</span>
                               </div>
-                            </td>
-                            <td className="px-5 py-4">
+                            </TableCell>
+                            <TableCell>
                               <div className="line-clamp-1">
                                 <span className="font-medium">{formatUserName(transfer.user_profile)}</span>
                                 {transfer.user_profile?.email && (
                                   <span className="text-xs text-gray-500 block">{transfer.user_profile.email}</span>
                                 )}
                               </div>
-                            </td>
-                            <td className="px-5 py-4">{formatDate(transfer.created_at)}</td>
-                            <td className="px-5 py-4 font-medium">{formatCurrency(transfer.amount)}</td>
-                            <td className="px-5 py-4">
+                            </TableCell>
+                            <TableCell>{formatDate(transfer.created_at)}</TableCell>
+                            <TableCell className="font-medium">{formatCurrency(transfer.amount)}</TableCell>
+                            <TableCell>
                               <span className="line-clamp-1">{transfer.description || '-'}</span>
-                            </td>
-                            <td className="px-5 py-4">
+                            </TableCell>
+                            <TableCell>
                               {getStatusBadge(transfer.status)}
-                            </td>
-                          </tr>
+                            </TableCell>
+                          </TableRow>
                         ))}
-                      </tbody>
-                    </table>
+                      </TableBody>
+                    </Table>
                   </div>
                 ) : (
                   <div className="text-center py-10">
