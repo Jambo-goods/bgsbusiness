@@ -73,7 +73,7 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       console.log("Tentative de récupération de tous les virements bancaires");
       
-      // Récupération de tous les virements bancaires sans aucun filtrage
+      // Important: Retirer tout filtrage par ID utilisateur pour récupérer tous les virements
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
         .select('*');
@@ -90,8 +90,12 @@ export default function BankTransfersPage() {
       // Récupérer les profils des utilisateurs pour tous les virements
       let profilesById: Record<string, BankTransferUserProfile> = {};
       
+      // Extraire les IDs utilisateurs uniques de tous les virements
       const userIds = [...new Set((transfersData || []).map(transfer => transfer.user_id))];
+      console.log("IDs utilisateurs uniques:", userIds);
+      
       if (userIds.length > 0) {
+        // Récupérer les profils de tous les utilisateurs concernés
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, first_name, last_name, email')
@@ -102,6 +106,7 @@ export default function BankTransfersPage() {
           toast.error('Erreur lors de la récupération des profils');
         } else if (profilesData) {
           console.log("Données des profils reçues:", profilesData);
+          console.log("Nombre de profils récupérés:", profilesData.length);
           
           // Créer un dictionnaire des profils par ID
           profilesData.forEach(profile => {
@@ -115,21 +120,29 @@ export default function BankTransfersPage() {
       }
       
       // Formater tous les transferts avec les informations de profil
-      const formattedTransfers: BankTransfer[] = (transfersData || []).map(transfer => ({
-        id: transfer.id,
-        user_id: transfer.user_id,
-        amount: transfer.amount || 0,
-        status: transfer.status || 'pending',
-        description: transfer.notes || '',
-        reference: transfer.reference || '',
-        created_at: transfer.confirmed_at || transfer.created_at || new Date().toISOString(),
-        confirmed_at: transfer.confirmed_at,
-        rejected_at: transfer.rejected_at,
-        processed_at: transfer.processed_at,
-        notes: transfer.notes,
-        processed: transfer.processed,
-        user_profile: profilesById[transfer.user_id] || null
-      }));
+      const formattedTransfers: BankTransfer[] = (transfersData || []).map(transfer => {
+        console.log(`Formatage du transfert ${transfer.id} pour l'utilisateur ${transfer.user_id}`);
+        
+        return {
+          id: transfer.id,
+          user_id: transfer.user_id,
+          amount: transfer.amount || 0,
+          status: transfer.status || 'pending',
+          description: transfer.notes || '',
+          reference: transfer.reference || '',
+          created_at: transfer.confirmed_at || new Date().toISOString(),
+          confirmed_at: transfer.confirmed_at,
+          rejected_at: null, // Valeur par défaut pour éviter l'erreur TypeScript
+          processed_at: transfer.processed_at,
+          notes: transfer.notes,
+          processed: transfer.processed,
+          user_profile: profilesById[transfer.user_id] || {
+            first_name: "Utilisateur",
+            last_name: "Inconnu",
+            email: null
+          }
+        };
+      });
       
       console.log("Tous les virements formatés:", formattedTransfers);
       console.log("Nombre total de virements formatés:", formattedTransfers.length);
@@ -139,7 +152,7 @@ export default function BankTransfersPage() {
         console.log("Statuts des virements:", formattedTransfers.map(t => t.status).join(', '));
       }
       
-      // Définir tous les virements sans filtrage
+      // Définir tous les virements sans filtrage par utilisateur
       setBankTransfers(formattedTransfers);
     } catch (err) {
       console.error('Erreur lors de la récupération des virements bancaires:', err);
@@ -160,7 +173,9 @@ export default function BankTransfersPage() {
     : bankTransfers.filter(transfer => 
         transfer.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (transfer.description && transfer.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (transfer.user_profile?.email && transfer.user_profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
+        (transfer.user_profile?.email && transfer.user_profile.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (transfer.user_profile?.first_name && transfer.user_profile.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (transfer.user_profile?.last_name && transfer.user_profile.last_name.toLowerCase().includes(searchTerm.toLowerCase()))
       );
 
   // Obtenir le badge de statut
@@ -223,14 +238,14 @@ export default function BankTransfersPage() {
             
             <Card className="mb-6">
               <CardHeader className="pb-3">
-                <CardTitle>Tous les virements</CardTitle>
+                <CardTitle>Tous les virements de tous les utilisateurs</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="mb-4 flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="Rechercher par référence, description ou email..."
+                      placeholder="Rechercher par référence, description, nom ou email..."
                       className="pl-9"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
