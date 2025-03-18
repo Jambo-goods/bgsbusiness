@@ -11,7 +11,6 @@ import {
   LineChart,
   BarChart3,
   Briefcase,
-  Sparkles,
   Users
 } from "lucide-react";
 import SidebarNavItem from "./SidebarNavItem";
@@ -80,16 +79,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             badgeColor="bg-green-500"
           />
           
-          <SidebarNavItem 
-            icon={<Sparkles size={18} />}
-            label="Opportunités"
-            isActive={activeTab === "opportunities"}
-            onClick={() => setActiveTab("opportunities")}
-            isOpen={isSidebarOpen}
-            badge="Hot"
-            badgeColor="bg-red-500"
-          />
-        
           {/* Program items (without the section header) */}
           <SidebarNavItem 
             icon={<Users size={18} />}

@@ -17,7 +17,6 @@ const WalletTab = lazy(() => preloadWalletTab());
 const YieldTab = lazy(() => import("./tabs/YieldTab"));
 const Investments = lazy(() => preloadInvestments());
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
-const OpportunitiesTab = lazy(() => import("./tabs/OpportunitiesTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
 const NotificationsTab = lazy(() => import("./tabs/NotificationsTab"));
 const ReferralTab = lazy(() => preloadReferralTab());
@@ -129,8 +128,6 @@ export default function TabContent({
               )}
             </div>
           )}
-
-          {activeTab === "opportunities" && <OpportunitiesTab />}
           
           {activeTab === "profile" && (
             <ProfileTab userData={userData} />
