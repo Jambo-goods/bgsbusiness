@@ -73,11 +73,11 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       console.log("Tentative de récupération de tous les virements bancaires");
       
-      // Important: Retirer tout filtrage par ID utilisateur pour récupérer tous les virements
+      // Important: No WHERE clause here to get ALL transfers
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
         .select('*');
-        
+      
       if (transfersError) {
         console.error('Erreur SQL:', transfersError);
         throw transfersError;
@@ -87,7 +87,7 @@ export default function BankTransfersPage() {
       setRawTransfers(transfersData || []);
       console.log("Nombre total de virements récupérés de la base de données:", transfersData?.length || 0);
       
-      // Récupérer les profils des utilisateurs pour tous les virements
+      // Profils des utilisateurs
       let profilesById: Record<string, BankTransferUserProfile> = {};
       
       // Extraire les IDs utilisateurs uniques de tous les virements
@@ -132,7 +132,7 @@ export default function BankTransfersPage() {
           reference: transfer.reference || '',
           created_at: transfer.confirmed_at || new Date().toISOString(),
           confirmed_at: transfer.confirmed_at,
-          rejected_at: null, // Valeur par défaut pour éviter l'erreur TypeScript
+          rejected_at: transfer.rejected_at || null,
           processed_at: transfer.processed_at,
           notes: transfer.notes,
           processed: transfer.processed,
