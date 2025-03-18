@@ -60,9 +60,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => setActiveTab("yield")}
             isOpen={isSidebarOpen}
           />
-        </SidebarSection>
         
-        <SidebarSection title="Investissements">
+          {/* Investment items (without the section header) */}
           <SidebarNavItem 
             icon={<BarChart3 size={20} />}
             label="Mes investissements"
@@ -90,9 +89,8 @@ const Sidebar: React.FC<SidebarProps> = ({
             badge="Hot"
             badgeColor="bg-red-500"
           />
-        </SidebarSection>
         
-        <SidebarSection title="Programmes">
+          {/* Program items (without the section header) */}
           <SidebarNavItem 
             icon={<Users size={20} />}
             label="Parrainage"
