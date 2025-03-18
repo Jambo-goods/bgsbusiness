@@ -100,35 +100,36 @@ const Sidebar: React.FC<SidebarProps> = ({
             badge="10%"
             badgeColor="bg-amber-500"
           />
+          
+          {/* Moved user navigation items here */}
+          <SidebarNavItem 
+            icon={<User size={18} />}
+            label="Mon Profil"
+            isActive={activeTab === "profile"}
+            onClick={() => setActiveTab("profile")}
+            isOpen={isSidebarOpen}
+          />
+          
+          <SidebarNavItem 
+            icon={<Bell size={18} />}
+            label="Notifications"
+            isActive={activeTab === "notifications"}
+            onClick={() => setActiveTab("notifications")}
+            isOpen={isSidebarOpen}
+          />
+          
+          <SidebarNavItem 
+            icon={<Settings size={18} />}
+            label="Paramètres"
+            isActive={activeTab === "settings"}
+            onClick={() => setActiveTab("settings")}
+            isOpen={isSidebarOpen}
+          />
         </SidebarSection>
       </div>
       
-      {/* User Navigation */}
+      {/* User Navigation - now only contains logout */}
       <div className="px-2 py-1 border-t border-gray-100 space-y-1">
-        <SidebarNavItem 
-          icon={<User size={18} />}
-          label="Mon Profil"
-          isActive={activeTab === "profile"}
-          onClick={() => setActiveTab("profile")}
-          isOpen={isSidebarOpen}
-        />
-        
-        <SidebarNavItem 
-          icon={<Bell size={18} />}
-          label="Notifications"
-          isActive={activeTab === "notifications"}
-          onClick={() => setActiveTab("notifications")}
-          isOpen={isSidebarOpen}
-        />
-        
-        <SidebarNavItem 
-          icon={<Settings size={18} />}
-          label="Paramètres"
-          isActive={activeTab === "settings"}
-          onClick={() => setActiveTab("settings")}
-          isOpen={isSidebarOpen}
-        />
-        
         <SidebarNavItem 
           icon={<LogOut size={18} />}
           label="Déconnexion"
