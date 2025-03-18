@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -7,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Search, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { formatDate, maskAccountNumber } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
 import StatusBadge from "@/components/dashboard/tabs/wallet/withdrawal-table/StatusBadge";
+import SidebarMenu from "@/components/layout/SidebarMenu";
+import { Toaster } from "sonner";
 
 interface WithdrawalRequest {
   id: string;
@@ -118,108 +119,114 @@ export default function WithdrawalRequestsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Demandes de Retrait</h1>
-        
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <Input 
-                type="text" 
-                placeholder="Rechercher..." 
-                className="pl-10 w-full md:w-80" 
-                value={searchTerm} 
-                onChange={e => setSearchTerm(e.target.value)} 
-              />
+    <div className="min-h-screen bg-gray-50 flex">
+      <Toaster />
+      
+      <SidebarMenu />
+      
+      <div className="flex-1">
+        <div className="container mx-auto py-8 px-4">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">Demandes de Retrait</h1>
+          
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <Input 
+                  type="text" 
+                  placeholder="Rechercher..." 
+                  className="pl-10 w-full md:w-80" 
+                  value={searchTerm} 
+                  onChange={e => setSearchTerm(e.target.value)} 
+                />
+              </div>
             </div>
-          </div>
 
-          {isLoading ? (
-            <div className="flex justify-center items-center p-12">
-              <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
-            </div>
-          ) : filteredRequests.length === 0 ? (
-            <div className="text-center p-8 text-gray-500">
-              Aucune demande de retrait trouvée
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Utilisateur</TableHead>
-                    <TableHead>
-                      <button 
-                        className="flex items-center space-x-1 hover:text-gray-700" 
-                        onClick={() => handleSort("amount")}
-                      >
-                        <span>Montant</span>
-                        {sortField === "amount" && (
-                          sortDirection === "asc" ? 
-                            <ArrowUp className="h-4 w-4" /> : 
-                            <ArrowDown className="h-4 w-4" />
-                        )}
-                      </button>
-                    </TableHead>
-                    <TableHead>
-                      <button 
-                        className="flex items-center space-x-1 hover:text-gray-700" 
-                        onClick={() => handleSort("requested_at")}
-                      >
-                        <span>Date de Demande</span>
-                        {sortField === "requested_at" && (
-                          sortDirection === "asc" ? 
-                            <ArrowUp className="h-4 w-4" /> : 
-                            <ArrowDown className="h-4 w-4" />
-                        )}
-                      </button>
-                    </TableHead>
-                    <TableHead>Banque</TableHead>
-                    <TableHead>Compte</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>
-                      <button 
-                        className="flex items-center space-x-1 hover:text-gray-700" 
-                        onClick={() => handleSort("processed_at")}
-                      >
-                        <span>Date de Traitement</span>
-                        {sortField === "processed_at" && (
-                          sortDirection === "asc" ? 
-                            <ArrowUp className="h-4 w-4" /> : 
-                            <ArrowDown className="h-4 w-4" />
-                        )}
-                      </button>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredRequests.map(request => {
-                    const user = userData[request.user_id] || { first_name: null, last_name: null, email: null };
-                    return (
-                      <TableRow key={request.id}>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{user.first_name} {user.last_name}</div>
-                            <div className="text-sm text-gray-500">{user.email}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-medium">{request.amount?.toLocaleString()} €</TableCell>
-                        <TableCell>{formatDate(request.requested_at)}</TableCell>
-                        <TableCell>{request.bank_info?.bankName || "-"}</TableCell>
-                        <TableCell>{maskAccountNumber(request.bank_info?.accountNumber || "")}</TableCell>
-                        <TableCell><StatusBadge status={request.status} /></TableCell>
-                        <TableCell>
-                          {request.processed_at ? formatDate(request.processed_at) : "-"}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+            {isLoading ? (
+              <div className="flex justify-center items-center p-12">
+                <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+              </div>
+            ) : filteredRequests.length === 0 ? (
+              <div className="text-center p-8 text-gray-500">
+                Aucune demande de retrait trouvée
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Utilisateur</TableHead>
+                      <TableHead>
+                        <button 
+                          className="flex items-center space-x-1 hover:text-gray-700" 
+                          onClick={() => handleSort("amount")}
+                        >
+                          <span>Montant</span>
+                          {sortField === "amount" && (
+                            sortDirection === "asc" ? 
+                              <ArrowUp className="h-4 w-4" /> : 
+                              <ArrowDown className="h-4 w-4" />
+                          )}
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button 
+                          className="flex items-center space-x-1 hover:text-gray-700" 
+                          onClick={() => handleSort("requested_at")}
+                        >
+                          <span>Date de Demande</span>
+                          {sortField === "requested_at" && (
+                            sortDirection === "asc" ? 
+                              <ArrowUp className="h-4 w-4" /> : 
+                              <ArrowDown className="h-4 w-4" />
+                          )}
+                        </button>
+                      </TableHead>
+                      <TableHead>Banque</TableHead>
+                      <TableHead>Compte</TableHead>
+                      <TableHead>Statut</TableHead>
+                      <TableHead>
+                        <button 
+                          className="flex items-center space-x-1 hover:text-gray-700" 
+                          onClick={() => handleSort("processed_at")}
+                        >
+                          <span>Date de Traitement</span>
+                          {sortField === "processed_at" && (
+                            sortDirection === "asc" ? 
+                              <ArrowUp className="h-4 w-4" /> : 
+                              <ArrowDown className="h-4 w-4" />
+                          )}
+                        </button>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredRequests.map(request => {
+                      const user = userData[request.user_id] || { first_name: null, last_name: null, email: null };
+                      return (
+                        <TableRow key={request.id}>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{user.first_name} {user.last_name}</div>
+                              <div className="text-sm text-gray-500">{user.email}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{request.amount?.toLocaleString()} €</TableCell>
+                          <TableCell>{formatDate(request.requested_at)}</TableCell>
+                          <TableCell>{request.bank_info?.bankName || "-"}</TableCell>
+                          <TableCell>{maskAccountNumber(request.bank_info?.accountNumber || "")}</TableCell>
+                          <TableCell><StatusBadge status={request.status} /></TableCell>
+                          <TableCell>
+                            {request.processed_at ? formatDate(request.processed_at) : "-"}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

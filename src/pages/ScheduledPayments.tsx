@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { Toaster } from 'sonner';
-import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil, Users, Settings, BanknoteIcon, Wallet, LayoutDashboard } from 'lucide-react';
+import { Check, Clock, AlertCircle, ChevronDown, Search, Filter, ArrowUpDown, Plus, Pencil } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -24,14 +23,6 @@ import {
   DropdownMenuLabel
 } from '@/components/ui/dropdown-menu';
 import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-} from '@/components/ui/navigation-menu';
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -40,20 +31,10 @@ import {
   DialogFooter,
   DialogClose
 } from '@/components/ui/dialog';
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormDescription,
-  FormMessage
-} from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useForm } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import SidebarMenu from '@/components/layout/SidebarMenu';
 
 const ScheduledPaymentsPage = () => {
   const { scheduledPayments, isLoading, error, addScheduledPayment, updatePaymentStatus } = useScheduledPayments();
@@ -266,46 +247,7 @@ const ScheduledPaymentsPage = () => {
     <div className="min-h-screen bg-gray-50 flex">
       <Toaster />
       
-      {/* Vertical Menu */}
-      <div className="w-64 bg-white shadow-lg h-screen sticky top-0 border-r border-gray-200">
-        <div className="p-4 border-b border-gray-200">
-          <Link to="/" className="font-bold text-xl text-blue-600 flex items-center">
-            Finance App
-          </Link>
-        </div>
-        
-        <nav className="p-4 space-y-1">
-          <Link to="/scheduled-payments" className="flex items-center gap-3 px-4 py-3 bg-blue-50 text-blue-700 rounded-lg">
-            <BanknoteIcon className="h-5 w-5" />
-            <span>Paiements Programmés</span>
-          </Link>
-          
-          <Link to="/withdrawal-requests" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-            <Wallet className="h-5 w-5" />
-            <span>Demandes de retrait</span>
-          </Link>
-          
-          <Link to="/bank-transfers" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-            <BanknoteIcon className="h-5 w-5" />
-            <span>Virements Bancaires</span>
-          </Link>
-          
-          <Link to="/profiles" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-            <Users className="h-5 w-5" />
-            <span>Profils</span>
-          </Link>
-          
-          <Link to="/admin/projects" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-            <LayoutDashboard className="h-5 w-5" />
-            <span>Gestion des Projets</span>
-          </Link>
-          
-          <Link to="/settings" className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg">
-            <Settings className="h-5 w-5" />
-            <span>Paramètres</span>
-          </Link>
-        </nav>
-      </div>
+      <SidebarMenu />
       
       <div className="flex-1">
         <div className="container mx-auto py-8 px-4">
