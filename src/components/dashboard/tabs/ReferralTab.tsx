@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -172,15 +173,15 @@ export default function ReferralTab() {
         </Card>
       </div>
       
-      {/* Referral Link and Code */}
-      <Card className="overflow-hidden border-2 border-amber-100">
-        <CardHeader className="bg-amber-50">
-          <CardTitle className="text-amber-800">Votre code de parrainage</CardTitle>
+      {/* Referral Link and Code - Changed border from amber to gray */}
+      <Card className="overflow-hidden border-2 border-gray-200">
+        <CardHeader className="bg-gray-50">
+          <CardTitle className="text-gray-800">Votre code de parrainage</CardTitle>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="space-y-6">
-            <div className="bg-amber-50 p-4 rounded-lg text-center">
-              <span className="text-2xl font-bold tracking-wider text-amber-800">{referralCode}</span>
+            <div className="bg-gray-50 p-4 rounded-lg text-center">
+              <span className="text-2xl font-bold tracking-wider text-gray-800">{referralCode}</span>
             </div>
             
             <div className="flex flex-col md:flex-row gap-4">
