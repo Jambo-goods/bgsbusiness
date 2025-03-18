@@ -79,10 +79,11 @@ export default function BankTransfersPage() {
       setRawTransfers(transfersData || []);
       console.log("Nombre total de virements récupérés de la base de données:", transfersData?.length || 0);
       
-      // Récupérer les profils des utilisateurs
-      if (transfersData && transfersData.length > 0) {
-        const userIds = [...new Set(transfersData.map(transfer => transfer.user_id))];
-        
+      // Récupérer les profils des utilisateurs pour tous les virements
+      const userIds = [...new Set((transfersData || []).map(transfer => transfer.user_id))];
+      let profilesById: Record<string, BankTransferUserProfile> = {};
+      
+      if (userIds.length > 0) {
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, first_name, last_name, email')
@@ -95,7 +96,6 @@ export default function BankTransfersPage() {
         console.log("Données des profils reçues:", profilesData);
         
         // Créer un dictionnaire des profils par ID
-        const profilesById: Record<string, BankTransferUserProfile> = {};
         if (profilesData) {
           profilesData.forEach(profile => {
             profilesById[profile.id] = {
@@ -105,8 +105,10 @@ export default function BankTransfersPage() {
             };
           });
         }
-        
-        // Formater les transferts avec les informations de profil
+      }
+      
+      // Formater tous les transferts avec les informations de profil
+      if (transfersData) {
         const formattedTransfers: BankTransfer[] = transfersData.map(transfer => ({
           id: transfer.id,
           user_id: transfer.user_id,
@@ -127,6 +129,8 @@ export default function BankTransfersPage() {
         console.log("Nombre total de virements formatés:", formattedTransfers.length);
         console.log("IDs des virements:", formattedTransfers.map(t => t.id).join(', '));
         console.log("Statuts des virements:", formattedTransfers.map(t => t.status).join(', '));
+        
+        // Définir tous les virements sans filtrage
         setBankTransfers(formattedTransfers);
       } else {
         console.log("Aucun virement trouvé dans la base de données");
@@ -145,7 +149,7 @@ export default function BankTransfersPage() {
     toast.success('Données actualisées');
   };
 
-  // Ne pas filtrer les virements - afficher tous les virements
+  // Appliquer uniquement le filtre de recherche texte si saisi, sinon afficher tous les virements
   const filteredTransfers = searchTerm.trim() === '' 
     ? bankTransfers 
     : bankTransfers.filter(transfer => 
