@@ -68,7 +68,6 @@ export default function DashboardLayout({
           isSidebarOpen={isSidebarOpen}
           toggleSidebar={toggleSidebar}
           handleLogout={handleLogout}
-          userData={userData}
         />
         
         {/* Main content */}

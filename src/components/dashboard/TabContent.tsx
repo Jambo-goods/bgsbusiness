@@ -1,3 +1,4 @@
+
 import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
@@ -5,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import ProjectsList from "../projects/ProjectsList";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { Project } from "@/types/project";
-import ReferralTab from "./tabs/ReferralTab";
 
 // Prefetch critical paths
 const preloadWalletTab = () => import("./tabs/WalletTab");
@@ -99,7 +99,7 @@ export default function TabContent({
   }, [activeTab]);
   
   return (
-    <div>
+    <div className="w-full mt-4">
       {activeTab === "overview" && (
         <Overview 
           userData={userData} 
@@ -108,58 +108,52 @@ export default function TabContent({
         />
       )}
       
-      <div className="mt-4">
-        {activeTab === "referral" && (
-          <ReferralTab />
-        )}
-        
-        {activeTab !== "overview" && (
-          <Suspense fallback={<TabLoading />}>
-            {activeTab === "wallet" && <WalletTab />}
-            
-            {activeTab === "yield" && <YieldTab />}
-            
-            {activeTab === "investments" && (
-              <Investments 
-                userInvestments={userInvestments}
-                onRefresh={refreshData}
-              />
-            )}
+      {activeTab !== "overview" && (
+        <Suspense fallback={<TabLoading />}>
+          {activeTab === "wallet" && <WalletTab />}
+          
+          {activeTab === "yield" && <YieldTab />}
+          
+          {activeTab === "investments" && (
+            <Investments 
+              userInvestments={userInvestments}
+              onRefresh={refreshData}
+            />
+          )}
 
-            {activeTab === "projects" && (
-              <div className="space-y-6">
-                <h2 className="text-2xl font-semibold text-bgs-blue">Projets d'investissement proposés</h2>
-                <p className="text-gray-600">
-                  Découvrez tous les projets d'investissement disponibles sur la plateforme et trouvez ceux qui correspondent à vos objectifs financiers.
-                </p>
-                {loading ? (
-                  <div className="flex justify-center py-20">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
-                  </div>
+          {activeTab === "projects" && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold text-bgs-blue">Projets d'investissement proposés</h2>
+              <p className="text-gray-600">
+                Découvrez tous les projets d'investissement disponibles sur la plateforme et trouvez ceux qui correspondent à vos objectifs financiers.
+              </p>
+              {loading ? (
+                <div className="flex justify-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
+                </div>
+              ) : (
+                dbProjects.length > 0 ? (
+                  <ProjectsList projects={dbProjects} />
                 ) : (
-                  dbProjects.length > 0 ? (
-                    <ProjectsList projects={dbProjects} />
-                  ) : (
-                    <div className="text-center py-20">
-                      <p className="text-gray-500">Aucun projet disponible actuellement.</p>
-                    </div>
-                  )
-                )}
-              </div>
-            )}
+                  <div className="text-center py-20">
+                    <p className="text-gray-500">Aucun projet disponible actuellement.</p>
+                  </div>
+                )
+              )}
+            </div>
+          )}
 
-            {activeTab === "opportunities" && <OpportunitiesTab />}
-            
-            {activeTab === "profile" && (
-              <ProfileTab userData={userData} />
-            )}
+          {activeTab === "opportunities" && <OpportunitiesTab />}
+          
+          {activeTab === "profile" && (
+            <ProfileTab userData={userData} />
+          )}
 
-            {activeTab === "settings" && <SettingsTab />}
-            
-            {activeTab === "notifications" && <NotificationsTab />}
-          </Suspense>
-        )}
-      </div>
+          {activeTab === "settings" && <SettingsTab />}
+          
+          {activeTab === "notifications" && <NotificationsTab />}
+        </Suspense>
+      )}
     </div>
   );
 }
