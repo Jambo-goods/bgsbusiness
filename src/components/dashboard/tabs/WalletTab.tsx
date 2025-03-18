@@ -8,7 +8,7 @@ import WalletHistory from './wallet/WalletHistory';
 import { useWalletData } from '@/hooks/dashboard/useWalletData';
 
 export default function WalletTab() {
-  const { walletBalance, walletChange } = useWalletData();
+  const { walletBalance, walletChange, refreshWalletData } = useWalletData();
   
   return (
     <div className="space-y-8">
