@@ -24,27 +24,36 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       console.log("Fetching bank transfers with status filter:", statusFilter);
 
-      // Get all transfers from both bank_transfers and wallet_transactions tables
-      const fetchBankTransfersPromise = supabase
+      // Create the base query for bank transfers - without any status filter initially
+      let bankTransfersQuery = supabase
         .from('bank_transfers')
         .select('*')
         .order('confirmed_at', { ascending: false });
 
-      const fetchWalletTransactionsPromise = supabase
+      // Create the base query for wallet transactions - without any status filter initially
+      let walletTransactionsQuery = supabase
         .from('wallet_transactions')
         .select('*')
         .eq('type', 'deposit');
 
+      // Apply status filter if not "all"
+      if (statusFilter !== "all") {
+        bankTransfersQuery = bankTransfersQuery.eq('status', statusFilter);
+        walletTransactionsQuery = walletTransactionsQuery.eq('status', statusFilter);
+      }
+
       // Execute both queries in parallel
       const [bankTransfersResult, walletTransactionsResult] = await Promise.all([
-        fetchBankTransfersPromise,
-        fetchWalletTransactionsPromise
+        bankTransfersQuery,
+        walletTransactionsQuery
       ]);
 
       // Check for errors in bank transfers query
       if (bankTransfersResult.error) {
         console.error("Error fetching bank transfers:", bankTransfersResult.error);
-        toast.error("Erreur lors du chargement des virements bancaires", {
+        toast({
+          variant: "destructive",
+          title: "Erreur lors du chargement des virements bancaires",
           description: bankTransfersResult.error.message
         });
         setIsLoading(false);
@@ -54,7 +63,9 @@ export default function BankTransfersPage() {
       // Check for errors in wallet transactions query
       if (walletTransactionsResult.error) {
         console.error("Error fetching wallet transactions:", walletTransactionsResult.error);
-        toast.error("Erreur lors du chargement des transactions", {
+        toast({
+          variant: "destructive",
+          title: "Erreur lors du chargement des transactions",
           description: walletTransactionsResult.error.message
         });
         setIsLoading(false);
@@ -83,6 +94,11 @@ export default function BankTransfersPage() {
 
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
+        toast({
+          variant: "destructive",
+          title: "Erreur lors du chargement des profils",
+          description: profilesError.message
+        });
       }
 
       // Create a map of profiles by user ID
@@ -140,27 +156,28 @@ export default function BankTransfersPage() {
       // Combine both types of transfers
       const allTransfers = [...formattedBankTransfers, ...formattedWalletTransfers];
       
-      // Apply status filter if needed
-      const filteredTransfers = statusFilter === "all" 
-        ? allTransfers 
-        : allTransfers.filter(item => item.status === statusFilter);
-
-      console.log("Combined transfers count:", allTransfers.length);
-      console.log("Filtered transfers count:", filteredTransfers.length);
+      // Log all transfers to check
+      console.log("All transfers before filtering:", allTransfers);
       
-      setBankTransfers(filteredTransfers);
-      setTotalCount(filteredTransfers.length);
+      // Sort transfers by created_at date in descending order (newest first)
+      allTransfers.sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      
+      setBankTransfers(allTransfers);
+      setTotalCount(allTransfers.length);
+      console.log("Total transfers after formatting:", allTransfers.length);
     } catch (err) {
       console.error("Unexpected error fetching bank transfers:", err);
-      toast.error("Une erreur est survenue lors du chargement des données");
+      toast({
+        variant: "destructive",
+        title: "Une erreur est survenue",
+        description: "Impossible de charger les données des virements bancaires"
+      });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const filteredTransfers = statusFilter === "all" 
-    ? bankTransfers 
-    : bankTransfers.filter(item => item.status === statusFilter);
 
   return (
     <DashboardLayout>
@@ -189,7 +206,7 @@ export default function BankTransfersPage() {
         />
         
         <BankTransferTable 
-          pendingTransfers={filteredTransfers}
+          pendingTransfers={bankTransfers}
           isLoading={isLoading}
           refreshData={fetchBankTransfers}
         />
