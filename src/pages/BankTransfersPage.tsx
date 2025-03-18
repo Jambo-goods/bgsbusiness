@@ -12,6 +12,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import { formatCurrency, formatDate } from '@/utils/formatUtils';
 
+interface BankTransferUserProfile {
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+}
+
 interface BankTransfer {
   id: string;
   user_id: string;
@@ -25,11 +31,7 @@ interface BankTransfer {
   processed_at?: string | null;
   notes?: string | null;
   processed?: boolean | null;
-  user_profile?: {
-    first_name: string | null;
-    last_name: string | null;
-    email: string | null;
-  } | null;
+  user_profile?: BankTransferUserProfile | null;
 }
 
 export default function BankTransfersPage() {
@@ -62,28 +64,48 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       console.log("Tentative de récupération de tous les virements bancaires");
       
-      // Récupération de tous les virements bancaires avec les profils associés
-      const { data, error } = await supabase
+      // Récupération de tous les virements bancaires
+      const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
-        .select(`
-          *,
-          profiles:user_id (
-            first_name,
-            last_name,
-            email
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
         
-      if (error) {
-        console.error('Erreur SQL:', error);
-        throw error;
+      if (transfersError) {
+        console.error('Erreur SQL:', transfersError);
+        throw transfersError;
       }
       
-      console.log("Données reçues:", data);
+      console.log("Données des virements reçues:", transfersData);
       
-      if (data && data.length > 0) {
-        const formattedTransfers: BankTransfer[] = data.map(transfer => ({
+      // Récupérer les profils des utilisateurs
+      if (transfersData && transfersData.length > 0) {
+        const userIds = [...new Set(transfersData.map(transfer => transfer.user_id))];
+        
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', userIds);
+          
+        if (profilesError) {
+          console.error('Erreur lors de la récupération des profils:', profilesError);
+        }
+        
+        console.log("Données des profils reçues:", profilesData);
+        
+        // Créer un dictionnaire des profils par ID
+        const profilesById: Record<string, BankTransferUserProfile> = {};
+        if (profilesData) {
+          profilesData.forEach(profile => {
+            profilesById[profile.id] = {
+              first_name: profile.first_name,
+              last_name: profile.last_name,
+              email: profile.email
+            };
+          });
+        }
+        
+        // Formater les transferts avec les informations de profil
+        const formattedTransfers: BankTransfer[] = transfersData.map(transfer => ({
           id: transfer.id,
           user_id: transfer.user_id,
           amount: transfer.amount || 0,
@@ -92,10 +114,11 @@ export default function BankTransfersPage() {
           reference: transfer.reference || 'REF-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
           created_at: transfer.confirmed_at || new Date().toISOString(),
           confirmed_at: transfer.confirmed_at,
+          rejected_at: null,
           processed_at: transfer.processed_at,
           notes: transfer.notes,
           processed: transfer.processed,
-          user_profile: transfer.profiles
+          user_profile: profilesById[transfer.user_id] || null
         }));
         
         console.log("Virements formatés:", formattedTransfers);
@@ -139,7 +162,7 @@ export default function BankTransfersPage() {
   };
 
   // Formater le nom d'utilisateur
-  const formatUserName = (profile?: { first_name: string | null; last_name: string | null; email: string | null } | null) => {
+  const formatUserName = (profile?: BankTransferUserProfile | null) => {
     if (!profile) return "Utilisateur inconnu";
     const firstName = profile.first_name || "";
     const lastName = profile.last_name || "";
