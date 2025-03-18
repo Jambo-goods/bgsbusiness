@@ -90,7 +90,7 @@ export default function NavbarActions() {
           onMarkAllRead={fetchUnreadNotificationsCount}
         />
         
-        <UserMenuDropdown />
+        <UserMenuDropdown isOpen={false} isActive={() => false} />
       </div>
     );
   }
