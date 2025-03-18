@@ -84,6 +84,8 @@ export const registerUser = async (userData: UserRegistrationData) => {
             
           if (referralError) {
             console.error("Error creating referral record:", referralError);
+          } else {
+            console.log("Referral record created successfully");
           }
         }
       }

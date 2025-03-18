@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowRight, AlertCircle, Users } from "lucide-react";
+import { ArrowRight, AlertCircle, Users, HelpCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import NameFields from "./NameFields";
 import EmailField from "./EmailField";
@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
@@ -157,9 +158,33 @@ export default function RegisterForm() {
         />
         
         <div className="space-y-2">
-          <Label htmlFor="referralCode" className="text-bgs-blue">
-            Code parrain (optionnel)
-          </Label>
+          <div className="flex justify-between items-center">
+            <Label htmlFor="referralCode" className="text-bgs-blue">
+              Code parrain (optionnel)
+            </Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4" side="top">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Comment utiliser un code parrain ?</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Si quelqu'un vous a invité, vous pouvez:
+                  </p>
+                  <ul className="text-xs text-muted-foreground list-disc list-inside space-y-1">
+                    <li>Cliquer directement sur le lien de parrainage qu'ils vous ont envoyé (le code sera automatiquement rempli)</li>
+                    <li>Ou saisir manuellement leur code parrain dans ce champ</li>
+                  </ul>
+                  <p className="text-xs text-muted-foreground">
+                    En utilisant un code parrain, vous bénéficierez tous les deux d'avantages.
+                  </p>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <div className="relative">
             <Input
               id="referralCode"
@@ -176,7 +201,11 @@ export default function RegisterForm() {
           </div>
           {referralError && <p className="text-red-500 text-sm mt-1">{referralError}</p>}
           <p className="text-sm text-bgs-blue/70">
-            Si quelqu'un vous a parrainé, entrez son code ici. Après inscription, vous obtiendrez votre propre code de parrainage.
+            {searchParams.get("ref") ? (
+              <>Un code parrain a été automatiquement ajouté depuis votre lien d'invitation.</>
+            ) : (
+              <>Si quelqu'un vous a parrainé, entrez son code ici. Après inscription, vous obtiendrez votre propre code de parrainage.</>
+            )}
           </p>
         </div>
         

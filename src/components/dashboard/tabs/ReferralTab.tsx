@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, Users, CreditCard, CheckCircle, Share2 } from "lucide-react";
+import { Copy, Users, CreditCard, CheckCircle, Share2, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -230,6 +230,49 @@ export default function ReferralTab() {
                 </Button>
               </div>
             </div>
+            
+            {/* Guide d'utilisation - Comment inviter des filleuls */}
+            <Card className="border-blue-100 bg-blue-50">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-blue-800 flex items-center text-lg">
+                  <HelpCircle className="h-5 w-5 mr-2" />
+                  Comment inviter des filleuls ?
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-blue-800">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Option 1: Partager votre lien de parrainage</h4>
+                    <ol className="list-decimal list-inside space-y-2 text-sm pl-2">
+                      <li>Copiez votre lien de parrainage en cliquant sur le bouton "Copier" ci-dessus</li>
+                      <li>Partagez ce lien avec vos amis par email, SMS ou réseaux sociaux</li>
+                      <li>Quand ils cliqueront sur le lien, ils seront dirigés vers la page d'inscription</li>
+                      <li>Votre code de parrainage sera automatiquement rempli dans le formulaire</li>
+                    </ol>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium mb-2">Option 2: Partager votre code de parrainage</h4>
+                    <ol className="list-decimal list-inside space-y-2 text-sm pl-2">
+                      <li>Communiquez votre code de parrainage à vos amis ({referralCode})</li>
+                      <li>Ils devront se rendre sur la page d'inscription: {window.location.origin}/register</li>
+                      <li>Dans le formulaire d'inscription, ils devront saisir votre code dans le champ "Code parrain"</li>
+                      <li>Une fois inscrits, ils apparaîtront dans votre liste de filleuls ci-dessous</li>
+                    </ol>
+                  </div>
+                  
+                  <div className="bg-white p-3 rounded-md border border-blue-200">
+                    <p className="text-sm font-medium">Important:</p>
+                    <ul className="list-disc list-inside text-sm pl-2">
+                      <li>Vos filleuls doivent utiliser votre code lors de leur inscription</li>
+                      <li>Vous recevrez 10% de commission sur leurs rendements automatiquement</li>
+                      <li>Les commissions seront créditées directement sur votre portefeuille</li>
+                      <li>Vous pouvez suivre vos commissions dans l'onglet "Historique des commissions"</li>
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
             
             <div className="bg-blue-50 p-4 rounded-lg">
               <h3 className="font-medium text-blue-800 mb-2">Comment ça marche ?</h3>
