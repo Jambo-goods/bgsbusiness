@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Search, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
 import { formatDate, maskAccountNumber } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
 import StatusBadge from "@/components/dashboard/tabs/wallet/withdrawal-table/StatusBadge";
+import { toast } from "sonner";
 
 interface WithdrawalRequest {
   id: string;
@@ -60,26 +61,42 @@ export default function WithdrawalRequestsPage() {
   const fetchWithdrawalRequests = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching all withdrawal requests...");
+      
+      // Requête sans filtre par utilisateur pour récupérer toutes les demandes de retrait
       const { data, error } = await supabase
         .from("withdrawal_requests")
         .select("*")
         .order(sortField, { ascending: sortDirection === "asc" });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching withdrawal requests:", error);
+        toast.error("Impossible de charger les demandes de retrait");
+        throw error;
+      }
 
+      console.log(`Retrieved ${data?.length || 0} withdrawal requests`);
       const withdrawalData = data || [];
       setWithdrawalRequests(withdrawalData as WithdrawalRequest[]);
 
       // Fetch user data for all requests
       const userIds = Array.from(new Set(withdrawalData.map(w => w.user_id)));
       if (userIds.length > 0) {
+        console.log(`Fetching profile data for ${userIds.length} users`);
+        
+        // Récupérer toutes les données de profil sans restriction
         const { data: users, error: userError } = await supabase
           .from("profiles")
           .select("id, first_name, last_name, email")
           .in("id", userIds);
 
-        if (userError) throw userError;
+        if (userError) {
+          console.error("Error fetching profiles:", userError);
+          toast.error("Impossible de charger les données des utilisateurs");
+          throw userError;
+        }
 
+        console.log(`Retrieved ${users?.length || 0} user profiles`);
         const userMap: Record<string, UserData> = {};
         users?.forEach(user => {
           userMap[user.id] = {
@@ -91,7 +108,8 @@ export default function WithdrawalRequestsPage() {
         setUserData(userMap);
       }
     } catch (error) {
-      console.error("Error fetching withdrawal requests:", error);
+      console.error("Error in fetchWithdrawalRequests:", error);
+      toast.error("Une erreur est survenue lors du chargement des données");
     } finally {
       setIsLoading(false);
     }
@@ -120,7 +138,7 @@ export default function WithdrawalRequestsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Demandes de Retrait</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">Toutes les Demandes de Retrait</h1>
         
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex flex-col md:flex-row gap-4 justify-between mb-6">
