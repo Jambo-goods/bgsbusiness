@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { useUserSession } from '@/hooks/dashboard/useUserSession';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -37,39 +36,33 @@ export default function BankTransfersPage() {
   const [bankTransfers, setBankTransfers] = useState<BankTransfer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const { userId } = useUserSession();
 
   useEffect(() => {
-    if (userId) {
-      fetchBankTransfers();
+    fetchBankTransfers();
+    
+    // Configuration de l'abonnement en temps réel pour tous les virements
+    const channel = supabase
+      .channel('bank-transfers-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'bank_transfers'
+      }, () => {
+        fetchBankTransfers();
+      })
+      .subscribe();
       
-      // Mise en place d'un abonnement en temps réel
-      const channel = supabase
-        .channel('bank-transfers-changes')
-        .on('postgres_changes', {
-          event: '*',
-          schema: 'public',
-          table: 'bank_transfers',
-          filter: `user_id=eq.${userId}`
-        }, () => {
-          fetchBankTransfers();
-        })
-        .subscribe();
-        
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }
-  }, [userId]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const fetchBankTransfers = async () => {
-    if (!userId) return;
-    
     try {
       setIsLoading(true);
-      console.log("Tentative de récupération des virements pour l'utilisateur:", userId);
+      console.log("Tentative de récupération de tous les virements bancaires");
       
-      // Récupération directe des virements bancaires
+      // Récupération de tous les virements bancaires avec les profils associés
       const { data, error } = await supabase
         .from('bank_transfers')
         .select(`
@@ -80,7 +73,6 @@ export default function BankTransfersPage() {
             email
           )
         `)
-        .eq('user_id', userId)
         .order('created_at', { ascending: false });
         
       if (error) {
@@ -98,7 +90,7 @@ export default function BankTransfersPage() {
           status: (transfer.status as 'pending' | 'completed' | 'rejected') || 'pending',
           description: transfer.notes || '',
           reference: transfer.reference || 'REF-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
-          created_at: transfer.created_at || transfer.confirmed_at || new Date().toISOString(),
+          created_at: transfer.confirmed_at || new Date().toISOString(),
           confirmed_at: transfer.confirmed_at,
           processed_at: transfer.processed_at,
           notes: transfer.notes,
@@ -109,12 +101,12 @@ export default function BankTransfersPage() {
         console.log("Virements formatés:", formattedTransfers);
         setBankTransfers(formattedTransfers);
       } else {
-        console.log("Aucun virement trouvé pour cet utilisateur");
+        console.log("Aucun virement trouvé dans la base de données");
         setBankTransfers([]);
       }
     } catch (err) {
       console.error('Erreur lors de la récupération des virements bancaires:', err);
-      toast.error('Impossible de charger vos virements bancaires');
+      toast.error('Impossible de charger les virements bancaires');
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +120,8 @@ export default function BankTransfersPage() {
   // Filtrer les virements en fonction du terme de recherche
   const filteredTransfers = bankTransfers.filter(transfer => 
     transfer.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (transfer.description && transfer.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    (transfer.description && transfer.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (transfer.user_profile?.email && transfer.user_profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Obtenir le badge de statut
@@ -145,11 +138,22 @@ export default function BankTransfersPage() {
     }
   };
 
+  // Formater le nom d'utilisateur
+  const formatUserName = (profile?: { first_name: string | null; last_name: string | null; email: string | null } | null) => {
+    if (!profile) return "Utilisateur inconnu";
+    const firstName = profile.first_name || "";
+    const lastName = profile.last_name || "";
+    if (firstName || lastName) {
+      return `${firstName} ${lastName}`.trim();
+    }
+    return profile.email || "Utilisateur inconnu";
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>Virements Bancaires | BGS Invest</title>
-        <meta name="description" content="Suivez vos virements bancaires avec BGS Invest" />
+        <title>Tous les Virements Bancaires | BGS Invest</title>
+        <meta name="description" content="Gestion de tous les virements bancaires avec BGS Invest" />
       </Helmet>
       
       <Navbar />
@@ -159,8 +163,8 @@ export default function BankTransfersPage() {
           <div className="max-w-6xl mx-auto">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
               <div>
-                <h1 className="text-2xl font-bold text-bgs-blue">Virements Bancaires</h1>
-                <p className="text-gray-600 mt-1">Consultez l'historique de vos virements bancaires</p>
+                <h1 className="text-2xl font-bold text-bgs-blue">Tous les Virements Bancaires</h1>
+                <p className="text-gray-600 mt-1">Consultez tous les virements bancaires dans le système</p>
               </div>
               
               <div className="mt-4 md:mt-0 flex items-center gap-3">
@@ -177,14 +181,14 @@ export default function BankTransfersPage() {
             
             <Card className="mb-6">
               <CardHeader className="pb-3">
-                <CardTitle>Vos virements</CardTitle>
+                <CardTitle>Tous les virements</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="mb-4 flex flex-col sm:flex-row gap-3">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
-                      placeholder="Rechercher par référence ou description..."
+                      placeholder="Rechercher par référence, description ou email..."
                       className="pl-9"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -205,6 +209,7 @@ export default function BankTransfersPage() {
                       <thead className="bg-gray-50 text-gray-600 text-sm">
                         <tr>
                           <th className="px-5 py-3 text-left font-medium">Référence</th>
+                          <th className="px-5 py-3 text-left font-medium">Utilisateur</th>
                           <th className="px-5 py-3 text-left font-medium">Date</th>
                           <th className="px-5 py-3 text-left font-medium">Montant</th>
                           <th className="px-5 py-3 text-left font-medium">Description</th>
@@ -218,6 +223,14 @@ export default function BankTransfersPage() {
                               <div className="flex items-center">
                                 <FileText className="h-4 w-4 text-gray-400 mr-2" />
                                 <span>{transfer.reference}</span>
+                              </div>
+                            </td>
+                            <td className="px-5 py-4">
+                              <div className="line-clamp-1">
+                                <span className="font-medium">{formatUserName(transfer.user_profile)}</span>
+                                {transfer.user_profile?.email && (
+                                  <span className="text-xs text-gray-500 block">{transfer.user_profile.email}</span>
+                                )}
                               </div>
                             </td>
                             <td className="px-5 py-4">{formatDate(transfer.created_at)}</td>
@@ -242,7 +255,7 @@ export default function BankTransfersPage() {
                     </div>
                     <h3 className="text-lg font-medium text-gray-900 mb-1">Aucun virement trouvé</h3>
                     <p className="text-gray-500 max-w-md mx-auto">
-                      Vous n'avez pas encore effectué de virements bancaires ou aucun virement ne correspond à votre recherche.
+                      Aucun virement bancaire ne correspond à votre recherche.
                     </p>
                   </div>
                 )}
