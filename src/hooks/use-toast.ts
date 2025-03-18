@@ -1,11 +1,12 @@
 
 import { useState, useEffect } from "react";
-import { toast as sonnerToast, type Toast } from "sonner";
+import { toast as sonnerToast } from "sonner";
 
-export type ToastProps = Toast & {
+export type ToastProps = {
   title?: string;
   description?: string;
   variant?: "default" | "destructive";
+  [key: string]: any; // For additional properties
 };
 
 export function useToast() {
