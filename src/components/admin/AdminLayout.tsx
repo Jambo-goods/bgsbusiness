@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Outlet, Navigate, useNavigate } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logoutAdmin } from '@/services/adminAuthService';
 import { 
@@ -13,7 +13,6 @@ export default function AdminLayout() {
   const { adminUser, setAdminUser } = useAdmin();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
 
   // If no admin user is logged in, redirect to login
   if (!adminUser) {
@@ -53,10 +52,12 @@ export default function AdminLayout() {
       icon: <Users className="w-5 h-5" />, 
       path: '/admin/profiles' 
     },
+    { 
+      label: 'Paiements programmés', 
+      icon: <BanknoteIcon className="w-5 h-5" />, 
+      path: '/admin/scheduled-payments' 
+    },
   ];
-
-  // Hide sidebar on projects page
-  const isProjectsPage = location.pathname === '/admin/projects';
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -64,18 +65,16 @@ export default function AdminLayout() {
       <div className="bg-bgs-blue text-white shadow-md">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
-            {!isProjectsPage && (
-              <button
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="md:hidden p-2"
-              >
-                {isMenuOpen ? (
-                  <X className="w-6 h-6" />
-                ) : (
-                  <Menu className="w-6 h-6" />
-                )}
-              </button>
-            )}
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="md:hidden p-2"
+            >
+              {isMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
             <h1 className="text-xl font-bold">BGS Admin</h1>
           </div>
           
@@ -106,7 +105,7 @@ export default function AdminLayout() {
       </div>
       
       {/* Mobile menu overlay */}
-      {!isProjectsPage && isMenuOpen && (
+      {isMenuOpen && (
         <div 
           className="md:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setIsMenuOpen(false)}
@@ -114,52 +113,50 @@ export default function AdminLayout() {
       )}
       
       <div className="flex flex-1">
-        {/* Sidebar - hidden for projects page */}
-        {!isProjectsPage && (
-          <aside 
-            className={`
-              ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
-              md:translate-x-0 fixed md:static inset-y-0 left-0 w-64 bg-white shadow-lg 
-              transition-transform duration-300 ease-in-out z-50 pt-16 md:pt-0
-            `}
-          >
-            <nav className="p-4 space-y-1">
-              {menuItems.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => {
-                    navigate(item.path);
-                    setIsMenuOpen(false);
-                  }}
-                  className={`
-                    flex items-center gap-3 px-4 py-3 w-full rounded-lg
-                    ${
-                      location.pathname === item.path
-                        ? 'bg-bgs-blue text-white'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }
-                  `}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </button>
-              ))}
-              
-              <hr className="my-4" />
-              
+        {/* Sidebar */}
+        <aside 
+          className={`
+            ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} 
+            md:translate-x-0 fixed md:static inset-y-0 left-0 w-64 bg-white shadow-lg 
+            transition-transform duration-300 ease-in-out z-50 pt-16 md:pt-0
+          `}
+        >
+          <nav className="p-4 space-y-1">
+            {menuItems.map((item) => (
               <button
-                onClick={handleLogout}
-                className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-600 hover:bg-red-50"
+                key={item.path}
+                onClick={() => {
+                  navigate(item.path);
+                  setIsMenuOpen(false);
+                }}
+                className={`
+                  flex items-center gap-3 px-4 py-3 w-full rounded-lg
+                  ${
+                    location.pathname === item.path
+                      ? 'bg-bgs-blue text-white'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }
+                `}
               >
-                <LogOut className="w-5 h-5" />
-                <span>Déconnexion</span>
+                {item.icon}
+                <span>{item.label}</span>
               </button>
-            </nav>
-          </aside>
-        )}
+            ))}
+            
+            <hr className="my-4" />
+            
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-red-600 hover:bg-red-50"
+            >
+              <LogOut className="w-5 h-5" />
+              <span>Déconnexion</span>
+            </button>
+          </nav>
+        </aside>
         
-        {/* Main content - full width for projects page */}
-        <main className={`flex-1 p-4 md:p-6 overflow-auto ${isProjectsPage ? 'w-full' : ''}`}>
+        {/* Main content */}
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
           <Outlet />
         </main>
       </div>

@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useScheduledPayments } from "@/hooks/useScheduledPayments";
+import useScheduledPayments from "@/hooks/useScheduledPayments";
 
 export default function ScheduledPayments() {
   const { scheduledPayments, isLoading } = useScheduledPayments();
