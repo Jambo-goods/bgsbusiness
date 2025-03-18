@@ -33,12 +33,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   toggleSidebar
 }) => {
   return (
-    <div className="h-full flex flex-col justify-between py-4 overflow-y-auto">
+    <div className="h-full flex flex-col justify-between py-2 overflow-y-auto">
       {/* Main Navigation */}
-      <div className="flex-1 px-3 py-2 space-y-6">
+      <div className="flex-1 px-2 py-1 space-y-3">
         <SidebarSection title="Tableau de bord">
           <SidebarNavItem 
-            icon={<Home size={20} />}
+            icon={<Home size={18} />}
             label="Vue d'ensemble"
             isActive={activeTab === "overview"}
             onClick={() => setActiveTab("overview")}
@@ -46,7 +46,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
           
           <SidebarNavItem 
-            icon={<Wallet size={20} />}
+            icon={<Wallet size={18} />}
             label="Portefeuille"
             isActive={activeTab === "wallet"}
             onClick={() => setActiveTab("wallet")}
@@ -54,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
           
           <SidebarNavItem 
-            icon={<LineChart size={20} />}
+            icon={<LineChart size={18} />}
             label="Rendements"
             isActive={activeTab === "yield"}
             onClick={() => setActiveTab("yield")}
@@ -63,7 +63,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         
           {/* Investment items (without the section header) */}
           <SidebarNavItem 
-            icon={<BarChart3 size={20} />}
+            icon={<BarChart3 size={18} />}
             label="Mes investissements"
             isActive={activeTab === "investments"}
             onClick={() => setActiveTab("investments")}
@@ -71,7 +71,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
           
           <SidebarNavItem 
-            icon={<Briefcase size={20} />}
+            icon={<Briefcase size={18} />}
             label="Projets"
             isActive={activeTab === "projects"}
             onClick={() => setActiveTab("projects")}
@@ -81,7 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
           
           <SidebarNavItem 
-            icon={<Sparkles size={20} />}
+            icon={<Sparkles size={18} />}
             label="Opportunités"
             isActive={activeTab === "opportunities"}
             onClick={() => setActiveTab("opportunities")}
@@ -92,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         
           {/* Program items (without the section header) */}
           <SidebarNavItem 
-            icon={<Users size={20} />}
+            icon={<Users size={18} />}
             label="Parrainage"
             isActive={activeTab === "referral"}
             onClick={() => setActiveTab("referral")}
@@ -104,9 +104,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       {/* User Navigation */}
-      <div className="px-3 py-2 border-t border-gray-100 space-y-1">
+      <div className="px-2 py-1 border-t border-gray-100 space-y-1">
         <SidebarNavItem 
-          icon={<User size={20} />}
+          icon={<User size={18} />}
           label="Mon Profil"
           isActive={activeTab === "profile"}
           onClick={() => setActiveTab("profile")}
@@ -114,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         />
         
         <SidebarNavItem 
-          icon={<Bell size={20} />}
+          icon={<Bell size={18} />}
           label="Notifications"
           isActive={activeTab === "notifications"}
           onClick={() => setActiveTab("notifications")}
@@ -122,7 +122,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         />
         
         <SidebarNavItem 
-          icon={<Settings size={20} />}
+          icon={<Settings size={18} />}
           label="Paramètres"
           isActive={activeTab === "settings"}
           onClick={() => setActiveTab("settings")}
@@ -130,7 +130,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         />
         
         <SidebarNavItem 
-          icon={<LogOut size={20} />}
+          icon={<LogOut size={18} />}
           label="Déconnexion"
           isActive={false}
           onClick={handleLogout}
@@ -139,13 +139,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       {/* Mobile Sidebar Toggle */}
-      <div className="md:hidden px-3 pt-2 border-t border-gray-100">
+      <div className="md:hidden px-2 pt-2 border-t border-gray-100">
         <button
           onClick={toggleSidebar}
-          className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-600 hover:text-bgs-blue hover:bg-bgs-blue/5 rounded-md transition-colors"
+          className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-bgs-blue hover:bg-bgs-blue/5 rounded-md transition-colors"
         >
           <span>Fermer le menu</span>
-          <ChevronRight size={16} />
+          <ChevronRight size={14} />
         </button>
       </div>
     </div>

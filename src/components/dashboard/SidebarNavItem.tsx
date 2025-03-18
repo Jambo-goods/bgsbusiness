@@ -24,7 +24,7 @@ const SidebarNavItem: React.FC<SidebarNavItemProps> = ({
     <button
       onClick={onClick}
       className={`
-        w-full flex items-center px-3 py-2 rounded-md transition-colors
+        w-full flex items-center px-2 py-1.5 rounded-md transition-colors text-sm
         ${isActive 
           ? "bg-bgs-blue/10 text-bgs-blue font-medium" 
           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
@@ -37,10 +37,10 @@ const SidebarNavItem: React.FC<SidebarNavItemProps> = ({
       
       {isOpen && (
         <div className="ml-3 flex-1 flex justify-between items-center">
-          <span>{label}</span>
+          <span className="truncate">{label}</span>
           
           {badge && (
-            <span className={`${badgeColor} text-white text-xs px-1.5 py-0.5 rounded-full ml-2`}>
+            <span className={`${badgeColor} text-white text-xs px-1 py-0.5 rounded-full ml-1`}>
               {badge}
             </span>
           )}
