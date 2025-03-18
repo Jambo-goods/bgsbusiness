@@ -22,7 +22,7 @@ interface BankTransfer {
   id: string;
   user_id: string;
   amount: number;
-  status: string; // Changed from enum to string to handle any status value
+  status: string; // Using string to handle any status value
   description?: string;
   reference: string;
   created_at: string;
@@ -67,8 +67,7 @@ export default function BankTransfersPage() {
       // Récupération de tous les virements bancaires sans filtrage de statut
       const { data: transfersData, error: transfersError } = await supabase
         .from('bank_transfers')
-        .select('*')
-        .order('confirmed_at', { ascending: false });
+        .select('*');
         
       if (transfersError) {
         console.error('Erreur SQL:', transfersError);
@@ -109,7 +108,7 @@ export default function BankTransfersPage() {
           id: transfer.id,
           user_id: transfer.user_id,
           amount: transfer.amount || 0,
-          status: transfer.status || 'pending', // Accept any status string
+          status: transfer.status || 'pending',
           description: transfer.notes || '',
           reference: transfer.reference || 'REF-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
           created_at: transfer.confirmed_at || new Date().toISOString(),
@@ -121,7 +120,8 @@ export default function BankTransfersPage() {
           user_profile: profilesById[transfer.user_id] || null
         }));
         
-        console.log("Virements formatés:", formattedTransfers);
+        console.log("Tous les virements formatés:", formattedTransfers);
+        console.log("Nombre total de virements:", formattedTransfers.length);
         setBankTransfers(formattedTransfers);
       } else {
         console.log("Aucun virement trouvé dans la base de données");
