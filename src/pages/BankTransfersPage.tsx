@@ -11,25 +11,7 @@ import { FileText, Download, RotateCcw, Search, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
-
-// Fonction de formatage de la monnaie
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 2
-  }).format(amount);
-};
-
-// Fonction de formatage de date
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  }).format(date);
-};
+import { formatCurrency, formatDate } from '@/utils/formatUtils';
 
 interface BankTransfer {
   id: string;
@@ -48,7 +30,7 @@ interface BankTransfer {
     first_name: string | null;
     last_name: string | null;
     email: string | null;
-  };
+  } | null;
 }
 
 export default function BankTransfersPage() {
@@ -87,7 +69,7 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       console.log("Tentative de récupération des virements pour l'utilisateur:", userId);
       
-      // Récupération des virements bancaires avec les informations de profil
+      // Récupération directe des virements bancaires
       const { data, error } = await supabase
         .from('bank_transfers')
         .select(`
@@ -115,8 +97,8 @@ export default function BankTransfersPage() {
           amount: transfer.amount || 0,
           status: (transfer.status as 'pending' | 'completed' | 'rejected') || 'pending',
           description: transfer.notes || '',
-          reference: transfer.reference,
-          created_at: transfer.confirmed_at || new Date().toISOString(),
+          reference: transfer.reference || 'REF-' + Math.random().toString(36).substring(2, 8).toUpperCase(),
+          created_at: transfer.created_at || transfer.confirmed_at || new Date().toISOString(),
           confirmed_at: transfer.confirmed_at,
           processed_at: transfer.processed_at,
           notes: transfer.notes,
@@ -241,7 +223,7 @@ export default function BankTransfersPage() {
                             <td className="px-5 py-4">{formatDate(transfer.created_at)}</td>
                             <td className="px-5 py-4 font-medium">{formatCurrency(transfer.amount)}</td>
                             <td className="px-5 py-4">
-                              <span className="line-clamp-1">{transfer.description}</span>
+                              <span className="line-clamp-1">{transfer.description || '-'}</span>
                             </td>
                             <td className="px-5 py-4">
                               {getStatusBadge(transfer.status)}

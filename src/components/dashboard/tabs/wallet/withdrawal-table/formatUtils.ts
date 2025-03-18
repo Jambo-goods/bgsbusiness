@@ -1,8 +1,17 @@
+
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
 export const formatDate = (dateString: string) => {
   return format(new Date(dateString), 'dd MMM yyyy', { locale: fr });
+};
+
+export const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    minimumFractionDigits: 2
+  }).format(amount);
 };
 
 export const maskAccountNumber = (accountNumber: string) => {
