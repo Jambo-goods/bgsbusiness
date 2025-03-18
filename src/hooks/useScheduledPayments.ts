@@ -184,3 +184,5 @@ export const useScheduledPayments = () => {
     updatePaymentStatus
   };
 };
+
+export default useScheduledPayments;
