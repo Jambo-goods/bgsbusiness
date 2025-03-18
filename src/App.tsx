@@ -74,11 +74,10 @@ const App = () => (
                   <Route path="dashboard" element={<AdminDashboard />} />
                   <Route path="projects" element={<AdminProjects />} />
                   <Route path="settings" element={<div>Paramètres</div>} />
-                  {/* Nested Routes */}
-                  <Route path="../scheduled-payments" element={<ScheduledPayments />} />
-                  <Route path="../withdrawal-requests" element={<WithdrawalRequestsPage />} />
-                  <Route path="../bank-transfers" element={<BankTransfersPage />} />
-                  <Route path="../profiles" element={<ProfilesPage />} />
+                  <Route path="scheduled-payments" element={<ScheduledPayments />} />
+                  <Route path="withdrawal-requests" element={<WithdrawalRequestsPage />} />
+                  <Route path="bank-transfers" element={<BankTransfersPage />} />
+                  <Route path="profiles" element={<ProfilesPage />} />
                 </Route>
                 
                 <Route path="*" element={<NotFound />} />

@@ -40,22 +40,22 @@ export default function AdminLayout() {
     { 
       label: 'Virements bancaires', 
       icon: <BanknoteIcon className="w-5 h-5" />, 
-      path: '/bank-transfers' 
+      path: '/admin/bank-transfers' 
     },
     { 
       label: 'Demandes de retrait', 
       icon: <ArrowLeftRight className="w-5 h-5" />, 
-      path: '/withdrawal-requests' 
+      path: '/admin/withdrawal-requests' 
     },
     { 
       label: 'Profils', 
       icon: <Users className="w-5 h-5" />, 
-      path: '/profiles' 
+      path: '/admin/profiles' 
     },
     { 
       label: 'Paiements programmés', 
       icon: <BanknoteIcon className="w-5 h-5" />, 
-      path: '/scheduled-payments' 
+      path: '/admin/scheduled-payments' 
     },
   ];
 

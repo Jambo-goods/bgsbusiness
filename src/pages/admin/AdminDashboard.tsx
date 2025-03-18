@@ -36,25 +36,25 @@ export default function AdminDashboard() {
       title: "Demandes de retrait",
       icon: <ArrowLeftRight className="h-8 w-8 text-green-600" />,
       description: "Valider et gérer les demandes de retrait",
-      link: "/withdrawal-requests"
+      link: "/admin/withdrawal-requests"
     },
     {
       title: "Virements bancaires",
       icon: <BanknoteIcon className="h-8 w-8 text-purple-600" />,
       description: "Superviser les virements entrants",
-      link: "/bank-transfers"
+      link: "/admin/bank-transfers"
     },
     {
       title: "Paiements programmés",
       icon: <BanknoteIcon className="h-8 w-8 text-amber-600" />,
       description: "Gérer les paiements à venir",
-      link: "/scheduled-payments"
+      link: "/admin/scheduled-payments"
     },
     {
       title: "Profils utilisateur",
       icon: <Users className="h-8 w-8 text-indigo-600" />,
       description: "Consulter les profils des utilisateurs",
-      link: "/profiles"
+      link: "/admin/profiles"
     },
     {
       title: "Paramètres",
