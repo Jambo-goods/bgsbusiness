@@ -36,15 +36,18 @@ interface BankTransfer {
   user_id: string;
   amount: number;
   status: 'pending' | 'completed' | 'rejected';
-  description: string;
+  description?: string;
   reference: string;
   created_at: string;
-  confirmed_at?: string;
-  rejected_at?: string;
+  confirmed_at?: string | null;
+  rejected_at?: string | null;
+  processed_at?: string | null;
+  notes?: string | null;
+  processed?: boolean | null;
   user_profile?: {
-    first_name: string;
-    last_name: string;
-    email: string;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
   };
 }
 
@@ -82,6 +85,7 @@ export default function BankTransfersPage() {
     
     try {
       setIsLoading(true);
+      console.log("Tentative de récupération des virements pour l'utilisateur:", userId);
       
       // Récupération des virements bancaires avec les informations de profil
       const { data, error } = await supabase
@@ -97,18 +101,34 @@ export default function BankTransfersPage() {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur SQL:', error);
+        throw error;
+      }
       
-      if (data) {
+      console.log("Données reçues:", data);
+      
+      if (data && data.length > 0) {
         const formattedTransfers: BankTransfer[] = data.map(transfer => ({
-          ...transfer,
-          user_profile: transfer.profiles as any,
-          description: transfer.description || '',
-          reference: transfer.reference || '',
-          status: transfer.status as 'pending' | 'completed' | 'rejected'
+          id: transfer.id,
+          user_id: transfer.user_id,
+          amount: transfer.amount || 0,
+          status: (transfer.status as 'pending' | 'completed' | 'rejected') || 'pending',
+          description: transfer.notes || '',
+          reference: transfer.reference,
+          created_at: transfer.confirmed_at || new Date().toISOString(),
+          confirmed_at: transfer.confirmed_at,
+          processed_at: transfer.processed_at,
+          notes: transfer.notes,
+          processed: transfer.processed,
+          user_profile: transfer.profiles
         }));
         
+        console.log("Virements formatés:", formattedTransfers);
         setBankTransfers(formattedTransfers);
+      } else {
+        console.log("Aucun virement trouvé pour cet utilisateur");
+        setBankTransfers([]);
       }
     } catch (err) {
       console.error('Erreur lors de la récupération des virements bancaires:', err);
@@ -126,7 +146,7 @@ export default function BankTransfersPage() {
   // Filtrer les virements en fonction du terme de recherche
   const filteredTransfers = bankTransfers.filter(transfer => 
     transfer.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    transfer.description.toLowerCase().includes(searchTerm.toLowerCase())
+    (transfer.description && transfer.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Obtenir le badge de statut
