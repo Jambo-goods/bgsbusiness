@@ -35,7 +35,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="h-full flex flex-col justify-between py-4 overflow-y-auto">
       {/* Main Navigation */}
-      <div className="flex-1 px-3 py-2 space-y-4">
+      <div className="flex-1 px-3 py-2 space-y-6">
         <SidebarSection title="Tableau de bord">
           <SidebarNavItem 
             icon={<Home size={20} />}
@@ -106,7 +106,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       {/* User Navigation */}
-      <div className="px-3 py-2 border-t border-gray-100">
+      <div className="px-3 py-2 border-t border-gray-100 space-y-1">
         <SidebarNavItem 
           icon={<User size={20} />}
           label="Mon Profil"

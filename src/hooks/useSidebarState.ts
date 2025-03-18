@@ -11,8 +11,8 @@ export function useSidebarState() {
       return savedState === 'true';
     }
     
-    // Initial state based on screen size
-    return window.innerWidth >= 1024;
+    // Initial state based on screen size - default to open
+    return true;
   });
 
   // Update localStorage when state changes
@@ -24,21 +24,20 @@ export function useSidebarState() {
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 768) {
-        // Auto-close sidebar on mobile unless user specifically opened it
-        if (isSidebarOpen && localStorage.getItem('dashboardSidebarState') !== 'true') {
-          setIsSidebarOpen(false);
-        }
-      } else if (window.innerWidth >= 1280) {
-        // Auto-expand on large screens unless user specifically closed it
-        if (!isSidebarOpen && localStorage.getItem('dashboardSidebarState') !== 'false') {
-          setIsSidebarOpen(true);
-        }
+        // Auto-close sidebar on small screens
+        setIsSidebarOpen(false);
+      } else if (window.innerWidth >= 768) {
+        // Auto-expand on larger screens
+        setIsSidebarOpen(true);
       }
     };
     
+    // Initialize based on current screen size
+    handleResize();
+    
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [isSidebarOpen]);
+  }, []);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);

@@ -31,7 +31,7 @@ const SidebarNavItem: React.FC<SidebarNavItemProps> = ({
         }
       `}
     >
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 text-current">
         {icon}
       </div>
       
