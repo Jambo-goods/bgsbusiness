@@ -145,12 +145,14 @@ export default function BankTransfersPage() {
     toast.success('Données actualisées');
   };
 
-  // Filtrer les virements en fonction du terme de recherche
-  const filteredTransfers = bankTransfers.filter(transfer => 
-    transfer.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (transfer.description && transfer.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (transfer.user_profile?.email && transfer.user_profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Ne pas filtrer les virements - afficher tous les virements
+  const filteredTransfers = searchTerm.trim() === '' 
+    ? bankTransfers 
+    : bankTransfers.filter(transfer => 
+        transfer.reference.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (transfer.description && transfer.description.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (transfer.user_profile?.email && transfer.user_profile.email.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
 
   // Obtenir le badge de statut
   const getStatusBadge = (status: string) => {
