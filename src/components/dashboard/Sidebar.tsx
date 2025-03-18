@@ -36,7 +36,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     <div className="h-full flex flex-col justify-between py-4 overflow-y-auto">
       {/* Main Navigation */}
       <div className="flex-1 px-3 py-2 space-y-4">
-        <SidebarSection title="Tableau de bord" isOpen={isSidebarOpen}>
+        <SidebarSection title="Tableau de bord">
           <SidebarNavItem 
             icon={<Home size={20} />}
             label="Vue d'ensemble"
@@ -62,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
         </SidebarSection>
         
-        <SidebarSection title="Investissements" isOpen={isSidebarOpen}>
+        <SidebarSection title="Investissements">
           <SidebarNavItem 
             icon={<BarChart3 size={20} />}
             label="Mes investissements"
@@ -92,7 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           />
         </SidebarSection>
         
-        <SidebarSection title="Programmes" isOpen={isSidebarOpen}>
+        <SidebarSection title="Programmes">
           <SidebarNavItem 
             icon={<Users size={20} />}
             label="Parrainage"
