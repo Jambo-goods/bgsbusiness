@@ -26,17 +26,17 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       console.log("Fetching bank transfers with status filter:", statusFilter);
 
-      // Get only the bank transfers data (not wallet transactions)
+      // Récupérer TOUS les virements bancaires sans filtre par utilisateur
       let query = supabase
         .from('bank_transfers')
         .select('*');
 
-      // Apply filter if needed
+      // Appliquer le filtre par statut si nécessaire
       if (statusFilter !== "all") {
         query = query.eq('status', statusFilter);
       }
 
-      // Execute the query
+      // Exécuter la requête
       const { data: transfersData, error: transfersError } = await query.order('confirmed_at', { ascending: false });
 
       if (transfersError) {
@@ -56,10 +56,10 @@ export default function BankTransfersPage() {
         return;
       }
 
-      // Fetch user profiles separately - get all unique user IDs
+      // Récupérer tous les profils utilisateurs
       const userIds = [
         ...new Set(transfersData?.map(transfer => transfer.user_id) || [])
-      ].filter(Boolean); // Remove any null/undefined
+      ].filter(Boolean); // Supprimer les valeurs null/undefined
       
       console.log("Unique user IDs count:", userIds.length);
 
@@ -71,17 +71,17 @@ export default function BankTransfersPage() {
         return;
       }
 
+      // Récupérer tous les profils en une seule requête
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name, email')
-        .in('id', userIds);
+        .select('id, first_name, last_name, email');
 
       if (profilesError) {
         console.error("Error fetching profiles:", profilesError);
         toast.error("Erreur lors du chargement des profils utilisateurs");
       }
 
-      // Create a map of profiles by user ID
+      // Créer une map des profils par ID utilisateur
       const profilesMap: Record<string, any> = {};
       if (profilesData) {
         profilesData.forEach(profile => {
@@ -91,10 +91,10 @@ export default function BankTransfersPage() {
 
       console.log("Profiles fetched count:", profilesData?.length || 0);
       
-      // Format bank transfers
+      // Formater les virements bancaires
       const formattedTransfers: BankTransferItem[] = [];
       
-      // Add only bank transfers (not wallet transactions)
+      // Ajouter uniquement les virements bancaires
       if (transfersData) {
         const bankItems = transfersData.map(item => {
           const userProfile = profilesMap[item.user_id] || {};
@@ -143,7 +143,7 @@ export default function BankTransfersPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold mb-2">Virements Bancaires</h1>
           <p className="text-gray-600">
-            Gérez tous les virements bancaires enregistrés sur la plateforme.
+            Visualisez tous les virements bancaires enregistrés sur la plateforme.
           </p>
         </div>
         
