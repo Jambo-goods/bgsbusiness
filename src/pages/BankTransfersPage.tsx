@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -154,122 +153,69 @@ export default function BankTransfersPage() {
       const updatePayload = {
         transferId: selectedTransfer.id,
         status: editStatus,
-        processed: editStatus === 'received' || editStatus === 'reçu',
+        processed: editStatus === 'received' || editStatus === 'reçu' ? true : false,
         processedAt: finalProcessedDate ? finalProcessedDate.toISOString() : null,
         notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
       };
       
       console.log("Sending update with payload:", updatePayload);
       
-      // Multiple attempts strategy
-      let updateSuccess = false;
-      let statusVerified = false;
-      let responseMessage = "";
-      
-      // 1. First try the edge function approach
-      console.log("Calling Edge Function with payload...");
+      // First attempt - try edge function
       const { data: functionData, error: functionError } = await supabase.functions.invoke('update-bank-transfer', {
         body: updatePayload
       });
       
-      if (functionError) {
-        console.error("Erreur lors de l'appel à la fonction Edge:", functionError);
-        responseMessage = `Erreur de la fonction Edge: ${functionError.message}`;
-        throw new Error(responseMessage);
-      }
-      
       console.log("Edge function response:", functionData);
       
-      if (functionData && functionData.success) {
-        updateSuccess = true;
-        statusVerified = functionData.verified;
-        responseMessage = functionData.message;
-        
-        // Show warning if verification failed
-        if (!functionData.verified) {
-          console.warn("Edge function reports success but verification failed. Current status:", functionData.currentStatus);
-          setUpdateError(`Attention: Le statut peut ne pas avoir été correctement mis à jour. Statut actuel: ${functionData.currentStatus}`);
-          toast.warning("La mise à jour a été tentée mais pourrait ne pas avoir pris effet. Vérifiez le statut.");
-        } else {
-          console.log("Edge function reports complete success. Status updated to:", functionData.currentStatus);
-          toast.success("Virement bancaire mis à jour avec succès");
-          closeEditModal();
-        }
-      } else if (functionData) {
-        // Something else went wrong
-        const errorMsg = functionData.error || "Une erreur inconnue est survenue";
-        console.error("Update failed with error:", errorMsg);
-        setUpdateError(`Échec de la mise à jour: ${errorMsg}`);
-        
-        // Still try direct update as fallback
-        updateSuccess = false;
+      if (functionError) {
+        console.error("Edge function error:", functionError);
+        throw new Error(`Erreur de la fonction Edge: ${functionError.message}`);
       }
       
-      // 2. If edge function failed or verification failed, try direct update
-      if (!updateSuccess || !statusVerified) {
-        console.log("Trying direct update as fallback...");
+      if (functionData && functionData.success) {
+        console.log("Update successful via edge function");
         
-        // Prepare update data for direct update
+        // Check if verification was successful
+        if (!functionData.verified) {
+          console.warn("Edge function reported success but verification failed");
+          toast.warning("La mise à jour a été effectuée mais la vérification a échoué");
+        } else {
+          toast.success("Virement bancaire mis à jour avec succès");
+        }
+        
+        // Wait a moment to allow database changes to propagate
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await fetchBankTransfers();
+        closeEditModal();
+      } else {
+        // Fallback to direct update if edge function failed
+        console.log("Edge function did not return success, trying direct update");
+        
         const updates = {
           status: editStatus,
-          processed: editStatus === 'received' || editStatus === 'reçu',
+          processed: editStatus === 'received' || editStatus === 'reçu' ? true : false,
           processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : null,
-          notes: `Mise à jour manuelle (fallback) le ${new Date().toLocaleDateString('fr-FR')}`
+          notes: `Mise à jour directe le ${new Date().toLocaleDateString('fr-FR')}`
         };
         
-        const { data, error: directError } = await supabase
+        const { error: updateError } = await supabase
           .from('bank_transfers')
           .update(updates)
-          .eq('id', selectedTransfer.id)
-          .select();
-        
-        if (directError) {
-          console.error("Erreur lors de la mise à jour directe:", directError);
-          if (!updateSuccess) { // Only show error if the edge function also failed
-            setUpdateError(`${updateError || ""}\nMise à jour directe échouée: ${directError.message}`);
-            toast.error(`Erreur de mise à jour: ${directError.message}`);
-          }
-        } else {
-          console.log("Direct update succeeded:", data);
-          if (!updateSuccess) { // If edge function failed but this succeeded
-            toast.success("Virement bancaire mis à jour via méthode secondaire");
-            closeEditModal();
-          }
-          updateSuccess = true;
-        }
-      }
-      
-      // 3. Final verification and notification to user
-      if (updateSuccess) {
-        // Verify the status one more time
-        const { data: verifyData } = await supabase
-          .from('bank_transfers')
-          .select('status, processed, processed_at')
-          .eq('id', selectedTransfer.id)
-          .single();
+          .eq('id', selectedTransfer.id);
           
-        if (verifyData && verifyData.status === editStatus) {
-          console.log("Final verification successful");
-          toast.success("Statut du virement vérifié et confirmé");
-          statusVerified = true;
-        } else if (verifyData) {
-          console.warn(`Final verification failed. Expected: ${editStatus}, Got: ${verifyData.status}`);
-          toast.warning(`Attention: Le statut peut être "${verifyData.status}" au lieu de "${editStatus}"`);
+        if (updateError) {
+          console.error("Direct update failed:", updateError);
+          throw new Error(`Erreur de mise à jour directe: ${updateError.message}`);
         }
-      }
-      
-      // Always force refresh the transfers list
-      await fetchBankTransfers();
-      
-      // Close modal if update was successful
-      if (updateSuccess) {
+        
+        toast.success("Virement bancaire mis à jour directement");
+        await fetchBankTransfers();
         closeEditModal();
       }
-      
     } catch (error: any) {
-      console.error("Erreur globale lors de la mise à jour:", error);
+      console.error("Update error:", error);
       setUpdateError(error.message || "Une erreur inconnue est survenue");
-      toast.error(`Erreur de mise à jour: ${error.message || "Une erreur est survenue"}`);
+      toast.error(`Erreur de mise à jour: ${error.message || "Erreur inconnue"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -515,6 +461,12 @@ export default function BankTransfersPage() {
                   </option>
                 ))}
               </select>
+              
+              {(editStatus === 'received' || editStatus === 'reçu') && (
+                <div className="text-sm text-green-600 mt-1">
+                  <span className="font-medium">Note:</span> Le transfert sera automatiquement marqué comme traité
+                </div>
+              )}
             </div>
             
             <div className="space-y-2">
