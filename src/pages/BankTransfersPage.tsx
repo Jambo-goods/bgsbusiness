@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import StatusBadge from "@/components/dashboard/tabs/wallet/withdrawal-table/StatusBadge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { bankTransferService } from "@/components/admin/dashboard/services/bankTransferService";
 
 interface BankTransfer {
   id: string;
@@ -53,27 +54,8 @@ export default function BankTransfersPage() {
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateDetails, setUpdateDetails] = useState<any>(null);
 
-  useEffect(() => {
-    fetchBankTransfers();
-
-    const bankTransferChannel = supabase
-      .channel("bank_transfers_changes")
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "bank_transfers"
-      }, (payload) => {
-        console.log("Bank transfer change detected:", payload);
-        fetchBankTransfers();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(bankTransferChannel);
-    };
-  }, [sortField, sortDirection]);
-
-  const fetchBankTransfers = async () => {
+  // Use useCallback to memoize the fetchBankTransfers function
+  const fetchBankTransfers = useCallback(async () => {
     try {
       setIsLoading(true);
       console.log("Fetching bank transfers...");
@@ -114,7 +96,27 @@ export default function BankTransfersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sortField, sortDirection]);
+
+  useEffect(() => {
+    fetchBankTransfers();
+
+    const bankTransferChannel = supabase
+      .channel("bank_transfers_changes")
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "bank_transfers"
+      }, (payload) => {
+        console.log("Bank transfer change detected:", payload);
+        fetchBankTransfers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bankTransferChannel);
+    };
+  }, [fetchBankTransfers]);
 
   const handleSort = (field: string) => {
     if (field === sortField) {
@@ -153,93 +155,25 @@ export default function BankTransfersPage() {
         console.log("Automatically setting processed date to now:", finalProcessedDate);
       }
       
-      // Create the update payload
-      const updatePayload = {
-        transferId: selectedTransfer.id,
-        status: editStatus,
-        processed: editStatus === 'received' || editStatus === 'reçu',
-        processedAt: finalProcessedDate ? finalProcessedDate.toISOString() : null,
-        notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
-      };
+      // Use the direct service to update the bank transfer
+      const result = await bankTransferService.updateBankTransfer(
+        selectedTransfer.id,
+        editStatus,
+        finalProcessedDate ? finalProcessedDate.toISOString() : null
+      );
       
-      console.log("Sending update with payload:", updatePayload);
+      console.log("Update result:", result);
       
-      // First attempt - try edge function
-      const { data: functionData, error: functionError } = await supabase.functions.invoke('update-bank-transfer', {
-        body: updatePayload
-      });
-      
-      if (functionError) {
-        console.error("Edge function error:", functionError);
-        setUpdateDetails({
-          type: "error",
-          message: `Erreur lors de l'appel à la fonction: ${functionError.message}`
-        });
-        
-        // Try direct update as a fallback
-        const { error: directError } = await supabase
-          .from('bank_transfers')
-          .update({
-            status: editStatus,
-            processed: editStatus === 'received' || editStatus === 'reçu',
-            processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : null,
-            notes: `Mise à jour directe le ${new Date().toLocaleDateString('fr-FR')}`
-          })
-          .eq('id', selectedTransfer.id);
-          
-        if (directError) {
-          throw new Error(`Échec de la mise à jour directe: ${directError.message}`);
-        }
-        
-        toast.success("Virement bancaire mis à jour directement (fallback)");
-        await new Promise(resolve => setTimeout(resolve, 500));
-        await fetchBankTransfers();
-        closeEditModal();
-        return;
-      }
-      
-      console.log("Edge function response:", functionData);
-      setUpdateDetails(functionData);
-      
-      if (functionData && functionData.success) {
-        // Check if verification was successful
-        if (!functionData.verified) {
-          console.warn("Edge function reported success but verification failed");
-          toast.warning("La mise à jour a été effectuée mais la vérification a échoué");
-          setUpdateDetails({
-            ...functionData,
-            details: "La mise à jour a été effectuée mais les données n'ont pas été vérifiées correctement."
-          });
-          
-          // Try one more direct update
-          try {
-            console.log("Attempting direct update as verification fallback");
-            const directUpdate = {
-              status: editStatus,
-              processed: editStatus === 'received' || editStatus === 'reçu',
-              processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : null
-            };
-            
-            await supabase
-              .from('bank_transfers')
-              .update(directUpdate)
-              .eq('id', selectedTransfer.id);
-              
-            console.log("Direct update completed as fallback");
-          } catch (directError) {
-            console.error("Direct update fallback failed:", directError);
-          }
-        } else {
-          toast.success("Virement bancaire mis à jour avec succès");
-        }
+      if (result.success) {
+        toast.success(result.message);
         
         // Wait a moment to allow database changes to propagate
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 2000));
         await fetchBankTransfers();
         closeEditModal();
       } else {
         setUpdateError("La mise à jour a échoué. Consultez les détails ci-dessous.");
-        setUpdateDetails(functionData || { error: "Aucune réponse de la fonction" });
+        setUpdateDetails(result);
         toast.error("Échec de la mise à jour du virement bancaire");
       }
     } catch (error: any) {
@@ -291,6 +225,41 @@ export default function BankTransfersPage() {
       toast.error("Échec de l'actualisation des données");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Function to set a transfer directly to received status
+  const setTransferToReceived = async () => {
+    if (!selectedTransfer) return;
+    
+    setIsSubmitting(true);
+    setEditStatus('received');
+    const now = new Date();
+    setProcessedDate(now);
+    
+    try {
+      const result = await bankTransferService.updateBankTransfer(
+        selectedTransfer.id,
+        'received',
+        now.toISOString()
+      );
+      
+      if (result.success) {
+        toast.success("Virement marqué comme reçu avec succès");
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await fetchBankTransfers();
+        closeEditModal();
+      } else {
+        toast.error("Échec du marquage du virement comme reçu");
+        setUpdateError("Échec de l'opération");
+        setUpdateDetails(result);
+      }
+    } catch (error: any) {
+      console.error("Error setting transfer to received:", error);
+      setUpdateError(error.message);
+      toast.error(`Erreur: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -556,20 +525,38 @@ export default function BankTransfersPage() {
             
             {!updateError && updateDetails && (
               <Alert 
-                className={updateDetails.verified ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}
+                className={updateDetails.success ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}
               >
-                <AlertTitle className={updateDetails.verified ? "text-green-800" : "text-yellow-800"}>
-                  {updateDetails.verified ? "Mise à jour réussie" : "Mise à jour avec avertissement"}
+                <AlertTitle className={updateDetails.success ? "text-green-800" : "text-yellow-800"}>
+                  {updateDetails.success ? "Mise à jour réussie" : "Mise à jour avec avertissement"}
                 </AlertTitle>
-                <AlertDescription className={updateDetails.verified ? "text-green-700" : "text-yellow-700"}>
+                <AlertDescription className={updateDetails.success ? "text-green-700" : "text-yellow-700"}>
                   {updateDetails.message}
                   
-                  <div className="mt-2 p-2 rounded text-xs overflow-auto max-h-32 bg-white/50">
-                    <pre>{JSON.stringify(updateDetails, null, 2)}</pre>
-                  </div>
+                  {updateDetails.data && (
+                    <div className="mt-2 p-2 rounded text-xs overflow-auto max-h-32 bg-white/50">
+                      <pre>{JSON.stringify(updateDetails.data, null, 2)}</pre>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
+            
+            <div className="mt-6 space-y-2">
+              <Button 
+                type="button" 
+                variant="secondary"
+                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                disabled={isSubmitting}
+                onClick={setTransferToReceived}
+              >
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Forcer à Reçu
+              </Button>
+              <p className="text-xs text-center text-gray-500">
+                Ce bouton marque directement le virement comme reçu et traité avec la date actuelle
+              </p>
+            </div>
             
             <DialogFooter>
               <Button type="button" variant="outline" onClick={closeEditModal}>

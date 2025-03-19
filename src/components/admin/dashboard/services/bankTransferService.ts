@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -321,7 +322,7 @@ export const bankTransferService = {
     }
   },
   
-  async updateBankTransfer(transferId: string, status: string, processedDate: string | null): Promise<boolean> {
+  async updateBankTransfer(transferId: string, status: string, processedDate: string | null): Promise<{success: boolean, message: string, data?: any}> {
     try {
       console.log(`Mise à jour directe du virement ${transferId} avec statut ${status}`);
       
@@ -351,7 +352,10 @@ export const bankTransferService = {
           .single();
           
         if (fetchError) {
-          throw new Error(`Erreur lors de la récupération du virement: ${fetchError.message}`);
+          return {
+            success: false,
+            message: `Erreur lors de la récupération du virement: ${fetchError.message}`
+          };
         }
         
         // Combine existing data with updates
@@ -366,54 +370,84 @@ export const bankTransferService = {
           .upsert(fullUpdate);
           
         if (upsertError) {
-          throw new Error(`Erreur lors de la mise à jour forcée: ${upsertError.message}`);
+          return {
+            success: false,
+            message: `Erreur lors de la mise à jour forcée: ${upsertError.message}`
+          };
         }
       }
       
       // Verify the update was successful
       const { data: checkData, error: checkError } = await supabase
         .from('bank_transfers')
-        .select('status, processed, processed_at')
+        .select('status, processed, processed_at, user_id, amount, reference')
         .eq('id', transferId)
         .single();
         
       if (checkError) {
-        throw new Error(`Erreur lors de la vérification: ${checkError.message}`);
+        return {
+          success: false,
+          message: `Erreur lors de la vérification: ${checkError.message}`
+        };
       }
       
       // Check if the update was actually applied
       if (checkData.status !== status) {
         console.warn(`Le statut n'a pas été correctement mis à jour. Attendu: ${status}, Obtenu: ${checkData.status}`);
-        return false;
+        return {
+          success: false,
+          message: `Échec de mise à jour. Statut actuel: ${checkData.status}, demandé: ${status}`
+        };
       }
       
       // If status is received, try to update the wallet
       if (status === 'received' || status === 'reçu') {
         try {
-          // Get the full transfer data
-          const { data: transferData, error: transferError } = await supabase
-            .from('bank_transfers')
-            .select('user_id, amount')
-            .eq('id', transferId)
-            .single();
-            
-          if (!transferError && transferData) {
-            // Trigger wallet balance recalculation
-            await supabase.rpc('recalculate_wallet_balance', {
-              user_uuid: transferData.user_id
+          // Trigger wallet balance recalculation
+          await supabase.rpc('recalculate_wallet_balance', {
+            user_uuid: checkData.user_id
+          });
+          
+          console.log(`Solde du wallet mis à jour pour l'utilisateur ${checkData.user_id}`);
+          
+          // Create notification for the user
+          const { error: notifyError } = await supabase
+            .from('notifications')
+            .insert({
+              user_id: checkData.user_id,
+              title: "Virement reçu",
+              message: `Votre virement de ${checkData.amount}€ (réf: ${checkData.reference}) a été reçu et traité.`,
+              type: "deposit",
+              seen: false,
+              data: {
+                category: "success",
+                amount: checkData.amount,
+                reference: checkData.reference
+              }
             });
             
-            console.log(`Solde du wallet mis à jour pour l'utilisateur ${transferData.user_id}`);
+          if (notifyError) {
+            console.error("Erreur lors de la création de notification:", notifyError);
+          } else {
+            console.log("Notification créée pour le virement reçu");
           }
         } catch (walletError) {
           console.error("Erreur lors de la mise à jour du solde:", walletError);
+          // We don't return an error here as the transfer was updated successfully
         }
       }
       
-      return true;
-    } catch (error) {
+      return {
+        success: true,
+        message: 'Virement bancaire mis à jour avec succès',
+        data: checkData
+      };
+    } catch (error: any) {
       console.error("Erreur lors de la mise à jour du virement:", error);
-      return false;
+      return {
+        success: false,
+        message: error.message || 'Une erreur inconnue est survenue'
+      };
     }
   }
 };
