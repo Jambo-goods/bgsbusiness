@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDownIcon, ArrowUpIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from "lucide-react";
@@ -72,6 +73,12 @@ export default function HistoryItem({ item }: HistoryItemProps) {
     new Date(item.created_at),
     { addSuffix: true, locale: fr }
   );
+  
+  // Helper function to extract reference from description
+  const extractReference = (text: string) => {
+    const match = text.match(/DEP-\d+/);
+    return match ? match[0] : null;
+  };
 
   if (item.itemType === 'transaction') {
     return (
