@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -169,6 +170,9 @@ export default function BankTransfersPage() {
     setIsSubmitting(true);
     
     try {
+      console.log("Updating bank transfer with status:", editStatus);
+      console.log("Processed date:", processedDate ? processedDate.toISOString() : null);
+      
       const { error } = await supabase
         .from('bank_transfers')
         .update({
@@ -181,7 +185,8 @@ export default function BankTransfersPage() {
       if (error) throw error;
       
       toast.success("Virement bancaire mis à jour avec succès");
-      fetchBankTransfers();
+      // Immediately refresh data after update
+      await fetchBankTransfers();
       closeEditModal();
     } catch (error) {
       console.error("Erreur lors de la mise à jour du virement:", error);
