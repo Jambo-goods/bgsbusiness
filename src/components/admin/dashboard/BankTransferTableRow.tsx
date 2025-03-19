@@ -6,10 +6,19 @@ import { fr } from "date-fns/locale";
 import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2, AlertTriangle } from "lucide-react";
+import { Check, X, Loader2, AlertTriangle, Edit, Calendar } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { 
+  Dialog, DialogContent, DialogHeader, DialogTitle, 
+  DialogFooter, DialogDescription 
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;
@@ -25,6 +34,12 @@ export default function BankTransferTableRow({
   const { updateTransferStatus } = useBankTransfers();
   const [localProcessing, setLocalProcessing] = useState(false);
   const [lastActionTime, setLastActionTime] = useState<number>(0);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editStatus, setEditStatus] = useState<string>(item.status || "pending");
+  const [processedDate, setProcessedDate] = useState<Date | undefined>(
+    item.processed_at ? new Date(item.processed_at) : undefined
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Format date nicely
   const formattedDate = item.created_at 
@@ -175,6 +190,83 @@ export default function BankTransferTableRow({
       setTimeout(() => setLocalProcessing(false), 1000);
     }
   };
+
+  // Open edit modal
+  const handleEditClick = () => {
+    setEditStatus(item.status || 'pending');
+    setProcessedDate(item.processed_at ? new Date(item.processed_at) : undefined);
+    setIsEditModalOpen(true);
+  };
+
+  // Submit status and processed date changes
+  const handleSubmitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (isProcessing || isSubmitting) return;
+    
+    setIsSubmitting(true);
+    toast.info("Mise à jour en cours...");
+    
+    try {
+      console.log(`Updating transfer ${item.id} with status ${editStatus} and processed date ${processedDate}`);
+      
+      // Determine if processed should be true based on status and date
+      const isProcessed = (editStatus === 'received' || editStatus === 'rejected') || processedDate !== undefined;
+      
+      // Call the edge function
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
+        'update-bank-transfer',
+        {
+          body: {
+            transferId: item.id,
+            status: editStatus,
+            isProcessed: isProcessed,
+            notes: `Mis à jour manuellement le ${new Date().toLocaleDateString('fr-FR')}`,
+            userId: item.user_id
+          }
+        }
+      );
+      
+      if (edgeFunctionError) {
+        console.error("Erreur fonction edge:", edgeFunctionError);
+        toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
+        
+        // Fallback to local service
+        const processedDateStr = processedDate ? processedDate.toISOString() : null;
+        const success = await updateTransferStatus(item, editStatus, processedDateStr);
+        
+        if (success && onStatusUpdate) {
+          toast.success("Virement mis à jour avec succès");
+          setIsEditModalOpen(false);
+          onStatusUpdate();
+        } else {
+          toast.error("Échec de la mise à jour - veuillez réessayer");
+        }
+      } else {
+        console.log("Résultat fonction edge:", edgeFunctionData);
+        
+        if (edgeFunctionData.success) {
+          toast.success("Virement mis à jour avec succès");
+          setIsEditModalOpen(false);
+          
+          // Notify parent component to refresh data
+          if (onStatusUpdate) {
+            // Ensure we give the database time to update
+            setTimeout(() => {
+              onStatusUpdate();
+            }, 1000);
+          }
+        } else {
+          toast.error(`Échec de la mise à jour: ${edgeFunctionData.error || 'Erreur inconnue'}`);
+        }
+      }
+    } catch (error) {
+      console.error("Erreur de mise à jour:", error);
+      toast.error("Une erreur s'est produite lors de la mise à jour");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   
   return (
     <TableRow className={isProcessing ? "bg-gray-50" : ""}>
@@ -248,6 +340,107 @@ export default function BankTransferTableRow({
             </div>
           )}
         </div>
+      </TableCell>
+      
+      <TableCell>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          onClick={handleEditClick}
+          disabled={isProcessing}
+        >
+          <Edit className="h-4 w-4 mr-1" />
+          Modifier
+        </Button>
+        
+        {/* Edit Modal */}
+        <Dialog open={isEditModalOpen} onOpenChange={(open) => !open && setIsEditModalOpen(false)}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Modifier le virement</DialogTitle>
+              <DialogDescription>
+                Référence: {item.reference}
+              </DialogDescription>
+            </DialogHeader>
+            
+            <form onSubmit={handleSubmitEdit} className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Statut</Label>
+                <select
+                  id="status"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2"
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value)}
+                >
+                  <option value="pending">En attente</option>
+                  <option value="received">Reçu</option>
+                  <option value="rejected">Rejeté</option>
+                  <option value="cancelled">Annulé</option>
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="processedDate">Date de traitement</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      id="processedDate"
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !processedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {processedDate ? format(processedDate, "P", { locale: fr }) : "Sélectionner une date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={processedDate}
+                      onSelect={setProcessedDate}
+                      initialFocus
+                      locale={fr}
+                    />
+                    <div className="p-2 border-t border-gray-100">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="w-full justify-center"
+                        onClick={() => setProcessedDate(undefined)}
+                      >
+                        Effacer la date
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={isSubmitting}
+                >
+                  Annuler
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Mise à jour...
+                    </>
+                  ) : (
+                    "Mettre à jour"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </TableCell>
     </TableRow>
   );

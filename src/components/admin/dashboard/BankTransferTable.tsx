@@ -36,7 +36,6 @@ export default function BankTransferTable({
     const intervalId = setInterval(() => {
       if (refreshData && !isRefreshing) {
         setIsRefreshing(true);
-        // Fixed: removed .finally() since refreshData returns void
         refreshData();
         // Set timeout to ensure we set isRefreshing back to false
         setTimeout(() => {
@@ -81,6 +80,7 @@ export default function BankTransferTable({
             <TableHead>Utilisateur</TableHead>
             <TableHead>Référence</TableHead>
             <TableHead>Réception</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
