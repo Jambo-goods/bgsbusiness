@@ -9,7 +9,7 @@ export default function BankTransferTable({
   pendingTransfers, 
   isLoading
 }: BankTransferTableProps) {
-  const { processingId } = useBankTransfers();
+  const { processingId, rejectTransfer } = useBankTransfers();
 
   console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers?.length || 0);
   console.log("Transfer IDs in Table:", pendingTransfers?.map(t => t.id));
@@ -40,7 +40,6 @@ export default function BankTransferTable({
             <TableHead>Utilisateur</TableHead>
             <TableHead>Référence</TableHead>
             <TableHead>Réception</TableHead>
-            {/* Actions column removed */}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -49,6 +48,7 @@ export default function BankTransferTable({
               key={item.id}
               item={item}
               processingId={processingId}
+              rejectTransfer={rejectTransfer}
             />
           ))}
         </TableBody>
