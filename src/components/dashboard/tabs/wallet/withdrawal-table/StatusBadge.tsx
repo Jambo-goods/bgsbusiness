@@ -9,9 +9,7 @@ interface StatusBadgeProps {
 
 export default function StatusBadge({ status }: StatusBadgeProps) {
   const getStatusConfig = (status: string) => {
-    const statusLower = status.toLowerCase();
-    
-    switch (statusLower) {
+    switch (status.toLowerCase()) {
       case "pending":
         return {
           label: "En attente",

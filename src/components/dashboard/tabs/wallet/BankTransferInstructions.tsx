@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -53,8 +52,7 @@ export default function BankTransferInstructions() {
         return;
       }
       
-      // Create notification directly with the deposit service
-      await notificationService.deposit.depositRequested(parseInt(transferAmount), bankDetails.reference);
+      await notificationService.depositRequested(parseInt(transferAmount), bankDetails.reference);
       
       await supabase.from('bank_transfers').insert({
         user_id: userId,
