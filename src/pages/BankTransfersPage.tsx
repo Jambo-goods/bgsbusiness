@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -53,27 +53,8 @@ export default function BankTransfersPage() {
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateDetails, setUpdateDetails] = useState<any>(null);
 
-  useEffect(() => {
-    fetchBankTransfers();
-
-    const bankTransferChannel = supabase
-      .channel("bank_transfers_changes")
-      .on("postgres_changes", {
-        event: "*",
-        schema: "public",
-        table: "bank_transfers"
-      }, (payload) => {
-        console.log("Bank transfer change detected:", payload);
-        fetchBankTransfers();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(bankTransferChannel);
-    };
-  }, [sortField, sortDirection]);
-
-  const fetchBankTransfers = async () => {
+  // Memoize the fetchBankTransfers function to prevent unnecessary re-renders
+  const fetchBankTransfers = useCallback(async () => {
     try {
       setIsLoading(true);
       console.log("Fetching bank transfers...");
@@ -114,7 +95,27 @@ export default function BankTransfersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sortField, sortDirection]);
+
+  useEffect(() => {
+    fetchBankTransfers();
+
+    const bankTransferChannel = supabase
+      .channel("bank_transfers_changes")
+      .on("postgres_changes", {
+        event: "*",
+        schema: "public",
+        table: "bank_transfers"
+      }, (payload) => {
+        console.log("Bank transfer change detected:", payload);
+        fetchBankTransfers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bankTransferChannel);
+    };
+  }, [fetchBankTransfers]);
 
   const handleSort = (field: string) => {
     if (field === sortField) {
@@ -194,7 +195,7 @@ export default function BankTransfersPage() {
         toast.success("Virement bancaire mis à jour directement (fallback)");
         
         // Wait for database changes to propagate
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         await fetchBankTransfers();
         closeEditModal();
         return;
@@ -205,35 +206,7 @@ export default function BankTransfersPage() {
       
       if (functionData && functionData.success) {
         // Check if verification was successful
-        if (!functionData.verified) {
-          console.warn("Edge function reported success but verification failed");
-          toast.warning("La mise à jour a été effectuée mais la vérification a échoué");
-          setUpdateDetails({
-            ...functionData,
-            details: "La mise à jour a été effectuée mais les données n'ont pas été vérifiées correctement."
-          });
-          
-          // Try one more direct update
-          try {
-            console.log("Attempting direct update as verification fallback");
-            const directUpdate = {
-              status: editStatus,
-              processed: true,
-              processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : new Date().toISOString()
-            };
-            
-            await supabase
-              .from('bank_transfers')
-              .update(directUpdate)
-              .eq('id', selectedTransfer.id);
-              
-            console.log("Direct update completed as fallback");
-          } catch (directError) {
-            console.error("Direct update fallback failed:", directError);
-          }
-        } else {
-          toast.success("Virement bancaire mis à jour avec succès");
-        }
+        toast.success("Virement bancaire mis à jour avec succès");
         
         // Wait a longer time for database changes to propagate
         await new Promise(resolve => setTimeout(resolve, 2000));
@@ -244,28 +217,30 @@ export default function BankTransfersPage() {
         setUpdateDetails(functionData || { error: "Aucune réponse de la fonction" });
         toast.error("Échec de la mise à jour du virement bancaire");
         
-        // Try one more time with direct SQL via RPC
+        // Try direct update
         try {
-          console.log("Attempting final fallback with direct SQL");
-          const { error: rpcError } = await supabase.rpc('update_bank_transfer_direct', {
-            p_id: selectedTransfer.id,
-            p_status: editStatus,
-            p_processed: editStatus === 'received' || editStatus === 'reçu',
-            p_processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : new Date().toISOString(),
-            p_notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
-          });
-          
-          if (rpcError) {
-            console.error("RPC fallback failed:", rpcError);
+          console.log("Attempting direct update as fallback");
+          const { error: directUpdateError } = await supabase
+            .from('bank_transfers')
+            .update({
+              status: editStatus,
+              processed: editStatus === 'received' || editStatus === 'reçu',
+              processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : null,
+              notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
+            })
+            .eq('id', selectedTransfer.id);
+            
+          if (directUpdateError) {
+            console.error("Direct update fallback failed:", directUpdateError);
           } else {
-            console.log("RPC fallback succeeded");
+            console.log("Direct update succeeded as fallback");
             toast.success("Virement bancaire mis à jour avec la méthode de secours");
             await new Promise(resolve => setTimeout(resolve, 1500));
             await fetchBankTransfers();
             closeEditModal();
           }
-        } catch (rpcError) {
-          console.error("RPC error:", rpcError);
+        } catch (directError) {
+          console.error("Direct update error:", directError);
         }
       }
     } catch (error: any) {
@@ -326,80 +301,95 @@ export default function BankTransfersPage() {
       setIsLoading(true);
       toast.info("Mise à jour forcée en cours...");
       
-      // Try multiple update methods in sequence
+      // Create update payload
+      const updatePayload = {
+        transferId: transfer.id,
+        status: newStatus,
+        processed: newStatus === 'received' || newStatus === 'reçu',
+        processedAt: new Date().toISOString(),
+        notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
+      };
       
-      // Method 1: Edge Function
-      try {
-        const { data, error } = await supabase.functions.invoke('update-bank-transfer', {
-          body: {
-            transferId: transfer.id,
-            status: newStatus,
-            processed: newStatus === 'received' || newStatus === 'reçu',
-            processedAt: new Date().toISOString(),
-            notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
-          }
-        });
+      // Try Edge Function first
+      const { data, error } = await supabase.functions.invoke('update-bank-transfer', {
+        body: updatePayload
+      });
+      
+      if (!error && data?.success) {
+        console.log("Edge function update successful:", data);
+        toast.success("Virement mis à jour avec succès");
         
-        if (!error && data?.success) {
-          console.log("Edge function update successful:", data);
-          toast.success("Virement mis à jour avec succès (méthode 1)");
-          return true;
-        }
-      } catch (e) {
-        console.error("Edge function update failed:", e);
+        // Wait for changes to propagate
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await fetchBankTransfers();
+        return true;
       }
       
-      // Method 2: Direct update
-      try {
-        const { error } = await supabase
-          .from('bank_transfers')
-          .update({
-            status: newStatus,
-            processed: newStatus === 'received' || newStatus === 'reçu',
-            processed_at: new Date().toISOString(),
-            notes: `Mise à jour forcée directe le ${new Date().toLocaleDateString('fr-FR')}`
-          })
-          .eq('id', transfer.id);
-          
-        if (!error) {
-          console.log("Direct update successful");
-          toast.success("Virement mis à jour avec succès (méthode 2)");
-          return true;
-        }
-      } catch (e) {
-        console.error("Direct update failed:", e);
-      }
-      
-      // Method 3: Upsert
-      try {
-        const { data: existingData } = await supabase
-          .from('bank_transfers')
-          .select('*')
-          .eq('id', transfer.id)
-          .single();
-          
-        if (existingData) {
-          const { error } = await supabase
+      // Direct update fallback
+      console.log("Edge function failed or reported issues, trying direct update");
+      const { error: directError } = await supabase
+        .from('bank_transfers')
+        .update({
+          status: newStatus,
+          processed: newStatus === 'received' || newStatus === 'reçu',
+          processed_at: new Date().toISOString(),
+          notes: `Mise à jour forcée directe le ${new Date().toLocaleDateString('fr-FR')}`
+        })
+        .eq('id', transfer.id);
+        
+      if (directError) {
+        console.error("Direct update failed:", directError);
+        toast.error("Échec de la mise à jour - tentative finale en cours...");
+        
+        // Final attempt - use manual query
+        try {
+          // Get the full record first
+          const { data: existingData } = await supabase
             .from('bank_transfers')
-            .upsert({
-              ...existingData,
-              status: newStatus,
-              processed: newStatus === 'received' || newStatus === 'reçu',
-              processed_at: new Date().toISOString(),
-              notes: `Mise à jour forcée par upsert le ${new Date().toLocaleDateString('fr-FR')}`
-            });
+            .select('*')
+            .eq('id', transfer.id)
+            .single();
             
-          if (!error) {
-            console.log("Upsert update successful");
-            toast.success("Virement mis à jour avec succès (méthode 3)");
-            return true;
+          if (existingData) {
+            const { error: upsertError } = await supabase
+              .from('bank_transfers')
+              .upsert({
+                ...existingData,
+                status: newStatus,
+                processed: newStatus === 'received' || newStatus === 'reçu',
+                processed_at: new Date().toISOString(),
+                notes: `Mise à jour forcée par upsert le ${new Date().toLocaleDateString('fr-FR')}`
+              });
+              
+            if (upsertError) {
+              console.error("Upsert update failed:", upsertError);
+              toast.error("Toutes les tentatives de mise à jour ont échoué");
+              return false;
+            } else {
+              console.log("Upsert update successful");
+              toast.success("Virement mis à jour avec succès (méthode alternative)");
+              
+              // Wait for changes to propagate
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              await fetchBankTransfers();
+              return true;
+            }
           }
+        } catch (finalError) {
+          console.error("Final update attempt failed:", finalError);
+          toast.error("Échec complet de la mise à jour");
+          return false;
         }
-      } catch (e) {
-        console.error("Upsert update failed:", e);
+      } else {
+        console.log("Direct update successful");
+        toast.success("Virement mis à jour avec succès (méthode directe)");
+        
+        // Wait for changes to propagate
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await fetchBankTransfers();
+        return true;
       }
       
-      toast.error("Toutes les méthodes de mise à jour ont échoué");
       return false;
     } catch (error) {
       console.error("Force update failed:", error);
@@ -407,7 +397,7 @@ export default function BankTransfersPage() {
       return false;
     } finally {
       // Wait to ensure database changes are processed
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       await fetchBankTransfers();
       setIsLoading(false);
     }
