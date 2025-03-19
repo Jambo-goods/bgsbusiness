@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -50,6 +51,7 @@ export default function BankTransfersPage() {
   const [processedDate, setProcessedDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [updateDetails, setUpdateDetails] = useState<any>(null);
 
   useEffect(() => {
     fetchBankTransfers();
@@ -129,6 +131,7 @@ export default function BankTransfersPage() {
     setProcessedDate(transfer.processed_at ? new Date(transfer.processed_at) : undefined);
     setIsEditModalOpen(true);
     setUpdateError(null);
+    setUpdateDetails(null);
   };
 
   const handleSubmitEdit = async (e: React.FormEvent) => {
@@ -138,6 +141,7 @@ export default function BankTransfersPage() {
     
     setIsSubmitting(true);
     setUpdateError(null);
+    setUpdateDetails(null);
     
     try {
       console.log(`Updating bank transfer with status: ${editStatus} (ID: ${selectedTransfer.id})`);
@@ -153,7 +157,7 @@ export default function BankTransfersPage() {
       const updatePayload = {
         transferId: selectedTransfer.id,
         status: editStatus,
-        processed: editStatus === 'received' || editStatus === 'reçu' ? true : false,
+        processed: editStatus === 'received' || editStatus === 'reçu',
         processedAt: finalProcessedDate ? finalProcessedDate.toISOString() : null,
         notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
       };
@@ -165,56 +169,86 @@ export default function BankTransfersPage() {
         body: updatePayload
       });
       
-      console.log("Edge function response:", functionData);
-      
       if (functionError) {
         console.error("Edge function error:", functionError);
-        throw new Error(`Erreur de la fonction Edge: ${functionError.message}`);
+        setUpdateDetails({
+          type: "error",
+          message: `Erreur lors de l'appel à la fonction: ${functionError.message}`
+        });
+        
+        // Try direct update as a fallback
+        const { error: directError } = await supabase
+          .from('bank_transfers')
+          .update({
+            status: editStatus,
+            processed: editStatus === 'received' || editStatus === 'reçu',
+            processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : null,
+            notes: `Mise à jour directe le ${new Date().toLocaleDateString('fr-FR')}`
+          })
+          .eq('id', selectedTransfer.id);
+          
+        if (directError) {
+          throw new Error(`Échec de la mise à jour directe: ${directError.message}`);
+        }
+        
+        toast.success("Virement bancaire mis à jour directement (fallback)");
+        await new Promise(resolve => setTimeout(resolve, 500));
+        await fetchBankTransfers();
+        closeEditModal();
+        return;
       }
       
+      console.log("Edge function response:", functionData);
+      setUpdateDetails(functionData);
+      
       if (functionData && functionData.success) {
-        console.log("Update successful via edge function");
-        
         // Check if verification was successful
         if (!functionData.verified) {
           console.warn("Edge function reported success but verification failed");
           toast.warning("La mise à jour a été effectuée mais la vérification a échoué");
+          setUpdateDetails({
+            ...functionData,
+            details: "La mise à jour a été effectuée mais les données n'ont pas été vérifiées correctement."
+          });
+          
+          // Try one more direct update
+          try {
+            console.log("Attempting direct update as verification fallback");
+            const directUpdate = {
+              status: editStatus,
+              processed: editStatus === 'received' || editStatus === 'reçu',
+              processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : null
+            };
+            
+            await supabase
+              .from('bank_transfers')
+              .update(directUpdate)
+              .eq('id', selectedTransfer.id);
+              
+            console.log("Direct update completed as fallback");
+          } catch (directError) {
+            console.error("Direct update fallback failed:", directError);
+          }
         } else {
           toast.success("Virement bancaire mis à jour avec succès");
         }
         
         // Wait a moment to allow database changes to propagate
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         await fetchBankTransfers();
         closeEditModal();
       } else {
-        // Fallback to direct update if edge function failed
-        console.log("Edge function did not return success, trying direct update");
-        
-        const updates = {
-          status: editStatus,
-          processed: editStatus === 'received' || editStatus === 'reçu' ? true : false,
-          processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : null,
-          notes: `Mise à jour directe le ${new Date().toLocaleDateString('fr-FR')}`
-        };
-        
-        const { error: updateError } = await supabase
-          .from('bank_transfers')
-          .update(updates)
-          .eq('id', selectedTransfer.id);
-          
-        if (updateError) {
-          console.error("Direct update failed:", updateError);
-          throw new Error(`Erreur de mise à jour directe: ${updateError.message}`);
-        }
-        
-        toast.success("Virement bancaire mis à jour directement");
-        await fetchBankTransfers();
-        closeEditModal();
+        setUpdateError("La mise à jour a échoué. Consultez les détails ci-dessous.");
+        setUpdateDetails(functionData || { error: "Aucune réponse de la fonction" });
+        toast.error("Échec de la mise à jour du virement bancaire");
       }
     } catch (error: any) {
       console.error("Update error:", error);
       setUpdateError(error.message || "Une erreur inconnue est survenue");
+      setUpdateDetails({
+        error: error.message,
+        stack: error.stack
+      });
       toast.error(`Erreur de mise à jour: ${error.message || "Erreur inconnue"}`);
     } finally {
       setIsSubmitting(false);
@@ -225,6 +259,7 @@ export default function BankTransfersPage() {
     setIsEditModalOpen(false);
     setSelectedTransfer(null);
     setUpdateError(null);
+    setUpdateDetails(null);
   };
 
   const filteredTransfers = bankTransfers.filter(transfer => {
@@ -418,7 +453,7 @@ export default function BankTransfersPage() {
       </div>
 
       <Dialog open={isEditModalOpen} onOpenChange={open => !open && closeEditModal()}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>Modifier le virement bancaire</DialogTitle>
             <DialogDescription>
@@ -463,9 +498,13 @@ export default function BankTransfersPage() {
               </select>
               
               {(editStatus === 'received' || editStatus === 'reçu') && (
-                <div className="text-sm text-green-600 mt-1">
-                  <span className="font-medium">Note:</span> Le transfert sera automatiquement marqué comme traité
-                </div>
+                <Alert className="mt-2 bg-green-50 text-green-800 border-green-200">
+                  <AlertTitle className="text-sm font-semibold">Important</AlertTitle>
+                  <AlertDescription className="text-xs">
+                    En définissant le statut comme "Reçu", le virement sera automatiquement marqué comme traité
+                    et le solde du portefeuille de l'utilisateur sera mis à jour.
+                  </AlertDescription>
+                </Alert>
               )}
             </div>
             
@@ -496,7 +535,7 @@ export default function BankTransfersPage() {
                 </PopoverContent>
               </Popover>
               <div className="text-sm text-gray-500 mt-1">
-                <span className="font-medium">Important:</span> La date de traitement est essentielle pour marquer le virement comme traité
+                <span className="font-medium">Important:</span> Une date de traitement est automatiquement définie si vous choisissez le statut "Reçu"
               </div>
             </div>
             
@@ -505,6 +544,29 @@ export default function BankTransfersPage() {
                 <AlertTitle>Erreur de mise à jour</AlertTitle>
                 <AlertDescription className="text-sm">
                   {updateError}
+                  
+                  {updateDetails && (
+                    <div className="mt-2 p-2 bg-red-50 rounded text-xs overflow-auto max-h-32">
+                      <pre>{JSON.stringify(updateDetails, null, 2)}</pre>
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {!updateError && updateDetails && (
+              <Alert 
+                className={updateDetails.verified ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}
+              >
+                <AlertTitle className={updateDetails.verified ? "text-green-800" : "text-yellow-800"}>
+                  {updateDetails.verified ? "Mise à jour réussie" : "Mise à jour avec avertissement"}
+                </AlertTitle>
+                <AlertDescription className={updateDetails.verified ? "text-green-700" : "text-yellow-700"}>
+                  {updateDetails.message}
+                  
+                  <div className="mt-2 p-2 rounded text-xs overflow-auto max-h-32 bg-white/50">
+                    <pre>{JSON.stringify(updateDetails, null, 2)}</pre>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
