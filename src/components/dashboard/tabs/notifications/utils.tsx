@@ -3,10 +3,11 @@ import { Wallet, Briefcase, Shield, Megaphone, Bell, Info, CheckCircle, AlertTri
 import type { NotificationType, NotificationCategory } from "@/services/notifications/types";
 
 export const getNotificationTypeIcon = (type: string) => {
-  switch (type) {
+  switch (type.toLowerCase()) {
     case 'deposit':
-    case 'withdrawal':
       return <Wallet className="h-5 w-5 text-blue-500" />;
+    case 'withdrawal':
+      return <Wallet className="h-5 w-5 text-orange-500" />;
     case 'investment':
       return <Briefcase className="h-5 w-5 text-green-500" />;
     case 'security':
@@ -19,7 +20,7 @@ export const getNotificationTypeIcon = (type: string) => {
 };
 
 export const getNotificationCategoryIcon = (category?: string) => {
-  switch (category) {
+  switch (category?.toLowerCase()) {
     case 'success':
       return <CheckCircle className="h-5 w-5 text-green-500" />;
     case 'warning':

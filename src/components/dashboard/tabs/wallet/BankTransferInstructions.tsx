@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -52,7 +53,17 @@ export default function BankTransferInstructions() {
         return;
       }
       
-      await notificationService.depositRequested(parseInt(transferAmount), bankDetails.reference);
+      // Créer une notification pour l'utilisateur
+      await notificationService.createNotification({
+        title: "Confirmation de virement bancaire",
+        description: `Votre confirmation de virement de ${transferAmount}€ a été reçue. Référence: ${bankDetails.reference}`,
+        type: "deposit",
+        category: "info",
+        metadata: {
+          amount: parseInt(transferAmount),
+          reference: bankDetails.reference
+        }
+      });
       
       await supabase.from('bank_transfers').insert({
         user_id: userId,
