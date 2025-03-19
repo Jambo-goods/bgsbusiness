@@ -5,19 +5,15 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
-import { Button } from "@/components/ui/button";
-import { XCircle, Loader2 } from "lucide-react";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;
   processingId: string | null;
-  rejectTransfer?: (item: BankTransferItem) => Promise<boolean>;
 }
 
 export default function BankTransferTableRow({
   item,
-  processingId,
-  rejectTransfer
+  processingId
 }: BankTransferTableRowProps) {
   // Format date nicely
   const formattedDate = item.created_at 
@@ -33,12 +29,6 @@ export default function BankTransferTableRow({
   const isReceiptConfirmed = item.processed === true;
   const isRejected = item.status === 'rejected';
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
-  
-  const handleRejectTransfer = async () => {
-    if (rejectTransfer) {
-      await rejectTransfer(item);
-    }
-  };
   
   return (
     <TableRow className={isProcessing ? "bg-gray-50" : ""}>
@@ -64,31 +54,14 @@ export default function BankTransferTableRow({
       </TableCell>
       
       <TableCell>
-        <div className="flex items-center space-x-2">
-          <StatusBadge
-            status={item.status}
-            hasMisspelledStatus={hasMisspelledStatus}
-            isProcessed={!!item.processed}
-          />
-          
-          {!isRejected && rejectTransfer && (
-            <Button 
-              variant="outline" 
-              size="sm"
-              className="h-7 px-2 text-xs bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:text-red-800"
-              onClick={handleRejectTransfer}
-              disabled={isProcessing}
-            >
-              {isProcessing ? (
-                <Loader2 className="h-3 w-3 animate-spin mr-1" />
-              ) : (
-                <XCircle className="h-3 w-3 mr-1" />
-              )}
-              Rejeter
-            </Button>
-          )}
-        </div>
+        <StatusBadge
+          status={item.status}
+          hasMisspelledStatus={hasMisspelledStatus}
+          isProcessed={!!item.processed}
+        />
       </TableCell>
+      
+      {/* Actions column removed */}
     </TableRow>
   );
 }
