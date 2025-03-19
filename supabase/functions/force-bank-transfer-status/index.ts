@@ -29,11 +29,11 @@ serve(async (req) => {
       }
     )
 
-    console.log(`Starting force update for bank transfer ${transferId} to status ${newStatus}`)
+    console.log(`Starting force update for bank transfer ${transferId} to status ${newStatus || 'received'}`)
     console.log(`Environment check - SUPABASE_URL: ${Deno.env.get('SUPABASE_URL') ? 'exists' : 'missing'}`)
     console.log(`Environment check - SERVICE_ROLE: ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'exists' : 'missing'}`)
     
-    // First, try using our new database function that bypasses RLS
+    // First, try using our dedicated database function that bypasses RLS (highest chance of success)
     try {
       console.log("Attempting update with force_bank_transfer_status database function")
       const { data: functionData, error: functionError } = await supabaseAdmin.rpc(
@@ -46,7 +46,7 @@ serve(async (req) => {
       
       if (functionError) {
         console.error("Error with force_bank_transfer_status function:", functionError);
-      } else {
+      } else if (functionData === true) {
         console.log("Database function update successful:", functionData);
         
         // If successful, get the updated record data
@@ -86,7 +86,7 @@ serve(async (req) => {
       
       if (adminFnError) {
         console.error("Error with admin_update_bank_transfer function:", adminFnError);
-      } else {
+      } else if (adminFnData === true) {
         console.log("Admin database function update successful:", adminFnData);
         
         // If successful, get the updated record data
@@ -111,7 +111,7 @@ serve(async (req) => {
       console.error("Exception in admin database function execution:", adminFnError);
     }
     
-    // First, get the full record data if not provided
+    // Next, get the full record data if not provided
     let fullTransfer = transferData
     if (!fullTransfer) {
       const { data: fetchedData, error: fetchError } = await supabaseAdmin
@@ -188,89 +188,147 @@ serve(async (req) => {
       }
     }
     
-    // Prepare the update data with the most critical fields
-    const updateData = {
-      id: fullTransfer.id,  // Primary key must be included
-      status: newStatus,
-      processed: true,
-      processed_at: new Date().toISOString(),
-      notes: (fullTransfer.notes || '') + ' | Force updated via Edge Function on ' + new Date().toLocaleString()
-    };
-    
-    console.log("Updating transfer with:", updateData)
-    
-    // First try with direct SQL for maximum control and bypass all RLS
+    // Try a completely different approach with a DELETE + INSERT
     try {
-      // Use SQL directly with the admin client to bypass any issues
-      const { data: sqlData, error: sqlError } = await supabaseAdmin.rpc(
-        'admin_update_bank_transfer',
-        { 
-          transfer_id: transferId, 
-          new_status: newStatus,
-          processed: true,
-          notes: updateData.notes
+      console.log("Attempting DELETE + INSERT approach as an emergency measure...")
+      
+      // First, save a backup of the existing record
+      const backupRecord = { ...fullTransfer }
+      
+      // Then modify the status for our insert
+      const modifiedRecord = { 
+        ...backupRecord,
+        status: newStatus || 'received',
+        processed: true,
+        processed_at: new Date().toISOString(),
+        notes: (backupRecord.notes || '') + ' | Force updated via Edge Function on ' + new Date().toLocaleString()
+      }
+      
+      // First delete the existing record
+      const { error: deleteError } = await supabaseAdmin
+        .from('bank_transfers')
+        .delete()
+        .eq('id', transferId)
+      
+      if (deleteError) {
+        console.error("Error during DELETE operation:", deleteError)
+      } else {
+        console.log("Successfully deleted record, now inserting with new status")
+        
+        // Then insert the modified version
+        const { error: insertError } = await supabaseAdmin
+          .from('bank_transfers')
+          .insert(modifiedRecord)
+          
+        if (insertError) {
+          console.error("Error during INSERT operation:", insertError)
+          
+          // Restore the original record if insertion failed
+          const { error: restoreError } = await supabaseAdmin
+            .from('bank_transfers')
+            .insert(backupRecord)
+            
+          if (restoreError) {
+            console.error("CRITICAL: Failed to restore original record:", restoreError)
+          } else {
+            console.log("Successfully restored original record after failed insertion")
+          }
+        } else {
+          console.log("Successfully replaced record with new status via DELETE+INSERT")
+          
+          // Verify the result
+          const { data: checkData, error: checkError } = await supabaseAdmin
+            .from('bank_transfers')
+            .select('status, user_id, amount, reference')
+            .eq('id', transferId)
+            .single()
+            
+          if (!checkError && checkData.status === (newStatus || 'received')) {
+            return new Response(
+              JSON.stringify({
+                success: true,
+                message: "Bank transfer status updated using DELETE+INSERT approach",
+                userId: checkData.user_id,
+                amount: checkData.amount,
+                reference: checkData.reference
+              }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            )
+          }
         }
-      );
+      }
+    } catch (replaceError) {
+      console.error("Exception during DELETE+INSERT approach:", replaceError)
+    }
+    
+    // As absolute last resort, try direct SQL execution
+    try {
+      console.log("Attempting direct SQL execution as final measure...")
+      
+      const { data: sqlData, error: sqlError } = await supabaseAdmin.rpc(
+        'execute_admin_sql',
+        { 
+          sql_command: `UPDATE bank_transfers 
+                        SET status = '${newStatus || 'received'}', 
+                            processed = true, 
+                            processed_at = NOW(), 
+                            notes = '${fullTransfer.notes || ''} | Force updated via SQL on ${new Date().toLocaleString()}'
+                        WHERE id = '${transferId}'`
+        }
+      )
       
       if (sqlError) {
-        console.error("Error with direct SQL update:", sqlError);
+        console.error("Error with direct SQL execution:", sqlError)
       } else {
-        console.log("SQL update successful:", sqlData);
+        console.log("SQL execution successful:", sqlData)
+        
+        // Verify the update
+        const { data: checkData, error: checkError } = await supabaseAdmin
+          .from('bank_transfers')
+          .select('status, user_id, amount, reference')
+          .eq('id', transferId)
+          .single()
+          
+        if (!checkError && checkData.status === (newStatus || 'received')) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              message: "Bank transfer status updated using direct SQL execution",
+              userId: checkData.user_id,
+              amount: checkData.amount,
+              reference: checkData.reference
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
       }
     } catch (sqlExecError) {
-      console.error("Exception in SQL execution:", sqlExecError);
+      console.error("Exception in SQL execution:", sqlExecError)
     }
     
-    // Fallback to regular update if RPC is not available
-    const { error: updateError } = await supabaseAdmin
-      .from('bank_transfers')
-      .update(updateData)
-      .eq('id', transferId);
-      
-    if (updateError) {
-      console.error("Error updating bank transfer via update:", updateError);
-      
-      // Try a second approach with upsert if update fails
-      console.log("Attempting upsert as fallback...");
-      const { error: upsertError } = await supabaseAdmin
-        .from('bank_transfers')
-        .upsert(updateData);
-        
-      if (upsertError) {
-        console.error("Upsert also failed:", upsertError);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: `Failed all update attempts. Last error: ${upsertError.message}` 
-          }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
-    
-    // Verify the update
+    // Verify the update as a last step
     const { data: checkData, error: checkError } = await supabaseAdmin
       .from('bank_transfers')
       .select('status, user_id, amount, reference')
       .eq('id', transferId)
-      .single();
+      .single()
       
     if (checkError) {
-      console.error("Error verifying update:", checkError);
+      console.error("Error verifying update:", checkError)
       return new Response(
         JSON.stringify({ 
           success: false, 
           message: `Error verifying update: ${checkError.message}` 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      )
     }
     
     // Return success result with user data for notification
     return new Response(
       JSON.stringify({
-        success: checkData.status === newStatus,
-        message: checkData.status === newStatus 
+        success: checkData.status === (newStatus || 'received'),
+        message: checkData.status === (newStatus || 'received') 
           ? "Bank transfer successfully updated to received" 
           : `Failed to update status. Current status: ${checkData.status}`,
         userId: checkData.user_id,
@@ -278,10 +336,10 @@ serve(async (req) => {
         reference: checkData.reference
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    )
     
   } catch (error) {
-    console.error("Critical error:", error);
+    console.error("Critical error:", error)
     
     return new Response(
       JSON.stringify({ 
@@ -289,6 +347,6 @@ serve(async (req) => {
         message: error instanceof Error ? error.message : "Unknown error"
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    )
   }
-});
+})

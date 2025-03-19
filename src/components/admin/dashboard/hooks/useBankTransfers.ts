@@ -71,8 +71,7 @@ export function useBankTransfers(onSuccess: () => void) {
       // Show progress toast
       const toastId = toast.loading("Tentative de mise à jour forcée en cours...", { duration: 10000 });
       
-      // First attempt: Use database function via force_bank_transfer_status
-      console.log("[FORÇAGE] Méthode 1: Fonction de base de données avec privilèges élevés");
+      // Use Edge Function directly to bypass all RLS - this has the highest chance of success
       const result = await bankTransferService.directForceBankTransfer(item);
       
       if (result.success) {
@@ -87,8 +86,8 @@ export function useBankTransfers(onSuccess: () => void) {
         return;
       }
       
-      // Second attempt: Use fallback database function if first failed
-      console.log("[FORÇAGE] Méthode 2: Fonction alternative avec privilèges admin");
+      // If first attempt failed, try the alternative approach through the Edge Function
+      console.log("[FORÇAGE] Premier essai échoué, tentative avec méthode alternative...");
       const fallbackResult = await bankTransferService.forceUpdateToReceived(item.id);
       
       if (fallbackResult.success) {
