@@ -45,7 +45,10 @@ export function useBankTransfers(onSuccess: () => void) {
     try {
       setProcessingId(item.id);
       console.log("Confirmation de la réception pour l'ID:", item.id);
+      
+      // First try with the database function
       const success = await bankTransferService.confirmReceipt(item);
+      
       if (success) {
         toast.success("Réception confirmée avec succès");
         onSuccess();
@@ -68,8 +71,8 @@ export function useBankTransfers(onSuccess: () => void) {
       // Show progress toast
       const toastId = toast.loading("Tentative de mise à jour forcée en cours...", { duration: 10000 });
       
-      // First attempt: Use Edge Function directly with all transfer data
-      console.log("[FORÇAGE] Méthode 1: Edge Function avec données complètes");
+      // First attempt: Use database function via force_bank_transfer_status
+      console.log("[FORÇAGE] Méthode 1: Fonction de base de données avec privilèges élevés");
       const result = await bankTransferService.directForceBankTransfer(item);
       
       if (result.success) {
@@ -84,8 +87,8 @@ export function useBankTransfers(onSuccess: () => void) {
         return;
       }
       
-      // Second attempt: Use fallback method if first failed
-      console.log("[FORÇAGE] Méthode 2: Mise à jour directe avec ID seulement");
+      // Second attempt: Use fallback database function if first failed
+      console.log("[FORÇAGE] Méthode 2: Fonction alternative avec privilèges admin");
       const fallbackResult = await bankTransferService.forceUpdateToReceived(item.id);
       
       if (fallbackResult.success) {

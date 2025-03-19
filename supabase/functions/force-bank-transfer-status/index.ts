@@ -33,6 +33,84 @@ serve(async (req) => {
     console.log(`Environment check - SUPABASE_URL: ${Deno.env.get('SUPABASE_URL') ? 'exists' : 'missing'}`)
     console.log(`Environment check - SERVICE_ROLE: ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'exists' : 'missing'}`)
     
+    // First, try using our new database function that bypasses RLS
+    try {
+      console.log("Attempting update with force_bank_transfer_status database function")
+      const { data: functionData, error: functionError } = await supabaseAdmin.rpc(
+        'force_bank_transfer_status',
+        { 
+          transfer_id: transferId, 
+          new_status: newStatus || 'received'
+        }
+      );
+      
+      if (functionError) {
+        console.error("Error with force_bank_transfer_status function:", functionError);
+      } else {
+        console.log("Database function update successful:", functionData);
+        
+        // If successful, get the updated record data
+        const { data: updatedTransfer } = await supabaseAdmin
+          .from('bank_transfers')
+          .select('status, user_id, amount, reference')
+          .eq('id', transferId)
+          .single();
+          
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Bank transfer successfully updated using database function",
+            userId: updatedTransfer?.user_id,
+            amount: updatedTransfer?.amount,
+            reference: updatedTransfer?.reference
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch (fnError) {
+      console.error("Exception in database function execution:", fnError);
+    }
+    
+    // Fallback to admin_update_bank_transfer if first function failed
+    try {
+      console.log("Attempting update with admin_update_bank_transfer database function")
+      const { data: adminFnData, error: adminFnError } = await supabaseAdmin.rpc(
+        'admin_update_bank_transfer',
+        { 
+          transfer_id: transferId, 
+          new_status: newStatus || 'received',
+          processed: true,
+          notes: 'Forced update via Edge Function on ' + new Date().toLocaleString()
+        }
+      );
+      
+      if (adminFnError) {
+        console.error("Error with admin_update_bank_transfer function:", adminFnError);
+      } else {
+        console.log("Admin database function update successful:", adminFnData);
+        
+        // If successful, get the updated record data
+        const { data: updatedTransfer } = await supabaseAdmin
+          .from('bank_transfers')
+          .select('status, user_id, amount, reference')
+          .eq('id', transferId)
+          .single();
+          
+        return new Response(
+          JSON.stringify({
+            success: true,
+            message: "Bank transfer successfully updated using admin database function",
+            userId: updatedTransfer?.user_id,
+            amount: updatedTransfer?.amount,
+            reference: updatedTransfer?.reference
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } catch (adminFnError) {
+      console.error("Exception in admin database function execution:", adminFnError);
+    }
+    
     // First, get the full record data if not provided
     let fullTransfer = transferData
     if (!fullTransfer) {

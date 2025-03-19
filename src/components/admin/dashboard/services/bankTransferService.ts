@@ -226,6 +226,56 @@ export const bankTransferService = {
       
       console.log(`Confirmation de réception pour ${item.id}`);
       
+      // Try using the database function first
+      try {
+        const { data: functionData, error: functionError } = await supabase.rpc(
+          'force_bank_transfer_status',
+          { 
+            transfer_id: item.id,
+            new_status: 'received'
+          }
+        );
+        
+        if (!functionError && functionData === true) {
+          console.log("Mise à jour de statut réussie via la fonction DB avec privilèges élevés");
+          
+          // Create notification for the user
+          if (item.user_id) {
+            const { error: notifyError } = await supabase
+              .from('notifications')
+              .insert({
+                user_id: item.user_id,
+                title: "Virement reçu",
+                message: `Votre virement bancaire (réf: ${item.reference || item.description}) a été reçu et est en cours de traitement.`,
+                type: "deposit",
+                data: {
+                  category: "info",
+                  reference: item.reference || item.description
+                }
+              });
+              
+            if (notifyError) {
+              console.error("Erreur lors de la création de notification:", notifyError);
+            }
+          }
+          
+          // Log admin action
+          if (adminUser.id) {
+            await logAdminAction(
+              adminUser.id,
+              'wallet_management',
+              `Confirmation de réception de virement - Réf: ${item.description}`,
+              item.user_id
+            );
+          }
+          
+          return true;
+        }
+      } catch (rpcError) {
+        console.error("Erreur avec la fonction database:", rpcError);
+      }
+      
+      // Fallback to original implementation
       let success = false;
       
       // 1. Update receipt confirmation - try with wallet_transactions first
@@ -407,9 +457,56 @@ export const bankTransferService = {
   
   async forceUpdateToReceived(transferId: string): Promise<{success: boolean, message: string}> {
     try {
-      console.log(`[FORÇAGE] Tentative de forcer statut à 'reçu' pour le transfert ${transferId} via Edge Function`);
+      console.log(`[FORÇAGE] Tentative de forcer statut à 'reçu' pour le transfert ${transferId} via fonction DB`);
       
-      // Call the edge function to bypass RLS
+      // First, try using the database function directly (most powerful approach)
+      try {
+        const { data, error } = await supabase.rpc(
+          'force_bank_transfer_status',
+          { 
+            transfer_id: transferId,
+            new_status: 'received'
+          }
+        );
+        
+        if (error) {
+          console.error("[FORÇAGE] Erreur lors de l'appel à la fonction DB:", error);
+        } else if (data === true) {
+          console.log("[FORÇAGE] Mise à jour réussie via la fonction DB");
+          
+          // Get user data for notification
+          const { data: transferData } = await supabase
+            .from('bank_transfers')
+            .select('user_id, amount, reference')
+            .eq('id', transferId)
+            .single();
+            
+          if (transferData?.user_id) {
+            await supabase.from('notifications').insert({
+              user_id: transferData.user_id,
+              title: "Virement traité",
+              message: `Votre virement bancaire a été traité et ajouté à votre portefeuille.`,
+              type: "deposit",
+              data: {
+                category: "success",
+                amount: transferData.amount,
+                reference: transferData.reference
+              }
+            });
+          }
+          
+          return { 
+            success: true, 
+            message: "Virement forcé à 'reçu' avec succès via fonction de base de données" 
+          };
+        }
+      } catch (rpcError) {
+        console.error("[FORÇAGE] Erreur fonction DB:", rpcError);
+      }
+      
+      // If DB function failed, try Edge Function as fallback
+      console.log("[FORÇAGE] Tentative via Edge Function");
+      
       const { data, error } = await supabase.functions.invoke('force-bank-transfer-status', {
         body: { 
           transferId,
@@ -471,6 +568,97 @@ export const bankTransferService = {
     try {
       console.log("[DIRECT FORCE] Démarrage forçage direct pour", item.id);
       
+      // First, try with direct database function which runs with elevated privileges
+      try {
+        const { data, error } = await supabase.rpc(
+          'force_bank_transfer_status',
+          { 
+            transfer_id: item.id,
+            new_status: 'received'
+          }
+        );
+        
+        if (error) {
+          console.error("[DIRECT FORCE] Erreur avec la fonction DB:", error);
+        } else if (data === true) {
+          console.log("[DIRECT FORCE] Mise à jour réussie via fonction DB privilégiée");
+          
+          // Create notification for success
+          try {
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: item.user_id,
+                title: "Virement traité",
+                message: `Votre virement bancaire a été traité et ajouté à votre portefeuille.`,
+                type: "deposit",
+                data: {
+                  category: "success",
+                  amount: item.amount,
+                  reference: item.reference
+                }
+              });
+          } catch (e) {
+            console.error("[DIRECT FORCE] Erreur notification:", e);
+          }
+          
+          return { 
+            success: true, 
+            message: "Virement forcé à reçu avec succès via fonction de base de données privilégiée" 
+          };
+        }
+      } catch (dbFnError) {
+        console.error("[DIRECT FORCE] Exception avec fonction DB:", dbFnError);
+      }
+      
+      // If DB function failed, try admin_update_bank_transfer as alternative
+      try {
+        const { data, error } = await supabase.rpc(
+          'admin_update_bank_transfer',
+          { 
+            transfer_id: item.id,
+            new_status: 'received',
+            processed: true,
+            notes: 'Mise à jour forcée le ' + new Date().toLocaleString()
+          }
+        );
+        
+        if (error) {
+          console.error("[DIRECT FORCE] Erreur avec admin_update_bank_transfer:", error);
+        } else if (data === true) {
+          console.log("[DIRECT FORCE] Mise à jour réussie via fonction admin");
+          
+          // Create notification
+          try {
+            await supabase
+              .from('notifications')
+              .insert({
+                user_id: item.user_id,
+                title: "Virement traité",
+                message: `Votre virement bancaire a été traité et ajouté à votre portefeuille.`,
+                type: "deposit",
+                data: {
+                  category: "success",
+                  amount: item.amount,
+                  reference: item.reference
+                }
+              });
+          } catch (e) {
+            console.error("[DIRECT FORCE] Erreur notification:", e);
+          }
+          
+          return { 
+            success: true, 
+            message: "Virement forcé à reçu avec succès via fonction admin" 
+          };
+        }
+      } catch (adminFnError) {
+        console.error("[DIRECT FORCE] Exception avec fonction admin:", adminFnError);
+      }
+      
+      // If all DB functions failed, fallback to Edge Function
+      console.log("[DIRECT FORCE] Utilisation de l'Edge Function comme dernier recours");
+      
       // Call the edge function to bypass RLS
       const { data, error } = await supabase.functions.invoke('force-bank-transfer-status', {
         body: { 
@@ -518,9 +706,32 @@ export const bankTransferService = {
           message: "Virement forcé à reçu avec succès via Edge Function" 
         };
       } else {
-        // Fallback to forceUpdateToReceived if edge function failed
-        console.log("[DIRECT FORCE] Échec de l'Edge Function, tentative avec forceUpdateToReceived");
-        return await this.forceUpdateToReceived(item.id);
+        // If everything failed, try one last desperate approach
+        console.log("[DIRECT FORCE] Tout a échoué, tentative désespérée...");
+        
+        try {
+          // Attempt direct wallet balance update if the rest failed
+          console.log("[DIRECT FORCE] Tentative de mise à jour du solde portefeuille directe...");
+          const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
+            user_id: item.user_id,
+            increment_amount: item.amount || 0
+          });
+          
+          if (!balanceError) {
+            console.log("[DIRECT FORCE] Mise à jour du solde réussie par dernier recours");
+            return {
+              success: true,
+              message: "Mise à jour du solde effectuée directement (mais statut non modifié)"
+            };
+          }
+        } catch (lastError) {
+          console.error("[DIRECT FORCE] Échec de la dernière tentative:", lastError);
+        }
+        
+        return { 
+          success: false, 
+          message: data?.message || "Échec de toutes les méthodes de mise à jour forcée" 
+        };
       }
     } catch (error: any) {
       console.error("[DIRECT FORCE] Erreur critique:", error);

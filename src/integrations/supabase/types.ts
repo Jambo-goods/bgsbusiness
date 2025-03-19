@@ -538,6 +538,22 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      admin_update_bank_transfer: {
+        Args: {
+          transfer_id: string
+          new_status: string
+          processed: boolean
+          notes: string
+        }
+        Returns: boolean
+      }
+      force_bank_transfer_status: {
+        Args: {
+          transfer_id: string
+          new_status?: string
+        }
+        Returns: boolean
+      }
       increment_wallet_balance: {
         Args: {
           user_id: string
