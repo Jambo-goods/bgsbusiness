@@ -19,9 +19,10 @@ export default function BankTransferTable({
   const handleStatusUpdate = () => {
     setLastUpdateTime(Date.now());
     if (refreshData) {
+      // Add a slight delay to ensure database operations have completed
       setTimeout(() => {
         refreshData();
-      }, 500);
+      }, 1000);
     }
   };
 

@@ -11,6 +11,13 @@ export function useBankTransfers() {
   const confirmReceipt = async (transfer: BankTransferItem) => {
     try {
       setProcessingId(transfer.id);
+      
+      // Store admin token if available (for authenticated requests)
+      const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+      if (adminUser?.token) {
+        localStorage.setItem('admin_token', adminUser.token);
+      }
+      
       const success = await bankTransferService.confirmReceipt(transfer);
       
       if (success) {
@@ -33,6 +40,13 @@ export function useBankTransfers() {
   const rejectTransfer = async (transfer: BankTransferItem) => {
     try {
       setProcessingId(transfer.id);
+      
+      // Store admin token if available (for authenticated requests)
+      const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+      if (adminUser?.token) {
+        localStorage.setItem('admin_token', adminUser.token);
+      }
+      
       const success = await bankTransferService.rejectDeposit(transfer);
       
       if (success) {
@@ -61,7 +75,7 @@ export function useBankTransfers() {
         ? new Date().toISOString() 
         : null;
       
-      // Store the admin token in localStorage if available
+      // Store admin token if available
       const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
       if (adminUser?.token) {
         localStorage.setItem('admin_token', adminUser.token);

@@ -43,6 +43,8 @@ export default function BankTransferTableRow({
   // Handle confirming receipt
   const handleConfirmReceipt = async () => {
     setLocalProcessing(true);
+    toast.info("Traitement en cours...");
+    
     try {
       const success = await updateTransferStatus(item, 'received');
       if (success && onStatusUpdate) {
@@ -62,6 +64,8 @@ export default function BankTransferTableRow({
   // Handle rejecting transfer
   const handleRejectTransfer = async () => {
     setLocalProcessing(true);
+    toast.info("Traitement du rejet en cours...");
+    
     try {
       const success = await updateTransferStatus(item, 'rejected');
       if (success && onStatusUpdate) {
