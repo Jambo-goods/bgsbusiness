@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BankTransferItem } from "./types/bankTransfer";
-import { Check, ReceiptText, XCircle, ArrowDownUp, AlertTriangle, Hammer } from "lucide-react";
+import { Check, ReceiptText, XCircle, AlertTriangle, Hammer } from "lucide-react";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;

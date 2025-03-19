@@ -554,23 +554,38 @@ export const bankTransferService = {
         console.error("[FORÇAGE] Exception lors du recalcul du solde:", err);
       }
       
-      // 3. MISE À JOUR DIRECTE SQL: Contourner les triggers et validations en utilisant une méthode de mise à jour sans hook
+      // 3. Utiliser l'update conventionnel mais avec les champs obligatoires
       console.log("[FORÇAGE] Tentative de mise à jour directe du statut");
       const processedDate = new Date().toISOString();
       
-      // Préparer les données pour l'insertion/update
-      const updateData = {
-        id: transferId,
+      // Récupérer l'enregistrement complet pour l'upsert
+      const { data: fullTransferData, error: fullDataError } = await supabase
+        .from('bank_transfers')
+        .select('*')
+        .eq('id', transferId)
+        .single();
+        
+      if (fullDataError) {
+        console.error("[FORÇAGE] Impossible de récupérer l'enregistrement complet:", fullDataError);
+        return {
+          success: false,
+          message: `Erreur lors de la récupération des données complètes: ${fullDataError.message}`
+        };
+      }
+      
+      // Mettre à jour les champs spécifiques
+      const updatedTransfer = {
+        ...fullTransferData,
         status: 'received',
         processed: true,
         processed_at: processedDate,
         notes: `Mise à jour FORCÉE le ${new Date().toLocaleDateString('fr-FR')} par admin. Contournement des validations standard.`
       };
       
-      // Utilisation de upsert pour forcer la mise à jour
+      // Utilisation d'upsert pour forcer la mise à jour
       const { error: updateError } = await supabase
         .from('bank_transfers')
-        .upsert(updateData, { onConflict: 'id' });
+        .upsert(updatedTransfer);
       
       if (updateError) {
         console.error("[FORÇAGE] Erreur lors de la mise à jour directe:", updateError);
@@ -718,17 +733,16 @@ export const bankTransferService = {
       // Méthode 2: Upsert avec toutes les données
       if (patchError) {
         console.log("[DIRECT FORCE] Méthode 2: Upsert avec toutes les données");
-        const fullData = {
-          ...currentState,
-          status: 'received',
-          processed: true,
-          processed_at: new Date().toISOString(),
-          notes: (currentState.notes || '') + ' | Forcé manuellement le ' + new Date().toLocaleDateString('fr-FR')
-        };
         
         const { error: upsertError } = await supabase
           .from('bank_transfers')
-          .upsert(fullData);
+          .upsert({
+            ...currentState,
+            status: 'received',
+            processed: true,
+            processed_at: new Date().toISOString(),
+            notes: (currentState.notes || '') + ' | Forcé manuellement le ' + new Date().toLocaleDateString('fr-FR')
+          });
           
         if (upsertError) {
           console.error("[DIRECT FORCE] Échec méthode 2:", upsertError);

@@ -13,6 +13,7 @@ export function useBankTransfers(onSuccess: () => void) {
       console.log("Confirmation du dépôt pour l'ID:", item.id);
       const success = await bankTransferService.confirmDeposit(item, amount);
       if (success) {
+        toast.success("Dépôt confirmé avec succès");
         onSuccess();
       }
     } catch (error) {
@@ -29,6 +30,7 @@ export function useBankTransfers(onSuccess: () => void) {
       console.log("Rejet du dépôt pour l'ID:", item.id);
       const success = await bankTransferService.rejectDeposit(item);
       if (success) {
+        toast.success("Dépôt rejeté avec succès");
         onSuccess();
       }
     } catch (error) {
@@ -45,7 +47,10 @@ export function useBankTransfers(onSuccess: () => void) {
       console.log("Confirmation de la réception pour l'ID:", item.id);
       const success = await bankTransferService.confirmReceipt(item);
       if (success) {
+        toast.success("Réception confirmée avec succès");
         onSuccess();
+      } else {
+        toast.error("Échec de la confirmation. Essayez d'utiliser l'option 'FORCER'");
       }
     } catch (error) {
       console.error("Erreur lors de la confirmation de la réception:", error);
@@ -63,7 +68,25 @@ export function useBankTransfers(onSuccess: () => void) {
       // Afficher message d'information pour indiquer que l'opération est en cours
       toast.info("Tentative de mise à jour forcée en cours...", { duration: 5000 });
       
-      // Première tentative avec l'API standard
+      // Première tentative avec directForceBankTransfer
+      const directResult = await bankTransferService.directForceBankTransfer(item);
+      
+      if (directResult.success) {
+        toast.success("Mise à jour réussie! Virement marqué comme reçu.");
+        
+        // Ajouter un délai long pour s'assurer que tout est bien mis à jour
+        setTimeout(() => {
+          onSuccess();
+          toast.info("Rafraîchissement des données...");
+        }, 5000);
+        
+        return;
+      }
+      
+      console.error("[FORÇAGE] Première tentative échouée:", directResult.message);
+      toast.warning("Première tentative échouée, essai avec méthode alternative...");
+      
+      // Deuxième tentative avec l'autre méthode
       const result = await bankTransferService.forceUpdateToReceived(item.id);
       
       if (result.success) {
@@ -73,28 +96,26 @@ export function useBankTransfers(onSuccess: () => void) {
         setTimeout(() => {
           onSuccess();
           toast.info("Rafraîchissement des données...");
-        }, 3000);
-        
-        return;
-      }
-      
-      console.error("[FORÇAGE] Première tentative échouée:", result.message);
-      toast.warning("Première tentative échouée, essai avec méthode alternative...");
-      
-      // Deuxième tentative avec API RPC directe
-      const directResult = await bankTransferService.directForceBankTransfer(item);
-      
-      if (directResult.success) {
-        toast.success("Mise à jour réussie avec méthode alternative!");
-        
-        // Ajouter un délai encore plus long pour s'assurer que tout est bien mis à jour
-        setTimeout(() => {
-          onSuccess();
-          toast.info("Rafraîchissement des données...");
         }, 5000);
       } else {
-        toast.error(`Échec de toutes les tentatives: ${directResult.message}`);
-        console.error("[FORÇAGE] Toutes les tentatives ont échoué:", directResult);
+        toast.error(`Échec de toutes les tentatives: ${result.message}`);
+        console.error("[FORÇAGE] Toutes les tentatives ont échoué:", result);
+        
+        // Dernière tentative avec méthode d'update standard
+        const standardResult = await bankTransferService.updateBankTransfer(
+          item.id,
+          'received',
+          new Date().toISOString()
+        );
+        
+        if (standardResult.success) {
+          toast.success("Mise à jour réussie avec la méthode standard!");
+          setTimeout(() => {
+            onSuccess();
+          }, 3000);
+        } else {
+          toast.error("Toutes les méthodes ont échoué. Contactez l'équipe technique.");
+        }
       }
     } catch (error) {
       console.error("[FORÇAGE] Erreur critique lors du forçage:", error);
@@ -102,7 +123,7 @@ export function useBankTransfers(onSuccess: () => void) {
     } finally {
       setTimeout(() => {
         setProcessingId(null);
-      }, 1000);
+      }, 2000);
     }
   };
 
