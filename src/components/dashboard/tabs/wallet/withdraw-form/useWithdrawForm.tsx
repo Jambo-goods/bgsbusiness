@@ -65,16 +65,7 @@ export const useWithdrawForm = (balance: number, onWithdraw: () => Promise<void>
       const withdrawalId = data?.id;
       
       // Créer une notification pour la demande de retrait
-      await notificationService.createNotification({
-        title: "Demande de retrait envoyée",
-        description: `Votre demande de retrait de ${withdrawalAmount}€ a été enregistrée et sera traitée dans les plus brefs délais.`,
-        type: "withdrawal",
-        category: "info",
-        metadata: {
-          amount: withdrawalAmount,
-          withdrawalId: withdrawalId
-        }
-      });
+      await notificationService.withdrawalRequested(withdrawalAmount);
       
       // Create a transaction entry for the withdrawal request
       await supabase.from('wallet_transactions').insert({
