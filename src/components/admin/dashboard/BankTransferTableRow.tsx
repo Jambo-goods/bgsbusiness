@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -6,7 +5,7 @@ import { fr } from "date-fns/locale";
 import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2, Edit, Calendar } from "lucide-react";
+import { Check, X, Loader2, Edit, Calendar, RotateCcw } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,7 +51,9 @@ export default function BankTransferTableRow({
 
   const isReceiptConfirmed = item.processed === true;
   const isRejected = item.status === 'rejected';
+  const isCancelled = item.status === 'cancelled';
   const isPending = item.status === 'pending';
+  const isProcessed = isReceiptConfirmed || isRejected || isCancelled;
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
   
   const shouldPreventAction = () => {
@@ -173,6 +174,61 @@ export default function BankTransferTableRow({
     } catch (error) {
       console.error("Erreur de mise à jour:", error);
       toast.error("Une erreur s'est produite lors du rejet");
+    } finally {
+      setTimeout(() => setLocalProcessing(false), 1000);
+    }
+  };
+
+  const handleRestoreTransfer = async () => {
+    if (isProcessing || shouldPreventAction()) return;
+    
+    setLocalProcessing(true);
+    toast.info("Restauration en cours...");
+    
+    try {
+      console.log(`Restoring transfer ${item.id} to pending status`);
+      
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
+        'update-bank-transfer',
+        {
+          body: {
+            transferId: item.id,
+            status: 'pending',
+            isProcessed: false,
+            notes: `Restauré en statut attente le ${new Date().toLocaleDateString('fr-FR')}`,
+            userId: item.user_id
+          }
+        }
+      );
+      
+      if (edgeFunctionError) {
+        console.error("Erreur fonction edge:", edgeFunctionError);
+        toast.error(`Erreur de restauration: ${edgeFunctionError.message}`);
+        
+        const success = await updateTransferStatus(item, 'pending', null);
+        if (success && onStatusUpdate) {
+          toast.success("Virement restauré en statut 'En attente'");
+          onStatusUpdate();
+        } else {
+          toast.error("Échec de la restauration - veuillez réessayer");
+        }
+      } else {
+        console.log("Résultat fonction edge:", edgeFunctionData);
+        
+        if (edgeFunctionData.success) {
+          toast.success("Virement restauré en statut 'En attente'");
+          if (onStatusUpdate) {
+            setTimeout(() => {
+              onStatusUpdate();
+            }, 1000);
+          }
+        } else {
+          toast.error(`Échec de la restauration: ${edgeFunctionData.error || 'Erreur inconnue'}`);
+        }
+      }
+    } catch (error) {
+      console.error("Erreur de restauration:", error);
+      toast.error("Une erreur s'est produite lors de la restauration");
     } finally {
       setTimeout(() => setLocalProcessing(false), 1000);
     }
@@ -328,6 +384,24 @@ export default function BankTransferTableRow({
                 <span className="sr-only">Rejeter</span>
               </Button>
             </>
+          )}
+
+          {isProcessed && !isPending && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700"
+              onClick={handleRestoreTransfer}
+              disabled={isProcessing}
+              title="Restaurer en 'En attente'"
+            >
+              {isProcessing ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              )}
+              <span className="sr-only">Restaurer</span>
+            </Button>
           )}
         </div>
         
