@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -5,7 +6,7 @@ import { fr } from "date-fns/locale";
 import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2, AlertTriangle, Edit, Calendar } from "lucide-react";
+import { Check, X, Loader2, Edit } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,10 +15,10 @@ import {
   DialogFooter, DialogDescription 
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { Calendar } from "lucide-react";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;
@@ -252,7 +253,6 @@ export default function BankTransferTableRow({
     <TableRow className={isProcessing ? "bg-gray-50" : ""}>
       <TableCell className="font-medium">
         {formattedDate}
-        <div className="text-xs text-gray-500">Ref: {item.reference || 'N/A'}</div>
       </TableCell>
       
       <TableCell>
@@ -269,6 +269,10 @@ export default function BankTransferTableRow({
             {item.description || `Virement - ${item.amount || 0}€`}
           </span>
         </div>
+      </TableCell>
+      
+      <TableCell>
+        <span className="font-medium">{item.amount || 0} €</span>
       </TableCell>
       
       <TableCell>
