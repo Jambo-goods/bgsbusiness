@@ -7,12 +7,22 @@ import { useBankTransfers } from "./hooks/useBankTransfers";
 
 export default function BankTransferTable({ 
   pendingTransfers, 
-  isLoading
+  isLoading,
+  refreshData
 }: BankTransferTableProps) {
   const { processingId } = useBankTransfers();
 
   console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers?.length || 0);
   console.log("Transfer IDs in Table:", pendingTransfers?.map(t => t.id));
+
+  // Handle refresh after status update
+  const handleStatusUpdate = () => {
+    if (refreshData) {
+      setTimeout(() => {
+        refreshData();
+      }, 500);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -40,7 +50,6 @@ export default function BankTransferTable({
             <TableHead>Utilisateur</TableHead>
             <TableHead>Référence</TableHead>
             <TableHead>Réception</TableHead>
-            {/* Actions column removed */}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -49,6 +58,7 @@ export default function BankTransferTable({
               key={item.id}
               item={item}
               processingId={processingId}
+              onStatusUpdate={handleStatusUpdate}
             />
           ))}
         </TableBody>

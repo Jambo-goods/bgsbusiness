@@ -5,16 +5,23 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
+import { Button } from "@/components/ui/button";
+import { Check, X } from "lucide-react";
+import { useBankTransfers } from "./hooks/useBankTransfers";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;
   processingId: string | null;
+  onStatusUpdate?: () => void;
 }
 
 export default function BankTransferTableRow({
   item,
-  processingId
+  processingId,
+  onStatusUpdate
 }: BankTransferTableRowProps) {
+  const { confirmReceipt, rejectTransfer } = useBankTransfers();
+  
   // Format date nicely
   const formattedDate = item.created_at 
     ? format(new Date(item.created_at), 'dd MMM yyyy HH:mm', { locale: fr })
@@ -28,7 +35,20 @@ export default function BankTransferTableRow({
 
   const isReceiptConfirmed = item.processed === true;
   const isRejected = item.status === 'rejected';
+  const isPending = item.status === 'pending';
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
+  
+  // Handle confirming receipt
+  const handleConfirmReceipt = async () => {
+    await confirmReceipt(item);
+    if (onStatusUpdate) onStatusUpdate();
+  };
+  
+  // Handle rejecting transfer
+  const handleRejectTransfer = async () => {
+    await rejectTransfer(item);
+    if (onStatusUpdate) onStatusUpdate();
+  };
   
   return (
     <TableRow className={isProcessing ? "bg-gray-50" : ""}>
@@ -54,14 +74,38 @@ export default function BankTransferTableRow({
       </TableCell>
       
       <TableCell>
-        <StatusBadge
-          status={item.status}
-          hasMisspelledStatus={hasMisspelledStatus}
-          isProcessed={!!item.processed}
-        />
+        <div className="flex items-center gap-2">
+          <StatusBadge
+            status={item.status}
+            hasMisspelledStatus={hasMisspelledStatus}
+            isProcessed={!!item.processed}
+          />
+          
+          {isPending && (
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 bg-green-50 border-green-200 hover:bg-green-100 text-green-700"
+                onClick={handleConfirmReceipt}
+                disabled={isProcessing}
+              >
+                <Check className="h-3.5 w-3.5 mr-1" /> Reçu
+              </Button>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 bg-red-50 border-red-200 hover:bg-red-100 text-red-700"
+                onClick={handleRejectTransfer}
+                disabled={isProcessing}
+              >
+                <X className="h-3.5 w-3.5 mr-1" /> Rejeter
+              </Button>
+            </div>
+          )}
+        </div>
       </TableCell>
-      
-      {/* Actions column removed */}
     </TableRow>
   );
 }
