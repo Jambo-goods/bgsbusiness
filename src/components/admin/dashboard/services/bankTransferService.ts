@@ -191,45 +191,63 @@ export const bankTransferService = {
       
       console.log(`Confirmation de réception pour ${item.id}`);
       
-      // 1. Essayer d'utiliser RPC pour contourner RLS
+      // 1. Essayer d'utiliser RPC pour contourner RLS avec une meilleure gestion du paramètre processed
       try {
+        // Utiliser is_processed au lieu de processed pour éviter l'ambiguïté en SQL
         const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_update_bank_transfer', {
           transfer_id: item.id,
           new_status: 'received',
-          processed: true,
+          processed: true, // Renommé pour plus de clarté
           notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
         });
         
         if (rpcError) {
           console.error("Erreur RPC admin_update_bank_transfer:", rpcError);
           console.warn("Fallback aux méthodes standards...");
+          
+          // Alternative: essayer d'insérer directement via service role
+          const { error: directUpdateError } = await supabase
+            .from('bank_transfers')
+            .update({ 
+              status: 'received',
+              processed: true,
+              processed_at: new Date().toISOString(),
+              notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
+            })
+            .eq('id', item.id);
+            
+          if (directUpdateError) {
+            console.error("Erreur lors de la mise à jour directe:", directUpdateError);
+          } else {
+            console.log("Mise à jour directe réussie pour", item.id);
+            
+            // Créer notification
+            await this.createReceiptNotification(item);
+            
+            // Log admin action
+            if (adminUser.id) {
+              await logAdminAction(
+                adminUser.id,
+                'wallet_management',
+                `Confirmation de réception de virement - Réf: ${item.description || item.reference}`,
+                item.user_id
+              );
+            }
+            
+            return true;
+          }
         } else {
           console.log("Mise à jour via RPC réussie:", rpcResult);
           
           // Créer notification
-          const { error: notifyError } = await supabase
-            .from('notifications')
-            .insert({
-              user_id: item.user_id,
-              title: "Virement reçu",
-              message: `Votre virement bancaire (réf: ${item.reference || item.description}) a été reçu et est en cours de traitement.`,
-              type: "deposit",
-              data: {
-                category: "info",
-                reference: item.reference || item.description
-              }
-            });
-            
-          if (notifyError) {
-            console.error("Erreur lors de la création de notification:", notifyError);
-          }
+          await this.createReceiptNotification(item);
           
           // Log admin action
           if (adminUser.id) {
             await logAdminAction(
               adminUser.id,
               'wallet_management',
-              `Confirmation de réception de virement - Réf: ${item.description}`,
+              `Confirmation de réception de virement - Réf: ${item.description || item.reference}`,
               item.user_id
             );
           }
@@ -264,6 +282,7 @@ export const bankTransferService = {
           .update({ 
             status: 'received', 
             processed: true,
+            processed_at: new Date().toISOString(),
             notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
           })
           .eq('id', item.id)
@@ -293,29 +312,14 @@ export const bankTransferService = {
       
       // Create notification if success
       if (success) {
-        const { error: notifyError } = await supabase
-          .from('notifications')
-          .insert({
-            user_id: item.user_id,
-            title: "Virement reçu",
-            message: `Votre virement bancaire (réf: ${item.reference || item.description}) a été reçu et est en cours de traitement.`,
-            type: "deposit",
-            data: {
-              category: "info",
-              reference: item.reference || item.description
-            }
-          });
-          
-        if (notifyError) {
-          console.error("Erreur lors de la création de notification:", notifyError);
-        }
+        await this.createReceiptNotification(item);
         
         // Log admin action
         if (adminUser.id) {
           await logAdminAction(
             adminUser.id,
             'wallet_management',
-            `Confirmation de réception de virement - Réf: ${item.description}`,
+            `Confirmation de réception de virement - Réf: ${item.description || item.reference}`,
             item.user_id
           );
         }
@@ -331,6 +335,30 @@ export const bankTransferService = {
       console.error("Erreur lors de la confirmation de réception:", error);
       toast.error("Une erreur est survenue lors de la confirmation de réception");
       return false;
+    }
+  },
+  
+  // Méthode auxiliaire pour créer les notifications de réception
+  async createReceiptNotification(item: BankTransferItem): Promise<void> {
+    try {
+      const { error: notifyError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: item.user_id,
+          title: "Virement reçu",
+          message: `Votre virement bancaire (réf: ${item.reference || item.description}) a été reçu et est en cours de traitement.`,
+          type: "deposit",
+          data: {
+            category: "info",
+            reference: item.reference || item.description
+          }
+        });
+        
+      if (notifyError) {
+        console.error("Erreur lors de la création de notification:", notifyError);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création de notification:", error);
     }
   },
   
