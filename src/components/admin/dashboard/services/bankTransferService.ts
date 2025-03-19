@@ -46,15 +46,20 @@ export const bankTransferService = {
           }
         });
       
-      // 4. Utiliser le service de notification générique
+      // 4. Use the notification service properly
       try {
-        // Utiliser la méthode notify du service de notification
-        if (notificationService && typeof notificationService.notify === 'function') {
-          notificationService.notify("depositSuccess", { amount });
-          console.log("Notification de confirmation de dépôt envoyée");
-        } else {
-          console.log("Service de notification utilisé de manière générique");
-        }
+        // Create a deposit confirmed notification using createNotification
+        await notificationService.createNotification({
+          title: "Dépôt confirmé",
+          description: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
+          type: "deposit",
+          category: "success",
+          metadata: {
+            amount,
+            transaction_id: item.id
+          }
+        });
+        console.log("Notification de confirmation de dépôt envoyée");
       } catch (notifyError) {
         console.error("Erreur avec le service de notification:", notifyError);
       }

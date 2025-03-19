@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { notificationService } from "@/services/notifications";
 
 export default function BankTransferInstructions() {
   const [copied, setCopied] = useState(false);
@@ -52,8 +51,20 @@ export default function BankTransferInstructions() {
         return;
       }
       
-      // Create a notification for the deposit request
-      await notificationService.depositRequested(parseInt(transferAmount), bankDetails.reference);
+      // Create a notification directly with supabase
+      await supabase.from('notifications').insert({
+        user_id: userId,
+        title: "Demande de dépôt",
+        message: `Votre demande de dépôt de ${parseInt(transferAmount)}€ a été enregistrée (réf: ${bankDetails.reference})`,
+        type: "deposit",
+        data: {
+          category: "transaction",
+          amount: parseInt(transferAmount),
+          reference: bankDetails.reference,
+          status: "pending"
+        },
+        seen: false
+      });
       
       await supabase.from('bank_transfers').insert({
         user_id: userId,

@@ -64,17 +64,19 @@ export const useWithdrawForm = (balance: number, onWithdraw: () => Promise<void>
       
       const withdrawalId = data?.id;
       
-      // Create a notification for the withdrawal request
-      await notificationService.createNotification({
+      // Create a notification for the withdrawal request using supabase directly
+      await supabase.from('notifications').insert({
+        user_id: session.session.user.id,
         title: "Demande de retrait",
-        description: `Votre demande de retrait de ${withdrawalAmount.toFixed(2)}€ a été soumise`,
+        message: `Votre demande de retrait de ${withdrawalAmount.toFixed(2)}€ a été soumise`,
         type: "withdrawal",
-        category: "transaction",
-        metadata: {
+        data: {
+          category: "transaction",
           amount: withdrawalAmount,
           withdrawalId: withdrawalId,
           status: "pending"
-        }
+        },
+        seen: false
       });
       
       // Create a transaction entry for the withdrawal request
@@ -92,6 +94,9 @@ export const useWithdrawForm = (balance: number, onWithdraw: () => Promise<void>
       
       // Reset form
       setAmount("");
+      setAccountHolder("");
+      setBankName("");
+      setAccountNumber("");
       
       // Update wallet balance
       if (onWithdraw) {

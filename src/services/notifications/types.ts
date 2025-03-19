@@ -26,8 +26,8 @@ export interface Notification {
   description: string;
   date: Date;
   read: boolean;
-  type: NotificationType;
-  category?: NotificationCategory;
+  type: string;
+  category?: string;
   metadata: Record<string, any>;
 }
 
@@ -49,7 +49,7 @@ export const NotificationCategories = {
 export interface NotificationCreateParams {
   title: string;
   description: string;
-  type: NotificationType;
-  category?: NotificationCategory;
+  type: string;
+  category?: string;
   metadata?: Record<string, any>;
 }

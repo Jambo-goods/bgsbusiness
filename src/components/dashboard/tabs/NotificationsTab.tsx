@@ -23,9 +23,44 @@ export default function NotificationsTab() {
     
     try {
       console.log("Fetching notifications...");
-      const data = await notificationService.getNotifications();
-      console.log("Notifications fetched:", data.length);
-      setNotifications(data);
+      // Get user session
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        console.log("No session found");
+        setError("Veuillez vous connecter pour voir vos notifications");
+        return;
+      }
+      
+      // Get notifications directly from supabase
+      const { data, error: notifError } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.session.user.id)
+        .order('created_at', { ascending: false });
+      
+      if (notifError) throw notifError;
+      
+      if (!data) {
+        console.log("No notifications data returned");
+        setNotifications([]);
+        return;
+      }
+      
+      // Transform database notifications to UI notifications
+      const transformedNotifications: Notification[] = data.map(dbNotif => ({
+        id: dbNotif.id,
+        title: dbNotif.title,
+        description: dbNotif.message,
+        date: new Date(dbNotif.created_at),
+        read: dbNotif.seen,
+        type: dbNotif.type,
+        category: dbNotif.data?.category || 'info',
+        metadata: dbNotif.data || {}
+      }));
+      
+      console.log("Notifications fetched:", transformedNotifications.length);
+      setNotifications(transformedNotifications);
     } catch (err) {
       console.error("Error fetching notifications:", err);
       setError("Impossible de charger les notifications. Veuillez réessayer plus tard.");
@@ -40,15 +75,19 @@ export default function NotificationsTab() {
     fetchNotifications();
     
     // Set up real-time subscription
-    const unsubscribe = notificationService.setupRealtimeSubscription(() => {
-      console.log("Real-time notification update detected");
-      fetchNotifications();
-    });
+    const channel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'notifications' }, 
+        () => {
+          console.log("Real-time notification update detected");
+          fetchNotifications();
+        }
+      )
+      .subscribe();
     
     return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
+      supabase.removeChannel(channel);
     };
   }, [fetchNotifications]);
 
@@ -60,10 +99,24 @@ export default function NotificationsTab() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      await notificationService.markAllAsRead();
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        toast.error("Veuillez vous connecter pour marquer les notifications comme lues");
+        return;
+      }
+      
+      // Update notifications in the database
+      await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('user_id', session.session.user.id);
+      
+      // Update local state
       setNotifications(prev => 
         prev.map(notification => ({ ...notification, read: true }))
       );
+      
       toast.success("Toutes les notifications ont été marquées comme lues");
     } catch (err) {
       console.error("Error marking all as read:", err);
@@ -73,7 +126,13 @@ export default function NotificationsTab() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await notificationService.markAsRead(id);
+      // Update notification in the database
+      await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('id', id);
+      
+      // Update local state
       setNotifications(prev => 
         prev.map(notification => 
           notification.id === id ? { ...notification, read: true } : notification
@@ -87,11 +146,17 @@ export default function NotificationsTab() {
 
   const handleDeleteNotification = async (id: string) => {
     try {
-      await notificationService.deleteNotification(id);
+      // Delete notification from the database
+      await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
       
+      // Update local state
       setNotifications(prev => 
         prev.filter(notification => notification.id !== id)
       );
+      
       toast.success("Notification supprimée");
     } catch (error) {
       console.error("Error deleting notification:", error);
