@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
+import StatusBadge from "@/components/dashboard/tabs/wallet/withdrawal-table/StatusBadge";
 
 interface BankTransfer {
   id: string;
@@ -119,45 +120,6 @@ export default function BankTransfersPage() {
     }
   };
 
-  const getStatusLabel = (status: string | null) => {
-    switch (status) {
-      case 'pending':
-        return 'En attente';
-      case 'received':
-      case 'reçu':
-        return 'Reçu';
-      case 'processed':
-        return 'Traité';
-      case 'confirmed':
-        return 'Confirmé';
-      case 'rejected':
-        return 'Rejeté';
-      case 'cancelled':
-        return 'Annuler';
-      default:
-        return status || 'Inconnu';
-    }
-  };
-
-  const getStatusColor = (status: string | null) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'received':
-      case 'reçu':
-        return 'bg-blue-100 text-blue-800';
-      case 'processed':
-      case 'confirmed':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      case 'cancelled':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const handleEditTransfer = (transfer: BankTransfer) => {
     setSelectedTransfer(transfer);
     setEditStatus(transfer.status || "");
@@ -184,26 +146,72 @@ export default function BankTransfersPage() {
       
       console.log("Sending update:", updates);
       
+      // Mise à jour du virement bancaire
       const { data, error } = await supabase
         .from('bank_transfers')
         .update(updates)
         .eq('id', selectedTransfer.id)
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Erreur lors de la mise à jour:", error);
+        throw error;
+      }
       
       console.log("Updated transfer:", data);
       
+      // Si le statut est "received" ou "reçu", déclencher la mise à jour du solde du wallet
+      if (editStatus === "received" || editStatus === "reçu") {
+        await activateWalletUpdate(selectedTransfer);
+      }
+      
       toast.success("Virement bancaire mis à jour avec succès");
       
-      // Immediately refresh data after update
-      await fetchBankTransfers();
+      // Fermer le modal et réinitialiser les états
       closeEditModal();
+      
+      // Forcer une actualisation des données
+      await fetchBankTransfers();
     } catch (error) {
       console.error("Erreur lors de la mise à jour du virement:", error);
       toast.error("Une erreur est survenue lors de la mise à jour");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Fonction pour forcer la mise à jour du solde du wallet
+  const activateWalletUpdate = async (transfer: BankTransfer) => {
+    try {
+      console.log("Tentative de mise à jour du solde du wallet pour l'utilisateur:", transfer.user_id);
+      
+      // Utiliser la fonction RPC pour mettre à jour le solde du wallet
+      const { data, error } = await supabase.rpc('recalculate_wallet_balance', {
+        user_uuid: transfer.user_id
+      });
+      
+      if (error) {
+        console.error("Erreur lors de la mise à jour du solde:", error);
+        throw error;
+      }
+      
+      console.log("Solde du wallet mis à jour avec succès");
+      
+      // Créer une notification pour l'utilisateur
+      await supabase.from('notifications').insert({
+        user_id: transfer.user_id,
+        title: "Virement reçu",
+        message: `Votre virement de ${transfer.amount}€ (réf: ${transfer.reference}) a été reçu et ajouté à votre portefeuille.`,
+        type: "deposit",
+        data: {
+          category: "success",
+          amount: transfer.amount,
+          reference: transfer.reference
+        }
+      });
+      
+    } catch (error) {
+      console.error("Erreur lors de l'activation de la mise à jour du wallet:", error);
     }
   };
 
@@ -333,9 +341,7 @@ export default function BankTransfersPage() {
                         <TableCell className="font-medium">{transfer.amount?.toLocaleString()} €</TableCell>
                         <TableCell>{transfer.confirmed_at ? formatDate(transfer.confirmed_at) : "-"}</TableCell>
                         <TableCell>
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(transfer.status)}`}>
-                            {getStatusLabel(transfer.status)}
-                          </span>
+                          <StatusBadge status={transfer.status || 'pending'} />
                         </TableCell>
                         <TableCell>
                           <div className="max-w-xs truncate">
