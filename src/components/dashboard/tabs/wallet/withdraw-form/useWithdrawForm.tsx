@@ -52,18 +52,30 @@ export const useWithdrawForm = (balance: number, onWithdraw: () => Promise<void>
       };
       
       // Create withdrawal request
-      const { error } = await supabase.from('withdrawal_requests').insert({
+      const { error, data } = await supabase.from('withdrawal_requests').insert({
         user_id: session.session.user.id,
         amount: withdrawalAmount,
         status: 'pending',
         bank_info: bankInfo,
         requested_at: new Date().toISOString()
-      });
+      }).select('id').single();
       
       if (error) throw error;
       
-      // Send notification
+      const withdrawalId = data?.id;
+      
+      // Send notification for the withdrawal request
       await notificationService.withdrawalRequested(withdrawalAmount);
+      
+      // Create a transaction entry for the withdrawal request
+      await supabase.from('wallet_transactions').insert({
+        user_id: session.session.user.id,
+        type: 'withdrawal',
+        amount: withdrawalAmount,
+        status: 'pending',
+        description: `Demande de retrait #${withdrawalId} - En attente`,
+        created_at: new Date().toISOString()
+      });
       
       // Show success toast
       toast.success("Votre demande de retrait a été soumise avec succès");

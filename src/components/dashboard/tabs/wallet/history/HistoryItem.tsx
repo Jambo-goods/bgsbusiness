@@ -91,7 +91,7 @@ export default function HistoryItem({ item }: HistoryItemProps) {
       ? reference 
         ? `Virement bancaire confirmé (réf: ${reference})`
         : 'Dépôt'
-      : 'Retrait';
+      : 'Demande de retrait';
       
     return (
       <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
@@ -131,8 +131,11 @@ export default function HistoryItem({ item }: HistoryItemProps) {
     // It's a notification
     // Améliorer l'affichage des notifications pour les virements bancaires
     let title = item.title;
+    
     if (item.type === 'deposit' && reference) {
       title = `Virement bancaire confirmé (réf: ${reference})`;
+    } else if (item.type === 'withdrawal') {
+      title = `Demande de retrait ${item.title.toLowerCase()}`;
     }
     
     return (

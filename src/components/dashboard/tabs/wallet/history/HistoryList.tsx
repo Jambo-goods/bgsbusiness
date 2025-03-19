@@ -37,8 +37,13 @@ export default function HistoryList({ items }: HistoryListProps) {
     }
   });
   
-  // Filtrer les éléments
+  // Filtrer les éléments pour éviter les doublons
   const filteredItems = items.filter(item => {
+    // Les demandes de retrait doivent toujours être affichées
+    if (item.itemType === 'notification' && item.type === 'withdrawal') {
+      return true;
+    }
+    
     // Cas 1: L'élément n'a pas de référence DEP-XXXXX, on le garde toujours
     let ref = null;
     
