@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -161,23 +160,35 @@ export const bankTransferService = {
       
       console.log(`Confirmation de réception pour ${item.id}`);
       
-      // Direct UPDATE using service role (bypassing RLS)
-      const { error: directUpdateError } = await supabase
-        .from('bank_transfers')
-        .update({ 
-          status: 'received',
-          processed: true,
-          processed_at: new Date().toISOString(),
-          notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
-        })
-        .eq('id', item.id);
+      // Use the supabase client with custom options
+      const { data, error } = await supabase.rpc('admin_update_bank_transfer', {
+        transfer_id: item.id,
+        new_status: 'received',
+        is_processed: true,
+        processing_notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
+      });
+      
+      if (error) {
+        console.error("Erreur lors de la mise à jour via RPC:", error);
+        
+        // Fallback to direct update if RPC fails
+        const { error: directUpdateError } = await supabase
+          .from('bank_transfers')
+          .update({ 
+            status: 'received',
+            processed: true,
+            processed_at: new Date().toISOString(),
+            notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
+          })
+          .eq('id', item.id);
           
-      if (directUpdateError) {
-        console.error("Erreur lors de la mise à jour directe:", directUpdateError);
-        return false;
+        if (directUpdateError) {
+          console.error("Erreur lors de la mise à jour directe:", directUpdateError);
+          return false;
+        }
       }
       
-      console.log("Mise à jour directe réussie pour", item.id);
+      console.log("Mise à jour réussie pour", item.id);
       
       // Créer notification
       await this.createReceiptNotification(item);
@@ -239,57 +250,35 @@ export const bankTransferService = {
       
       // Determine if transfer should be marked as processed
       const isProcessed = status === 'received' || status === 'reçu' || status === 'rejected';
+      const processingNotes = `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`;
       
-      // Define the update data
-      const updateData = {
-        status: status,
-        processed: isProcessed,
-        processed_at: processedDate || (isProcessed ? new Date().toISOString() : null),
-        notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
-      };
+      // Try the RPC approach first
+      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_bank_transfer', {
+        transfer_id: transferId,
+        new_status: status,
+        is_processed: isProcessed,
+        processing_notes: processingNotes
+      });
       
-      console.log("Données de mise à jour:", updateData);
-      
-      // Direct UPDATE bypassing RLS
-      const { data, error } = await supabase
-        .from('bank_transfers')
-        .update(updateData)
-        .eq('id', transferId)
-        .select('*');
+      if (rpcError) {
+        console.error("Échec de la mise à jour via RPC:", rpcError);
         
-      if (error) {
-        console.error("Erreur lors de la mise à jour directe:", error);
+        // Fallback to direct update
+        const { data, error } = await supabase
+          .from('bank_transfers')
+          .update({
+            status: status,
+            processed: isProcessed,
+            processed_at: processedDate || (isProcessed ? new Date().toISOString() : null),
+            notes: processingNotes
+          })
+          .eq('id', transferId);
         
-        // Try RPC call as fallback
-        try {
-          const { data: rpcData, error: rpcError } = await supabase.rpc('admin_mark_bank_transfer', {
-            transfer_id: transferId,
-            new_status: status,
-            is_processed: isProcessed,
-            notes: `Mise à jour manuelle via RPC le ${new Date().toLocaleDateString('fr-FR')}`
-          });
-          
-          if (rpcError) {
-            console.error("Erreur lors de l'appel RPC:", rpcError);
-            return {
-              success: false,
-              message: `Échec via RPC: ${rpcError.message}`,
-              data: { rpcError }
-            };
-          }
-          
-          console.log("Mise à jour via RPC réussie:", rpcData);
+        if (error) {
+          console.error("Échec de la mise à jour directe:", error);
           return {
-            success: true,
-            message: "Mise à jour via RPC réussie",
-            data: rpcData
-          };
-        } catch (rpcError) {
-          console.error("Exception lors de l'appel RPC:", rpcError);
-          return {
-            success: false,
-            message: `Échec global: ${error.message}`,
-            data: { error, rpcError }
+            success: false, 
+            message: `Échec de la mise à jour: ${error.message}`
           };
         }
       }
@@ -310,6 +299,7 @@ export const bankTransferService = {
       }
       
       const success = updatedTransfer.status === status;
+      console.log("Résultat de la vérification:", success ? "Succès" : "Échec", updatedTransfer);
       
       // Update wallet balance if successful
       if (success && updatedTransfer.user_id && (status === 'received' || status === 'reçu')) {

@@ -42,6 +42,8 @@ export default function BankTransferTableRow({
   
   // Handle confirming receipt
   const handleConfirmReceipt = async () => {
+    if (isProcessing) return;
+    
     setLocalProcessing(true);
     toast.info("Traitement en cours...");
     
@@ -57,12 +59,14 @@ export default function BankTransferTableRow({
       console.error("Erreur de mise à jour:", error);
       toast.error("Une erreur s'est produite lors de la mise à jour");
     } finally {
-      setLocalProcessing(false);
+      setTimeout(() => setLocalProcessing(false), 500);
     }
   };
   
   // Handle rejecting transfer
   const handleRejectTransfer = async () => {
+    if (isProcessing) return;
+    
     setLocalProcessing(true);
     toast.info("Traitement du rejet en cours...");
     
@@ -78,7 +82,7 @@ export default function BankTransferTableRow({
       console.error("Erreur de mise à jour:", error);
       toast.error("Une erreur s'est produite lors du rejet");
     } finally {
-      setLocalProcessing(false);
+      setTimeout(() => setLocalProcessing(false), 500);
     }
   };
   

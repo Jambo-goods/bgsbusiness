@@ -101,7 +101,8 @@ export function useBankTransfers() {
       toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
       return false;
     } finally {
-      setProcessingId(null);
+      // Add small delay before clearing processing state for UI feedback
+      setTimeout(() => setProcessingId(null), 500);
     }
   };
 

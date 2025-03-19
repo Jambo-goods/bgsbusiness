@@ -22,7 +22,7 @@ export default function BankTransferTable({
       // Add a slight delay to ensure database operations have completed
       setTimeout(() => {
         refreshData();
-      }, 1000);
+      }, 1500);
     }
   };
 
@@ -35,6 +35,13 @@ export default function BankTransferTable({
     }, 10000);
     
     return () => clearInterval(intervalId);
+  }, [refreshData]);
+
+  // Initial data load
+  useEffect(() => {
+    if (refreshData) {
+      refreshData();
+    }
   }, [refreshData]);
 
   if (isLoading) {
