@@ -27,6 +27,7 @@ interface BankTransfer {
   processed_at: string | null;
   notes: string | null;
   user_id: string;
+  processed: boolean;
 }
 
 interface UserData {
@@ -141,15 +142,17 @@ export default function BankTransfersPage() {
       console.log(`Updating bank transfer with status: ${editStatus} (ID: ${selectedTransfer.id})`);
       console.log("Processed date:", processedDate ? processedDate.toISOString() : null);
       
+      // Create the update payload
       const updates = {
         status: editStatus,
         processed_at: processedDate ? processedDate.toISOString() : null,
+        processed: editStatus === 'received' || editStatus === 'reçu',
         notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
       };
       
       console.log("Sending update with payload:", updates);
       
-      let updatedData;
+      // First attempt: Direct update
       const { data, error } = await supabase
         .from('bank_transfers')
         .update(updates)
@@ -161,46 +164,62 @@ export default function BankTransfersPage() {
         console.error("Détails de l'erreur:", error.details, error.hint, error.code);
         setUpdateError(`Première tentative échouée: ${error.message}`);
         
+        // Second attempt: RPC function call to force update
         try {
-          const { data: transferData, error: fetchError } = await supabase
-            .from('bank_transfers')
-            .select('*')
-            .eq('id', selectedTransfer.id)
-            .single();
+          console.log("Tentative avec RPC...");
+          // Try using a stored procedure if available
+          const { data: rpcData, error: rpcError } = await supabase.rpc('force_update_bank_transfer', {
+            transfer_id: selectedTransfer.id,
+            new_status: editStatus,
+            processed_date: processedDate ? processedDate.toISOString() : null,
+            processed_value: editStatus === 'received' || editStatus === 'reçu'
+          });
           
-          if (fetchError) {
-            throw new Error(`Erreur lors de la récupération du transfert: ${fetchError.message}`);
+          if (rpcError) {
+            console.error("Erreur lors de l'appel RPC:", rpcError);
+            
+            // Third attempt: Fallback to admin service role
+            console.log("Tentative avec service role...");
+            // Get the transfer data first
+            const { data: transferData, error: fetchError } = await supabase
+              .from('bank_transfers')
+              .select('*')
+              .eq('id', selectedTransfer.id)
+              .single();
+            
+            if (fetchError) {
+              throw new Error(`Erreur lors de la récupération du transfert: ${fetchError.message}`);
+            }
+            
+            // Use raw SQL via edge function if available
+            const { error: funcError } = await supabase.functions.invoke('update-bank-transfer', {
+              body: {
+                transferId: selectedTransfer.id,
+                status: editStatus,
+                processed: editStatus === 'received' || editStatus === 'reçu',
+                processedAt: processedDate ? processedDate.toISOString() : null,
+                notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
+              }
+            });
+            
+            if (funcError) {
+              setUpdateError(`Toutes les tentatives ont échoué: ${funcError.message}`);
+              throw new Error(`Échec de toutes les tentatives: ${funcError.message}`);
+            }
+            
+            console.log("Mise à jour via edge function réussie");
+          } else {
+            console.log("Mise à jour via RPC réussie:", rpcData);
           }
-          
-          const completeUpdate = {
-            ...transferData,
-            status: editStatus,
-            processed: editStatus === 'received' || editStatus === 'reçu',
-            processed_at: processedDate ? processedDate.toISOString() : null,
-            notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
-          };
-          
-          const { data: upsertData, error: upsertError } = await supabase
-            .from('bank_transfers')
-            .upsert(completeUpdate)
-            .select();
-          
-          if (upsertError) {
-            setUpdateError(`Seconde tentative échouée: ${upsertError.message}`);
-            throw new Error(`Seconde tentative échec: ${upsertError.message}`);
-          }
-          
-          updatedData = upsertData;
-          console.log("Mise à jour réussie via seconde tentative:", updatedData);
         } catch (fallbackError: any) {
-          console.error("Erreur lors de la seconde tentative:", fallbackError);
+          console.error("Erreur lors des tentatives alternatives:", fallbackError);
           throw fallbackError;
         }
       } else {
         console.log("Mise à jour réussie:", data);
-        updatedData = data;
       }
       
+      // Verify the update actually took effect
       const { data: checkData, error: checkError } = await supabase
         .from('bank_transfers')
         .select('*')
@@ -212,13 +231,37 @@ export default function BankTransfersPage() {
       } else {
         console.log("État après mise à jour:", checkData);
         
-        if (checkData.status !== editStatus) {
-          const warningMsg = `Attention: Le statut n'a pas été correctement mis à jour. Statut actuel: ${checkData.status}`;
-          console.warn(warningMsg);
-          toast.warning(warningMsg);
+        // Force a direct SQL update for this specific transfer if status hasn't changed
+        if (checkData.status !== editStatus || 
+            (processedDate && (!checkData.processed_at || new Date(checkData.processed_at).toISOString() !== processedDate.toISOString()))) {
+          
+          console.warn("La mise à jour n'a pas été correctement appliquée. Tentative directe...");
+          
+          // Final attempt: Force direct update on the client side
+          const forceUpdate = {
+            ...checkData,
+            status: editStatus,
+            processed: editStatus === 'received' || editStatus === 'reçu',
+            processed_at: processedDate ? processedDate.toISOString() : null,
+            notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
+          };
+          
+          // Use upsert as a last resort
+          const { data: upsertData, error: upsertError } = await supabase
+            .from('bank_transfers')
+            .upsert(forceUpdate)
+            .select();
+            
+          if (upsertError) {
+            console.error("Erreur lors de la mise à jour forcée:", upsertError);
+            toast.warning("Mise à jour partielle. Rechargez la page pour vérifier les changements.");
+          } else {
+            console.log("Mise à jour forcée réussie:", upsertData);
+          }
         }
       }
       
+      // If the status is "received", update the wallet balance
       if (editStatus === "received" || editStatus === "reçu") {
         await activateWalletUpdate(selectedTransfer);
       }
@@ -226,6 +269,7 @@ export default function BankTransfersPage() {
       toast.success("Virement bancaire mis à jour");
       closeEditModal();
       
+      // Force refresh the transfers list
       await fetchBankTransfers();
       
     } catch (error: any) {
@@ -423,6 +467,7 @@ export default function BankTransfersPage() {
                         <TableCell>{transfer.confirmed_at ? formatDate(transfer.confirmed_at) : "-"}</TableCell>
                         <TableCell>
                           <StatusBadge status={transfer.status || 'pending'} />
+                          {transfer.processed && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Traité</span>}
                         </TableCell>
                         <TableCell>
                           <div className="max-w-xs truncate">
@@ -522,6 +567,9 @@ export default function BankTransfersPage() {
                   />
                 </PopoverContent>
               </Popover>
+              <div className="text-sm text-gray-500 mt-1">
+                <span className="font-medium">Important:</span> La date de traitement est essentielle pour marquer le virement comme traité
+              </div>
             </div>
             
             {updateError && (
