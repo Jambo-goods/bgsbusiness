@@ -67,7 +67,10 @@ export default function WithdrawalRequestsTable() {
                 break;
               case 'received':
                 console.log("Withdrawal request received notification");
-                notificationService.withdrawalReceived(amount);
+                notificationService.withdrawalReceived(amount)
+                  .catch(error => {
+                    console.error("Error sending received withdrawal notification:", error);
+                  });
                 toast.info(`Votre demande de retrait de ${amount}€ a été reçue`, {
                   description: "Elle est en cours d'examen."
                 });
@@ -86,7 +89,10 @@ export default function WithdrawalRequestsTable() {
               case 'paid':
                 // Handle paid status notification
                 console.log("Withdrawal paid notification");
-                notificationService.withdrawalPaid(amount);
+                notificationService.withdrawalPaid(amount)
+                  .catch(error => {
+                    console.error("Error sending paid withdrawal notification:", error);
+                  });
                 toast.success(`Votre retrait de ${amount}€ a été payé`, {
                   description: "Le montant a été transféré sur votre compte bancaire."
                 });
@@ -167,6 +173,7 @@ export default function WithdrawalRequestsTable() {
               <TableHead>Banque</TableHead>
               <TableHead>Compte</TableHead>
               <TableHead>Statut</TableHead>
+              <TableHead>Date de traitement</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>

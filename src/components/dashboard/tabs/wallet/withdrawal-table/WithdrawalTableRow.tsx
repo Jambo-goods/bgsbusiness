@@ -32,6 +32,7 @@ export default function WithdrawalTableRow({ request, onEdit }: WithdrawalTableR
       <TableCell>{request.bank_info?.bankName || "-"}</TableCell>
       <TableCell>{maskAccountNumber(request.bank_info?.accountNumber || "")}</TableCell>
       <TableCell><StatusBadge status={request.status} /></TableCell>
+      <TableCell>{request.processed_at ? formatDate(request.processed_at) : "-"}</TableCell>
       <TableCell>
         <Button 
           variant="ghost" 
