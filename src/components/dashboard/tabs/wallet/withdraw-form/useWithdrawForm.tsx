@@ -64,7 +64,7 @@ export const useWithdrawForm = (balance: number, onWithdraw: () => Promise<void>
       
       const withdrawalId = data?.id;
       
-      // Créer une notification pour la demande de retrait
+      // Create a notification for the withdrawal request
       await notificationService.withdrawalRequested(withdrawalAmount);
       
       // Create a transaction entry for the withdrawal request

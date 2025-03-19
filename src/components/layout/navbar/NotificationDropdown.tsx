@@ -20,6 +20,7 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { getNotificationTypeIcon, getNotificationCategoryIcon } from "../dashboard/tabs/notifications/utils";
 
 interface NotificationDropdownProps {
   isOpen: boolean;
@@ -98,36 +99,6 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
     navigate("/dashboard?tab=notifications");
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'deposit':
-      case 'withdrawal':
-        return <Wallet className="h-4 w-4 text-blue-500" />;
-      case 'investment':
-        return <Briefcase className="h-4 w-4 text-green-500" />;
-      case 'security':
-        return <Shield className="h-4 w-4 text-purple-500" />;
-      case 'marketing':
-        return <Megaphone className="h-4 w-4 text-orange-500" />;
-      default:
-        return <Bell className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getCategoryIcon = (category?: string) => {
-    switch (category) {
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'info':
-      default:
-        return <Info className="h-4 w-4 text-blue-500" />;
-    }
-  };
-
   const formatDate = (date: Date) => {
     return formatDistanceToNow(date, {
       addSuffix: true,
@@ -181,7 +152,7 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
             >
               <div className="flex items-start gap-2">
                 <div className="mt-0.5">
-                  {getTypeIcon(notification.type)}
+                  {getNotificationTypeIcon(notification.type)}
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">

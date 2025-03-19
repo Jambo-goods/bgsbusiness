@@ -1,10 +1,24 @@
 
-import { Json } from "@/integrations/supabase/types";
+// Basic notification type definitions
+export interface NotificationData {
+  category?: string;
+  amount?: number;
+  reference?: string;
+  status?: string;
+  withdrawalId?: string;
+  [key: string]: any;
+}
 
-export type NotificationType = 
-  | 'deposit' | 'withdrawal' | 'investment' | 'security' | 'marketing';
-
-export type NotificationCategory = 'info' | 'success' | 'warning' | 'error';
+export interface DatabaseNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  user_id: string;
+  created_at: string;
+  seen: boolean;
+  data?: NotificationData;
+}
 
 export interface Notification {
   id: string;
@@ -12,10 +26,25 @@ export interface Notification {
   description: string;
   date: Date;
   read: boolean;
-  type: NotificationType;
-  category?: NotificationCategory;
-  metadata?: Record<string, any>;
+  type: string;
+  category?: string;
+  metadata: Record<string, any>;
 }
+
+export type NotificationType = 'deposit' | 'withdrawal' | 'investment' | 'security' | 'marketing' | 'info' | 'success' | 'error' | 'warning';
+export type NotificationCategory = 'system' | 'transaction' | 'investment' | 'security' | 'marketing' | 'info' | 'success' | 'error' | 'warning';
+
+export const NotificationCategories = {
+  SYSTEM: 'system' as NotificationCategory,
+  TRANSACTION: 'transaction' as NotificationCategory,
+  INVESTMENT: 'investment' as NotificationCategory,
+  SECURITY: 'security' as NotificationCategory,
+  MARKETING: 'marketing' as NotificationCategory,
+  INFO: 'info' as NotificationCategory,
+  SUCCESS: 'success' as NotificationCategory,
+  ERROR: 'error' as NotificationCategory,
+  WARNING: 'warning' as NotificationCategory,
+};
 
 export interface NotificationCreateParams {
   title: string;
@@ -23,32 +52,4 @@ export interface NotificationCreateParams {
   type: NotificationType;
   category?: NotificationCategory;
   metadata?: Record<string, any>;
-}
-
-export const NotificationCategories = {
-  deposit: { icon: 'wallet', title: 'Portefeuille' },
-  withdrawal: { icon: 'wallet', title: 'Portefeuille' },
-  investment: { icon: 'briefcase', title: 'Investissement' },
-  security: { icon: 'shield', title: 'Sécurité' },
-  marketing: { icon: 'megaphone', title: 'Actualités' },
-};
-
-export type NotificationData = {
-  category?: NotificationCategory;
-  amount?: number;
-  reference?: string;
-  transaction_id?: string;
-  status?: string;
-  [key: string]: any;
-}
-
-export interface DatabaseNotification {
-  id: string;
-  title: string;
-  message: string;  // Used in DB instead of description
-  type: string;
-  user_id: string;
-  created_at: string;
-  seen: boolean;    // Used in DB instead of read
-  data: NotificationData; // JSON in database
 }

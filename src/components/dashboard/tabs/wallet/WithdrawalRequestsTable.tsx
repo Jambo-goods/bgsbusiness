@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -51,58 +50,72 @@ export default function WithdrawalRequestsTable() {
               case 'scheduled':
               case 'sheduled':
                 notificationService.withdrawalScheduled(amount)
+                  .then(() => {
+                    toast.info(`Votre demande de retrait de ${amount}€ a été programmée`);
+                  })
                   .catch(error => {
                     console.error("Error sending scheduled withdrawal notification:", error);
                   });
-                toast.info(`Votre demande de retrait de ${amount}€ a été programmée`);
                 break;
               case 'approved':
                 notificationService.withdrawalValidated(amount)
+                  .then(() => {
+                    toast.success(`Votre demande de retrait de ${amount}€ a été validée`);
+                  })
                   .catch(error => {
                     console.error("Error sending validated withdrawal notification:", error);
                   });
-                toast.success(`Votre demande de retrait de ${amount}€ a été validée`);
                 break;
               case 'completed':
                 notificationService.withdrawalCompleted(amount)
+                  .then(() => {
+                    toast.success(`Votre retrait de ${amount}€ a été effectué avec succès`);
+                  })
                   .catch(error => {
                     console.error("Error sending completed withdrawal notification:", error);
                   });
-                toast.success(`Votre retrait de ${amount}€ a été effectué avec succès`);
                 break;
               case 'rejected':
                 notificationService.withdrawalRejected(amount)
+                  .then(() => {
+                    toast.error(`Votre demande de retrait de ${amount}€ a été refusée`);
+                  })
                   .catch(error => {
                     console.error("Error sending rejected withdrawal notification:", error);
                   });
-                toast.error(`Votre demande de retrait de ${amount}€ a été refusée`);
                 break;
               case 'received':
                 notificationService.withdrawalReceived(amount)
+                  .then(() => {
+                    toast.info(`Votre demande de retrait de ${amount}€ a été reçue`, {
+                      description: "Elle est en cours d'examen."
+                    });
+                  })
                   .catch(error => {
                     console.error("Error sending received withdrawal notification:", error);
                   });
-                toast.info(`Votre demande de retrait de ${amount}€ a été reçue`, {
-                  description: "Elle est en cours d'examen."
-                });
                 break;
               case 'confirmed':
                 notificationService.withdrawalConfirmed(amount)
+                  .then(() => {
+                    toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
+                      description: "Elle est en cours de traitement."
+                    });
+                  })
                   .catch(error => {
                     console.error("Error sending confirmed withdrawal notification:", error);
                   });
-                toast.success(`Votre demande de retrait de ${amount}€ a été confirmée`, {
-                  description: "Elle est en cours de traitement."
-                });
                 break;
               case 'paid':
                 notificationService.withdrawalPaid(amount)
+                  .then(() => {
+                    toast.success(`Votre retrait de ${amount}€ a été payé`, {
+                      description: "Le montant a été transféré sur votre compte bancaire."
+                    });
+                  })
                   .catch(error => {
                     console.error("Error sending paid withdrawal notification:", error);
                   });
-                toast.success(`Votre retrait de ${amount}€ a été payé`, {
-                  description: "Le montant a été transféré sur votre compte bancaire."
-                });
                 break;
             }
           }

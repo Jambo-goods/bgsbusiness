@@ -1,229 +1,260 @@
-// Generic notification service with improved compatibility
-
+import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
+import { 
+  Notification, 
+  NotificationType, 
+  NotificationCategory, 
+  NotificationCreateParams, 
+  DatabaseNotification 
+} from "./types";
 
-// Basic notification types to satisfy imports
-export type Notification = {
-  id: string;
-  title: string;
-  message: string;
-  type: NotificationType;
-  category: NotificationCategory;
-  read: boolean;
-  created_at: string;
+export type { 
+  Notification, 
+  NotificationType, 
+  NotificationCategory,
+  NotificationCreateParams
 };
 
-export type NotificationType = 'info' | 'success' | 'error' | 'warning';
-export type NotificationCategory = 'system' | 'transaction' | 'investment' | 'security' | 'marketing';
+export { NotificationCategories } from "./types";
 
-export const NotificationCategories = {
-  SYSTEM: 'system' as NotificationCategory,
-  TRANSACTION: 'transaction' as NotificationCategory,
-  INVESTMENT: 'investment' as NotificationCategory,
-  SECURITY: 'security' as NotificationCategory,
-  MARKETING: 'marketing' as NotificationCategory,
-};
+class NotificationService {
+  private async createNotification(params: NotificationCreateParams): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
 
-class GenericNotificationService {
-  private showNotification(title: string, message: string, type: "info" | "success" | "error" | "warning" = "info") {
-    switch (type) {
-      case "success":
-        toast.success(title, { description: message });
-        break;
-      case "error":
-        toast.error(title, { description: message });
-        break;
-      case "warning":
-        toast.warning(title, { description: message });
-        break;
-      default:
-        toast.info(title, { description: message });
-    }
+    const id = uuidv4();
+    const { title, description, type, category = 'info', metadata = {} } = params;
+
+    await supabase.from('notifications').insert({
+      id,
+      title,
+      message: description,
+      type,
+      user_id: userData.user.id,
+      created_at: new Date().toISOString(),
+      seen: false,
+      data: { category, ...metadata }
+    });
   }
 
-  // Get all notifications for a user
-  public getNotifications(userId: string) {
-    console.log("Getting notifications for user", userId);
-    return Promise.resolve([]);
+  async markAsRead(notificationId: string): Promise<void> {
+    await supabase
+      .from('notifications')
+      .update({ seen: true })
+      .eq('id', notificationId);
   }
 
-  // Get unread count for notifications
-  public getUnreadCount(userId: string) {
-    return Promise.resolve(0);
+  async deleteNotification(notificationId: string): Promise<void> {
+    await supabase
+      .from('notifications')
+      .delete()
+      .eq('id', notificationId);
   }
 
-  // Mark a notification as read
-  public markAsRead(notificationId: string) {
-    console.log("Marking notification as read", notificationId);
-    return Promise.resolve(true);
+  async getNotifications(): Promise<Notification[]> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return [];
+
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userData.user.id)
+      .order('created_at', { ascending: false });
+
+    if (error || !data) return [];
+
+    return data.map(this.mapDatabaseToNotification);
   }
 
-  // Mark all notifications as read
-  public markAllAsRead(userId: string) {
-    console.log("Marking all notifications as read for user", userId);
-    return Promise.resolve(true);
+  async getUnreadCount(): Promise<number> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return 0;
+
+    const { count, error } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userData.user.id)
+      .eq('seen', false);
+
+    return count || 0;
   }
 
-  // Set up realtime subscription
-  public setupRealtimeSubscription(userId: string, callback: () => void) {
-    console.log("Setting up realtime subscription for user", userId);
-    return () => {}; // Cleanup function
+  async markAllAsRead(): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+
+    await supabase
+      .from('notifications')
+      .update({ seen: true })
+      .eq('user_id', userData.user.id)
+      .eq('seen', false);
   }
 
-  // Notification methods
-  public depositRequested(params: any = {}) {
-    this.notify("depositRequested", params);
+  async setupRealtimeSubscription(callback: () => void): Promise<() => void> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return () => {};
+
+    const channel = supabase
+      .channel('notifications_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userData.user.id}`
+      }, () => {
+        callback();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }
 
-  public depositSuccess(params: any = {}) {
-    this.notify("depositSuccess", params);
-  }
-
-  public withdrawalRequested(params: any = {}) {
-    this.notify("withdrawalRequested", params);
-  }
-
-  public withdrawalScheduled(params: any = {}) {
-    this.notify("withdrawalScheduled", params);
-  }
-
-  public withdrawalValidated(params: any = {}) {
-    this.notify("withdrawalValidated", params);
-  }
-
-  public withdrawalCompleted(params: any = {}) {
-    this.notify("withdrawalCompleted", params);
-  }
-
-  public withdrawalRejected(params: any = {}) {
-    this.notify("withdrawalRejected", params);
-  }
-
-  public withdrawalReceived(params: any = {}) {
-    this.notify("withdrawalReceived", params);
-  }
-
-  public withdrawalConfirmed(params: any = {}) {
-    this.notify("withdrawalConfirmed", params);
-  }
-
-  public withdrawalPaid(params: any = {}) {
-    this.notify("withdrawalPaid", params);
-  }
-
-  public insufficientFunds(params: any = {}) {
-    this.notify("insufficientFunds", params);
-  }
-
-  public investmentConfirmed(params: any = {}) {
-    this.notify("investmentConfirmed", params);
-  }
-
-  public newInvestmentOpportunity(params: any = {}) {
-    this.notify("newInvestmentOpportunity", params);
-  }
-
-  // Generic notify method
-  public notify(type: string, params: any = {}) {
-    // Map des notifications avec titres et messages par défaut
-    const notifications: Record<string, { title: string; message: string; type: "info" | "success" | "error" | "warning" }> = {
-      // Dépôts
-      depositRequested: {
-        title: "Dépôt demandé",
-        message: `Votre demande de dépôt a été enregistrée avec succès.`,
-        type: "success"
-      },
-      depositSuccess: {
-        title: "Dépôt validé",
-        message: `Votre dépôt a été validé et ajouté à votre portefeuille.`,
-        type: "success"
-      },
-      // Retraits
-      withdrawalRequested: {
-        title: "Demande de retrait enregistrée",
-        message: `Votre demande de retrait a été enregistrée et sera traitée prochainement.`,
-        type: "success"
-      },
-      withdrawalScheduled: {
-        title: "Retrait planifié",
-        message: `Votre retrait a été planifié et sera traité prochainement.`,
-        type: "info"
-      },
-      withdrawalValidated: {
-        title: "Retrait validé",
-        message: `Votre demande de retrait a été validée et sera traitée prochainement.`,
-        type: "success"
-      },
-      withdrawalCompleted: {
-        title: "Retrait effectué",
-        message: `Votre retrait a été effectué avec succès.`,
-        type: "success"
-      },
-      withdrawalRejected: {
-        title: "Retrait refusé",
-        message: `Votre demande de retrait a été refusée.`,
-        type: "error"
-      },
-      withdrawalReceived: {
-        title: "Retrait reçu",
-        message: `Votre retrait a été reçu.`,
-        type: "success"
-      },
-      withdrawalConfirmed: {
-        title: "Retrait confirmé",
-        message: `Votre retrait a été confirmé.`,
-        type: "success"
-      },
-      withdrawalPaid: {
-        title: "Retrait payé",
-        message: `Votre retrait a été payé.`,
-        type: "success"
-      },
-      // Investissements
-      insufficientFunds: {
-        title: "Fonds insuffisants",
-        message: `Vous n'avez pas suffisamment de fonds dans votre portefeuille pour effectuer cette opération.`,
-        type: "error"
-      },
-      investmentConfirmed: {
-        title: "Investissement confirmé",
-        message: `Votre investissement a été confirmé.`,
-        type: "success"
-      },
-      newInvestmentOpportunity: {
-        title: "Nouvelle opportunité d'investissement",
-        message: `Une nouvelle opportunité d'investissement est disponible.`,
-        type: "info"
+  // Deposit notifications
+  async depositRequested(amount: number, reference?: string): Promise<void> {
+    return this.createNotification({
+      title: "Virement bancaire confirmé",
+      description: `Vous avez confirmé avoir effectué un virement bancaire de ${amount}€${reference ? ` avec la référence ${reference}` : ''}`,
+      type: "deposit",
+      category: "info",
+      metadata: { 
+        amount,
+        reference,
+        timestamp: new Date().toISOString()
       }
-    };
-
-    // Utiliser les notifications prédéfinies ou une notification générique
-    const notification = notifications[type] || {
-      title: "Notification",
-      message: "Une mise à jour a été effectuée.",
-      type: "info" as const
-    };
-
-    // Remplacer les placeholders dans le message si des paramètres sont fournis
-    let finalMessage = notification.message;
-    if (params) {
-      Object.keys(params).forEach(key => {
-        finalMessage = finalMessage.replace(`{${key}}`, params[key]);
-      });
-    }
-
-    this.showNotification(notification.title, finalMessage, notification.type);
+    });
   }
 
-  // Other methods for backward compatibility
-  public deposit(params: any = {}) {
-    this.notify("depositSuccess", params);
+  async depositSuccess(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Dépôt validé",
+      description: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
+      type: "deposit",
+      category: "success",
+      metadata: { amount }
+    });
   }
 
-  public withdrawal(params: any = {}) {
-    this.notify("withdrawalCompleted", params);
+  // Withdrawal notifications
+  async withdrawalRequested(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Demande de retrait soumise",
+      description: `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`,
+      type: "withdrawal",
+      category: "info",
+      metadata: { 
+        amount,
+        status: "submitted"
+      }
+    });
+  }
+
+  async withdrawalScheduled(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait planifié",
+      description: `Votre retrait de ${amount}€ a été planifié et sera traité prochainement.`,
+      type: "withdrawal",
+      category: "info",
+      metadata: { amount }
+    });
+  }
+
+  async withdrawalValidated(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait validé",
+      description: `Votre demande de retrait de ${amount}€ a été validée et sera traitée prochainement.`,
+      type: "withdrawal",
+      category: "success",
+      metadata: { amount }
+    });
+  }
+
+  async withdrawalCompleted(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait effectué",
+      description: `Votre retrait de ${amount}€ a été effectué avec succès.`,
+      type: "withdrawal",
+      category: "success",
+      metadata: { amount }
+    });
+  }
+
+  async withdrawalRejected(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait refusé",
+      description: `Votre demande de retrait de ${amount}€ a été refusée.`,
+      type: "withdrawal",
+      category: "error",
+      metadata: { amount }
+    });
+  }
+
+  async withdrawalReceived(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait reçu",
+      description: `Votre demande de retrait de ${amount}€ a été reçue et est en cours d'examen.`,
+      type: "withdrawal",
+      category: "info",
+      metadata: { amount }
+    });
+  }
+
+  async withdrawalConfirmed(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait confirmé",
+      description: `Votre demande de retrait de ${amount}€ a été confirmée et est en cours de traitement.`,
+      type: "withdrawal",
+      category: "success",
+      metadata: { amount }
+    });
+  }
+
+  async withdrawalPaid(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Retrait payé",
+      description: `Votre retrait de ${amount}€ a été payé. Le montant a été transféré sur votre compte bancaire.`,
+      type: "withdrawal",
+      category: "success",
+      metadata: { amount }
+    });
+  }
+
+  // Other notifications
+  async investmentConfirmed(amount: number, projectName: string): Promise<void> {
+    return this.createNotification({
+      title: "Investissement confirmé",
+      description: `Votre investissement de ${amount}€ dans le projet ${projectName} a été confirmé.`,
+      type: "investment",
+      category: "success",
+      metadata: { amount, projectName }
+    });
+  }
+
+  async insufficientFunds(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Fonds insuffisants",
+      description: `Vous n'avez pas suffisamment de fonds (${amount}€ requis) pour effectuer cette opération.`,
+      type: "info",
+      category: "error",
+      metadata: { amount }
+    });
+  }
+
+  protected mapDatabaseToNotification(dbNotification: DatabaseNotification): Notification {
+    return {
+      id: dbNotification.id,
+      title: dbNotification.title,
+      description: dbNotification.message,
+      date: new Date(dbNotification.created_at),
+      read: dbNotification.seen,
+      type: dbNotification.type,
+      category: dbNotification.data?.category,
+      metadata: dbNotification.data || {}
+    };
   }
 }
 
 // Export a singleton instance
-export const notificationService = new GenericNotificationService();
+export const notificationService = new NotificationService();

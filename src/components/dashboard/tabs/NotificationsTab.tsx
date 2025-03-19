@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { notificationService } from "@/services/notifications";
@@ -120,7 +119,7 @@ export default function NotificationsTab() {
         <h3 className="text-lg font-medium text-red-800 mb-2">Erreur de chargement</h3>
         <p className="text-red-600">{error}</p>
         <button 
-          onClick={handleRefresh}
+          onClick={fetchNotifications}
           className="mt-4 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition-colors"
         >
           Réessayer
@@ -136,7 +135,7 @@ export default function NotificationsTab() {
         <NotificationActions
           unreadCount={unreadCount}
           isRefreshing={isRefreshing}
-          onRefresh={handleRefresh}
+          onRefresh={fetchNotifications}
           onMarkAllAsRead={handleMarkAllAsRead}
           totalCount={notifications.length}
         />

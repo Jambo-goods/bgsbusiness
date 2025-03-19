@@ -52,11 +52,8 @@ export default function BankTransferInstructions() {
         return;
       }
       
-      // Créer une notification pour l'utilisateur
-      await notificationService.depositRequested(
-        parseInt(transferAmount), 
-        bankDetails.reference
-      );
+      // Create a notification for the deposit request
+      await notificationService.depositRequested(parseInt(transferAmount), bankDetails.reference);
       
       await supabase.from('bank_transfers').insert({
         user_id: userId,
