@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -54,7 +53,6 @@ export default function BankTransfersPage() {
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateDetails, setUpdateDetails] = useState<any>(null);
 
-  // Use useCallback to memoize the fetchBankTransfers function
   const fetchBankTransfers = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -148,14 +146,12 @@ export default function BankTransfersPage() {
     try {
       console.log(`Updating bank transfer with status: ${editStatus} (ID: ${selectedTransfer.id})`);
       
-      // Always ensure we have a processed date for "received" status
       let finalProcessedDate = processedDate;
       if ((editStatus === 'received' || editStatus === 'reçu') && !processedDate) {
         finalProcessedDate = new Date();
         console.log("Automatically setting processed date to now:", finalProcessedDate);
       }
       
-      // Use the direct service to update the bank transfer
       const result = await bankTransferService.updateBankTransfer(
         selectedTransfer.id,
         editStatus,
@@ -167,7 +163,6 @@ export default function BankTransfersPage() {
       if (result.success) {
         toast.success(result.message);
         
-        // Wait a moment to allow database changes to propagate
         await new Promise(resolve => setTimeout(resolve, 2000));
         await fetchBankTransfers();
         closeEditModal();
@@ -228,7 +223,6 @@ export default function BankTransfersPage() {
     }
   };
 
-  // Function to set a transfer directly to received status
   const setTransferToReceived = async () => {
     if (!selectedTransfer) return;
     
@@ -373,7 +367,6 @@ export default function BankTransfersPage() {
                       </button>
                     </TableHead>
                     <TableHead>Notes</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -399,17 +392,6 @@ export default function BankTransfersPage() {
                           <div className="max-w-xs truncate">
                             {transfer.notes || "-"}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => handleEditTransfer(transfer)} 
-                            className="h-8 w-8"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span className="sr-only">Éditer</span>
-                          </Button>
                         </TableCell>
                       </TableRow>
                     );
