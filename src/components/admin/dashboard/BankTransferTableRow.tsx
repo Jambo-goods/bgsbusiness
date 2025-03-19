@@ -6,7 +6,7 @@ import { fr } from "date-fns/locale";
 import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2, Edit } from "lucide-react";
+import { Check, X, Loader2, Edit, Calendar } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,7 +18,6 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { Calendar } from "lucide-react";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;
@@ -373,7 +372,7 @@ export default function BankTransferTableRow({
                       {processedDate ? format(processedDate, "P", { locale: fr }) : "Sélectionner une date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0" align="start">
                     <CalendarComponent
                       mode="single"
                       selected={processedDate}
