@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -152,71 +151,34 @@ export default function BankTransfersPage() {
       
       console.log("Sending update with payload:", updates);
       
-      // First attempt: Direct update
-      const { data, error } = await supabase
-        .from('bank_transfers')
-        .update(updates)
-        .eq('id', selectedTransfer.id)
-        .select();
-      
-      if (error) {
-        console.error("Erreur lors de la mise à jour:", error);
-        console.error("Détails de l'erreur:", error.details, error.hint, error.code);
-        setUpdateError(`Première tentative échouée: ${error.message}`);
-        
-        // Second attempt: RPC function call to force update
-        try {
-          console.log("Tentative avec RPC...");
-          // Try using a stored procedure if available
-          const { data: rpcData, error: rpcError } = await supabase.rpc('force_update_bank_transfer', {
-            transfer_id: selectedTransfer.id,
-            new_status: editStatus,
-            processed_date: processedDate ? processedDate.toISOString() : null,
-            processed_value: editStatus === 'received' || editStatus === 'reçu'
-          });
-          
-          if (rpcError) {
-            console.error("Erreur lors de l'appel RPC:", rpcError);
-            
-            // Third attempt: Fallback to admin service role
-            console.log("Tentative avec service role...");
-            // Get the transfer data first
-            const { data: transferData, error: fetchError } = await supabase
-              .from('bank_transfers')
-              .select('*')
-              .eq('id', selectedTransfer.id)
-              .single();
-            
-            if (fetchError) {
-              throw new Error(`Erreur lors de la récupération du transfert: ${fetchError.message}`);
-            }
-            
-            // Use raw SQL via edge function if available
-            const { error: funcError } = await supabase.functions.invoke('update-bank-transfer', {
-              body: {
-                transferId: selectedTransfer.id,
-                status: editStatus,
-                processed: editStatus === 'received' || editStatus === 'reçu',
-                processedAt: processedDate ? processedDate.toISOString() : null,
-                notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
-              }
-            });
-            
-            if (funcError) {
-              setUpdateError(`Toutes les tentatives ont échoué: ${funcError.message}`);
-              throw new Error(`Échec de toutes les tentatives: ${funcError.message}`);
-            }
-            
-            console.log("Mise à jour via edge function réussie");
-          } else {
-            console.log("Mise à jour via RPC réussie:", rpcData);
-          }
-        } catch (fallbackError: any) {
-          console.error("Erreur lors des tentatives alternatives:", fallbackError);
-          throw fallbackError;
+      // Use the edge function to perform the update (most reliable method)
+      const { error: functionError } = await supabase.functions.invoke('update-bank-transfer', {
+        body: {
+          transferId: selectedTransfer.id,
+          status: editStatus,
+          processed: editStatus === 'received' || editStatus === 'reçu',
+          processedAt: processedDate ? processedDate.toISOString() : null,
+          notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
         }
-      } else {
-        console.log("Mise à jour réussie:", data);
+      });
+      
+      if (functionError) {
+        console.error("Erreur lors de l'appel à la fonction Edge:", functionError);
+        setUpdateError(`Erreur de la fonction Edge: ${functionError.message}`);
+        
+        // Fallback to direct update
+        console.log("Fallback to direct update...");
+        const { data, error: directError } = await supabase
+          .from('bank_transfers')
+          .update(updates)
+          .eq('id', selectedTransfer.id)
+          .select();
+        
+        if (directError) {
+          console.error("Erreur lors de la mise à jour directe:", directError);
+          setUpdateError(`${updateError}\nMise à jour directe échouée: ${directError.message}`);
+          throw new Error(`Échec de la mise à jour: ${directError.message}`);
+        }
       }
       
       // Verify the update actually took effect
@@ -228,48 +190,24 @@ export default function BankTransfersPage() {
         
       if (checkError) {
         console.error("Erreur lors de la vérification:", checkError);
+        setUpdateError(`Échec de la vérification: ${checkError.message}`);
       } else {
         console.log("État après mise à jour:", checkData);
         
-        // Force a direct SQL update for this specific transfer if status hasn't changed
-        if (checkData.status !== editStatus || 
-            (processedDate && (!checkData.processed_at || new Date(checkData.processed_at).toISOString() !== processedDate.toISOString()))) {
+        // Check if the update didn't apply
+        if (checkData.status !== editStatus) {
+          console.warn(`La mise à jour n'a pas été correctement appliquée. Attendu: ${editStatus}, Obtenu: ${checkData.status}`);
+          setUpdateError(`Attention: Le statut n'a pas été correctement mis à jour. Statut actuel: ${checkData.status}`);
           
-          console.warn("La mise à jour n'a pas été correctement appliquée. Tentative directe...");
-          
-          // Final attempt: Force direct update on the client side
-          const forceUpdate = {
-            ...checkData,
-            status: editStatus,
-            processed: editStatus === 'received' || editStatus === 'reçu',
-            processed_at: processedDate ? processedDate.toISOString() : null,
-            notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
-          };
-          
-          // Use upsert as a last resort
-          const { data: upsertData, error: upsertError } = await supabase
-            .from('bank_transfers')
-            .upsert(forceUpdate)
-            .select();
-            
-          if (upsertError) {
-            console.error("Erreur lors de la mise à jour forcée:", upsertError);
-            toast.warning("Mise à jour partielle. Rechargez la page pour vérifier les changements.");
-          } else {
-            console.log("Mise à jour forcée réussie:", upsertData);
-          }
+          // Show error but don't prevent closing the modal
+          toast.warning("Mise à jour partielle. Le statut n'a pas été changé.");
+        } else {
+          toast.success("Virement bancaire mis à jour avec succès");
+          closeEditModal();
         }
       }
       
-      // If the status is "received", update the wallet balance
-      if (editStatus === "received" || editStatus === "reçu") {
-        await activateWalletUpdate(selectedTransfer);
-      }
-      
-      toast.success("Virement bancaire mis à jour");
-      closeEditModal();
-      
-      // Force refresh the transfers list
+      // Force refresh the transfers list regardless of success/failure
       await fetchBankTransfers();
       
     } catch (error: any) {
