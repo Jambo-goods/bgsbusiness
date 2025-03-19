@@ -71,6 +71,8 @@ export default function BankTransfersPage() {
   const fetchBankTransfers = async () => {
     try {
       setIsLoading(true);
+      console.log("Fetching bank transfers...");
+      
       const { data, error } = await supabase
         .from("bank_transfers")
         .select("*")
@@ -78,6 +80,7 @@ export default function BankTransfersPage() {
 
       if (error) throw error;
 
+      console.log("Received bank transfers:", data);
       const transfersData = data || [];
       setBankTransfers(transfersData as BankTransfer[]);
 
@@ -173,18 +176,26 @@ export default function BankTransfersPage() {
       console.log("Updating bank transfer with status:", editStatus);
       console.log("Processed date:", processedDate ? processedDate.toISOString() : null);
       
-      const { error } = await supabase
+      const updates = {
+        status: editStatus,
+        processed_at: processedDate ? processedDate.toISOString() : null,
+        notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
+      };
+      
+      console.log("Sending update:", updates);
+      
+      const { data, error } = await supabase
         .from('bank_transfers')
-        .update({
-          status: editStatus,
-          processed_at: processedDate ? processedDate.toISOString() : null,
-          notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
-        })
-        .eq('id', selectedTransfer.id);
+        .update(updates)
+        .eq('id', selectedTransfer.id)
+        .select();
       
       if (error) throw error;
       
+      console.log("Updated transfer:", data);
+      
       toast.success("Virement bancaire mis à jour avec succès");
+      
       // Immediately refresh data after update
       await fetchBankTransfers();
       closeEditModal();
