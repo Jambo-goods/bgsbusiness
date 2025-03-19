@@ -1,12 +1,22 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, ArrowDown, ArrowUp, Loader2 } from "lucide-react";
+import { Search, ArrowDown, ArrowUp, Loader2, Edit } from "lucide-react";
 import { formatDate, maskAccountNumber } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
 import StatusBadge from "@/components/dashboard/tabs/wallet/withdrawal-table/StatusBadge";
 import { Toaster } from "sonner";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { CalendarIcon } from "lucide-react";
 
 interface WithdrawalRequest {
   id: string;
@@ -35,6 +45,13 @@ export default function WithdrawalRequestsPage() {
   const [sortField, setSortField] = useState("requested_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [userData, setUserData] = useState<Record<string, UserData>>({});
+  
+  // États pour l'édition
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editStatus, setEditStatus] = useState<string>("");
+  const [processedDate, setProcessedDate] = useState<Date | undefined>(undefined);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchWithdrawalRequests();
@@ -106,6 +123,47 @@ export default function WithdrawalRequestsPage() {
     }
   };
 
+  const handleEditWithdrawal = (withdrawal: WithdrawalRequest) => {
+    setSelectedWithdrawal(withdrawal);
+    setEditStatus(withdrawal.status || "");
+    setProcessedDate(withdrawal.processed_at ? new Date(withdrawal.processed_at) : undefined);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSubmitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedWithdrawal) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .update({
+          status: editStatus,
+          processed_at: processedDate ? processedDate.toISOString() : null
+        })
+        .eq('id', selectedWithdrawal.id);
+      
+      if (error) throw error;
+      
+      toast.success("Demande de retrait mise à jour avec succès");
+      fetchWithdrawalRequests();
+      closeEditModal();
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour de la demande de retrait:", error);
+      toast.error("Une erreur est survenue lors de la mise à jour");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedWithdrawal(null);
+  };
+
   const filteredRequests = withdrawalRequests.filter(request => {
     const searchLower = searchTerm.toLowerCase();
     const user = userData[request.user_id] || { first_name: null, last_name: null, email: null };
@@ -116,6 +174,17 @@ export default function WithdrawalRequestsPage() {
            userEmail.includes(searchLower) || 
            String(request.amount).includes(searchTerm);
   });
+
+  const statusOptions = [
+    { value: "pending", label: "En attente" },
+    { value: "received", label: "Reçue" },
+    { value: "confirmed", label: "Confirmée" },
+    { value: "scheduled", label: "Programmée" },
+    { value: "approved", label: "Approuvée" },
+    { value: "completed", label: "Complétée" },
+    { value: "paid", label: "Payée" },
+    { value: "rejected", label: "Rejetée" }
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -194,6 +263,7 @@ export default function WithdrawalRequestsPage() {
                         )}
                       </button>
                     </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -215,6 +285,17 @@ export default function WithdrawalRequestsPage() {
                         <TableCell>
                           {request.processed_at ? formatDate(request.processed_at) : "-"}
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => handleEditWithdrawal(request)} 
+                            className="h-8 w-8"
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Éditer</span>
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -224,6 +305,81 @@ export default function WithdrawalRequestsPage() {
           )}
         </div>
       </div>
+
+      {/* Modal d'édition */}
+      <Dialog open={isEditModalOpen} onOpenChange={open => !open && closeEditModal()}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Modifier la demande de retrait</DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleSubmitEdit} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Montant</Label>
+              <Input 
+                id="amount"
+                value={`${selectedWithdrawal?.amount || 0} €`}
+                disabled
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="status">Statut</Label>
+              <select
+                id="status"
+                className="w-full rounded-md border border-input bg-background px-3 py-2"
+                value={editStatus}
+                onChange={(e) => setEditStatus(e.target.value)}
+                required
+              >
+                <option value="" disabled>Sélectionner un statut</option>
+                {statusOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="processedDate">Date de traitement</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="processedDate"
+                    variant={"outline"}
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !processedDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {processedDate ? format(processedDate, "P", { locale: fr }) : "Sélectionner une date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={processedDate}
+                    onSelect={setProcessedDate}
+                    initialFocus
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={closeEditModal}>
+                Annuler
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Mise à jour..." : "Mettre à jour"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
