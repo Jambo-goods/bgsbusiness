@@ -50,23 +50,34 @@ export default function WithdrawalRequestsTable() {
             switch (payload.new.status) {
               case 'scheduled':
               case 'sheduled':
-                notificationService.withdrawalScheduled(amount);
+                notificationService.withdrawalScheduled(amount)
+                  .catch(error => {
+                    console.error("Error sending scheduled withdrawal notification:", error);
+                  });
                 toast.info(`Votre demande de retrait de ${amount}€ a été programmée`);
                 break;
               case 'approved':
-                notificationService.withdrawalValidated(amount);
+                notificationService.withdrawalValidated(amount)
+                  .catch(error => {
+                    console.error("Error sending validated withdrawal notification:", error);
+                  });
                 toast.success(`Votre demande de retrait de ${amount}€ a été validée`);
                 break;
               case 'completed':
-                notificationService.withdrawalCompleted(amount);
+                notificationService.withdrawalCompleted(amount)
+                  .catch(error => {
+                    console.error("Error sending completed withdrawal notification:", error);
+                  });
                 toast.success(`Votre retrait de ${amount}€ a été effectué avec succès`);
                 break;
               case 'rejected':
-                notificationService.withdrawalRejected(amount);
+                notificationService.withdrawalRejected(amount)
+                  .catch(error => {
+                    console.error("Error sending rejected withdrawal notification:", error);
+                  });
                 toast.error(`Votre demande de retrait de ${amount}€ a été refusée`);
                 break;
               case 'received':
-                console.log("Withdrawal request received notification");
                 notificationService.withdrawalReceived(amount)
                   .catch(error => {
                     console.error("Error sending received withdrawal notification:", error);
@@ -76,8 +87,6 @@ export default function WithdrawalRequestsTable() {
                 });
                 break;
               case 'confirmed':
-                // Handle confirmed status notification
-                console.log("Withdrawal confirmed notification");
                 notificationService.withdrawalConfirmed(amount)
                   .catch(error => {
                     console.error("Error sending confirmed withdrawal notification:", error);
@@ -87,8 +96,6 @@ export default function WithdrawalRequestsTable() {
                 });
                 break;
               case 'paid':
-                // Handle paid status notification
-                console.log("Withdrawal paid notification");
                 notificationService.withdrawalPaid(amount)
                   .catch(error => {
                     console.error("Error sending paid withdrawal notification:", error);

@@ -142,7 +142,6 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
                   onSelect={setProcessedDate}
                   initialFocus
                   locale={fr}
-                  className={cn("p-3 pointer-events-auto")}
                 />
               </PopoverContent>
             </Popover>
