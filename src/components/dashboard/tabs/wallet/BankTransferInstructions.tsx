@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -55,7 +54,7 @@ export default function BankTransferInstructions() {
         return;
       }
       
-      // Create a notification in the database
+      // Create a notification in the database - Une seule notification est désormais créée
       await supabase.from('notifications').insert({
         user_id: userId,
         title: "Virement bancaire confirmé",
@@ -68,10 +67,6 @@ export default function BankTransferInstructions() {
           timestamp: new Date().toISOString()
         }
       });
-      
-      // Send a notification using the notification service
-      // Fix: Use depositRequested directly from notificationService
-      await notificationService.depositRequested(parseInt(transferAmount), bankDetails.reference);
       
       // Enregistrer le virement bancaire dans la nouvelle table bank_transfers
       await supabase.from('bank_transfers').insert({
