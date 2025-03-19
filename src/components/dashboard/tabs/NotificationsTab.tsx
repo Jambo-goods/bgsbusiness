@@ -1,7 +1,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { notificationService, Notification } from "@/services/notifications";
+import { notificationService } from "@/services/notifications";
+import type { Notification } from "@/services/notifications/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import NotificationHeader from "./notifications/NotificationHeader";
@@ -22,7 +23,7 @@ export default function NotificationsTab() {
     
     try {
       console.log("Fetching notifications...");
-      const data = await notificationService.getNotifications(50);
+      const data = await notificationService.getNotifications();
       console.log("Notifications fetched:", data.length);
       setNotifications(data);
     } catch (err) {
@@ -84,12 +85,7 @@ export default function NotificationsTab() {
 
   const handleDeleteNotification = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id);
-      
-      if (error) throw error;
+      await notificationService.deleteNotification(id);
       
       setNotifications(prev => 
         prev.filter(notification => notification.id !== id)

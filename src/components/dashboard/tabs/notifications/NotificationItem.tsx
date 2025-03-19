@@ -1,23 +1,18 @@
 
-import React from "react";
+import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
-import { 
-  Bell, 
-  Wallet, 
-  Briefcase, 
-  Shield, 
-  Megaphone, 
-  CheckCircle, 
-  AlertTriangle, 
-  Info, 
-  XCircle,
-  Check,
-  Trash2
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Dot, MoreVertical, CheckCircle, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Notification } from "@/services/notifications";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Notification } from "@/services/notifications/types";
+import { getNotificationTypeIcon, getNotificationCategoryIcon } from "./utils";
 
 interface NotificationItemProps {
   notification: Notification;
@@ -25,95 +20,93 @@ interface NotificationItemProps {
   onDelete: (id: string) => void;
 }
 
-export default function NotificationItem({ 
-  notification, 
-  onMarkAsRead, 
-  onDelete 
+export default function NotificationItem({
+  notification,
+  onMarkAsRead,
+  onDelete,
 }: NotificationItemProps) {
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'deposit':
-      case 'withdrawal':
-        return <Wallet className="h-5 w-5 text-blue-500" />;
-      case 'investment':
-        return <Briefcase className="h-5 w-5 text-green-500" />;
-      case 'security':
-        return <Shield className="h-5 w-5 text-purple-500" />;
-      case 'marketing':
-        return <Megaphone className="h-5 w-5 text-orange-500" />;
-      default:
-        return <Bell className="h-5 w-5 text-gray-500" />;
-    }
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleMarkAsRead = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onMarkAsRead(notification.id);
   };
 
-  const getCategoryIcon = (category?: string) => {
-    switch (category) {
-      case 'success':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'warning':
-        return <AlertTriangle className="h-4 w-4 text-amber-500" />;
-      case 'error':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'info':
-      default:
-        return <Info className="h-4 w-4 text-blue-500" />;
-    }
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(notification.id);
+    setIsDropdownOpen(false);
   };
 
   const formatDate = (date: Date) => {
     return formatDistanceToNow(date, {
       addSuffix: true,
-      locale: fr
+      locale: fr,
     });
   };
 
+  const category = notification.category || "info";
+  const typeIcon = getNotificationTypeIcon(notification.type);
+  const categoryIcon = getNotificationCategoryIcon(category);
+
   return (
-    <Card 
-      className={`p-4 ${notification.read ? 'bg-white' : 'bg-blue-50 shadow-md'} transition-all hover:shadow-lg`}
+    <Card
+      className={`p-4 relative transition-colors hover:bg-gray-50 ${
+        notification.read ? "" : "bg-blue-50 hover:bg-blue-50/80"
+      }`}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-1">
-          {getTypeIcon(notification.type)}
-        </div>
-        
-        <div className="flex-1">
-          <div className="flex justify-between items-start mb-1">
-            <p className={`font-semibold ${notification.read ? 'text-gray-900' : 'text-blue-800'}`}>
+        <div className="rounded-full p-2 bg-white">{typeIcon}</div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-semibold text-sm text-gray-900">
               {notification.title}
-            </p>
-            <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
-              {formatDate(notification.date)}
-            </span>
+            </h3>
+            <div className="flex items-center gap-2 shrink-0">
+              {!notification.read && (
+                <Dot className="h-6 w-6 text-blue-500 -mr-1" />
+              )}
+              <span className="text-xs text-gray-500 whitespace-nowrap">
+                {formatDate(notification.date)}
+              </span>
+              <DropdownMenu
+                open={isDropdownOpen}
+                onOpenChange={setIsDropdownOpen}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                    <span className="sr-only">Actions</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {!notification.read && (
+                    <DropdownMenuItem onClick={handleMarkAsRead}>
+                      <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+                      Marquer comme lu
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onClick={handleDelete}
+                    className="text-red-600 focus:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Supprimer
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-          
-          <p className={`text-sm ${notification.read ? 'text-gray-600' : 'text-blue-700'}`}>
+          <p className="text-sm text-gray-600 mt-1">
             {notification.description}
           </p>
-          
-          {!notification.read && (
-            <div className="mt-3 flex justify-end">
-              <Button 
-                onClick={() => onMarkAsRead(notification.id)} 
-                variant="ghost" 
-                size="sm"
-                className="text-blue-600 hover:text-blue-800 hover:bg-blue-100"
-              >
-                <Check className="h-4 w-4 mr-1" />
-                Marquer comme lu
-              </Button>
-            </div>
-          )}
         </div>
-        
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onDelete(notification.id)}
-          className="text-gray-400 hover:text-red-500 hover:bg-red-50"
-          aria-label="Supprimer la notification"
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
       </div>
     </Card>
   );

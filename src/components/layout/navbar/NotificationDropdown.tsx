@@ -14,7 +14,8 @@ import {
   XCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { notificationService, Notification, NotificationType } from "@/services/notifications";
+import { notificationService } from "@/services/notifications";
+import type { Notification } from "@/services/notifications/types";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -65,9 +66,9 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
     setIsLoading(true);
     try {
       console.log("Fetching latest notifications");
-      const data = await notificationService.getNotifications(5);
+      const data = await notificationService.getNotifications();
       console.log("Latest notifications fetched:", data);
-      setNotifications(data);
+      setNotifications(data.slice(0, 5)); // Only take the first 5
     } catch (error) {
       console.error("Error fetching notifications:", error);
     } finally {
@@ -97,7 +98,7 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
     navigate("/dashboard?tab=notifications");
   };
 
-  const getTypeIcon = (type: NotificationType) => {
+  const getTypeIcon = (type: string) => {
     switch (type) {
       case 'deposit':
       case 'withdrawal':

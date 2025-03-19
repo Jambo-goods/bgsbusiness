@@ -1,8 +1,8 @@
 
 import { Wallet, Briefcase, Shield, Megaphone, Bell, Info, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
-import { NotificationType, NotificationCategory } from "@/services/notifications";
+import type { NotificationType, NotificationCategory } from "@/services/notifications/types";
 
-export const getNotificationTypeIcon = (type: NotificationType) => {
+export const getNotificationTypeIcon = (type: string) => {
   switch (type) {
     case 'deposit':
     case 'withdrawal':
@@ -18,7 +18,7 @@ export const getNotificationTypeIcon = (type: NotificationType) => {
   }
 };
 
-export const getNotificationCategoryIcon = (category?: NotificationCategory) => {
+export const getNotificationCategoryIcon = (category?: string) => {
   switch (category) {
     case 'success':
       return <CheckCircle className="h-5 w-5 text-green-500" />;
