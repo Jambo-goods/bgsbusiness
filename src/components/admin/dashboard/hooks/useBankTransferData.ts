@@ -54,16 +54,13 @@ export function useBankTransferData() {
         let bankTransfersError: any = null;
         
         try {
-          // Try using RPC first (if it exists)
-          const { data: rpcData, error: rpcError } = await supabase.rpc('admin_get_bank_transfers');
+          // Try using is_admin function as a check first
+          const { data: isAdminResult, error: isAdminError } = await supabase.rpc('is_admin');
           
-          if (!rpcError && rpcData) {
-            bankTransfersData = rpcData;
-            console.log("Données récupérées via RPC:", rpcData.length);
-          } else {
-            console.warn("RPC non disponible ou erreur:", rpcError);
+          if (!isAdminError && isAdminResult) {
+            console.log("Admin status verified:", isAdminResult);
             
-            // Fallback: récupérer directement les données
+            // Try direct query now that we know we have admin access
             const { data: directData, error: directError } = await supabase
               .from("bank_transfers")
               .select("*");
@@ -77,6 +74,16 @@ export function useBankTransferData() {
             } else {
               console.log("Données récupérées directement:", directData?.length || 0);
             }
+          } else {
+            console.warn("Not admin or admin check error:", isAdminError);
+            
+            // Fallback: récupérer directement les données avec limitations RLS
+            const { data: directData, error: directError } = await supabase
+              .from("bank_transfers")
+              .select("*");
+            
+            bankTransfersData = directData || [];
+            bankTransfersError = directError;
           }
         } catch (e) {
           console.error("Erreur lors de la tentative RPC/directe:", e);

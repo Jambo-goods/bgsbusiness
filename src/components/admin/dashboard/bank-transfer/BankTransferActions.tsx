@@ -1,65 +1,31 @@
 
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { Check, XCircle, ReceiptText } from "lucide-react";
 
 interface BankTransferActionsProps {
-  needsAction: boolean;
   isReceiptConfirmed: boolean;
   isRejected: boolean;
   hasMisspelledStatus: boolean;
-  hasStatusError: boolean;
-  onConfirmClick: () => void;
-  onRejectDeposit: () => void;
-  onConfirmReceipt: () => void;
 }
 
 export function BankTransferActions({
-  needsAction,
   isReceiptConfirmed,
   isRejected,
-  hasMisspelledStatus,
-  hasStatusError,
-  onConfirmClick,
-  onRejectDeposit,
-  onConfirmReceipt
+  hasMisspelledStatus
 }: BankTransferActionsProps) {
+  // Now this component only displays status text without any action buttons
+  let statusText = "En attente de traitement";
+  
+  if (isReceiptConfirmed) {
+    statusText = "Réception confirmée";
+  } else if (isRejected) {
+    statusText = "Rejeté";
+  } else if (hasMisspelledStatus) {
+    statusText = "Statut incorrect";
+  }
+  
   return (
-    <div className="flex flex-wrap justify-end gap-1">
-      {needsAction && (
-        <>
-          <Button 
-            size="sm" 
-            className="h-8 bg-green-600 hover:bg-green-700"
-            onClick={onConfirmClick}
-          >
-            <Check className="h-4 w-4 mr-1" />
-            Valider
-          </Button>
-          
-          <Button 
-            size="sm" 
-            variant="destructive" 
-            className="h-8"
-            onClick={onRejectDeposit}
-          >
-            <XCircle className="h-4 w-4 mr-1" />
-            Rejeter
-          </Button>
-        </>
-      )}
-      
-      {!isReceiptConfirmed && !isRejected && !hasMisspelledStatus && (
-        <Button 
-          size="sm" 
-          variant="outline" 
-          className="h-8"
-          onClick={onConfirmReceipt}
-        >
-          <ReceiptText className="h-4 w-4 mr-1" />
-          Confirmer réception
-        </Button>
-      )}
+    <div className="text-sm text-gray-500">
+      {statusText}
     </div>
   );
 }
