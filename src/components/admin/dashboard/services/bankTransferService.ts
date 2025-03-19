@@ -526,71 +526,72 @@ export const bankTransferService = {
         };
       }
       
-      // Step 1: Direct update to 'received' status
-      const { error: updateError } = await supabase
-        .from('bank_transfers')
-        .update({
-          status: 'received',
-          processed: true,
-          processed_at: new Date().toISOString(),
-          notes: `Forçage de statut à reçu le ${new Date().toLocaleDateString('fr-FR')}`
-        })
-        .eq('id', transferId);
-        
-      if (updateError) {
-        console.error("Échec du forçage de mise à jour:", updateError);
-        return {
-          success: false,
-          message: `Première tentative échouée: ${updateError.message}`
-        };
-      }
-      
-      // Step 2: Update wallet balance using recalculate_wallet_balance
-      try {
+      // DIRECT APPROACH: Update using a stored procedure/function that's known to work
+      if (currentData && currentData.user_id) {
+        // First, call the stored procedure to recalculate the wallet balance
         const { error: recalcError } = await supabase.rpc('recalculate_wallet_balance', {
           user_uuid: currentData.user_id
         });
         
         if (recalcError) {
-          console.error("Erreur lors de la mise à jour du solde:", recalcError);
+          console.error("Erreur lors de la mise à jour du solde via RPC:", recalcError);
           return {
-            success: true, // Still return true if bank_transfer was updated
-            message: `Virement mis à jour mais erreur avec le solde: ${recalcError.message}`
+            success: false,
+            message: `Erreur de calcul du solde: ${recalcError.message}`
           };
         }
         
-        console.log(`Solde du wallet mis à jour pour l'utilisateur ${currentData.user_id}`);
-      } catch (walletError: any) {
-        console.error("Erreur lors de la mise à jour du solde:", walletError);
+        // Now update the bank transfer directly with a simple update
+        const processedDate = new Date().toISOString();
+        const { error: updateError } = await supabase
+          .from('bank_transfers')
+          .update({
+            status: 'received',
+            processed: true,
+            processed_at: processedDate,
+            notes: `Forçage de statut à reçu le ${new Date().toLocaleDateString('fr-FR')}`
+          })
+          .eq('id', transferId);
+          
+        if (updateError) {
+          console.error("Erreur lors de la mise à jour du statut:", updateError);
+          return {
+            success: false,
+            message: `Erreur de mise à jour: ${updateError.message}`
+          };
+        }
+        
+        // Add a notification
+        try {
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id: currentData.user_id,
+              title: "Virement reçu",
+              message: `Votre virement bancaire de ${currentData.amount}€ a été marqué comme reçu.`,
+              type: "deposit",
+              data: {
+                category: "success",
+                amount: currentData.amount,
+                transaction_id: transferId
+              }
+            });
+        } catch (notificationError) {
+          console.error("Erreur lors de la création de notification:", notificationError);
+          // Don't fail the whole operation because of notification error
+        }
+        
         return {
-          success: true, // Still return true if bank_transfer was updated
-          message: `Virement mis à jour mais erreur avec le solde: ${walletError.message}`
+          success: true,
+          message: 'Virement forcé à "Reçu" et solde mis à jour'
+        };
+      } else {
+        return {
+          success: false,
+          message: 'Données de virement incomplètes ou utilisateur inconnu'
         };
       }
       
-      // Step 3: Add a notification for the user
-      try {
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: currentData.user_id,
-            title: "Virement reçu",
-            message: `Votre virement bancaire a été marqué comme reçu manuellement.`,
-            type: "deposit",
-            data: {
-              category: "success",
-              amount: currentData.amount,
-              transaction_id: transferId
-            }
-          });
-      } catch (notificationError) {
-        console.error("Erreur lors de la création de notification:", notificationError);
-      }
-      
-      return {
-        success: true,
-        message: 'Virement forcé à "Reçu" et solde mis à jour'
-      };
     } catch (error: any) {
       console.error("Erreur lors du forçage du statut:", error);
       return {

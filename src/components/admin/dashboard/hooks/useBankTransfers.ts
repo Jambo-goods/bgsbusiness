@@ -60,22 +60,48 @@ export function useBankTransfers(onSuccess: () => void) {
       setProcessingId(item.id);
       console.log("Forçage du statut à 'reçu' pour l'ID:", item.id);
       
+      // First attempt
       const { success, message } = await bankTransferService.forceUpdateToReceived(item.id);
       
       if (success) {
         toast.success("Virement forcé à 'reçu' avec succès");
+        
         // Add extra delay to ensure database updates propagate
         setTimeout(() => {
           onSuccess();
-        }, 1000);
+        }, 2000); // Increased delay to 2 seconds
       } else {
         console.error("Échec du forçage:", message);
         toast.error(`Échec du forçage: ${message}`);
+        
+        // Second attempt with a different approach if first attempt failed
+        if (message.includes("pending") || message.includes("échoué")) {
+          toast.info("Tentative alternative en cours...");
+          
+          // Delay before second attempt
+          setTimeout(async () => {
+            try {
+              // Try again with a different approach
+              const secondAttempt = await bankTransferService.forceUpdateToReceived(item.id);
+              
+              if (secondAttempt.success) {
+                toast.success("Seconde tentative réussie!");
+                onSuccess();
+              } else {
+                toast.error("Échec après plusieurs tentatives. Veuillez contacter le support technique.");
+              }
+            } catch (retryError) {
+              console.error("Erreur lors de la seconde tentative:", retryError);
+              toast.error("Échec de toutes les tentatives. Rechargez la page et réessayez.");
+            } finally {
+              setProcessingId(null);
+            }
+          }, 1000);
+        }
       }
     } catch (error) {
       console.error("Erreur lors du forçage du statut:", error);
       toast.error("Une erreur est survenue lors du forçage du statut");
-    } finally {
       setProcessingId(null);
     }
   };

@@ -28,6 +28,7 @@ export default function BankTransferTableRow({
   onForceToReceived
 }: BankTransferTableRowProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showForceDialog, setShowForceDialog] = useState(false);
   const [depositAmount, setDepositAmount] = useState(item.amount?.toString() || "");
   
   const handleConfirmClick = () => {
@@ -36,6 +37,14 @@ export default function BankTransferTableRow({
   
   const handleConfirmDialogClose = () => {
     setShowConfirmDialog(false);
+  };
+  
+  const handleForceClick = () => {
+    setShowForceDialog(true);
+  };
+  
+  const handleForceDialogClose = () => {
+    setShowForceDialog(false);
   };
   
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,6 +57,13 @@ export default function BankTransferTableRow({
     setShowConfirmDialog(false);
     const amountValue = parseFloat(depositAmount.replace(",", "."));
     await onConfirmDeposit(item, amountValue);
+  };
+  
+  const handleForceToReceived = async () => {
+    setShowForceDialog(false);
+    if (onForceToReceived) {
+      await onForceToReceived(item);
+    }
   };
   
   // Format date nicely
@@ -75,6 +91,7 @@ export default function BankTransferTableRow({
   const isPending = item.status === 'pending';
   const needsAction = isPending;
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
+  const hasPersistenceIssue = isProcessing || isPending || hasMisspelledStatus;
   
   return (
     <>
@@ -164,12 +181,12 @@ export default function BankTransferTableRow({
                 </Button>
               )}
               
-              {(hasMisspelledStatus || isPending) && onForceToReceived && (
+              {hasPersistenceIssue && onForceToReceived && (
                 <Button 
                   size="sm" 
                   variant="outline" 
-                  className="h-8 border-amber-500 text-amber-700 hover:bg-amber-50"
-                  onClick={() => onForceToReceived(item)}
+                  className="h-8 border-amber-500 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  onClick={handleForceClick}
                 >
                   <ArrowDownUp className="h-4 w-4 mr-1" />
                   Forcer à Reçu
@@ -180,6 +197,7 @@ export default function BankTransferTableRow({
         </TableCell>
       </TableRow>
       
+      {/* Confirm Deposit Dialog */}
       <Dialog open={showConfirmDialog} onOpenChange={handleConfirmDialogClose}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -207,6 +225,51 @@ export default function BankTransferTableRow({
               Annuler
             </Button>
             <Button onClick={handleConfirmDeposit}>Confirmer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Force to Received Dialog */}
+      <Dialog open={showForceDialog} onOpenChange={handleForceDialogClose}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Forcer le statut à "Reçu"</DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <div className="rounded-md bg-amber-50 p-4 border border-amber-200 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-amber-800">Attention</h3>
+                  <div className="mt-2 text-sm text-amber-700">
+                    <p>
+                      Cette action va forcer le statut du virement à "Reçu" et recalculer le solde du portefeuille
+                      de l'utilisateur. À utiliser en dernier recours lorsque les autres méthodes échouent.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Virement de <strong>{item.amount}€</strong> pour <strong>{userName}</strong>
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={handleForceDialogClose}>
+              Annuler
+            </Button>
+            <Button 
+              variant="default" 
+              className="bg-amber-600 hover:bg-amber-700"
+              onClick={handleForceToReceived}
+            >
+              Forcer le changement de statut
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
