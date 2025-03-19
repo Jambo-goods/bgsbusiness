@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -210,7 +209,6 @@ export const bankTransferService = {
     }
   },
   
-  // Méthode auxiliaire pour créer les notifications de réception
   async createReceiptNotification(item: BankTransferItem): Promise<void> {
     try {
       const { error: notifyError } = await supabase
@@ -254,15 +252,24 @@ export const bankTransferService = {
       // Get Admin JWT token from local storage to use service role
       const adminToken = localStorage.getItem('admin_token');
       
-      // Direct UPDATE with service role (bypassing RLS)
-      const { data, error } = await supabase
+      // Direct UPDATE with proper header setting for authorization
+      let query = supabase
         .from('bank_transfers')
         .update(updateData)
         .eq('id', transferId)
-        .select('*')
-        .headers(adminToken ? {
+        .select('*');
+        
+      // Add authorization headers if token is available
+      // Using the correct method to add headers in Supabase JS client
+      if (adminToken) {
+        // We need to use the correct method to set headers
+        query = query.headers({
           Authorization: `Bearer ${adminToken}`
-        } : {});
+        });
+      }
+      
+      // Execute the query
+      const { data, error } = await query;
         
       if (error) {
         console.error("Erreur lors de la mise à jour directe:", error);
