@@ -1,15 +1,42 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useScheduledPayments } from "@/hooks/useScheduledPayments";
+import { Button } from "@/components/ui/button";
+import { Plus, Pencil } from "lucide-react";
+import EditPaymentModal from "@/components/scheduled-payments/EditPaymentModal";
+import AddPaymentModal from "@/components/scheduled-payments/AddPaymentModal";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function ScheduledPayments() {
   const { scheduledPayments, isLoading } = useScheduledPayments();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+
+  const handleEditPayment = (payment: any) => {
+    setSelectedPayment(payment);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedPayment(null);
+  };
 
   return (
     <div className="min-h-full">
       <div className="container mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Paiements Programmés</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Paiements Programmés</h1>
+          <Button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Ajouter un paiement
+          </Button>
+        </div>
         
         <Card className="bg-white rounded-lg shadow">
           <CardHeader>
@@ -28,26 +55,27 @@ export default function ScheduledPayments() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Projet</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Pourcentage</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Montant</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Date prévue</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="px-4 py-3 text-left font-medium text-gray-500">Projet</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-medium text-gray-500">Pourcentage</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-medium text-gray-500">Montant</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-medium text-gray-500">Date prévue</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-medium text-gray-500">Statut</TableHead>
+                      <TableHead className="px-4 py-3 text-left font-medium text-gray-500">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                     {scheduledPayments.map((payment) => (
-                      <tr key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="px-4 py-4">{payment.projects?.name || "Projet inconnu"}</td>
-                        <td className="px-4 py-4">{payment.percentage}%</td>
-                        <td className="px-4 py-4">{payment.total_scheduled_amount || 0} €</td>
-                        <td className="px-4 py-4">
+                      <TableRow key={payment.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        <TableCell className="px-4 py-4">{payment.projects?.name || "Projet inconnu"}</TableCell>
+                        <TableCell className="px-4 py-4">{payment.percentage}%</TableCell>
+                        <TableCell className="px-4 py-4">{payment.total_scheduled_amount || 0} €</TableCell>
+                        <TableCell className="px-4 py-4">
                           {new Date(payment.payment_date).toLocaleDateString('fr-FR')}
-                        </td>
-                        <td className="px-4 py-4">
+                        </TableCell>
+                        <TableCell className="px-4 py-4">
                           <span 
                             className={`px-2 py-1 rounded-full text-xs ${
                               payment.status === 'pending' 
@@ -64,16 +92,39 @@ export default function ScheduledPayments() {
                               : payment.status === 'scheduled' ? 'Programmé'
                               : 'Inconnu'}
                           </span>
-                        </td>
-                      </tr>
+                        </TableCell>
+                        <TableCell className="px-4 py-4">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleEditPayment(payment)}
+                            className="flex items-center gap-1"
+                          >
+                            <Pencil size={14} />
+                            Modifier
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </tbody>
-                </table>
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
+      
+      {/* Modals for adding and editing payments */}
+      <AddPaymentModal 
+        isOpen={isAddModalOpen} 
+        onClose={() => setIsAddModalOpen(false)} 
+      />
+      
+      <EditPaymentModal 
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        payment={selectedPayment}
+      />
     </div>
   );
 }

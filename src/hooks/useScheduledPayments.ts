@@ -151,14 +151,39 @@ export const useScheduledPayments = () => {
   };
 
   // Function to update a scheduled payment status
-  const updatePaymentStatus = async (paymentId: string, newStatus: 'pending' | 'scheduled' | 'paid') => {
+  const updatePaymentStatus = async (
+    paymentId: string, 
+    newStatus: 'pending' | 'scheduled' | 'paid',
+    newPaymentDate?: string,
+    newPercentage?: number
+  ) => {
     try {
+      // Prepare update object
+      const updateData: {
+        status: string;
+        processed_at?: string | null;
+        payment_date?: string;
+        percentage?: number;
+      } = { 
+        status: newStatus,
+        processed_at: newStatus === 'paid' ? new Date().toISOString() : null 
+      };
+      
+      // Add optional fields if provided
+      if (newPaymentDate) {
+        const parsedDate = new Date(newPaymentDate);
+        if (!isNaN(parsedDate.getTime())) {
+          updateData.payment_date = parsedDate.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        }
+      }
+      
+      if (newPercentage !== undefined) {
+        updateData.percentage = newPercentage;
+      }
+      
       const { error } = await supabase
         .from('scheduled_payments')
-        .update({ 
-          status: newStatus,
-          processed_at: newStatus === 'paid' ? new Date().toISOString() : null 
-        })
+        .update(updateData)
         .eq('id', paymentId);
 
       if (error) {
