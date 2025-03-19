@@ -51,7 +51,6 @@ export default function HistoryItem({ item }: HistoryItemProps) {
         event: 'UPDATE',
         schema: 'public',
         table: 'withdrawal_requests',
-        // Fixed filter: we should listen for when status CHANGES TO 'confirmed', not filter existing records
         filter: `status=eq.confirmed`,
       }, (payload) => {
         console.log('Withdrawal request status changed to confirmed:', payload);
@@ -79,8 +78,21 @@ export default function HistoryItem({ item }: HistoryItemProps) {
     const match = text.match(/DEP-\d+/);
     return match ? match[0] : null;
   };
+  
+  // Extraction de la référence pour l'affichage
+  const reference = item.itemType === 'transaction' 
+    ? extractReference(item.description) 
+    : (item.itemType === 'notification' && item.type === 'deposit' 
+      ? extractReference(item.description) 
+      : null);
 
   if (item.itemType === 'transaction') {
+    const title = item.type === 'deposit' 
+      ? reference 
+        ? `Virement bancaire confirmé (réf: ${reference})`
+        : 'Dépôt'
+      : 'Retrait';
+      
     return (
       <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
         {/* Show confirmation alert when withdrawal request is confirmed */}
@@ -102,7 +114,7 @@ export default function HistoryItem({ item }: HistoryItemProps) {
               )}
             </div>
             <div>
-              <p className="font-medium">{item.description || (item.type === 'deposit' ? 'Dépôt' : 'Retrait')}</p>
+              <p className="font-medium">{title}</p>
               <p className="text-sm text-gray-500">{formattedDate}</p>
             </div>
           </div>
@@ -117,6 +129,12 @@ export default function HistoryItem({ item }: HistoryItemProps) {
     );
   } else {
     // It's a notification
+    // Améliorer l'affichage des notifications pour les virements bancaires
+    let title = item.title;
+    if (item.type === 'deposit' && reference) {
+      title = `Virement bancaire confirmé (réf: ${reference})`;
+    }
+    
     return (
       <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
         {/* Show confirmation alert when withdrawal request is confirmed and notification is related to withdrawal */}
@@ -132,7 +150,7 @@ export default function HistoryItem({ item }: HistoryItemProps) {
           <div className="flex items-start space-x-3">
             <NotificationIcon category={item.category} type={item.type} />
             <div>
-              <p className="font-medium">{item.title}</p>
+              <p className="font-medium">{title}</p>
               <p className="text-sm text-gray-600">{item.description}</p>
               <p className="text-xs text-gray-500 mt-1">{formattedDate}</p>
             </div>
