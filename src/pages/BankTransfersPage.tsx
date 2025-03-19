@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, Edit } from "lucide-react";
+import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
 import { Toaster } from "sonner";
@@ -223,37 +223,29 @@ export default function BankTransfersPage() {
     }
   };
 
-  const setTransferToReceived = async () => {
-    if (!selectedTransfer) return;
-    
-    setIsSubmitting(true);
-    setEditStatus('received');
-    const now = new Date();
-    setProcessedDate(now);
-    
+  const handleStatusChange = async (transferId: string, newStatus: 'received' | 'cancelled') => {
     try {
+      setIsLoading(true);
+      
       const result = await bankTransferService.updateBankTransfer(
-        selectedTransfer.id,
-        'received',
-        now.toISOString()
+        transferId,
+        newStatus,
+        newStatus === 'received' ? new Date().toISOString() : null
       );
       
       if (result.success) {
-        toast.success("Virement marqué comme reçu avec succès");
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        toast.success(newStatus === 'received' 
+          ? "Virement marqué comme reçu" 
+          : "Virement annulé");
         await fetchBankTransfers();
-        closeEditModal();
       } else {
-        toast.error("Échec du marquage du virement comme reçu");
-        setUpdateError("Échec de l'opération");
-        setUpdateDetails(result);
+        toast.error(`Échec de la mise à jour: ${result.message}`);
       }
     } catch (error: any) {
-      console.error("Error setting transfer to received:", error);
-      setUpdateError(error.message);
+      console.error(`Erreur lors de la mise à jour du statut:`, error);
       toast.error(`Erreur: ${error.message}`);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
@@ -372,6 +364,8 @@ export default function BankTransfersPage() {
                 <TableBody>
                   {filteredTransfers.map(transfer => {
                     const user = userData[transfer.user_id] || { first_name: null, last_name: null, email: null };
+                    const isPending = transfer.status === 'pending';
+                    
                     return (
                       <TableRow key={transfer.id}>
                         <TableCell>
@@ -384,8 +378,35 @@ export default function BankTransfersPage() {
                         <TableCell className="font-medium">{transfer.amount?.toLocaleString()} €</TableCell>
                         <TableCell>{transfer.confirmed_at ? formatDate(transfer.confirmed_at) : "-"}</TableCell>
                         <TableCell>
-                          <StatusBadge status={transfer.status || 'pending'} />
-                          {transfer.processed && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Traité</span>}
+                          <div className="flex items-center gap-2">
+                            <StatusBadge status={transfer.status || 'pending'} />
+                            {transfer.processed && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Traité</span>}
+                            
+                            {isPending && (
+                              <div className="flex gap-1 ml-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                  onClick={() => handleStatusChange(transfer.id, 'received')}
+                                  disabled={isLoading}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Reçu
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  className="h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleStatusChange(transfer.id, 'cancelled')}
+                                  disabled={isLoading}
+                                >
+                                  <XCircle className="h-4 w-4 mr-1" />
+                                  Annuler
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>{transfer.processed_at ? formatDate(transfer.processed_at) : "-"}</TableCell>
                         <TableCell>
@@ -560,3 +581,4 @@ export default function BankTransfersPage() {
     </div>
   );
 }
+
