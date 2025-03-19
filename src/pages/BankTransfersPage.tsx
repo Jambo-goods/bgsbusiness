@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -247,6 +248,19 @@ export default function BankTransfersPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Fonction pour forcer le statut "reçu"
+  const handleTransferToReceived = () => {
+    if (!selectedTransfer) return;
+    
+    setEditStatus('received');
+    setProcessedDate(new Date());
+    
+    // Soumettre automatiquement le formulaire après un court délai
+    setTimeout(() => {
+      handleSubmitEdit(new Event('submit') as any);
+    }, 100);
   };
 
   return (
@@ -551,7 +565,7 @@ export default function BankTransfersPage() {
                 variant="secondary"
                 className="w-full bg-green-600 hover:bg-green-700 text-white"
                 disabled={isSubmitting}
-                onClick={setTransferToReceived}
+                onClick={handleTransferToReceived}
               >
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Forcer à Reçu
@@ -581,4 +595,3 @@ export default function BankTransfersPage() {
     </div>
   );
 }
-
