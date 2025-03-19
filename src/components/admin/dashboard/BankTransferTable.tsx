@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { BankTransferTableProps, BankTransferItem } from "./types/bankTransfer";
 import BankTransferTableRow from "./BankTransferTableRow";
 import { useBankTransfers } from "./hooks/useBankTransfers";
+import { toast } from "sonner";
 
 export default function BankTransferTable({ 
   pendingTransfers, 
@@ -35,9 +36,12 @@ export default function BankTransferTable({
     const intervalId = setInterval(() => {
       if (refreshData && !isRefreshing) {
         setIsRefreshing(true);
-        refreshData().finally(() => {
+        // Fixed: removed .finally() since refreshData returns void
+        refreshData();
+        // Set timeout to ensure we set isRefreshing back to false
+        setTimeout(() => {
           setIsRefreshing(false);
-        });
+        }, 1000);
       }
     }, 15000); // Slightly longer interval to reduce load
     

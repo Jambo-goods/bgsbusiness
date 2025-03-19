@@ -1,371 +1,134 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { BankTransferItem } from "../types/bankTransfer";
-import { logAdminAction } from "@/services/adminAuthService";
-import { notificationService } from "@/services/notifications";
 
 export const bankTransferService = {
-  async confirmDeposit(item: BankTransferItem, amount: number): Promise<boolean> {
+  async updateBankTransfer(transferId: string, newStatus: string, processedDate: string | null = null) {
     try {
-      if (!amount || amount <= 0) {
-        toast.error("Veuillez saisir un montant valide supérieur à zéro");
-        return false;
-      }
+      console.log(`Mise à jour du virement ${transferId} avec statut ${newStatus}`);
       
-      // Get current admin information
-      const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
-      
-      console.log(`Traitement du dépôt ${item.id} pour un montant de ${amount}€`);
-      
-      // Direct UPDATE using service role (bypassing RLS)
-      const { error: updateError } = await supabase
-        .from('bank_transfers')
-        .update({ 
-          status: 'received',
-          processed: true,
-          processed_at: new Date().toISOString(),
-          amount: amount,
-          notes: `Dépôt confirmé par admin le ${new Date().toLocaleDateString('fr-FR')}`
-        })
-        .eq('id', item.id);
-        
-      if (updateError) {
-        console.error("Erreur lors de la mise à jour de la transaction:", updateError);
-        return false;
-      }
-        
-      // Increment the user's wallet balance
-      const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
-        user_id: item.user_id,
-        increment_amount: amount
-      });
-      
-      if (balanceError) {
-        console.error("Erreur lors de la mise à jour du solde:", balanceError);
-        // Utiliser recalculate comme fallback
-        await supabase.rpc('recalculate_wallet_balance', {
-          user_uuid: item.user_id
-        });
-      }
-      
-      // Create a notification for the user
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: item.user_id,
-          title: "Dépôt confirmé",
-          message: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
-          type: "deposit",
-          data: {
-            category: "success",
-            amount,
-            transaction_id: item.id
-          }
-        });
-        
-      if (notificationError) {
-        console.error("Erreur lors de la création de la notification:", notificationError);
-      }
-      
-      // Use the notification service properly
-      try {
-        await notificationService.depositSuccess(amount);
-        console.log("Notification de confirmation de dépôt envoyée");
-      } catch (notifyError) {
-        console.error("Erreur avec le service de notification:", notifyError);
-      }
-      
-      // Log admin action
-      if (adminUser.id) {
-        await logAdminAction(
-          adminUser.id,
-          'wallet_management',
-          `Confirmation de dépôt de ${amount}€`,
-          item.user_id,
-          undefined,
-          amount
-        );
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Erreur lors de la confirmation du dépôt:", error);
-      return false;
-    }
-  },
-
-  async rejectDeposit(item: BankTransferItem): Promise<boolean> {
-    try {
-      // Get current admin information
-      const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
-      
-      console.log(`Rejet du dépôt ${item.id}`);
-      
-      // Direct UPDATE using service role (bypassing RLS)
-      const { error: updateError } = await supabase
-        .from('bank_transfers')
-        .update({ 
-          status: 'rejected',
-          processed: true,
-          processed_at: new Date().toISOString(),
-          notes: `Dépôt rejeté par admin le ${new Date().toLocaleDateString('fr-FR')}`
-        })
-        .eq('id', item.id);
-          
-      if (updateError) {
-        console.error("Erreur lors du rejet de la transaction:", updateError);
-        return false;
-      }
-      
-      // Create a notification for the user
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: item.user_id,
-          title: "Dépôt rejeté",
-          message: "Votre demande de dépôt n'a pas pu être validée. Veuillez contacter le support pour plus d'informations.",
-          type: "deposit",
-          data: {
-            category: "error"
-          }
-        });
-        
-      if (notificationError) {
-        console.error("Erreur lors de la création de la notification de rejet:", notificationError);
-      }
-      
-      // Log admin action
-      if (adminUser.id) {
-        await logAdminAction(
-          adminUser.id,
-          'wallet_management',
-          `Rejet de demande de dépôt`,
-          item.user_id
-        );
-      }
-      
-      toast.success("Dépôt rejeté");
-      return true;
-    } catch (error) {
-      console.error("Erreur lors du rejet du dépôt:", error);
-      toast.error("Une erreur est survenue lors du rejet");
-      return false;
-    }
-  },
-
-  async confirmReceipt(item: BankTransferItem): Promise<boolean> {
-    try {
-      // Get current admin information
-      const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
-      
-      console.log(`Confirmation de réception pour ${item.id}`);
-      
-      // Use the supabase client with custom options
-      const { data, error } = await supabase.rpc('admin_update_bank_transfer', {
-        transfer_id: item.id,
-        new_status: 'received',
-        processed: true,
-        notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
-      });
-      
-      if (error) {
-        console.error("Erreur lors de la mise à jour via RPC:", error);
-        
-        // Fallback to direct update if RPC fails
-        const { error: directUpdateError } = await supabase
-          .from('bank_transfers')
-          .update({ 
-            status: 'received',
-            processed: true,
-            processed_at: new Date().toISOString(),
-            notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
-          })
-          .eq('id', item.id);
-          
-        if (directUpdateError) {
-          console.error("Erreur lors de la mise à jour directe:", directUpdateError);
-          return false;
-        }
-      }
-      
-      console.log("Mise à jour réussie pour", item.id);
-      
-      // Créer notification
-      await this.createReceiptNotification(item);
-      
-      // Log admin action
-      if (adminUser.id) {
-        await logAdminAction(
-          adminUser.id,
-          'wallet_management',
-          `Confirmation de réception de virement - Réf: ${item.description || item.reference}`,
-          item.user_id
-        );
-      }
-      
-      // Call recalculate wallet balance
-      try {
-        await supabase.rpc('recalculate_wallet_balance', {
-          user_uuid: item.user_id
-        });
-        console.log("Solde recalculé pour l'utilisateur", item.user_id);
-      } catch (balanceError) {
-        console.error("Erreur lors du recalcul du solde:", balanceError);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error("Erreur lors de la confirmation de réception:", error);
-      toast.error("Une erreur est survenue lors de la confirmation de réception");
-      return false;
-    }
-  },
-  
-  async createReceiptNotification(item: BankTransferItem): Promise<void> {
-    try {
-      const { error: notifyError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: item.user_id,
-          title: "Virement reçu",
-          message: `Votre virement bancaire (réf: ${item.reference || item.description}) a été reçu et est en cours de traitement.`,
-          type: "deposit",
-          data: {
-            category: "info",
-            reference: item.reference || item.description
-          }
-        });
-        
-      if (notifyError) {
-        console.error("Erreur lors de la création de notification:", notifyError);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la création de notification:", error);
-    }
-  },
-  
-  async updateBankTransfer(transferId: string, status: string, processedDate: string | null): Promise<{success: boolean, message: string, data?: any}> {
-    try {
-      console.log(`Mise à jour du virement ${transferId} avec statut ${status}`);
-      
-      // Determine if transfer should be marked as processed
-      const isProcessed = status === 'received' || status === 'reçu' || status === 'rejected';
-      const processingNotes = `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`;
-      
-      // Try the RPC approach first
-      const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_bank_transfer', {
-        transfer_id: transferId,
-        new_status: status,
-        processed: isProcessed,
-        notes: processingNotes
-      });
-      
-      if (rpcError) {
-        console.error("Échec de la mise à jour via RPC:", rpcError);
-        
-        // Fallback to direct update
-        const { data, error } = await supabase
-          .from('bank_transfers')
-          .update({
-            status: status,
-            processed: isProcessed,
-            processed_at: processedDate || (isProcessed ? new Date().toISOString() : null),
-            notes: processingNotes
-          })
-          .eq('id', transferId);
-        
-        if (error) {
-          console.error("Échec de la mise à jour directe:", error);
-          return {
-            success: false, 
-            message: `Échec de la mise à jour: ${error.message}`
-          };
-        }
-      }
-      
-      // Verify the update was successful by fetching the updated record
-      const { data: updatedTransfer, error: fetchError } = await supabase
-        .from('bank_transfers')
-        .select('*')
-        .eq('id', transferId)
+      // Récupérer les données du virement pour obtenir l'ID utilisateur
+      const { data: transferData, error: transferError } = await supabase
+        .from("bank_transfers")
+        .select("user_id, status, processed")
+        .eq("id", transferId)
         .single();
-        
-      if (fetchError) {
-        console.error("Erreur lors de la vérification après mise à jour:", fetchError);
-        return {
-          success: false,
-          message: "Impossible de vérifier l'état après mise à jour"
+      
+      if (transferError) {
+        console.error("Erreur lors de la récupération du virement:", transferError);
+        return { 
+          success: false, 
+          message: `Erreur de récupération: ${transferError.message}`,
+          error: transferError
         };
       }
       
-      const success = updatedTransfer.status === status;
-      console.log("Résultat de la vérification:", success ? "Succès" : "Échec", updatedTransfer);
+      console.log("Données du virement récupérées:", transferData);
       
-      // Update wallet balance if successful
-      if (success && updatedTransfer.user_id && (status === 'received' || status === 'reçu')) {
-        try {
-          // Use recalculate function if available, otherwise increment
-          try {
-            await supabase.rpc('recalculate_wallet_balance', {
-              user_uuid: updatedTransfer.user_id
-            });
-            console.log("Solde recalculé pour l'utilisateur", updatedTransfer.user_id);
-          } catch (rpcError) {
-            console.error("Erreur lors du recalcul du solde via RPC:", rpcError);
-            
-            // If transfer has an amount, try direct update as fallback
-            if (updatedTransfer.amount) {
-              const { error: updateError } = await supabase.rpc('increment_wallet_balance', {
-                user_id: updatedTransfer.user_id,
-                increment_amount: updatedTransfer.amount
-              });
-              
-              if (updateError) {
-                console.error("Erreur lors de l'incrémentation du solde:", updateError);
-              } else {
-                console.log("Solde incrémenté directement de", updatedTransfer.amount);
-              }
-            }
+      // Utiliser la fonction edge pour mise à jour avec privilèges admin
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
+        'update-bank-transfer',
+        {
+          body: {
+            transferId: transferId,
+            status: newStatus,
+            isProcessed: newStatus === 'received' || processedDate !== null,
+            notes: `Mise à jour via service le ${new Date().toLocaleDateString('fr-FR')}`,
+            userId: transferData?.user_id
           }
-          
-          // Create a notification for the user
-          try {
-            const { error: notifError } = await supabase
-              .from('notifications')
-              .insert({
-                user_id: updatedTransfer.user_id,
-                title: "Virement reçu",
-                message: `Votre virement bancaire (réf: ${updatedTransfer.reference}) a été traité.`,
-                type: "deposit",
-                data: {
-                  amount: updatedTransfer.amount,
-                  reference: updatedTransfer.reference
-                }
-              });
-              
-            if (notifError) {
-              console.error("Erreur lors de la création de notification:", notifError);
-            }
-          } catch (notifError) {
-            console.error("Exception lors de la création de notification:", notifError);
-          }
-        } catch (balanceError) {
-          console.error("Erreur générale lors de la mise à jour du solde:", balanceError);
         }
+      );
+      
+      if (edgeFunctionError) {
+        console.error("Erreur fonction edge:", edgeFunctionError);
+        
+        // Fallback à la mise à jour directe si la fonction edge échoue
+        const isProcessed = newStatus === 'received' || processedDate !== null;
+        
+        const { data, error } = await supabase
+          .from('bank_transfers')
+          .update({
+            status: newStatus,
+            processed: isProcessed,
+            processed_at: isProcessed ? (processedDate || new Date().toISOString()) : null,
+            notes: `Mise à jour via service le ${new Date().toLocaleDateString('fr-FR')}`
+          })
+          .eq('id', transferId)
+          .select();
+        
+        if (error) {
+          console.error("Erreur de mise à jour directe:", error);
+          return {
+            success: false,
+            message: `Erreur de mise à jour: ${error.message}`,
+            error: error,
+            data: transferData
+          };
+        }
+        
+        console.log("Mise à jour directe réussie:", data);
+        
+        // Si le statut est 'received', mettre à jour le solde du portefeuille
+        if (newStatus === 'received' && transferData?.user_id) {
+          try {
+            const { error: walletError } = await supabase.rpc('recalculate_wallet_balance', {
+              user_uuid: transferData.user_id
+            });
+            
+            if (walletError) {
+              console.error("Erreur de recalcul du solde:", walletError);
+            }
+          } catch (walletUpdateError) {
+            console.error("Erreur lors de la mise à jour du portefeuille:", walletUpdateError);
+          }
+        }
+        
+        return {
+          success: true,
+          message: `Virement mis à jour avec succès: ${newStatus}`,
+          data: data
+        };
       }
       
-      return {
-        success: success,
-        message: success ? 'Virement mis à jour avec succès' : `Échec de mise à jour. Statut: ${updatedTransfer.status}`,
-        data: updatedTransfer
-      };
-    } catch (error: any) {
-      console.error("Erreur générale:", error);
+      console.log("Résultat fonction edge:", edgeFunctionData);
+      
+      if (edgeFunctionData.success) {
+        return {
+          success: true,
+          message: `Virement mis à jour avec succès via edge function: ${newStatus}`,
+          data: edgeFunctionData.data
+        };
+      } else {
+        return {
+          success: false,
+          message: `Échec de la mise à jour via edge function: ${edgeFunctionData.error || 'Erreur inconnue'}`,
+          error: edgeFunctionData.error,
+          data: transferData
+        };
+      }
+    } catch (error) {
+      console.error("Erreur inattendue:", error);
       return {
         success: false,
-        message: error.message || 'Une erreur inconnue est survenue'
+        message: `Erreur système: ${error.message || 'Erreur inconnue'}`,
+        error: error
       };
     }
+  },
+  
+  // Abonner aux changements en temps réel sur la table des virements
+  subscribeToTransferChanges(callback) {
+    return supabase
+      .channel('bank_transfers_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'bank_transfers' }, 
+        (payload) => {
+          console.log('Changement détecté sur bank_transfers:', payload);
+          if (callback && typeof callback === 'function') {
+            callback(payload);
+          }
+        }
+      )
+      .subscribe();
   }
 };

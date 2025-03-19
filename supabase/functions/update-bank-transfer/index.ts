@@ -55,11 +55,11 @@ serve(async (req: Request) => {
 
     console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}`);
 
-    // First try using the admin_update_bank_transfer RPC function
-    const { data: rpcResult, error: rpcError } = await supabase.rpc("admin_update_bank_transfer", {
+    // Try using the updated RPC function with correct parameter naming
+    const { data: rpcResult, error: rpcError } = await supabase.rpc("admin_mark_bank_transfer", {
       transfer_id: transferId,
       new_status: status,
-      processed: isProcessed || false,
+      is_processed: isProcessed || false,
       notes: notes || `Mis à jour via edge function le ${new Date().toLocaleDateString('fr-FR')}`
     });
 

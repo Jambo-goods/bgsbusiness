@@ -6,7 +6,7 @@ import { fr } from "date-fns/locale";
 import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2 } from "lucide-react";
+import { Check, X, Loader2, AlertTriangle } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +24,7 @@ export default function BankTransferTableRow({
 }: BankTransferTableRowProps) {
   const { updateTransferStatus } = useBankTransfers();
   const [localProcessing, setLocalProcessing] = useState(false);
+  const [lastActionTime, setLastActionTime] = useState<number>(0);
   
   // Format date nicely
   const formattedDate = item.created_at 
@@ -41,17 +42,29 @@ export default function BankTransferTableRow({
   const isPending = item.status === 'pending';
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
   
+  // Debouncer to prevent duplicate calls
+  const shouldPreventAction = () => {
+    const now = Date.now();
+    const timeSinceLastAction = now - lastActionTime;
+    
+    if (timeSinceLastAction < 5000) { // 5 seconds cooldown
+      console.log(`Action prevented: Only ${timeSinceLastAction}ms since last action`);
+      return true;
+    }
+    
+    setLastActionTime(now);
+    return false;
+  };
+  
   // Handle confirming receipt using the edge function
   const handleConfirmReceipt = async () => {
-    if (isProcessing) return;
+    if (isProcessing || shouldPreventAction()) return;
     
     setLocalProcessing(true);
     toast.info("Traitement en cours...");
     
     try {
-      // Try the new edge function first
-      const session = await supabase.auth.getSession();
-      const adminToken = session.data.session?.access_token;
+      console.log(`Confirming receipt for transfer ${item.id}`);
       
       // Call the edge function
       const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
@@ -69,6 +82,7 @@ export default function BankTransferTableRow({
       
       if (edgeFunctionError) {
         console.error("Erreur fonction edge:", edgeFunctionError);
+        toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
         // Fallback to local service if edge function fails
         const success = await updateTransferStatus(item, 'received');
@@ -83,7 +97,13 @@ export default function BankTransferTableRow({
         
         if (edgeFunctionData.success) {
           toast.success("Virement marqué comme reçu");
-          if (onStatusUpdate) onStatusUpdate();
+          // Notify parent component to refresh data
+          if (onStatusUpdate) {
+            // Ensure we give the database time to update
+            setTimeout(() => {
+              onStatusUpdate();
+            }, 1000);
+          }
         } else {
           toast.error(`Échec de la mise à jour: ${edgeFunctionData.error || 'Erreur inconnue'}`);
         }
@@ -92,18 +112,20 @@ export default function BankTransferTableRow({
       console.error("Erreur de mise à jour:", error);
       toast.error("Une erreur s'est produite lors de la mise à jour");
     } finally {
-      setTimeout(() => setLocalProcessing(false), 500);
+      setTimeout(() => setLocalProcessing(false), 1000);
     }
   };
   
   // Handle rejecting transfer using the edge function
   const handleRejectTransfer = async () => {
-    if (isProcessing) return;
+    if (isProcessing || shouldPreventAction()) return;
     
     setLocalProcessing(true);
     toast.info("Traitement du rejet en cours...");
     
     try {
+      console.log(`Rejecting transfer ${item.id}`);
+      
       // Call the edge function
       const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
         'update-bank-transfer',
@@ -120,6 +142,7 @@ export default function BankTransferTableRow({
       
       if (edgeFunctionError) {
         console.error("Erreur fonction edge:", edgeFunctionError);
+        toast.error(`Erreur de rejet: ${edgeFunctionError.message}`);
         
         // Fallback to local service if edge function fails
         const success = await updateTransferStatus(item, 'rejected');
@@ -134,7 +157,13 @@ export default function BankTransferTableRow({
         
         if (edgeFunctionData.success) {
           toast.success("Virement rejeté avec succès");
-          if (onStatusUpdate) onStatusUpdate();
+          // Notify parent component to refresh data
+          if (onStatusUpdate) {
+            // Ensure we give the database time to update
+            setTimeout(() => {
+              onStatusUpdate();
+            }, 1000);
+          }
         } else {
           toast.error(`Échec du rejet: ${edgeFunctionData.error || 'Erreur inconnue'}`);
         }
@@ -143,7 +172,7 @@ export default function BankTransferTableRow({
       console.error("Erreur de mise à jour:", error);
       toast.error("Une erreur s'est produite lors du rejet");
     } finally {
-      setTimeout(() => setLocalProcessing(false), 500);
+      setTimeout(() => setLocalProcessing(false), 1000);
     }
   };
   
@@ -209,6 +238,13 @@ export default function BankTransferTableRow({
                 )}
                 Rejeter
               </Button>
+            </div>
+          )}
+          
+          {isRejected && (
+            <div className="flex items-center gap-1 text-red-600 text-xs">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span>Rejeté</span>
             </div>
           )}
         </div>
