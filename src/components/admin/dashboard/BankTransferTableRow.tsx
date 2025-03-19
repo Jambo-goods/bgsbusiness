@@ -7,7 +7,6 @@ import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
 import { BankTransferActions } from "./bank-transfer/BankTransferActions";
 import { ConfirmDepositDialog } from "./bank-transfer/ConfirmDepositDialog";
-import { ForceToReceivedDialog } from "./bank-transfer/ForceToReceivedDialog";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;
@@ -15,7 +14,6 @@ interface BankTransferTableRowProps {
   onConfirmDeposit: (item: BankTransferItem, amount: number) => Promise<void>;
   onRejectDeposit: (item: BankTransferItem) => Promise<void>;
   onConfirmReceipt: (item: BankTransferItem) => Promise<void>;
-  onForceToReceived?: (item: BankTransferItem) => Promise<void>;
 }
 
 export default function BankTransferTableRow({
@@ -23,11 +21,9 @@ export default function BankTransferTableRow({
   processingId,
   onConfirmDeposit,
   onRejectDeposit,
-  onConfirmReceipt,
-  onForceToReceived
+  onConfirmReceipt
 }: BankTransferTableRowProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [showForceDialog, setShowForceDialog] = useState(false);
   const [depositAmount, setDepositAmount] = useState(item.amount?.toString() || "");
   
   // Format date nicely
@@ -63,25 +59,10 @@ export default function BankTransferTableRow({
     setShowConfirmDialog(false);
   };
   
-  const handleForceClick = () => {
-    setShowForceDialog(true);
-  };
-  
-  const handleForceDialogClose = () => {
-    setShowForceDialog(false);
-  };
-  
   const handleConfirmDeposit = async () => {
     setShowConfirmDialog(false);
     const amountValue = parseFloat(depositAmount.replace(",", "."));
     await onConfirmDeposit(item, amountValue);
-  };
-  
-  const handleForceToReceived = async () => {
-    setShowForceDialog(false);
-    if (onForceToReceived) {
-      await onForceToReceived(item);
-    }
   };
   
   return (
@@ -131,8 +112,6 @@ export default function BankTransferTableRow({
               onConfirmClick={handleConfirmClick}
               onRejectDeposit={() => onRejectDeposit(item)}
               onConfirmReceipt={() => onConfirmReceipt(item)}
-              onForceClick={handleForceClick}
-              showForceButton={!!onForceToReceived}
             />
           )}
         </TableCell>
@@ -144,14 +123,6 @@ export default function BankTransferTableRow({
         depositAmount={depositAmount}
         onAmountChange={handleAmountChange}
         onConfirm={handleConfirmDeposit}
-      />
-      
-      <ForceToReceivedDialog
-        open={showForceDialog}
-        onOpenChange={handleForceDialogClose}
-        onForce={handleForceToReceived}
-        item={item}
-        userName={userName}
       />
     </>
   );

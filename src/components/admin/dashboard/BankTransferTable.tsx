@@ -14,8 +14,7 @@ export default function BankTransferTable({
     processingId,
     handleConfirmDeposit,
     handleRejectDeposit,
-    handleConfirmReceipt,
-    handleForceToReceived
+    handleConfirmReceipt
   } = useBankTransfers(refreshData);
 
   console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers?.length || 0);
@@ -59,7 +58,6 @@ export default function BankTransferTable({
               onConfirmDeposit={handleConfirmDeposit}
               onRejectDeposit={handleRejectDeposit}
               onConfirmReceipt={handleConfirmReceipt}
-              onForceToReceived={handleForceToReceived}
             />
           ))}
         </TableBody>

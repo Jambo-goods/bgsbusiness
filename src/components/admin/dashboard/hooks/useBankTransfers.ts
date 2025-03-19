@@ -47,7 +47,7 @@ export function useBankTransfers(onSuccess: () => void) {
         toast.success("Réception confirmée avec succès");
         onSuccess();
       } else {
-        toast.error("Échec de la confirmation. Essayez d'utiliser l'option 'FORCER'");
+        toast.error("Échec de la confirmation de réception");
       }
     } catch (error) {
       toast.error("Une erreur est survenue lors du traitement de la confirmation de réception");
@@ -55,61 +55,11 @@ export function useBankTransfers(onSuccess: () => void) {
       setProcessingId(null);
     }
   };
-  
-  const handleForceToReceived = async (item: BankTransferItem) => {
-    try {
-      setProcessingId(item.id);
-      
-      const toastId = toast.loading("Tentative de mise à jour forcée en cours...", { duration: 10000 });
-      
-      const result = await bankTransferService.directForceBankTransfer(item);
-      
-      if (result.success) {
-        toast.dismiss(toastId);
-        toast.success("Mise à jour forcée réussie! Le virement est maintenant marqué comme reçu.");
-        
-        setTimeout(() => {
-          onSuccess();
-        }, 1000);
-        
-        return;
-      }
-      
-      const fallbackResult = await bankTransferService.forceUpdateToReceived(item.id);
-      
-      if (fallbackResult.success) {
-        toast.dismiss(toastId);
-        toast.success("Mise à jour réussie via méthode alternative!");
-        
-        setTimeout(() => {
-          onSuccess();
-        }, 1000);
-        
-        return;
-      }
-      
-      toast.dismiss(toastId);
-      toast.error(`Échec de toutes les tentatives de mise à jour forcée: ${fallbackResult.message}`);
-      
-      setTimeout(() => {
-        onSuccess();
-        toast.info("Rafraîchissement des données pour vérification de l'état actuel...");
-      }, 2000);
-      
-    } catch (error) {
-      toast.error("Une erreur critique est survenue lors du forçage du statut");
-    } finally {
-      setTimeout(() => {
-        setProcessingId(null);
-      }, 2000);
-    }
-  };
 
   return {
     processingId,
     handleConfirmDeposit,
     handleRejectDeposit,
-    handleConfirmReceipt,
-    handleForceToReceived
+    handleConfirmReceipt
   };
 }

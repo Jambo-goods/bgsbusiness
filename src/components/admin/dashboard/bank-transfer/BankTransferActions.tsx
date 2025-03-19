@@ -9,11 +9,9 @@ interface BankTransferActionsProps {
   isRejected: boolean;
   hasMisspelledStatus: boolean;
   hasStatusError: boolean;
-  showForceButton: boolean;
   onConfirmClick: () => void;
   onRejectDeposit: () => void;
   onConfirmReceipt: () => void;
-  onForceClick: () => void;
 }
 
 export function BankTransferActions({
@@ -22,11 +20,9 @@ export function BankTransferActions({
   isRejected,
   hasMisspelledStatus,
   hasStatusError,
-  showForceButton,
   onConfirmClick,
   onRejectDeposit,
-  onConfirmReceipt,
-  onForceClick
+  onConfirmReceipt
 }: BankTransferActionsProps) {
   return (
     <div className="flex flex-wrap justify-end gap-1">
