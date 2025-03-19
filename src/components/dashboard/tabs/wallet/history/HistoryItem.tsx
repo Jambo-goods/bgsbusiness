@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ArrowDownIcon, ArrowUpIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from "lucide-react";
@@ -38,13 +37,9 @@ export type HistoryItemType = TransactionItem | NotificationItem;
 
 interface HistoryItemProps {
   item: HistoryItemType;
-  // Add seenReferences to track which transaction references we've already displayed
-  seenReferences?: Set<string>;
-  // Add function to update the set of seen references
-  updateSeenReferences?: (reference: string) => void;
 }
 
-export default function HistoryItem({ item, seenReferences, updateSeenReferences }: HistoryItemProps) {
+export default function HistoryItem({ item }: HistoryItemProps) {
   const [showConfirmationAlert, setShowConfirmationAlert] = useState(false);
   
   useEffect(() => {
@@ -72,43 +67,6 @@ export default function HistoryItem({ item, seenReferences, updateSeenReferences
       supabase.removeChannel(withdrawalRequestsChannel);
     };
   }, []);
-
-  // Get reference from metadata if available
-  const getReference = (): string | null => {
-    if (item.itemType === 'notification' && item.metadata?.reference) {
-      return item.metadata.reference;
-    } else if (item.itemType === 'transaction' && item.description) {
-      // Try to extract reference from description if it contains one
-      const match = item.description.match(/réf: ([A-Z0-9-]+)/i);
-      return match ? match[1] : null;
-    }
-    return null;
-  };
-
-  // Check if this item should be displayed (to avoid duplicates)
-  const shouldDisplay = (): boolean => {
-    const reference = getReference();
-    
-    // If no reference tracking is provided, always display
-    if (!seenReferences || !updateSeenReferences) return true;
-    
-    // If this item has a reference that we've seen before, don't display it
-    if (reference && seenReferences.has(reference)) {
-      return false;
-    }
-    
-    // If it has a reference we haven't seen before, add it to our seen set
-    if (reference) {
-      updateSeenReferences(reference);
-    }
-    
-    return true;
-  };
-
-  // If we shouldn't display this item (duplicate), return null
-  if (!shouldDisplay()) {
-    return null;
-  }
 
   const formattedDate = formatDistanceToNow(
     new Date(item.created_at),
