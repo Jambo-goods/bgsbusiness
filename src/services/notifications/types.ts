@@ -26,8 +26,8 @@ export interface Notification {
   description: string;
   date: Date;
   read: boolean;
-  type: string;
-  category?: string;
+  type: NotificationType;
+  category?: NotificationCategory;
   metadata: Record<string, any>;
 }
 

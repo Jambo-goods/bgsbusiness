@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { notificationService } from "@/services/notifications";
@@ -45,7 +46,9 @@ export default function NotificationsTab() {
     });
     
     return () => {
-      unsubscribe();
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
     };
   }, [fetchNotifications]);
 

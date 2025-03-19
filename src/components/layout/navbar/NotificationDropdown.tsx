@@ -20,7 +20,38 @@ import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { getNotificationTypeIcon, getNotificationCategoryIcon } from "../dashboard/tabs/notifications/utils";
+
+// Define utility functions directly here instead of importing them from a path that doesn't exist
+const getNotificationTypeIcon = (type: string) => {
+  switch (type.toLowerCase()) {
+    case 'deposit':
+      return <Wallet className="h-5 w-5 text-blue-500" />;
+    case 'withdrawal':
+      return <Wallet className="h-5 w-5 text-orange-500" />;
+    case 'investment':
+      return <Briefcase className="h-5 w-5 text-green-500" />;
+    case 'security':
+      return <Shield className="h-5 w-5 text-purple-500" />;
+    case 'marketing':
+      return <Megaphone className="h-5 w-5 text-orange-500" />;
+    default:
+      return <Bell className="h-5 w-5 text-blue-500" />;
+  }
+};
+
+const getNotificationCategoryIcon = (category?: string) => {
+  switch (category?.toLowerCase()) {
+    case 'success':
+      return <CheckCircle className="h-5 w-5 text-green-500" />;
+    case 'warning':
+      return <AlertTriangle className="h-5 w-5 text-amber-500" />;
+    case 'error':
+      return <XCircle className="h-5 w-5 text-red-500" />;
+    case 'info':
+    default:
+      return <Info className="h-5 w-5 text-blue-500" />;
+  }
+};
 
 interface NotificationDropdownProps {
   isOpen: boolean;
