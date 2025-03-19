@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -135,53 +134,36 @@ export default function BankTransfersPage() {
     setUpdateDetails(null);
   };
 
-  const handleSubmitEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedTransfer) return;
-    
-    setIsSubmitting(true);
-    setUpdateError(null);
-    setUpdateDetails(null);
-    
+  const handleStatusChange = async (transferId: string, newStatus: 'received' | 'cancelled' | 'rejected') => {
     try {
-      console.log(`Updating bank transfer with status: ${editStatus} (ID: ${selectedTransfer.id})`);
+      setIsLoading(true);
       
-      let finalProcessedDate = processedDate;
-      if ((editStatus === 'received' || editStatus === 'reçu') && !processedDate) {
-        finalProcessedDate = new Date();
-        console.log("Automatically setting processed date to now:", finalProcessedDate);
-      }
+      const processedDate = newStatus === 'received' ? new Date().toISOString() : null;
       
       const result = await bankTransferService.updateBankTransfer(
-        selectedTransfer.id,
-        editStatus,
-        finalProcessedDate ? finalProcessedDate.toISOString() : null
+        transferId,
+        newStatus,
+        processedDate
       );
       
-      console.log("Update result:", result);
-      
       if (result.success) {
-        toast.success(result.message);
-        
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        toast.success(
+          newStatus === 'received' 
+            ? "Virement marqué comme reçu" 
+            : newStatus === 'rejected'
+              ? "Virement rejeté"
+              : "Virement annulé"
+        );
         await fetchBankTransfers();
-        closeEditModal();
       } else {
-        setUpdateError("La mise à jour a échoué. Consultez les détails ci-dessous.");
-        setUpdateDetails(result);
-        toast.error("Échec de la mise à jour du virement bancaire");
+        console.error("Échec de la mise à jour:", result);
+        toast.error(`Échec de la mise à jour: ${result.message}`);
       }
     } catch (error: any) {
-      console.error("Update error:", error);
-      setUpdateError(error.message || "Une erreur inconnue est survenue");
-      setUpdateDetails({
-        error: error.message,
-        stack: error.stack
-      });
-      toast.error(`Erreur de mise à jour: ${error.message || "Erreur inconnue"}`);
+      console.error(`Erreur lors de la mise à jour du statut:`, error);
+      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
@@ -224,40 +206,63 @@ export default function BankTransfersPage() {
     }
   };
 
-  const handleStatusChange = async (transferId: string, newStatus: 'received' | 'cancelled') => {
+  const handleSubmitEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!selectedTransfer) return;
+    
+    setIsSubmitting(true);
+    setUpdateError(null);
+    setUpdateDetails(null);
+    
     try {
-      setIsLoading(true);
+      console.log(`Updating bank transfer with status: ${editStatus} (ID: ${selectedTransfer.id})`);
+      
+      let finalProcessedDate = processedDate;
+      if ((editStatus === 'received' || editStatus === 'reçu') && !processedDate) {
+        finalProcessedDate = new Date();
+        console.log("Automatically setting processed date to now:", finalProcessedDate);
+      }
       
       const result = await bankTransferService.updateBankTransfer(
-        transferId,
-        newStatus,
-        newStatus === 'received' ? new Date().toISOString() : null
+        selectedTransfer.id,
+        editStatus,
+        finalProcessedDate ? finalProcessedDate.toISOString() : null
       );
       
+      console.log("Update result:", result);
+      
       if (result.success) {
-        toast.success(newStatus === 'received' 
-          ? "Virement marqué comme reçu" 
-          : "Virement annulé");
+        toast.success(result.message);
+        
+        await new Promise(resolve => setTimeout(resolve, 1000));
         await fetchBankTransfers();
+        closeEditModal();
       } else {
-        toast.error(`Échec de la mise à jour: ${result.message}`);
+        setUpdateError("La mise à jour a échoué. Consultez les détails ci-dessous.");
+        setUpdateDetails(result);
+        toast.error("Échec de la mise à jour du virement bancaire");
       }
     } catch (error: any) {
-      console.error(`Erreur lors de la mise à jour du statut:`, error);
-      toast.error(`Erreur: ${error.message}`);
+      console.error("Update error:", error);
+      setUpdateError(error.message || "Une erreur inconnue est survenue");
+      setUpdateDetails({
+        error: error.message,
+        stack: error.stack,
+        context: 'handleSubmitEdit'
+      });
+      toast.error(`Erreur de mise à jour: ${error.message || "Erreur inconnue"}`);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
-  
-  // Fonction pour forcer le statut "reçu"
+
   const handleTransferToReceived = () => {
     if (!selectedTransfer) return;
     
     setEditStatus('received');
     setProcessedDate(new Date());
     
-    // Soumettre automatiquement le formulaire après un court délai
     setTimeout(() => {
       handleSubmitEdit(new Event('submit') as any);
     }, 100);

@@ -20,7 +20,7 @@ export default function BankTransferTableRow({
   processingId,
   onStatusUpdate
 }: BankTransferTableRowProps) {
-  const { confirmReceipt, rejectTransfer } = useBankTransfers();
+  const { confirmReceipt, rejectTransfer, updateTransferStatus } = useBankTransfers();
   
   // Format date nicely
   const formattedDate = item.created_at 
@@ -38,16 +38,16 @@ export default function BankTransferTableRow({
   const isPending = item.status === 'pending';
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
   
-  // Handle confirming receipt
+  // Handle confirming receipt - now uses updateTransferStatus
   const handleConfirmReceipt = async () => {
-    await confirmReceipt(item);
-    if (onStatusUpdate) onStatusUpdate();
+    const success = await updateTransferStatus(item, 'received');
+    if (success && onStatusUpdate) onStatusUpdate();
   };
   
-  // Handle rejecting transfer
+  // Handle rejecting transfer - now uses updateTransferStatus
   const handleRejectTransfer = async () => {
-    await rejectTransfer(item);
-    if (onStatusUpdate) onStatusUpdate();
+    const success = await updateTransferStatus(item, 'rejected');
+    if (success && onStatusUpdate) onStatusUpdate();
   };
   
   return (

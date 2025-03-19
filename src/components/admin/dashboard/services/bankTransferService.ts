@@ -256,7 +256,7 @@ export const bankTransferService = {
         .from('bank_transfers')
         .update(updateData)
         .eq('id', transferId)
-        .select();
+        .select('*');
         
       if (error) {
         console.error("Erreur lors de la mise à jour directe:", error);
@@ -266,30 +266,30 @@ export const bankTransferService = {
         };
       }
       
-      // Verify the update was successful
-      const { data: checkData, error: checkError } = await supabase
+      // Verify the update was successful by fetching the updated record
+      const { data: updatedTransfer, error: fetchError } = await supabase
         .from('bank_transfers')
-        .select('status, processed, processed_at, user_id')
+        .select('*')
         .eq('id', transferId)
         .single();
         
-      if (checkError) {
-        console.error("Erreur lors de la vérification:", checkError);
+      if (fetchError) {
+        console.error("Erreur lors de la vérification après mise à jour:", fetchError);
         return {
           success: false,
           message: "Impossible de vérifier l'état après mise à jour"
         };
       }
       
-      const success = checkData.status === status;
+      const success = updatedTransfer.status === status;
       
       // Update wallet balance if successful
-      if (success && checkData.user_id && (status === 'received' || status === 'reçu')) {
+      if (success && updatedTransfer.user_id && (status === 'received' || status === 'reçu')) {
         try {
           await supabase.rpc('recalculate_wallet_balance', {
-            user_uuid: checkData.user_id
+            user_uuid: updatedTransfer.user_id
           });
-          console.log("Solde recalculé pour l'utilisateur", checkData.user_id);
+          console.log("Solde recalculé pour l'utilisateur", updatedTransfer.user_id);
         } catch (rpcError) {
           console.error("Erreur lors du recalcul du solde:", rpcError);
         }
@@ -297,8 +297,8 @@ export const bankTransferService = {
       
       return {
         success: success,
-        message: success ? 'Virement mis à jour avec succès' : `Échec de mise à jour. Statut: ${checkData.status}`,
-        data: checkData
+        message: success ? 'Virement mis à jour avec succès' : `Échec de mise à jour. Statut: ${updatedTransfer.status}`,
+        data: updatedTransfer
       };
     } catch (error: any) {
       console.error("Erreur générale:", error);

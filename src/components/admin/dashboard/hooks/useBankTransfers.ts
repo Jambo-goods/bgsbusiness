@@ -51,9 +51,43 @@ export function useBankTransfers() {
     }
   };
 
+  // Add a new function to directly update bank transfer status
+  const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string) => {
+    try {
+      setProcessingId(transfer.id);
+      
+      // Use current date as processed date for received status
+      const processedDate = (newStatus === 'received' || newStatus === 'reçu') 
+        ? new Date().toISOString() 
+        : null;
+      
+      const result = await bankTransferService.updateBankTransfer(
+        transfer.id,
+        newStatus,
+        processedDate
+      );
+      
+      if (result.success) {
+        toast.success(`Virement mis à jour: ${newStatus}`);
+        return true;
+      } else {
+        console.error("Échec de mise à jour:", result);
+        toast.error(result.message);
+        return false;
+      }
+    } catch (error: any) {
+      console.error("Erreur lors de la mise à jour du statut:", error);
+      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
+      return false;
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   return {
     processingId,
     confirmReceipt,
-    rejectTransfer
+    rejectTransfer,
+    updateTransferStatus
   };
 }
