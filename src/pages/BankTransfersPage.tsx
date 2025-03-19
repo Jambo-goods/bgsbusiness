@@ -192,7 +192,9 @@ export default function BankTransfersPage() {
         }
         
         toast.success("Virement bancaire mis à jour directement (fallback)");
-        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Wait for database changes to propagate
+        await new Promise(resolve => setTimeout(resolve, 1000));
         await fetchBankTransfers();
         closeEditModal();
         return;
@@ -216,8 +218,8 @@ export default function BankTransfersPage() {
             console.log("Attempting direct update as verification fallback");
             const directUpdate = {
               status: editStatus,
-              processed: editStatus === 'received' || editStatus === 'reçu',
-              processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : null
+              processed: true,
+              processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : new Date().toISOString()
             };
             
             await supabase
@@ -233,14 +235,38 @@ export default function BankTransfersPage() {
           toast.success("Virement bancaire mis à jour avec succès");
         }
         
-        // Wait a moment to allow database changes to propagate
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Wait a longer time for database changes to propagate
+        await new Promise(resolve => setTimeout(resolve, 2000));
         await fetchBankTransfers();
         closeEditModal();
       } else {
         setUpdateError("La mise à jour a échoué. Consultez les détails ci-dessous.");
         setUpdateDetails(functionData || { error: "Aucune réponse de la fonction" });
         toast.error("Échec de la mise à jour du virement bancaire");
+        
+        // Try one more time with direct SQL via RPC
+        try {
+          console.log("Attempting final fallback with direct SQL");
+          const { error: rpcError } = await supabase.rpc('update_bank_transfer_direct', {
+            p_id: selectedTransfer.id,
+            p_status: editStatus,
+            p_processed: editStatus === 'received' || editStatus === 'reçu',
+            p_processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : new Date().toISOString(),
+            p_notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
+          });
+          
+          if (rpcError) {
+            console.error("RPC fallback failed:", rpcError);
+          } else {
+            console.log("RPC fallback succeeded");
+            toast.success("Virement bancaire mis à jour avec la méthode de secours");
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            await fetchBankTransfers();
+            closeEditModal();
+          }
+        } catch (rpcError) {
+          console.error("RPC error:", rpcError);
+        }
       }
     } catch (error: any) {
       console.error("Update error:", error);
@@ -290,6 +316,99 @@ export default function BankTransfersPage() {
       console.error("Erreur lors de l'actualisation:", error);
       toast.error("Échec de l'actualisation des données");
     } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to force update a bank transfer directly
+  const forceUpdateTransfer = async (transfer: BankTransfer, newStatus: string) => {
+    try {
+      setIsLoading(true);
+      toast.info("Mise à jour forcée en cours...");
+      
+      // Try multiple update methods in sequence
+      
+      // Method 1: Edge Function
+      try {
+        const { data, error } = await supabase.functions.invoke('update-bank-transfer', {
+          body: {
+            transferId: transfer.id,
+            status: newStatus,
+            processed: newStatus === 'received' || newStatus === 'reçu',
+            processedAt: new Date().toISOString(),
+            notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
+          }
+        });
+        
+        if (!error && data?.success) {
+          console.log("Edge function update successful:", data);
+          toast.success("Virement mis à jour avec succès (méthode 1)");
+          return true;
+        }
+      } catch (e) {
+        console.error("Edge function update failed:", e);
+      }
+      
+      // Method 2: Direct update
+      try {
+        const { error } = await supabase
+          .from('bank_transfers')
+          .update({
+            status: newStatus,
+            processed: newStatus === 'received' || newStatus === 'reçu',
+            processed_at: new Date().toISOString(),
+            notes: `Mise à jour forcée directe le ${new Date().toLocaleDateString('fr-FR')}`
+          })
+          .eq('id', transfer.id);
+          
+        if (!error) {
+          console.log("Direct update successful");
+          toast.success("Virement mis à jour avec succès (méthode 2)");
+          return true;
+        }
+      } catch (e) {
+        console.error("Direct update failed:", e);
+      }
+      
+      // Method 3: Upsert
+      try {
+        const { data: existingData } = await supabase
+          .from('bank_transfers')
+          .select('*')
+          .eq('id', transfer.id)
+          .single();
+          
+        if (existingData) {
+          const { error } = await supabase
+            .from('bank_transfers')
+            .upsert({
+              ...existingData,
+              status: newStatus,
+              processed: newStatus === 'received' || newStatus === 'reçu',
+              processed_at: new Date().toISOString(),
+              notes: `Mise à jour forcée par upsert le ${new Date().toLocaleDateString('fr-FR')}`
+            });
+            
+          if (!error) {
+            console.log("Upsert update successful");
+            toast.success("Virement mis à jour avec succès (méthode 3)");
+            return true;
+          }
+        }
+      } catch (e) {
+        console.error("Upsert update failed:", e);
+      }
+      
+      toast.error("Toutes les méthodes de mise à jour ont échoué");
+      return false;
+    } catch (error) {
+      console.error("Force update failed:", error);
+      toast.error("Échec de la mise à jour forcée");
+      return false;
+    } finally {
+      // Wait to ensure database changes are processed
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      await fetchBankTransfers();
       setIsLoading(false);
     }
   };
@@ -422,8 +541,18 @@ export default function BankTransfersPage() {
                         <TableCell className="font-medium">{transfer.amount?.toLocaleString()} €</TableCell>
                         <TableCell>{transfer.confirmed_at ? formatDate(transfer.confirmed_at) : "-"}</TableCell>
                         <TableCell>
-                          <StatusBadge status={transfer.status || 'pending'} />
-                          {transfer.processed && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Traité</span>}
+                          <div className="flex flex-col gap-1">
+                            <StatusBadge status={transfer.status || 'pending'} />
+                            {transfer.processed && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Traité</span>}
+                            {transfer.status === 'pending' && (
+                              <button
+                                onClick={() => forceUpdateTransfer(transfer, 'received')}
+                                className="text-xs text-blue-600 hover:text-blue-800 mt-1"
+                              >
+                                Forcer à Reçu
+                              </button>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>{transfer.processed_at ? formatDate(transfer.processed_at) : "-"}</TableCell>
                         <TableCell>
@@ -449,6 +578,14 @@ export default function BankTransfersPage() {
               </Table>
             </div>
           )}
+        </div>
+
+        <div className="mt-8 p-4 bg-gray-100 rounded-lg border border-gray-200">
+          <h3 className="text-lg font-medium mb-2">Informations de débogage</h3>
+          <p className="text-sm text-gray-600">
+            En cas de problème avec la mise à jour des virements, utilisez le bouton "Forcer à Reçu" pour tenter une mise à jour directe,
+            ou ouvrez le modal d'édition pour effectuer une mise à jour manuelle. Si les problèmes persistent, consultez les logs du navigateur.
+          </p>
         </div>
       </div>
 
