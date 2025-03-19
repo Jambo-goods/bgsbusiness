@@ -79,7 +79,7 @@ export default function BankTransferTable({
             <TableHead>Date</TableHead>
             <TableHead>Utilisateur</TableHead>
             <TableHead>Référence</TableHead>
-            <TableHead>Réception</TableHead>
+            <TableHead>Statut</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>

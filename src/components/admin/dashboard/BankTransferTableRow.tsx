@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -35,13 +34,12 @@ export default function BankTransferTableRow({
   const [localProcessing, setLocalProcessing] = useState(false);
   const [lastActionTime, setLastActionTime] = useState<number>(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editStatus, setEditStatus] = useState<string>(item.status || "pending");
+  const [editStatus, setEditStatus] = useState<string>(item.status || 'pending');
   const [processedDate, setProcessedDate] = useState<Date | undefined>(
     item.processed_at ? new Date(item.processed_at) : undefined
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Format date nicely
   const formattedDate = item.created_at 
     ? format(new Date(item.created_at), 'dd MMM yyyy HH:mm', { locale: fr })
     : 'Date inconnue';
@@ -57,7 +55,6 @@ export default function BankTransferTableRow({
   const isPending = item.status === 'pending';
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
   
-  // Debouncer to prevent duplicate calls
   const shouldPreventAction = () => {
     const now = Date.now();
     const timeSinceLastAction = now - lastActionTime;
@@ -70,8 +67,7 @@ export default function BankTransferTableRow({
     setLastActionTime(now);
     return false;
   };
-  
-  // Handle confirming receipt using the edge function
+
   const handleConfirmReceipt = async () => {
     if (isProcessing || shouldPreventAction()) return;
     
@@ -81,7 +77,6 @@ export default function BankTransferTableRow({
     try {
       console.log(`Confirming receipt for transfer ${item.id}`);
       
-      // Call the edge function
       const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
         'update-bank-transfer',
         {
@@ -99,7 +94,6 @@ export default function BankTransferTableRow({
         console.error("Erreur fonction edge:", edgeFunctionError);
         toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
-        // Fallback to local service if edge function fails
         const success = await updateTransferStatus(item, 'received');
         if (success && onStatusUpdate) {
           toast.success("Virement marqué comme reçu");
@@ -112,9 +106,7 @@ export default function BankTransferTableRow({
         
         if (edgeFunctionData.success) {
           toast.success("Virement marqué comme reçu");
-          // Notify parent component to refresh data
           if (onStatusUpdate) {
-            // Ensure we give the database time to update
             setTimeout(() => {
               onStatusUpdate();
             }, 1000);
@@ -131,7 +123,6 @@ export default function BankTransferTableRow({
     }
   };
   
-  // Handle rejecting transfer using the edge function
   const handleRejectTransfer = async () => {
     if (isProcessing || shouldPreventAction()) return;
     
@@ -141,7 +132,6 @@ export default function BankTransferTableRow({
     try {
       console.log(`Rejecting transfer ${item.id}`);
       
-      // Call the edge function
       const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
         'update-bank-transfer',
         {
@@ -159,7 +149,6 @@ export default function BankTransferTableRow({
         console.error("Erreur fonction edge:", edgeFunctionError);
         toast.error(`Erreur de rejet: ${edgeFunctionError.message}`);
         
-        // Fallback to local service if edge function fails
         const success = await updateTransferStatus(item, 'rejected');
         if (success && onStatusUpdate) {
           toast.success("Virement rejeté");
@@ -172,9 +161,7 @@ export default function BankTransferTableRow({
         
         if (edgeFunctionData.success) {
           toast.success("Virement rejeté avec succès");
-          // Notify parent component to refresh data
           if (onStatusUpdate) {
-            // Ensure we give the database time to update
             setTimeout(() => {
               onStatusUpdate();
             }, 1000);
@@ -191,14 +178,12 @@ export default function BankTransferTableRow({
     }
   };
 
-  // Open edit modal
   const handleEditClick = () => {
     setEditStatus(item.status || 'pending');
     setProcessedDate(item.processed_at ? new Date(item.processed_at) : undefined);
     setIsEditModalOpen(true);
   };
 
-  // Submit status and processed date changes
   const handleSubmitEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -210,10 +195,8 @@ export default function BankTransferTableRow({
     try {
       console.log(`Updating transfer ${item.id} with status ${editStatus} and processed date ${processedDate}`);
       
-      // Determine if processed should be true based on status and date
       const isProcessed = (editStatus === 'received' || editStatus === 'rejected') || processedDate !== undefined;
       
-      // Call the edge function
       const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
         'update-bank-transfer',
         {
@@ -231,7 +214,6 @@ export default function BankTransferTableRow({
         console.error("Erreur fonction edge:", edgeFunctionError);
         toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
-        // Fallback to local service
         const processedDateStr = processedDate ? processedDate.toISOString() : null;
         const success = await updateTransferStatus(item, editStatus, processedDateStr);
         
@@ -249,9 +231,7 @@ export default function BankTransferTableRow({
           toast.success("Virement mis à jour avec succès");
           setIsEditModalOpen(false);
           
-          // Notify parent component to refresh data
           if (onStatusUpdate) {
-            // Ensure we give the database time to update
             setTimeout(() => {
               onStatusUpdate();
             }, 1000);
@@ -348,7 +328,6 @@ export default function BankTransferTableRow({
           )}
         </div>
         
-        {/* Edit Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={(open) => !open && setIsEditModalOpen(false)}>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
