@@ -128,6 +128,8 @@ export default function BankTransfersPage() {
         return 'Confirmé';
       case 'rejected':
         return 'Rejeté';
+      case 'cancelled':
+        return 'Annuler';
       default:
         return status || 'Inconnu';
     }
@@ -145,6 +147,8 @@ export default function BankTransfersPage() {
         return 'bg-green-100 text-green-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -207,7 +211,8 @@ export default function BankTransfersPage() {
   const statusOptions = [
     { value: "pending", label: "En attente" },
     { value: "received", label: "Reçu" },
-    { value: "rejected", label: "Rejeté" }
+    { value: "rejected", label: "Rejeté" },
+    { value: "cancelled", label: "Annuler" }
   ];
 
   return (
