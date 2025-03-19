@@ -18,17 +18,17 @@ export const bankTransferService = {
       
       console.log(`Traitement du dépôt ${item.id} pour un montant de ${amount}€`);
       
-      // 1. Essayer d'utiliser RPC pour contourner RLS
+      // 1. Use the new admin_mark_bank_transfer function with proper parameter names
       try {
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_update_bank_transfer', {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_mark_bank_transfer', {
           transfer_id: item.id,
           new_status: 'received',
-          processed: true,
+          is_processed: true, // Use is_processed to avoid ambiguity
           notes: `Dépôt confirmé par admin le ${new Date().toLocaleDateString('fr-FR')}`
         });
         
         if (rpcError) {
-          console.error("Erreur RPC admin_update_bank_transfer:", rpcError);
+          console.error("Erreur RPC admin_mark_bank_transfer:", rpcError);
           console.warn("Fallback aux méthodes standards...");
         } else {
           console.log("Mise à jour via RPC réussie:", rpcResult);
@@ -118,17 +118,17 @@ export const bankTransferService = {
       
       console.log(`Rejet du dépôt ${item.id}`);
       
-      // 1. Essayer d'utiliser RPC pour contourner RLS
+      // 1. Use the new admin_mark_bank_transfer function
       try {
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_update_bank_transfer', {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_mark_bank_transfer', {
           transfer_id: item.id,
           new_status: 'rejected',
-          processed: true,
+          is_processed: true, // Use is_processed to avoid ambiguity
           notes: `Dépôt rejeté par admin le ${new Date().toLocaleDateString('fr-FR')}`
         });
         
         if (rpcError) {
-          console.error("Erreur RPC admin_update_bank_transfer:", rpcError);
+          console.error("Erreur RPC admin_mark_bank_transfer:", rpcError);
           console.warn("Fallback aux méthodes standards...");
         } else {
           console.log("Mise à jour via RPC réussie:", rpcResult);
@@ -191,18 +191,17 @@ export const bankTransferService = {
       
       console.log(`Confirmation de réception pour ${item.id}`);
       
-      // 1. Essayer d'utiliser RPC pour contourner RLS avec une meilleure gestion du paramètre processed
+      // 1. Use the new admin_mark_bank_transfer function
       try {
-        // Utiliser is_processed au lieu de processed pour éviter l'ambiguïté en SQL
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_update_bank_transfer', {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_mark_bank_transfer', {
           transfer_id: item.id,
           new_status: 'received',
-          processed: true, // Renommé pour plus de clarté
+          is_processed: true, // Use is_processed to avoid ambiguity
           notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
         });
         
         if (rpcError) {
-          console.error("Erreur RPC admin_update_bank_transfer:", rpcError);
+          console.error("Erreur RPC admin_mark_bank_transfer:", rpcError);
           console.warn("Fallback aux méthodes standards...");
           
           // Alternative: essayer d'insérer directement via service role
@@ -366,17 +365,17 @@ export const bankTransferService = {
     try {
       console.log(`Mise à jour du virement ${transferId} avec statut ${status}`);
       
-      // 1. Utiliser la fonction RPC admin_update_bank_transfer pour contourner RLS
+      // 1. Utiliser la fonction RPC admin_mark_bank_transfer pour contourner RLS
       try {
-        const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_update_bank_transfer', {
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_mark_bank_transfer', {
           transfer_id: transferId,
           new_status: status,
-          processed: status === 'received' || status === 'reçu',
+          is_processed: status === 'received' || status === 'reçu',
           notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
         });
         
         if (rpcError) {
-          console.error("Erreur RPC admin_update_bank_transfer:", rpcError);
+          console.error("Erreur RPC admin_mark_bank_transfer:", rpcError);
           console.warn("Fallback aux méthodes standards...");
         } else {
           console.log("Mise à jour via RPC réussie:", rpcResult);

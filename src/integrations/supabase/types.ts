@@ -538,6 +538,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      admin_mark_bank_transfer: {
+        Args: {
+          transfer_id: string
+          new_status: string
+          is_processed: boolean
+          notes: string
+        }
+        Returns: boolean
+      }
       admin_update_bank_transfer: {
         Args: {
           transfer_id: string
