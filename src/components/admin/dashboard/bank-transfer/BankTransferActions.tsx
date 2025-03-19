@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Check, XCircle, ReceiptText, Hammer } from "lucide-react";
+import { Check, XCircle, ReceiptText } from "lucide-react";
 
 interface BankTransferActionsProps {
   needsAction: boolean;
@@ -62,18 +62,6 @@ export function BankTransferActions({
         >
           <ReceiptText className="h-4 w-4 mr-1" />
           Confirmer réception
-        </Button>
-      )}
-      
-      {hasStatusError && showForceButton && (
-        <Button 
-          size="sm"
-          variant="destructive"
-          className="h-8 font-semibold animate-pulse"
-          onClick={onForceClick}
-        >
-          <Hammer className="h-4 w-4 mr-1" />
-          FORCER à Reçu
         </Button>
       )}
     </div>
