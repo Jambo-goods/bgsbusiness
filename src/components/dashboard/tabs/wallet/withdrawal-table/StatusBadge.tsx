@@ -1,6 +1,6 @@
 
 import React from "react";
-import { CheckCircle, Clock, AlertTriangle, ArrowLeftRight, XCircle, CheckCheck } from "lucide-react";
+import { CheckCircle, Clock, AlertTriangle, ArrowLeftRight, XCircle, CheckCheck, RefreshCcw, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StatusBadgeProps {
@@ -17,45 +17,47 @@ export default function StatusBadge({ status }: StatusBadgeProps) {
           icon: <Clock className="h-3.5 w-3.5 mr-1" />
         };
       case "received":
+      case "reçu":
         return {
-          label: "Reçue",
+          label: "Reçu",
           className: "bg-blue-50 text-blue-600 border-blue-200",
-          icon: <Clock className="h-3.5 w-3.5 mr-1" />
+          icon: <Circle className="h-3.5 w-3.5 mr-1" />
         };
       case "confirmed":
         return {
-          label: "Confirmée",
+          label: "Confirmé",
           className: "bg-indigo-50 text-indigo-600 border-indigo-200",
           icon: <CheckCircle className="h-3.5 w-3.5 mr-1" />
         };
       case "scheduled":
       case "sheduled": // Handle misspelling in database
         return {
-          label: "Programmée",
+          label: "Programmé",
           className: "bg-purple-50 text-purple-600 border-purple-200",
           icon: <ArrowLeftRight className="h-3.5 w-3.5 mr-1" />
         };
       case "approved":
         return {
-          label: "Approuvée",
+          label: "Approuvé",
           className: "bg-green-50 text-green-600 border-green-200",
           icon: <CheckCircle className="h-3.5 w-3.5 mr-1" />
         };
       case "completed":
+      case "processed":
         return {
-          label: "Complétée",
+          label: "Traité",
           className: "bg-green-100 text-green-700 border-green-300",
           icon: <CheckCircle className="h-3.5 w-3.5 mr-1" />
         };
       case "paid":
         return {
-          label: "Payée",
+          label: "Payé",
           className: "bg-green-500 text-white border-green-600",
           icon: <CheckCheck className="h-3.5 w-3.5 mr-1" />
         };
       case "rejected":
         return {
-          label: "Rejetée",
+          label: "Rejeté",
           className: "bg-red-50 text-red-600 border-red-200",
           icon: <XCircle className="h-3.5 w-3.5 mr-1" />
         };
