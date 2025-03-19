@@ -402,24 +402,49 @@ export const bankTransferService = {
         }
       }
       
-      // Step 3: If still not successful, try direct SQL execution
+      // Step 3: Directly call the recalculate function instead of using RPC
       if (!updateSuccess) {
         try {
-          console.log("Tentative de mise à jour avec RPC...");
+          console.log("Tentative de mise à jour manuelle avec recalculate_wallet_balance...");
           
-          // Try to update using a simple RPC call
-          const { error: rpcError } = await supabase.rpc('update_wallet_balance_on_transfer');
-          
-          if (rpcError) {
-            console.error("Échec de la mise à jour via RPC:", rpcError);
-            errorDetails += ` | RPC: ${rpcError.message}`;
-          } else {
-            updateSuccess = true;
-            console.log("Mise à jour potentiellement réussie via RPC trigger");
+          // Get user_id for the transfer
+          const { data: transferData, error: transferError } = await supabase
+            .from('bank_transfers')
+            .select('user_id')
+            .eq('id', transferId)
+            .single();
+            
+          if (transferError) {
+            console.error("Échec de récupération de l'ID utilisateur:", transferError);
+            errorDetails += ` | User ID: ${transferError.message}`;
+          } else if (transferData && transferData.user_id) {
+            // Call recalculate_wallet_balance directly
+            const { error: recalcError } = await supabase.rpc('recalculate_wallet_balance', {
+              user_uuid: transferData.user_id
+            });
+            
+            if (recalcError) {
+              console.error("Échec de la mise à jour via recalculate_wallet_balance:", recalcError);
+              errorDetails += ` | Recalculate: ${recalcError.message}`;
+            } else {
+              // Try to update the status again
+              const { error: updateError } = await supabase
+                .from('bank_transfers')
+                .update(updates)
+                .eq('id', transferId);
+                
+              if (updateError) {
+                console.error("Échec de la mise à jour après recalculate:", updateError);
+                errorDetails += ` | Final update: ${updateError.message}`;
+              } else {
+                updateSuccess = true;
+                console.log("Mise à jour potentiellement réussie via recalculate_wallet_balance");
+              }
+            }
           }
         } catch (err: any) {
-          console.error("Erreur lors de la troisième tentative (RPC):", err);
-          errorDetails += ` | RPC exception: ${err.message || 'Erreur inconnue'}`;
+          console.error("Erreur lors de la troisième tentative (recalculate):", err);
+          errorDetails += ` | Recalculate exception: ${err.message || 'Erreur inconnue'}`;
         }
       }
       
@@ -501,7 +526,7 @@ export const bankTransferService = {
         };
       }
       
-      // Step 1: First try - Direct SQL update (bypass ORM)
+      // Step 1: Direct update to 'received' status
       const { error: updateError } = await supabase
         .from('bank_transfers')
         .update({
@@ -520,11 +545,20 @@ export const bankTransferService = {
         };
       }
       
-      // Step 2: Update wallet balance regardless
+      // Step 2: Update wallet balance using recalculate_wallet_balance
       try {
-        await supabase.rpc('recalculate_wallet_balance', {
+        const { error: recalcError } = await supabase.rpc('recalculate_wallet_balance', {
           user_uuid: currentData.user_id
         });
+        
+        if (recalcError) {
+          console.error("Erreur lors de la mise à jour du solde:", recalcError);
+          return {
+            success: true, // Still return true if bank_transfer was updated
+            message: `Virement mis à jour mais erreur avec le solde: ${recalcError.message}`
+          };
+        }
+        
         console.log(`Solde du wallet mis à jour pour l'utilisateur ${currentData.user_id}`);
       } catch (walletError: any) {
         console.error("Erreur lors de la mise à jour du solde:", walletError);
@@ -532,6 +566,25 @@ export const bankTransferService = {
           success: true, // Still return true if bank_transfer was updated
           message: `Virement mis à jour mais erreur avec le solde: ${walletError.message}`
         };
+      }
+      
+      // Step 3: Add a notification for the user
+      try {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: currentData.user_id,
+            title: "Virement reçu",
+            message: `Votre virement bancaire a été marqué comme reçu manuellement.`,
+            type: "deposit",
+            data: {
+              category: "success",
+              amount: currentData.amount,
+              transaction_id: transferId
+            }
+          });
+      } catch (notificationError) {
+        console.error("Erreur lors de la création de notification:", notificationError);
       }
       
       return {

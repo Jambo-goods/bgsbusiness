@@ -64,7 +64,10 @@ export function useBankTransfers(onSuccess: () => void) {
       
       if (success) {
         toast.success("Virement forcé à 'reçu' avec succès");
-        onSuccess();
+        // Add extra delay to ensure database updates propagate
+        setTimeout(() => {
+          onSuccess();
+        }, 1000);
       } else {
         console.error("Échec du forçage:", message);
         toast.error(`Échec du forçage: ${message}`);
