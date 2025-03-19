@@ -547,13 +547,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      force_bank_transfer_status: {
-        Args: {
-          transfer_id: string
-          new_status?: string
-        }
-        Returns: boolean
-      }
       increment_wallet_balance: {
         Args: {
           user_id: string
