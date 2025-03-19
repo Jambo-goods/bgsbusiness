@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -148,7 +149,8 @@ export default function BankTransfersPage() {
       
       console.log("Sending update with payload:", updates);
       
-      const { data: updatedData, error } = await supabase
+      let updatedData;
+      const { data, error } = await supabase
         .from('bank_transfers')
         .update(updates)
         .eq('id', selectedTransfer.id)
@@ -195,7 +197,8 @@ export default function BankTransfersPage() {
           throw fallbackError;
         }
       } else {
-        console.log("Mise à jour réussie:", updatedData);
+        console.log("Mise à jour réussie:", data);
+        updatedData = data;
       }
       
       const { data: checkData, error: checkError } = await supabase
