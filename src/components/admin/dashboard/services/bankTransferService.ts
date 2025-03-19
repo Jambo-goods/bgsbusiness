@@ -407,78 +407,57 @@ export const bankTransferService = {
   
   async forceUpdateToReceived(transferId: string): Promise<{success: boolean, message: string}> {
     try {
-      console.log(`[FORÇAGE] Tentative de forcer statut à 'reçu' pour le transfert ${transferId}`);
+      console.log(`[FORÇAGE] Tentative de forcer statut à 'reçu' pour le transfert ${transferId} via Edge Function`);
       
-      // First get the full record
-      const { data: fullData, error: fetchError } = await supabase
-        .from('bank_transfers')
-        .select('*')
-        .eq('id', transferId)
-        .single();
-        
-      if (fetchError) {
-        console.error("[FORÇAGE] Impossible de récupérer les données complètes:", fetchError);
+      // Call the edge function to bypass RLS
+      const { data, error } = await supabase.functions.invoke('force-bank-transfer-status', {
+        body: { 
+          transferId,
+          newStatus: 'received',
+          forceWalletRecalculation: true
+        }
+      });
+      
+      if (error) {
+        console.error("[FORÇAGE] Erreur lors de l'appel à l'Edge Function:", error);
         return { 
           success: false, 
-          message: `Erreur lors de la récupération: ${fetchError.message}` 
+          message: `Erreur: ${error.message}` 
         };
       }
       
-      // Update wallet balance directly using RPC
-      if (fullData.user_id) {
+      console.log("[FORÇAGE] Résultat de l'Edge Function:", data);
+      
+      if (data?.success) {
+        // Create notification even if the edge function succeeded
         try {
-          await supabase.rpc('recalculate_wallet_balance', {
-            user_uuid: fullData.user_id
-          });
-          console.log("[FORÇAGE] Solde recalculé pour l'utilisateur", fullData.user_id);
-        } catch (err) {
-          console.error("[FORÇAGE] Erreur lors du recalcul du solde:", err);
+          if (data.userId) {
+            await supabase.from('notifications').insert({
+              user_id: data.userId,
+              title: "Virement traité",
+              message: `Votre virement bancaire a été traité et ajouté à votre portefeuille.`,
+              type: "deposit",
+              data: {
+                category: "success",
+                amount: data.amount,
+                reference: data.reference
+              }
+            });
+          }
+        } catch (e) {
+          console.error("[FORÇAGE] Erreur notification après succès Edge Function:", e);
         }
-      }
-      
-      // Create a complete update with all fields
-      const updatedRecord = {
-        ...fullData,
-        status: 'received',
-        processed: true,
-        processed_at: new Date().toISOString(),
-        notes: `Mise à jour FORCÉE le ${new Date().toLocaleDateString('fr-FR')}`
-      };
-      
-      // Use upsert to ensure all fields are included
-      const { error: updateError } = await supabase
-        .from('bank_transfers')
-        .upsert(updatedRecord);
-      
-      if (updateError) {
-        console.error("[FORÇAGE] Erreur lors de la mise à jour:", updateError);
-        return {
-          success: false,
-          message: `Échec de la mise à jour: ${updateError.message}`
+        
+        return { 
+          success: true, 
+          message: "Virement forcé à 'reçu' avec succès via Edge Function" 
+        };
+      } else {
+        return { 
+          success: false, 
+          message: data?.message || "Échec de la mise à jour via Edge Function" 
         };
       }
-      
-      // Final verification
-      const { data: checkData, error: checkError } = await supabase
-        .from('bank_transfers')
-        .select('status')
-        .eq('id', transferId)
-        .single();
-      
-      if (checkError) {
-        console.error("[FORÇAGE] Erreur lors de la vérification:", checkError);
-        return {
-          success: false,
-          message: "Mise à jour effectuée mais impossible de vérifier le résultat"
-        };
-      }
-      
-      return {
-        success: checkData.status === 'received',
-        message: checkData.status === 'received' 
-          ? "Virement forcé à 'reçu' avec succès" 
-          : `Échec de mise à jour. Statut actuel: ${checkData.status}`
-      };
     } catch (error: any) {
       console.error("[FORÇAGE] Erreur critique:", error);
       return {
@@ -492,77 +471,29 @@ export const bankTransferService = {
     try {
       console.log("[DIRECT FORCE] Démarrage forçage direct pour", item.id);
       
-      // 1. First, get complete data for the transfer
-      const { data: fullTransfer, error: fetchError } = await supabase
-        .from('bank_transfers')
-        .select('*')
-        .eq('id', item.id)
-        .single();
-        
-      if (fetchError) {
-        console.error("[DIRECT FORCE] Erreur récupération:", fetchError);
-        return { 
-          success: false, 
-          message: `Erreur récupération: ${fetchError.message}` 
-        };
-      }
-      
-      // 2. Update wallet balance directly
-      if (item.user_id) {
-        try {
-          // First get current balance
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('wallet_balance')
-            .eq('id', item.user_id)
-            .single();
-          
-          if (profile && item.amount) {
-            // Calculate new balance
-            const newBalance = (profile.wallet_balance || 0) + item.amount;
-            
-            // Update profile directly
-            await supabase
-              .from('profiles')
-              .update({ wallet_balance: newBalance })
-              .eq('id', item.user_id);
-              
-            console.log("[DIRECT FORCE] Solde mis à jour directement:", newBalance);
-          }
-        } catch (e) {
-          console.error("[DIRECT FORCE] Erreur mise à jour solde:", e);
+      // Call the edge function to bypass RLS
+      const { data, error } = await supabase.functions.invoke('force-bank-transfer-status', {
+        body: { 
+          transferId: item.id,
+          newStatus: 'received',
+          forceWalletUpdate: true,
+          amount: item.amount,
+          userId: item.user_id,
+          transferData: item
         }
-      }
+      });
       
-      // 3. Update bank transfer status with all fields included
-      const updatedTransfer = {
-        ...fullTransfer,
-        status: 'received',
-        processed: true,
-        processed_at: new Date().toISOString(),
-        notes: (fullTransfer.notes || '') + ' | Forcé manuellement le ' + new Date().toLocaleDateString('fr-FR')
-      };
-      
-      const { error: updateError } = await supabase
-        .from('bank_transfers')
-        .upsert(updatedTransfer);
-        
-      if (updateError) {
-        console.error("[DIRECT FORCE] Erreur mise à jour:", updateError);
+      if (error) {
+        console.error("[DIRECT FORCE] Erreur lors de l'appel à l'Edge Function:", error);
         return { 
           success: false, 
-          message: `Erreur mise à jour: ${updateError.message}` 
+          message: `Erreur Edge Function: ${error.message}` 
         };
       }
       
-      // 4. Verify the update
-      const { data: checkData } = await supabase
-        .from('bank_transfers')
-        .select('status')
-        .eq('id', item.id)
-        .single();
-        
-      if (checkData?.status === 'received') {
+      console.log("[DIRECT FORCE] Résultat de l'Edge Function:", data);
+      
+      if (data?.success) {
         // Create notification
         try {
           await supabase
@@ -584,13 +515,12 @@ export const bankTransferService = {
         
         return { 
           success: true, 
-          message: "Virement forcé à reçu avec succès" 
+          message: "Virement forcé à reçu avec succès via Edge Function" 
         };
       } else {
-        return { 
-          success: false, 
-          message: `Échec de mise à jour. Statut: ${checkData?.status || 'inconnu'}` 
-        };
+        // Fallback to forceUpdateToReceived if edge function failed
+        console.log("[DIRECT FORCE] Échec de l'Edge Function, tentative avec forceUpdateToReceived");
+        return await this.forceUpdateToReceived(item.id);
       }
     } catch (error: any) {
       console.error("[DIRECT FORCE] Erreur critique:", error);
