@@ -47,105 +47,130 @@ serve(async (req) => {
     console.log(`Edge Function: Updating bank transfer ${requestData.transferId}`);
     console.log(`Status: ${requestData.status}, Processed: ${requestData.processed}, Date: ${requestData.processedAt}`);
     
+    // CRITICAL: If status is 'received' or 'reçu', set processed to true
+    // This ensures consistent behavior across all updates
+    const processed = requestData.status === 'received' || requestData.status === 'reçu';
+    
     // CRITICAL: If processedAt is null and status is 'received', use current timestamp
-    // This ensures the bank transfer is properly marked as processed
     if ((requestData.status === 'received' || requestData.status === 'reçu') && !requestData.processedAt) {
       console.log("Setting processed_at to current timestamp since it was missing");
       requestData.processedAt = new Date().toISOString();
     }
     
-    // Method 1: Direct update with forced processed flag based on status
-    const processed = requestData.status === 'received' || requestData.status === 'reçu';
-    const { data: updateResult, error: updateError } = await supabaseClient
-      .from('bank_transfers')
-      .update({
-        status: requestData.status,
-        processed: processed,
-        processed_at: requestData.processedAt,
-        notes: requestData.notes
-      })
-      .eq('id', requestData.transferId);
+    // Use multiple strategies for updating (each one is a fallback if the previous fails)
+    // This maximizes the chance of a successful update
     
-    if (updateError) {
-      console.error(`Direct update failed: ${updateError.message}`);
-      console.error(`Details: ${JSON.stringify(updateError.details || {})}`);
-      
-      // Method 2: Try to fetch and then upsert
-      console.log("Trying fetch and upsert method...");
-      
-      const { data: existingData, error: fetchError } = await supabaseClient
-        .from('bank_transfers')
-        .select('*')
-        .eq('id', requestData.transferId)
-        .single();
-        
-      if (fetchError) {
-        console.error(`Failed to fetch bank transfer: ${fetchError.message}`);
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: `Failed to fetch bank transfer: ${fetchError.message}`
-          }), 
-          { headers, status: 400 }
-        );
-      }
-      
-      // Prepare the update data
-      const updateData = {
-        ...existingData,
-        status: requestData.status,
-        processed: processed,
-        processed_at: requestData.processedAt,
-        notes: requestData.notes
-      };
-      
-      // Use upsert with update resolution strategy
-      const { data: upsertData, error: upsertError } = await supabaseClient
-        .from('bank_transfers')
-        .upsert(updateData, { 
-          onConflict: 'id',
-          ignoreDuplicates: false
+    // 1. Strategy: Direct SQL via functions.invoke for most reliability
+    try {
+      console.log("Attempting direct SQL update via RPC...");
+      const { data: rpcData, error: rpcError } = await supabaseClient
+        .rpc('force_update_bank_transfer', {
+          transfer_id: requestData.transferId,
+          new_status: requestData.status,
+          processed_date: requestData.processedAt,
+          processed_value: processed,
+          notes_text: requestData.notes
         });
       
-      if (upsertError) {
-        console.error(`Upsert failed: ${upsertError.message}`);
-        console.error(`Details: ${JSON.stringify(upsertError.details || {})}`);
+      if (rpcError) {
+        console.error(`RPC update failed: ${rpcError.message}`);
+        throw new Error(`RPC update failed: ${rpcError.message}`);
+      }
+      
+      console.log("RPC update successful:", rpcData);
+    } catch (rpcMethodError) {
+      console.error("RPC method not available or failed:", rpcMethodError.message);
+      
+      // 2. Strategy: Direct update with REST API
+      console.log("Falling back to direct update...");
+      const { data: updateResult, error: updateError } = await supabaseClient
+        .from('bank_transfers')
+        .update({
+          status: requestData.status,
+          processed: processed,
+          processed_at: requestData.processedAt,
+          notes: requestData.notes
+        })
+        .eq('id', requestData.transferId);
+      
+      if (updateError) {
+        console.error(`Direct update failed: ${updateError.message}`);
+        console.error(`Details: ${JSON.stringify(updateError.details || {})}`);
         
-        // Method 3: Try raw SQL update via RPC
-        console.log("Trying direct SQL update method...");
+        // 3. Strategy: Try to fetch and then upsert
+        console.log("Trying fetch and upsert method...");
         
-        try {
-          // Raw SQL to perform the update
-          const { data: sqlData, error: sqlError } = await supabaseClient.rpc('force_update_bank_transfer', {
-            transfer_id: requestData.transferId,
-            new_status: requestData.status,
-            processed_date: requestData.processedAt,
-            processed_value: processed
-          });
+        const { data: existingData, error: fetchError } = await supabaseClient
+          .from('bank_transfers')
+          .select('*')
+          .eq('id', requestData.transferId)
+          .single();
           
-          if (sqlError) {
-            console.error(`SQL update failed: ${sqlError.message}`);
-            throw sqlError;
-          }
-        } catch (sqlError) {
-          console.error(`All update methods failed: ${sqlError.message}`);
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: `All update methods failed: ${sqlError.message}`,
-              originalError: upsertError.message
-            }), 
-            { headers, status: 500 }
+        if (fetchError) {
+          console.error(`Failed to fetch bank transfer: ${fetchError.message}`);
+          throw new Error(`Failed to fetch bank transfer: ${fetchError.message}`);
+        }
+        
+        // Prepare the update data - merging existing with new data
+        const updateData = {
+          ...existingData,
+          status: requestData.status,
+          processed: processed,
+          processed_at: requestData.processedAt,
+          notes: requestData.notes
+        };
+        
+        // Use upsert with update resolution strategy
+        const { data: upsertData, error: upsertError } = await supabaseClient
+          .from('bank_transfers')
+          .upsert(updateData, { 
+            onConflict: 'id',
+            ignoreDuplicates: false
+          });
+        
+        if (upsertError) {
+          console.error(`Upsert failed: ${upsertError.message}`);
+          
+          // 4. Strategy: Last resort - raw SQL via a different client approach
+          console.log("Attempting direct SQL UPDATE...");
+          
+          // We'll use the service role for this direct approach
+          const adminClient = createClient(
+            Deno.env.get('SUPABASE_URL') ?? '',
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
           );
+          
+          const query = `
+            UPDATE bank_transfers 
+            SET 
+              status = '${requestData.status}',
+              processed = ${processed},
+              processed_at = ${requestData.processedAt ? `'${requestData.processedAt}'` : 'NULL'},
+              notes = '${requestData.notes.replace(/'/g, "''")}'
+            WHERE id = '${requestData.transferId}'
+          `;
+          
+          try {
+            const { data, error } = await adminClient.rpc('exec_sql', { sql_query: query });
+            if (error) throw error;
+            console.log("Direct SQL update result:", data);
+          } catch (sqlError) {
+            console.error(`SQL execution failed: ${sqlError.message}`);
+            throw new Error(`All update methods failed. Last error: ${sqlError.message}`);
+          }
         }
       }
     }
     
+    // Wait a moment for changes to propagate
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
     // Verify the update took effect
     console.log("Verifying update...");
+    
     const { data: verifyData, error: verifyError } = await supabaseClient
       .from('bank_transfers')
-      .select('*')
+      .select('status, processed, processed_at, notes')
       .eq('id', requestData.transferId)
       .single();
       
@@ -153,10 +178,16 @@ serve(async (req) => {
       console.error(`Verification failed: ${verifyError.message}`);
       return new Response(
         JSON.stringify({ 
-          success: false, 
-          error: `Verification failed: ${verifyError.message}` 
+          success: true,
+          verified: false,
+          error: `Verification failed: ${verifyError.message}`,
+          message: 'Bank transfer update may have failed verification',
+          currentStatus: 'unknown',
+          requestedStatus: requestData.status,
+          processedDate: null,
+          processed: null
         }),
-        { headers, status: 500 }
+        { headers, status: 200 }
       );
     }
     
@@ -168,49 +199,59 @@ serve(async (req) => {
       console.log(`Update verified successfully. Status is now: ${verifyData.status}`);
       
       // Create user notification if update was successful
-      try {
-        // But only if the status is something meaningful to notify about
-        if (['received', 'completed', 'rejected'].includes(requestData.status) && verifyData.user_id) {
-          const notificationTitle = requestData.status === 'rejected' 
-            ? "Virement rejeté" 
-            : "Virement reçu";
+      if (['received', 'completed', 'rejected'].includes(requestData.status)) {
+        try {
+          // Get user ID from the bank transfer
+          const { data: transferData, error: transferError } = await supabaseClient
+            .from('bank_transfers')
+            .select('user_id, reference, amount')
+            .eq('id', requestData.transferId)
+            .single();
             
-          const notificationMessage = requestData.status === 'rejected'
-            ? `Votre virement bancaire (réf: ${verifyData.reference}) a été rejeté.`
-            : `Votre virement de ${verifyData.amount}€ (réf: ${verifyData.reference}) a été reçu et traité.`;
-          
-          await supabaseClient
-            .from('notifications')
-            .insert({
-              user_id: verifyData.user_id,
-              title: notificationTitle,
-              message: notificationMessage,
-              type: "deposit",
-              seen: false,
-              data: {
-                category: requestData.status === 'rejected' ? "error" : "success",
-                amount: verifyData.amount,
-                reference: verifyData.reference
-              }
-            });
+          if (transferError) {
+            console.error(`Failed to fetch transfer data for notification: ${transferError.message}`);
+          } else if (transferData.user_id) {
+            const notificationTitle = requestData.status === 'rejected' 
+              ? "Virement rejeté" 
+              : "Virement reçu";
+              
+            const notificationMessage = requestData.status === 'rejected'
+              ? `Votre virement bancaire (réf: ${transferData.reference}) a été rejeté.`
+              : `Votre virement de ${transferData.amount}€ (réf: ${transferData.reference}) a été reçu et traité.`;
             
-          console.log("User notification created");
-          
-          // If transaction is received, update wallet balance
-          if (requestData.status === 'received' || requestData.status === 'completed') {
-            try {
-              await supabaseClient.rpc('recalculate_wallet_balance', {
-                user_uuid: verifyData.user_id
+            await supabaseClient
+              .from('notifications')
+              .insert({
+                user_id: transferData.user_id,
+                title: notificationTitle,
+                message: notificationMessage,
+                type: "deposit",
+                seen: false,
+                data: {
+                  category: requestData.status === 'rejected' ? "error" : "success",
+                  amount: transferData.amount,
+                  reference: transferData.reference
+                }
               });
-              console.log(`Wallet balance recalculated for user ${verifyData.user_id}`);
-            } catch (walletError) {
-              console.error(`Error updating wallet balance: ${walletError.message}`);
+              
+            console.log("User notification created");
+            
+            // If transaction is received, update wallet balance
+            if (requestData.status === 'received' || requestData.status === 'completed') {
+              try {
+                await supabaseClient.rpc('recalculate_wallet_balance', {
+                  user_uuid: transferData.user_id
+                });
+                console.log(`Wallet balance recalculated for user ${transferData.user_id}`);
+              } catch (walletError) {
+                console.error(`Error updating wallet balance: ${walletError.message}`);
+              }
             }
           }
+        } catch (notifyError) {
+          console.error(`Failed to create notification: ${notifyError.message}`);
+          // Don't fail the whole operation if notification fails
         }
-      } catch (notifyError) {
-        console.error(`Failed to create notification: ${notifyError.message}`);
-        // Don't fail the whole operation if notification fails
       }
     }
     

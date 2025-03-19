@@ -17,6 +17,7 @@ import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
 import StatusBadge from "@/components/dashboard/tabs/wallet/withdrawal-table/StatusBadge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface BankTransfer {
   id: string;
@@ -108,6 +109,7 @@ export default function BankTransfersPage() {
       }
     } catch (error) {
       console.error("Error fetching bank transfers:", error);
+      toast.error("Erreur lors du chargement des virements");
     } finally {
       setIsLoading(false);
     }
@@ -148,8 +150,6 @@ export default function BankTransfersPage() {
         console.log("Automatically setting processed date to now:", finalProcessedDate);
       }
       
-      console.log("Processed date:", finalProcessedDate ? finalProcessedDate.toISOString() : null);
-      
       // Create the update payload
       const updatePayload = {
         transferId: selectedTransfer.id,
@@ -161,7 +161,12 @@ export default function BankTransfersPage() {
       
       console.log("Sending update with payload:", updatePayload);
       
-      // First try the edge function approach (most reliable)
+      // Multiple attempts strategy
+      let updateSuccess = false;
+      let statusVerified = false;
+      let responseMessage = "";
+      
+      // 1. First try the edge function approach
       console.log("Calling Edge Function with payload...");
       const { data: functionData, error: functionError } = await supabase.functions.invoke('update-bank-transfer', {
         body: updatePayload
@@ -169,44 +174,46 @@ export default function BankTransfersPage() {
       
       if (functionError) {
         console.error("Erreur lors de l'appel à la fonction Edge:", functionError);
-        setUpdateError(`Erreur de la fonction Edge: ${functionError.message}`);
-        throw new Error(`Erreur de la fonction Edge: ${functionError.message}`);
+        responseMessage = `Erreur de la fonction Edge: ${functionError.message}`;
+        throw new Error(responseMessage);
       }
       
       console.log("Edge function response:", functionData);
       
-      // Check if the edge function reports success but verification failed
-      if (functionData && functionData.success && !functionData.verified) {
-        console.warn("Edge function reports success but verification failed. Current status:", functionData.currentStatus);
-        setUpdateError(`Attention: Le statut peut ne pas avoir été correctement mis à jour. Statut actuel: ${functionData.currentStatus}`);
-        toast.warning("La mise à jour a été tentée mais pourrait ne pas avoir pris effet. Vérifiez le statut.");
-      } else if (functionData && functionData.success) {
-        console.log("Edge function reports complete success. Status updated to:", functionData.currentStatus);
-        toast.success("Virement bancaire mis à jour avec succès");
-        closeEditModal();
-      } else {
+      if (functionData && functionData.success) {
+        updateSuccess = true;
+        statusVerified = functionData.verified;
+        responseMessage = functionData.message;
+        
+        // Show warning if verification failed
+        if (!functionData.verified) {
+          console.warn("Edge function reports success but verification failed. Current status:", functionData.currentStatus);
+          setUpdateError(`Attention: Le statut peut ne pas avoir été correctement mis à jour. Statut actuel: ${functionData.currentStatus}`);
+          toast.warning("La mise à jour a été tentée mais pourrait ne pas avoir pris effet. Vérifiez le statut.");
+        } else {
+          console.log("Edge function reports complete success. Status updated to:", functionData.currentStatus);
+          toast.success("Virement bancaire mis à jour avec succès");
+          closeEditModal();
+        }
+      } else if (functionData) {
         // Something else went wrong
-        const errorMsg = functionData?.error || "Une erreur inconnue est survenue";
+        const errorMsg = functionData.error || "Une erreur inconnue est survenue";
         console.error("Update failed with error:", errorMsg);
         setUpdateError(`Échec de la mise à jour: ${errorMsg}`);
-        toast.error(`Échec de la mise à jour: ${errorMsg}`);
+        
+        // Still try direct update as fallback
+        updateSuccess = false;
       }
       
-      // Force refresh the transfers list regardless of success/failure
-      await fetchBankTransfers();
-      
-    } catch (error: any) {
-      console.error("Erreur lors de la mise à jour du virement:", error);
-      
-      // Fallback to direct update if edge function failed
-      try {
+      // 2. If edge function failed or verification failed, try direct update
+      if (!updateSuccess || !statusVerified) {
         console.log("Trying direct update as fallback...");
         
         // Prepare update data for direct update
         const updates = {
           status: editStatus,
           processed: editStatus === 'received' || editStatus === 'reçu',
-          processed_at: processedDate ? processedDate.toISOString() : null,
+          processed_at: finalProcessedDate ? finalProcessedDate.toISOString() : null,
           notes: `Mise à jour manuelle (fallback) le ${new Date().toLocaleDateString('fr-FR')}`
         };
         
@@ -218,19 +225,51 @@ export default function BankTransfersPage() {
         
         if (directError) {
           console.error("Erreur lors de la mise à jour directe:", directError);
-          setUpdateError(`${updateError || ""}\nMise à jour directe échouée: ${directError.message}`);
-          toast.error(`Erreur de mise à jour: ${error.message || "Une erreur est survenue"}`);
+          if (!updateSuccess) { // Only show error if the edge function also failed
+            setUpdateError(`${updateError || ""}\nMise à jour directe échouée: ${directError.message}`);
+            toast.error(`Erreur de mise à jour: ${directError.message}`);
+          }
         } else {
           console.log("Direct update succeeded:", data);
-          toast.success("Virement bancaire mis à jour via méthode secondaire");
-          closeEditModal();
-          await fetchBankTransfers();
+          if (!updateSuccess) { // If edge function failed but this succeeded
+            toast.success("Virement bancaire mis à jour via méthode secondaire");
+            closeEditModal();
+          }
+          updateSuccess = true;
         }
-      } catch (fallbackError: any) {
-        console.error("Erreur lors de la tentative de fallback:", fallbackError);
-        setUpdateError(error.message || "Une erreur inconnue est survenue");
-        toast.error(`Erreur de mise à jour: ${error.message || "Une erreur est survenue"}`);
       }
+      
+      // 3. Final verification and notification to user
+      if (updateSuccess) {
+        // Verify the status one more time
+        const { data: verifyData } = await supabase
+          .from('bank_transfers')
+          .select('status, processed, processed_at')
+          .eq('id', selectedTransfer.id)
+          .single();
+          
+        if (verifyData && verifyData.status === editStatus) {
+          console.log("Final verification successful");
+          toast.success("Statut du virement vérifié et confirmé");
+          statusVerified = true;
+        } else if (verifyData) {
+          console.warn(`Final verification failed. Expected: ${editStatus}, Got: ${verifyData.status}`);
+          toast.warning(`Attention: Le statut peut être "${verifyData.status}" au lieu de "${editStatus}"`);
+        }
+      }
+      
+      // Always force refresh the transfers list
+      await fetchBankTransfers();
+      
+      // Close modal if update was successful
+      if (updateSuccess) {
+        closeEditModal();
+      }
+      
+    } catch (error: any) {
+      console.error("Erreur globale lors de la mise à jour:", error);
+      setUpdateError(error.message || "Une erreur inconnue est survenue");
+      toast.error(`Erreur de mise à jour: ${error.message || "Une erreur est survenue"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -258,7 +297,7 @@ export default function BankTransfersPage() {
     { value: "pending", label: "En attente" },
     { value: "received", label: "Reçu" },
     { value: "rejected", label: "Rejeté" },
-    { value: "cancelled", label: "Annuler" }
+    { value: "cancelled", label: "Annulé" }
   ];
 
   const forceRefresh = async () => {
@@ -510,9 +549,12 @@ export default function BankTransfersPage() {
             </div>
             
             {updateError && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
-                {updateError}
-              </div>
+              <Alert variant="destructive" className="mt-4">
+                <AlertTitle>Erreur de mise à jour</AlertTitle>
+                <AlertDescription className="text-sm">
+                  {updateError}
+                </AlertDescription>
+              </Alert>
             )}
             
             <DialogFooter>
