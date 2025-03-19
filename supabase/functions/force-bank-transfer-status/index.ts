@@ -30,6 +30,8 @@ serve(async (req) => {
     )
 
     console.log(`Starting force update for bank transfer ${transferId} to status ${newStatus}`)
+    console.log(`Environment check - SUPABASE_URL: ${Deno.env.get('SUPABASE_URL') ? 'exists' : 'missing'}`)
+    console.log(`Environment check - SERVICE_ROLE: ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ? 'exists' : 'missing'}`)
     
     // First, get the full record data if not provided
     let fullTransfer = transferData
@@ -108,30 +110,64 @@ serve(async (req) => {
       }
     }
     
-    // Update the bank transfer status
-    const updatedTransfer = {
-      ...fullTransfer,
+    // Prepare the update data with the most critical fields
+    const updateData = {
+      id: fullTransfer.id,  // Primary key must be included
       status: newStatus,
       processed: true,
       processed_at: new Date().toISOString(),
       notes: (fullTransfer.notes || '') + ' | Force updated via Edge Function on ' + new Date().toLocaleString()
+    };
+    
+    console.log("Updating transfer with:", updateData)
+    
+    // First try with direct SQL for maximum control and bypass all RLS
+    try {
+      // Use SQL directly with the admin client to bypass any issues
+      const { data: sqlData, error: sqlError } = await supabaseAdmin.rpc(
+        'admin_update_bank_transfer',
+        { 
+          transfer_id: transferId, 
+          new_status: newStatus,
+          processed: true,
+          notes: updateData.notes
+        }
+      );
+      
+      if (sqlError) {
+        console.error("Error with direct SQL update:", sqlError);
+      } else {
+        console.log("SQL update successful:", sqlData);
+      }
+    } catch (sqlExecError) {
+      console.error("Exception in SQL execution:", sqlExecError);
     }
     
-    console.log("Updating transfer with:", updatedTransfer)
-    
+    // Fallback to regular update if RPC is not available
     const { error: updateError } = await supabaseAdmin
       .from('bank_transfers')
-      .upsert(updatedTransfer)
+      .update(updateData)
+      .eq('id', transferId);
       
     if (updateError) {
-      console.error("Error updating bank transfer:", updateError)
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          message: `Error updating bank transfer: ${updateError.message}` 
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      console.error("Error updating bank transfer via update:", updateError);
+      
+      // Try a second approach with upsert if update fails
+      console.log("Attempting upsert as fallback...");
+      const { error: upsertError } = await supabaseAdmin
+        .from('bank_transfers')
+        .upsert(updateData);
+        
+      if (upsertError) {
+        console.error("Upsert also failed:", upsertError);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: `Failed all update attempts. Last error: ${upsertError.message}` 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
     
     // Verify the update
@@ -139,17 +175,17 @@ serve(async (req) => {
       .from('bank_transfers')
       .select('status, user_id, amount, reference')
       .eq('id', transferId)
-      .single()
+      .single();
       
     if (checkError) {
-      console.error("Error verifying update:", checkError)
+      console.error("Error verifying update:", checkError);
       return new Response(
         JSON.stringify({ 
           success: false, 
           message: `Error verifying update: ${checkError.message}` 
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
     
     // Return success result with user data for notification
@@ -164,10 +200,10 @@ serve(async (req) => {
         reference: checkData.reference
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    );
     
   } catch (error) {
-    console.error("Critical error:", error)
+    console.error("Critical error:", error);
     
     return new Response(
       JSON.stringify({ 
@@ -175,6 +211,6 @@ serve(async (req) => {
         message: error instanceof Error ? error.message : "Unknown error"
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    );
   }
-})
+});

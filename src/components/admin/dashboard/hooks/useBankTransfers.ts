@@ -65,33 +65,52 @@ export function useBankTransfers(onSuccess: () => void) {
       setProcessingId(item.id);
       console.log("[FORÇAGE] Tentative de mise à jour forcée pour l'ID:", item.id);
       
-      // Display info message to indicate the operation is in progress
-      toast.info("Tentative de mise à jour forcée en cours...", { duration: 5000 });
+      // Show progress toast
+      const toastId = toast.loading("Tentative de mise à jour forcée en cours...", { duration: 10000 });
       
-      // Try with direct force method first (using Edge Function)
-      const directResult = await bankTransferService.directForceBankTransfer(item);
+      // First attempt: Use Edge Function directly with all transfer data
+      console.log("[FORÇAGE] Méthode 1: Edge Function avec données complètes");
+      const result = await bankTransferService.directForceBankTransfer(item);
       
-      if (directResult.success) {
+      if (result.success) {
+        toast.dismiss(toastId);
         toast.success("Mise à jour forcée réussie! Le virement est maintenant marqué comme reçu.");
         
-        // Add delay to ensure everything is properly updated
+        // Refresh data after success
         setTimeout(() => {
           onSuccess();
-          toast.info("Rafraîchissement des données...");
-        }, 3000);
+        }, 1000);
         
         return;
       }
       
-      // If first method failed, show error and still refresh
-      console.error("[FORÇAGE] La méthode Edge Function a échoué:", directResult.message);
-      toast.error(`Échec de la mise à jour: ${directResult.message}`);
+      // Second attempt: Use fallback method if first failed
+      console.log("[FORÇAGE] Méthode 2: Mise à jour directe avec ID seulement");
+      const fallbackResult = await bankTransferService.forceUpdateToReceived(item.id);
       
-      // Refresh anyway in case something changed
+      if (fallbackResult.success) {
+        toast.dismiss(toastId);
+        toast.success("Mise à jour réussie via méthode alternative!");
+        
+        // Refresh data after success
+        setTimeout(() => {
+          onSuccess();
+        }, 1000);
+        
+        return;
+      }
+      
+      // If both methods failed, show error but still refresh
+      toast.dismiss(toastId);
+      toast.error(`Échec de toutes les tentatives de mise à jour forcée: ${fallbackResult.message}`);
+      console.error("[FORÇAGE] Toutes les méthodes ont échoué:", result.message, fallbackResult.message);
+      
+      // Still refresh to see current state
       setTimeout(() => {
         onSuccess();
-        toast.info("Rafraîchissement des données pour vérification...");
-      }, 3000);
+        toast.info("Rafraîchissement des données pour vérification de l'état actuel...");
+      }, 2000);
+      
     } catch (error) {
       console.error("[FORÇAGE] Erreur critique lors du forçage:", error);
       toast.error("Une erreur critique est survenue lors du forçage du statut");
