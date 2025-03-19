@@ -292,15 +292,29 @@ export default function BankTransferTableRow({
       </TableCell>
       
       <TableCell>
+        <StatusBadge
+          status={item.status}
+          hasMisspelledStatus={hasMisspelledStatus}
+          isProcessed={!!item.processed}
+        />
+      </TableCell>
+      
+      <TableCell>
         <div className="flex items-center gap-2">
-          <StatusBadge
-            status={item.status}
-            hasMisspelledStatus={hasMisspelledStatus}
-            isProcessed={!!item.processed}
-          />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            onClick={handleEditClick}
+            disabled={isProcessing}
+            title="Modifier"
+          >
+            <Edit className="h-4 w-4" />
+            <span className="sr-only">Modifier</span>
+          </Button>
           
           {isPending && (
-            <div className="flex gap-1">
+            <>
               <Button
                 size="sm"
                 variant="outline"
@@ -313,7 +327,7 @@ export default function BankTransferTableRow({
                 ) : (
                   <Check className="h-3.5 w-3.5 mr-1" />
                 )}
-                Reçu
+                <span className="sr-only">Confirmer</span>
               </Button>
               
               <Button
@@ -328,31 +342,11 @@ export default function BankTransferTableRow({
                 ) : (
                   <X className="h-3.5 w-3.5 mr-1" />
                 )}
-                Rejeter
+                <span className="sr-only">Rejeter</span>
               </Button>
-            </div>
-          )}
-          
-          {isRejected && (
-            <div className="flex items-center gap-1 text-red-600 text-xs">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span>Rejeté</span>
-            </div>
+            </>
           )}
         </div>
-      </TableCell>
-      
-      <TableCell>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 px-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-          onClick={handleEditClick}
-          disabled={isProcessing}
-        >
-          <Edit className="h-4 w-4 mr-1" />
-          Modifier
-        </Button>
         
         {/* Edit Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={(open) => !open && setIsEditModalOpen(false)}>
