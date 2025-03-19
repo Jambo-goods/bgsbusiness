@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatDate } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
 import { Toaster } from "sonner";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -48,6 +48,7 @@ export default function BankTransfersPage() {
   const [editStatus, setEditStatus] = useState<string>("");
   const [processedDate, setProcessedDate] = useState<Date | undefined>(undefined);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBankTransfers();
@@ -125,6 +126,7 @@ export default function BankTransfersPage() {
     setEditStatus(transfer.status || "");
     setProcessedDate(transfer.processed_at ? new Date(transfer.processed_at) : undefined);
     setIsEditModalOpen(true);
+    setUpdateError(null);
   };
 
   const handleSubmitEdit = async (e: React.FormEvent) => {
@@ -133,9 +135,10 @@ export default function BankTransfersPage() {
     if (!selectedTransfer) return;
     
     setIsSubmitting(true);
+    setUpdateError(null);
     
     try {
-      console.log("Updating bank transfer with status:", editStatus);
+      console.log(`Updating bank transfer with status: ${editStatus} (ID: ${selectedTransfer.id})`);
       console.log("Processed date:", processedDate ? processedDate.toISOString() : null);
       
       const updates = {
@@ -144,9 +147,9 @@ export default function BankTransfersPage() {
         notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
       };
       
-      console.log("Sending update:", updates);
+      console.log("Sending update with payload:", updates);
       
-      // Mise à jour du virement bancaire
+      // Mise à jour du virement bancaire avec retour immédiat
       const { error } = await supabase
         .from('bank_transfers')
         .update(updates)
@@ -154,20 +157,44 @@ export default function BankTransfersPage() {
       
       if (error) {
         console.error("Erreur lors de la mise à jour:", error);
+        setUpdateError(`Erreur: ${error.message}`);
         throw error;
       }
       
-      // Vérifier que la mise à jour a bien été effectuée
-      const { data: updatedTransfer, error: checkError } = await supabase
+      // Récupérer et vérifier que la transaction a bien été mise à jour
+      const { data: updatedTransfer, error: fetchError } = await supabase
         .from('bank_transfers')
         .select('*')
         .eq('id', selectedTransfer.id)
         .single();
-        
-      if (checkError) {
-        console.error("Erreur lors de la vérification:", checkError);
+      
+      if (fetchError) {
+        console.error("Erreur lors de la vérification:", fetchError);
+        setUpdateError(`Erreur de vérification: ${fetchError.message}`);
       } else {
         console.log("Transfer after update:", updatedTransfer);
+        
+        // Vérifier si l'état a bien été mis à jour
+        if (updatedTransfer.status !== editStatus) {
+          console.warn(`La mise à jour du statut a échoué. Statut attendu: ${editStatus}, Statut obtenu: ${updatedTransfer.status}`);
+          setUpdateError(`La mise à jour n'a pas été appliquée. Le statut est toujours "${updatedTransfer.status}".`);
+          // On essaie une mise à jour forcée avec upsert
+          const { error: retryError } = await supabase
+            .from('bank_transfers')
+            .upsert({
+              id: selectedTransfer.id,
+              status: editStatus,
+              processed_at: processedDate ? processedDate.toISOString() : null,
+              notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
+            });
+            
+          if (retryError) {
+            console.error("Erreur lors de la seconde tentative:", retryError);
+            setUpdateError(`Échec de la seconde tentative: ${retryError.message}`);
+          } else {
+            console.log("Seconde tentative de mise à jour effectuée");
+          }
+        }
       }
       
       // Si le statut est "received" ou "reçu", déclencher la mise à jour du solde du wallet
@@ -175,16 +202,20 @@ export default function BankTransfersPage() {
         await activateWalletUpdate(selectedTransfer);
       }
       
-      toast.success("Virement bancaire mis à jour avec succès");
+      if (!updateError) {
+        toast.success("Virement bancaire mis à jour avec succès");
+        // Fermer le modal et réinitialiser les états
+        closeEditModal();
+      } else {
+        toast.error(`Problème lors de la mise à jour: ${updateError}`);
+      }
       
-      // Fermer le modal et réinitialiser les états
-      closeEditModal();
-      
-      // Forcer une actualisation des données
+      // Forcer une actualisation des données immédiate
       await fetchBankTransfers();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la mise à jour du virement:", error);
-      toast.error("Une erreur est survenue lors de la mise à jour");
+      toast.error(`Erreur: ${error.message || "Une erreur est survenue lors de la mise à jour"}`);
+      setUpdateError(error.message || "Une erreur inconnue est survenue");
     } finally {
       setIsSubmitting(false);
     }
@@ -228,6 +259,7 @@ export default function BankTransfersPage() {
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedTransfer(null);
+    setUpdateError(null);
   };
 
   const filteredTransfers = bankTransfers.filter(transfer => {
@@ -248,6 +280,13 @@ export default function BankTransfersPage() {
     { value: "rejected", label: "Rejeté" },
     { value: "cancelled", label: "Annuler" }
   ];
+
+  // Force refresh du composant après mise à jour
+  const forceRefresh = async () => {
+    setIsLoading(true);
+    await fetchBankTransfers();
+    setIsLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -270,10 +309,11 @@ export default function BankTransfersPage() {
             </div>
             <Button 
               variant="outline"
-              onClick={fetchBankTransfers}
+              onClick={forceRefresh}
               className="flex items-center gap-2"
+              disabled={isLoading}
             >
-              <RefreshCw className="h-4 w-4" />
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               Actualiser
             </Button>
           </div>
@@ -331,7 +371,19 @@ export default function BankTransfersPage() {
                         )}
                       </button>
                     </TableHead>
-                    <TableHead>Statut</TableHead>
+                    <TableHead>
+                      <button 
+                        className="flex items-center space-x-1 hover:text-gray-700" 
+                        onClick={() => handleSort("status")}
+                      >
+                        <span>Statut</span>
+                        {sortField === "status" && (
+                          sortDirection === "asc" ? 
+                            <ArrowUp className="h-4 w-4" /> : 
+                            <ArrowDown className="h-4 w-4" />
+                        )}
+                      </button>
+                    </TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -383,6 +435,9 @@ export default function BankTransfersPage() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Modifier le virement bancaire</DialogTitle>
+            <DialogDescription>
+              Mise à jour du virement {selectedTransfer?.reference}
+            </DialogDescription>
           </DialogHeader>
           
           <form onSubmit={handleSubmitEdit} className="space-y-4 py-4">
@@ -450,12 +505,24 @@ export default function BankTransfersPage() {
               </Popover>
             </div>
             
+            {updateError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded text-sm">
+                {updateError}
+              </div>
+            )}
+            
             <DialogFooter>
               <Button type="button" variant="outline" onClick={closeEditModal}>
                 Annuler
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Mise à jour..." : "Mettre à jour"}
+                {isSubmitting ? 
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Mise à jour...
+                  </> : 
+                  "Mettre à jour"
+                }
               </Button>
             </DialogFooter>
           </form>
