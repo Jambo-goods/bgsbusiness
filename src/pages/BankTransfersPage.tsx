@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -42,7 +41,6 @@ export default function BankTransfersPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [userData, setUserData] = useState<Record<string, UserData>>({});
   
-  // États pour l'édition
   const [selectedTransfer, setSelectedTransfer] = useState<BankTransfer | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editStatus, setEditStatus] = useState<string>("");
@@ -52,7 +50,6 @@ export default function BankTransfersPage() {
   useEffect(() => {
     fetchBankTransfers();
 
-    // Set up real-time listener for the bank_transfers table
     const bankTransferChannel = supabase
       .channel("bank_transfers_changes")
       .on("postgres_changes", {
@@ -83,7 +80,6 @@ export default function BankTransfersPage() {
       const transfersData = data || [];
       setBankTransfers(transfersData as BankTransfer[]);
 
-      // Fetch user data for all transfers
       const userIds = Array.from(new Set(transfersData.map(t => t.user_id)));
       if (userIds.length > 0) {
         const { data: users, error: userError } = await supabase
@@ -211,8 +207,6 @@ export default function BankTransfersPage() {
   const statusOptions = [
     { value: "pending", label: "En attente" },
     { value: "received", label: "Reçu" },
-    { value: "processed", label: "Traité" },
-    { value: "confirmed", label: "Confirmé" },
     { value: "rejected", label: "Rejeté" }
   ];
 
@@ -348,7 +342,6 @@ export default function BankTransfersPage() {
         </div>
       </div>
 
-      {/* Modal d'édition */}
       <Dialog open={isEditModalOpen} onOpenChange={open => !open && closeEditModal()}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
