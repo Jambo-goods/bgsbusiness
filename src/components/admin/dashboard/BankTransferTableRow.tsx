@@ -92,7 +92,7 @@ export default function BankTransferTableRow({
   const needsAction = isPending;
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
   const hasPersistenceIssue = isPending || hasMisspelledStatus;
-  const hasStatusError = isProcessing || hasPersistenceIssue;
+  const hasStatusError = hasPersistenceIssue || item.status !== 'received';
   
   return (
     <>
@@ -185,8 +185,8 @@ export default function BankTransferTableRow({
               {hasStatusError && onForceToReceived && (
                 <Button 
                   size="sm"
-                  variant="outline" 
-                  className="h-8 border-red-500 bg-red-50 text-red-700 hover:bg-red-100 font-semibold"
+                  variant="destructive"
+                  className="h-8 font-semibold animate-pulse"
                   onClick={handleForceClick}
                 >
                   <Hammer className="h-4 w-4 mr-1" />

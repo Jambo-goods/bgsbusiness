@@ -65,57 +65,59 @@ export function useBankTransfers(onSuccess: () => void) {
       setProcessingId(item.id);
       console.log("[FORÇAGE] Mise à jour directe du statut pour l'ID:", item.id);
       
-      // Afficher message d'information pour indiquer que l'opération est en cours
+      // Display info message to indicate the operation is in progress
       toast.info("Tentative de mise à jour forcée en cours...", { duration: 5000 });
       
-      // Première tentative avec directForceBankTransfer
+      // First attempt with directForceBankTransfer
       const directResult = await bankTransferService.directForceBankTransfer(item);
       
       if (directResult.success) {
-        toast.success("Mise à jour réussie! Virement marqué comme reçu.");
+        toast.success("Mise à jour directe réussie! Le virement est maintenant marqué comme reçu.");
         
-        // Ajouter un délai long pour s'assurer que tout est bien mis à jour
+        // Add long delay to ensure everything is properly updated
         setTimeout(() => {
           onSuccess();
           toast.info("Rafraîchissement des données...");
-        }, 5000);
+        }, 3000);
         
         return;
       }
       
-      console.error("[FORÇAGE] Première tentative échouée:", directResult.message);
-      toast.warning("Première tentative échouée, essai avec méthode alternative...");
+      // If first method failed, try with updateBankTransfer
+      console.error("[FORÇAGE] Première méthode échouée, essai avec updateBankTransfer...");
+      toast.warning("Première méthode échouée, essai avec une alternative...");
       
-      // Deuxième tentative avec l'autre méthode
+      const updateResult = await bankTransferService.updateBankTransfer(
+        item.id,
+        'received',
+        new Date().toISOString()
+      );
+      
+      if (updateResult.success) {
+        toast.success("Mise à jour réussie avec la méthode standard!");
+        setTimeout(() => {
+          onSuccess();
+        }, 3000);
+        return;
+      }
+      
+      // Last attempt with forceUpdateToReceived method
+      console.error("[FORÇAGE] Deuxième méthode échouée, essai avec forceUpdateToReceived...");
+      toast.warning("Deuxième méthode échouée, dernière tentative en cours...");
+      
       const result = await bankTransferService.forceUpdateToReceived(item.id);
       
       if (result.success) {
         toast.success("Virement forcé à 'reçu' avec succès");
         
-        // Ajouter un délai important pour s'assurer que les triggers de base de données s'exécutent
+        // Add significant delay to ensure database triggers execute
         setTimeout(() => {
           onSuccess();
           toast.info("Rafraîchissement des données...");
-        }, 5000);
+        }, 3000);
       } else {
         toast.error(`Échec de toutes les tentatives: ${result.message}`);
         console.error("[FORÇAGE] Toutes les tentatives ont échoué:", result);
-        
-        // Dernière tentative avec méthode d'update standard
-        const standardResult = await bankTransferService.updateBankTransfer(
-          item.id,
-          'received',
-          new Date().toISOString()
-        );
-        
-        if (standardResult.success) {
-          toast.success("Mise à jour réussie avec la méthode standard!");
-          setTimeout(() => {
-            onSuccess();
-          }, 3000);
-        } else {
-          toast.error("Toutes les méthodes ont échoué. Contactez l'équipe technique.");
-        }
       }
     } catch (error) {
       console.error("[FORÇAGE] Erreur critique lors du forçage:", error);
