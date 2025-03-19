@@ -54,11 +54,34 @@ export function useBankTransfers(onSuccess: () => void) {
       setProcessingId(null);
     }
   };
+  
+  const handleForceToReceived = async (item: BankTransferItem) => {
+    try {
+      setProcessingId(item.id);
+      console.log("Forçage du statut à 'reçu' pour l'ID:", item.id);
+      
+      const { success, message } = await bankTransferService.forceUpdateToReceived(item.id);
+      
+      if (success) {
+        toast.success("Virement forcé à 'reçu' avec succès");
+        onSuccess();
+      } else {
+        console.error("Échec du forçage:", message);
+        toast.error(`Échec du forçage: ${message}`);
+      }
+    } catch (error) {
+      console.error("Erreur lors du forçage du statut:", error);
+      toast.error("Une erreur est survenue lors du forçage du statut");
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   return {
     processingId,
     handleConfirmDeposit,
     handleRejectDeposit,
-    handleConfirmReceipt
+    handleConfirmReceipt,
+    handleForceToReceived
   };
 }
