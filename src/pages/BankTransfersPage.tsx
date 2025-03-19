@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -139,35 +140,76 @@ export default function BankTransfersPage() {
     
     try {
       console.log(`Updating bank transfer with status: ${editStatus} (ID: ${selectedTransfer.id})`);
-      console.log("Processed date:", processedDate ? processedDate.toISOString() : null);
+      
+      // Always ensure we have a processed date for "received" status
+      let finalProcessedDate = processedDate;
+      if ((editStatus === 'received' || editStatus === 'reçu') && !processedDate) {
+        finalProcessedDate = new Date();
+        console.log("Automatically setting processed date to now:", finalProcessedDate);
+      }
+      
+      console.log("Processed date:", finalProcessedDate ? finalProcessedDate.toISOString() : null);
       
       // Create the update payload
-      const updates = {
+      const updatePayload = {
+        transferId: selectedTransfer.id,
         status: editStatus,
-        processed_at: processedDate ? processedDate.toISOString() : null,
         processed: editStatus === 'received' || editStatus === 'reçu',
+        processedAt: finalProcessedDate ? finalProcessedDate.toISOString() : null,
         notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
       };
       
-      console.log("Sending update with payload:", updates);
+      console.log("Sending update with payload:", updatePayload);
       
-      // Use the edge function to perform the update (most reliable method)
-      const { error: functionError } = await supabase.functions.invoke('update-bank-transfer', {
-        body: {
-          transferId: selectedTransfer.id,
-          status: editStatus,
-          processed: editStatus === 'received' || editStatus === 'reçu',
-          processedAt: processedDate ? processedDate.toISOString() : null,
-          notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
-        }
+      // First try the edge function approach (most reliable)
+      console.log("Calling Edge Function with payload...");
+      const { data: functionData, error: functionError } = await supabase.functions.invoke('update-bank-transfer', {
+        body: updatePayload
       });
       
       if (functionError) {
         console.error("Erreur lors de l'appel à la fonction Edge:", functionError);
         setUpdateError(`Erreur de la fonction Edge: ${functionError.message}`);
+        throw new Error(`Erreur de la fonction Edge: ${functionError.message}`);
+      }
+      
+      console.log("Edge function response:", functionData);
+      
+      // Check if the edge function reports success but verification failed
+      if (functionData && functionData.success && !functionData.verified) {
+        console.warn("Edge function reports success but verification failed. Current status:", functionData.currentStatus);
+        setUpdateError(`Attention: Le statut peut ne pas avoir été correctement mis à jour. Statut actuel: ${functionData.currentStatus}`);
+        toast.warning("La mise à jour a été tentée mais pourrait ne pas avoir pris effet. Vérifiez le statut.");
+      } else if (functionData && functionData.success) {
+        console.log("Edge function reports complete success. Status updated to:", functionData.currentStatus);
+        toast.success("Virement bancaire mis à jour avec succès");
+        closeEditModal();
+      } else {
+        // Something else went wrong
+        const errorMsg = functionData?.error || "Une erreur inconnue est survenue";
+        console.error("Update failed with error:", errorMsg);
+        setUpdateError(`Échec de la mise à jour: ${errorMsg}`);
+        toast.error(`Échec de la mise à jour: ${errorMsg}`);
+      }
+      
+      // Force refresh the transfers list regardless of success/failure
+      await fetchBankTransfers();
+      
+    } catch (error: any) {
+      console.error("Erreur lors de la mise à jour du virement:", error);
+      
+      // Fallback to direct update if edge function failed
+      try {
+        console.log("Trying direct update as fallback...");
         
-        // Fallback to direct update
-        console.log("Fallback to direct update...");
+        // Prepare update data for direct update
+        const updates = {
+          status: editStatus,
+          processed: editStatus === 'received' || editStatus === 'reçu',
+          processed_at: processedDate ? processedDate.toISOString() : null,
+          notes: `Mise à jour manuelle (fallback) le ${new Date().toLocaleDateString('fr-FR')}`
+        };
+        
         const { data, error: directError } = await supabase
           .from('bank_transfers')
           .update(updates)
@@ -176,78 +218,21 @@ export default function BankTransfersPage() {
         
         if (directError) {
           console.error("Erreur lors de la mise à jour directe:", directError);
-          setUpdateError(`${updateError}\nMise à jour directe échouée: ${directError.message}`);
-          throw new Error(`Échec de la mise à jour: ${directError.message}`);
-        }
-      }
-      
-      // Verify the update actually took effect
-      const { data: checkData, error: checkError } = await supabase
-        .from('bank_transfers')
-        .select('*')
-        .eq('id', selectedTransfer.id)
-        .single();
-        
-      if (checkError) {
-        console.error("Erreur lors de la vérification:", checkError);
-        setUpdateError(`Échec de la vérification: ${checkError.message}`);
-      } else {
-        console.log("État après mise à jour:", checkData);
-        
-        // Check if the update didn't apply
-        if (checkData.status !== editStatus) {
-          console.warn(`La mise à jour n'a pas été correctement appliquée. Attendu: ${editStatus}, Obtenu: ${checkData.status}`);
-          setUpdateError(`Attention: Le statut n'a pas été correctement mis à jour. Statut actuel: ${checkData.status}`);
-          
-          // Show error but don't prevent closing the modal
-          toast.warning("Mise à jour partielle. Le statut n'a pas été changé.");
+          setUpdateError(`${updateError || ""}\nMise à jour directe échouée: ${directError.message}`);
+          toast.error(`Erreur de mise à jour: ${error.message || "Une erreur est survenue"}`);
         } else {
-          toast.success("Virement bancaire mis à jour avec succès");
+          console.log("Direct update succeeded:", data);
+          toast.success("Virement bancaire mis à jour via méthode secondaire");
           closeEditModal();
+          await fetchBankTransfers();
         }
+      } catch (fallbackError: any) {
+        console.error("Erreur lors de la tentative de fallback:", fallbackError);
+        setUpdateError(error.message || "Une erreur inconnue est survenue");
+        toast.error(`Erreur de mise à jour: ${error.message || "Une erreur est survenue"}`);
       }
-      
-      // Force refresh the transfers list regardless of success/failure
-      await fetchBankTransfers();
-      
-    } catch (error: any) {
-      console.error("Erreur lors de la mise à jour du virement:", error);
-      toast.error(`Erreur de mise à jour: ${error.message || "Une erreur est survenue"}`);
-      setUpdateError(error.message || "Une erreur inconnue est survenue");
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const activateWalletUpdate = async (transfer: BankTransfer) => {
-    try {
-      console.log("Tentative de mise à jour du solde du wallet pour l'utilisateur:", transfer.user_id);
-      
-      const { data, error } = await supabase.rpc('recalculate_wallet_balance', {
-        user_uuid: transfer.user_id
-      });
-      
-      if (error) {
-        console.error("Erreur lors de la mise à jour du solde:", error);
-        throw error;
-      }
-      
-      console.log("Solde du wallet mis à jour avec succès");
-      
-      await supabase.from('notifications').insert({
-        user_id: transfer.user_id,
-        title: "Virement reçu",
-        message: `Votre virement de ${transfer.amount}€ (réf: ${transfer.reference}) a été reçu et ajouté à votre portefeuille.`,
-        type: "deposit",
-        data: {
-          category: "success",
-          amount: transfer.amount,
-          reference: transfer.reference
-        }
-      });
-      
-    } catch (error) {
-      console.error("Erreur lors de l'activation de la mise à jour du wallet:", error);
     }
   };
 
@@ -385,6 +370,19 @@ export default function BankTransfersPage() {
                         )}
                       </button>
                     </TableHead>
+                    <TableHead>
+                      <button 
+                        className="flex items-center space-x-1 hover:text-gray-700" 
+                        onClick={() => handleSort("processed_at")}
+                      >
+                        <span>Date de Traitement</span>
+                        {sortField === "processed_at" && (
+                          sortDirection === "asc" ? 
+                            <ArrowUp className="h-4 w-4" /> : 
+                            <ArrowDown className="h-4 w-4" />
+                        )}
+                      </button>
+                    </TableHead>
                     <TableHead>Notes</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -407,6 +405,7 @@ export default function BankTransfersPage() {
                           <StatusBadge status={transfer.status || 'pending'} />
                           {transfer.processed && <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Traité</span>}
                         </TableCell>
+                        <TableCell>{transfer.processed_at ? formatDate(transfer.processed_at) : "-"}</TableCell>
                         <TableCell>
                           <div className="max-w-xs truncate">
                             {transfer.notes || "-"}

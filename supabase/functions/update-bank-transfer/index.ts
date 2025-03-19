@@ -47,12 +47,20 @@ serve(async (req) => {
     console.log(`Edge Function: Updating bank transfer ${requestData.transferId}`);
     console.log(`Status: ${requestData.status}, Processed: ${requestData.processed}, Date: ${requestData.processedAt}`);
     
-    // Method 1: Try direct update first
+    // CRITICAL: If processedAt is null and status is 'received', use current timestamp
+    // This ensures the bank transfer is properly marked as processed
+    if ((requestData.status === 'received' || requestData.status === 'reçu') && !requestData.processedAt) {
+      console.log("Setting processed_at to current timestamp since it was missing");
+      requestData.processedAt = new Date().toISOString();
+    }
+    
+    // Method 1: Direct update with forced processed flag based on status
+    const processed = requestData.status === 'received' || requestData.status === 'reçu';
     const { data: updateResult, error: updateError } = await supabaseClient
       .from('bank_transfers')
       .update({
         status: requestData.status,
-        processed: requestData.processed,
+        processed: processed,
         processed_at: requestData.processedAt,
         notes: requestData.notes
       })
@@ -86,7 +94,7 @@ serve(async (req) => {
       const updateData = {
         ...existingData,
         status: requestData.status,
-        processed: requestData.processed,
+        processed: processed,
         processed_at: requestData.processedAt,
         notes: requestData.notes
       };
@@ -103,53 +111,21 @@ serve(async (req) => {
         console.error(`Upsert failed: ${upsertError.message}`);
         console.error(`Details: ${JSON.stringify(upsertError.details || {})}`);
         
-        // Method 3: Try direct SQL as a last resort
+        // Method 3: Try raw SQL update via RPC
         console.log("Trying direct SQL update method...");
         
         try {
-          // Use RPC function if it exists
-          const { data: rpcData, error: rpcError } = await supabaseClient.rpc('force_update_bank_transfer', {
+          // Raw SQL to perform the update
+          const { data: sqlData, error: sqlError } = await supabaseClient.rpc('force_update_bank_transfer', {
             transfer_id: requestData.transferId,
             new_status: requestData.status,
             processed_date: requestData.processedAt,
-            processed_value: requestData.processed,
-            notes_text: requestData.notes
+            processed_value: processed
           });
           
-          if (rpcError) {
-            console.error(`RPC update failed: ${rpcError.message}`);
-            
-            // Method 4: Try with REST API for raw SQL
-            console.log("Performing direct REST update as final fallback...");
-            
-            // Manual raw SQL execution via fetch directly to PostgREST
-            const restUrl = `${Deno.env.get('SUPABASE_URL')}/rest/v1/rpc/force_update_bank_transfer`;
-            const authKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
-            
-            const response = await fetch(restUrl, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authKey}`,
-                'apikey': authKey
-              },
-              body: JSON.stringify({
-                transfer_id: requestData.transferId,
-                new_status: requestData.status,
-                processed_date: requestData.processedAt,
-                processed_value: requestData.processed,
-                notes_text: requestData.notes
-              })
-            });
-            
-            if (!response.ok) {
-              const errorText = await response.text();
-              throw new Error(`REST update failed: ${errorText}`);
-            }
-            
-            console.log("REST update completed successfully");
-          } else {
-            console.log("RPC update completed successfully");
+          if (sqlError) {
+            console.error(`SQL update failed: ${sqlError.message}`);
+            throw sqlError;
           }
         } catch (sqlError) {
           console.error(`All update methods failed: ${sqlError.message}`);
@@ -166,6 +142,7 @@ serve(async (req) => {
     }
     
     // Verify the update took effect
+    console.log("Verifying update...");
     const { data: verifyData, error: verifyError } = await supabaseClient
       .from('bank_transfers')
       .select('*')
@@ -246,7 +223,9 @@ serve(async (req) => {
           ? 'Bank transfer updated and verified successfully' 
           : 'Bank transfer update may have failed verification',
         currentStatus: verifyData.status,
-        requestedStatus: requestData.status
+        requestedStatus: requestData.status,
+        processedDate: verifyData.processed_at,
+        processed: verifyData.processed
       }),
       { headers }
     );
