@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Check, X, Loader2 } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;
@@ -40,7 +41,7 @@ export default function BankTransferTableRow({
   const isPending = item.status === 'pending';
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
   
-  // Handle confirming receipt
+  // Handle confirming receipt using the edge function
   const handleConfirmReceipt = async () => {
     if (isProcessing) return;
     
@@ -48,12 +49,44 @@ export default function BankTransferTableRow({
     toast.info("Traitement en cours...");
     
     try {
-      const success = await updateTransferStatus(item, 'received');
-      if (success && onStatusUpdate) {
-        toast.success("Virement marqué comme reçu");
-        onStatusUpdate();
+      // Try the new edge function first
+      const session = await supabase.auth.getSession();
+      const adminToken = session.data.session?.access_token;
+      
+      // Call the edge function
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
+        'update-bank-transfer',
+        {
+          body: {
+            transferId: item.id,
+            status: 'received',
+            isProcessed: true,
+            notes: `Réception confirmée le ${new Date().toLocaleDateString('fr-FR')}`,
+            userId: item.user_id
+          }
+        }
+      );
+      
+      if (edgeFunctionError) {
+        console.error("Erreur fonction edge:", edgeFunctionError);
+        
+        // Fallback to local service if edge function fails
+        const success = await updateTransferStatus(item, 'received');
+        if (success && onStatusUpdate) {
+          toast.success("Virement marqué comme reçu");
+          onStatusUpdate();
+        } else {
+          toast.error("Échec de la mise à jour - veuillez réessayer");
+        }
       } else {
-        toast.error("Échec de la mise à jour - veuillez réessayer");
+        console.log("Résultat fonction edge:", edgeFunctionData);
+        
+        if (edgeFunctionData.success) {
+          toast.success("Virement marqué comme reçu");
+          if (onStatusUpdate) onStatusUpdate();
+        } else {
+          toast.error(`Échec de la mise à jour: ${edgeFunctionData.error || 'Erreur inconnue'}`);
+        }
       }
     } catch (error) {
       console.error("Erreur de mise à jour:", error);
@@ -63,7 +96,7 @@ export default function BankTransferTableRow({
     }
   };
   
-  // Handle rejecting transfer
+  // Handle rejecting transfer using the edge function
   const handleRejectTransfer = async () => {
     if (isProcessing) return;
     
@@ -71,12 +104,40 @@ export default function BankTransferTableRow({
     toast.info("Traitement du rejet en cours...");
     
     try {
-      const success = await updateTransferStatus(item, 'rejected');
-      if (success && onStatusUpdate) {
-        toast.success("Virement rejeté");
-        onStatusUpdate();
+      // Call the edge function
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
+        'update-bank-transfer',
+        {
+          body: {
+            transferId: item.id,
+            status: 'rejected',
+            isProcessed: true,
+            notes: `Virement rejeté le ${new Date().toLocaleDateString('fr-FR')}`,
+            userId: item.user_id
+          }
+        }
+      );
+      
+      if (edgeFunctionError) {
+        console.error("Erreur fonction edge:", edgeFunctionError);
+        
+        // Fallback to local service if edge function fails
+        const success = await updateTransferStatus(item, 'rejected');
+        if (success && onStatusUpdate) {
+          toast.success("Virement rejeté");
+          onStatusUpdate();
+        } else {
+          toast.error("Échec du rejet - veuillez réessayer");
+        }
       } else {
-        toast.error("Échec du rejet - veuillez réessayer");
+        console.log("Résultat fonction edge:", edgeFunctionData);
+        
+        if (edgeFunctionData.success) {
+          toast.success("Virement rejeté avec succès");
+          if (onStatusUpdate) onStatusUpdate();
+        } else {
+          toast.error(`Échec du rejet: ${edgeFunctionData.error || 'Erreur inconnue'}`);
+        }
       }
     } catch (error) {
       console.error("Erreur de mise à jour:", error);

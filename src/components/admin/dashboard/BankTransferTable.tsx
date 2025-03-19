@@ -12,30 +12,37 @@ export default function BankTransferTable({
 }: BankTransferTableProps) {
   const { processingId } = useBankTransfers();
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers?.length || 0);
   
-  // Handle refresh after status update
+  // Handle refresh after status update with debounce
   const handleStatusUpdate = () => {
     setLastUpdateTime(Date.now());
-    if (refreshData) {
+    if (refreshData && !isRefreshing) {
+      setIsRefreshing(true);
+      
       // Add a slight delay to ensure database operations have completed
       setTimeout(() => {
         refreshData();
-      }, 1500);
+        setIsRefreshing(false);
+      }, 2000); // Increased delay for better stability
     }
   };
 
   // Force a refresh every 10 seconds to catch any updates
   useEffect(() => {
     const intervalId = setInterval(() => {
-      if (refreshData) {
-        refreshData();
+      if (refreshData && !isRefreshing) {
+        setIsRefreshing(true);
+        refreshData().finally(() => {
+          setIsRefreshing(false);
+        });
       }
-    }, 10000);
+    }, 15000); // Slightly longer interval to reduce load
     
     return () => clearInterval(intervalId);
-  }, [refreshData]);
+  }, [refreshData, isRefreshing]);
 
   // Initial data load
   useEffect(() => {
@@ -83,6 +90,11 @@ export default function BankTransferTable({
           ))}
         </TableBody>
       </Table>
+      {isRefreshing && (
+        <div className="text-center p-2 text-xs text-gray-500">
+          Actualisation en cours...
+        </div>
+      )}
     </div>
   );
 }

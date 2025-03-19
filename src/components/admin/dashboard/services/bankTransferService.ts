@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -164,8 +165,8 @@ export const bankTransferService = {
       const { data, error } = await supabase.rpc('admin_update_bank_transfer', {
         transfer_id: item.id,
         new_status: 'received',
-        is_processed: true,
-        processing_notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
+        processed: true,
+        notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
       });
       
       if (error) {
@@ -256,8 +257,8 @@ export const bankTransferService = {
       const { data: rpcData, error: rpcError } = await supabase.rpc('admin_update_bank_transfer', {
         transfer_id: transferId,
         new_status: status,
-        is_processed: isProcessed,
-        processing_notes: processingNotes
+        processed: isProcessed,
+        notes: processingNotes
       });
       
       if (rpcError) {
