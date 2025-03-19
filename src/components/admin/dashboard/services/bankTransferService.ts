@@ -18,11 +18,11 @@ export const bankTransferService = {
       
       console.log(`Traitement du dépôt ${item.id} pour un montant de ${amount}€`);
       
-      // 1. Use the new admin_mark_bank_transfer function with proper parameter names
+      // 1. Use the admin_mark_bank_transfer function with proper parameter names
       const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_mark_bank_transfer', {
         transfer_id: item.id,
         new_status: 'received',
-        is_processed: true, // Use is_processed instead of processed to avoid ambiguity
+        is_processed: true,
         notes: `Dépôt confirmé par admin le ${new Date().toLocaleDateString('fr-FR')}`
       });
       
@@ -30,18 +30,21 @@ export const bankTransferService = {
         console.error("Erreur RPC admin_mark_bank_transfer:", rpcError);
         console.warn("Fallback aux méthodes standards...");
         
-        // 2. Utiliser la méthode standard pour mettre à jour les transactions
+        // 2. Direct UPDATE using service role (bypassing RLS)
         const { error: updateError } = await supabase
-          .from('wallet_transactions')
+          .from('bank_transfers')
           .update({ 
-            status: 'completed',
-            amount: amount
+            status: 'received',
+            processed: true,
+            processed_at: new Date().toISOString(),
+            amount: amount,
+            notes: `Dépôt confirmé par admin le ${new Date().toLocaleDateString('fr-FR')}`
           })
           .eq('id', item.id);
           
         if (updateError) {
           console.error("Erreur lors de la mise à jour de la transaction:", updateError);
-          // Continue with other steps
+          return false;
         }
         
         // 3. Increment the user's wallet balance
@@ -114,11 +117,11 @@ export const bankTransferService = {
       
       console.log(`Rejet du dépôt ${item.id}`);
       
-      // 1. Use the new admin_mark_bank_transfer function
+      // 1. Use the admin_mark_bank_transfer function with correct parameter names
       const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_mark_bank_transfer', {
         transfer_id: item.id,
         new_status: 'rejected',
-        is_processed: true, // Use is_processed instead of processed to avoid ambiguity
+        is_processed: true,
         notes: `Dépôt rejeté par admin le ${new Date().toLocaleDateString('fr-FR')}`
       });
       
@@ -126,15 +129,20 @@ export const bankTransferService = {
         console.error("Erreur RPC admin_mark_bank_transfer:", rpcError);
         console.warn("Fallback aux méthodes standards...");
         
-        // 2. Utiliser la méthode standard pour mettre à jour les transactions
+        // 2. Direct UPDATE using service role (bypassing RLS)
         const { error: updateError } = await supabase
-          .from('wallet_transactions')
-          .update({ status: 'rejected' })
+          .from('bank_transfers')
+          .update({ 
+            status: 'rejected',
+            processed: true,
+            processed_at: new Date().toISOString(),
+            notes: `Dépôt rejeté par admin le ${new Date().toLocaleDateString('fr-FR')}`
+          })
           .eq('id', item.id);
           
         if (updateError) {
           console.error("Erreur lors du rejet de la transaction:", updateError);
-          // Continue with other steps
+          return false;
         }
       } else {
         console.log("Mise à jour via RPC réussie:", rpcResult);
@@ -183,18 +191,18 @@ export const bankTransferService = {
       
       console.log(`Confirmation de réception pour ${item.id}`);
       
-      // Use the new admin_mark_bank_transfer function with the correct parameter names
+      // Use the admin_mark_bank_transfer function with the correct parameter names
       const { data: rpcResult, error: rpcError } = await supabase.rpc('admin_mark_bank_transfer', {
         transfer_id: item.id,
         new_status: 'received',
-        is_processed: true, // Use is_processed to avoid ambiguity
+        is_processed: true,
         notes: `Réception confirmée par admin le ${new Date().toLocaleDateString('fr-FR')}`
       });
       
       if (rpcError) {
         console.error("Erreur RPC admin_mark_bank_transfer:", rpcError);
         
-        // Alternative: essayer d'insérer directement via service role
+        // Fallback: Try direct UPDATE (bypassing RLS)
         const { error: directUpdateError } = await supabase
           .from('bank_transfers')
           .update({ 
@@ -291,39 +299,20 @@ export const bankTransferService = {
         console.error("Erreur RPC admin_mark_bank_transfer:", rpcError);
         console.warn("Fallback aux méthodes standards...");
         
-        // 2. Fallback: méthode standard avec upsert
-        // Fetch the complete bank transfer record first
-        const { data: currentTransfer, error: fetchError } = await supabase
-          .from('bank_transfers')
-          .select('*')
-          .eq('id', transferId)
-          .single();
-          
-        if (fetchError) {
-          console.error("Erreur lors de la récupération des données existantes:", fetchError);
-          return {
-            success: false,
-            message: `Erreur de récupération: ${fetchError.message}`
-          };
-        }
-        
-        // Create complete update payload with all fields
-        const updates = {
-          ...currentTransfer,
-          status: status,
-          processed: status === 'received' || status === 'reçu',
-          processed_at: processedDate || new Date().toISOString(),
-          notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
-        };
-        
-        // Use upsert to ensure all fields are included
+        // 2. Fallback: direct UPDATE with service role (bypassing RLS)
         const { data, error } = await supabase
           .from('bank_transfers')
-          .upsert(updates)
+          .update({
+            status: status,
+            processed: status === 'received' || status === 'reçu',
+            processed_at: processedDate || new Date().toISOString(),
+            notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
+          })
+          .eq('id', transferId)
           .select();
           
         if (error) {
-          console.error("Erreur lors de la mise à jour:", error);
+          console.error("Erreur lors de la mise à jour directe:", error);
           return {
             success: false,
             message: `Erreur de mise à jour: ${error.message}`
@@ -348,7 +337,7 @@ export const bankTransferService = {
         const success = checkData.status === status;
         
         // Update wallet balance if successful
-        if (success && checkData.user_id) {
+        if (success && checkData.user_id && (status === 'received' || status === 'reçu')) {
           try {
             await supabase.rpc('recalculate_wallet_balance', {
               user_uuid: checkData.user_id
@@ -367,6 +356,26 @@ export const bankTransferService = {
         console.log("Mise à jour via RPC réussie:", rpcResult);
         
         // Update was successful via RPC
+        // Also update wallet balance if needed
+        if (status === 'received' || status === 'reçu') {
+          try {
+            // Get user_id for this transfer
+            const { data: transferData } = await supabase
+              .from('bank_transfers')
+              .select('user_id')
+              .eq('id', transferId)
+              .single();
+              
+            if (transferData && transferData.user_id) {
+              await supabase.rpc('recalculate_wallet_balance', {
+                user_uuid: transferData.user_id
+              });
+            }
+          } catch (balanceError) {
+            console.error("Erreur lors du recalcul du solde après RPC:", balanceError);
+          }
+        }
+        
         return {
           success: true,
           message: "Virement mis à jour avec succès via RPC",
