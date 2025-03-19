@@ -509,66 +509,105 @@ export const bankTransferService = {
   
   async forceUpdateToReceived(transferId: string): Promise<{success: boolean, message: string}> {
     try {
-      console.log(`Forçage de mise à jour à 'reçu' pour virement ${transferId}`);
+      console.log(`[FORÇAGE] Tentative de forcer statut à 'reçu' pour le transfert ${transferId}`);
       
-      // Get the current record to ensure we have the user ID
+      // 1. D'abord, récupérer les infos sur le transfert
       const { data: currentData, error: fetchError } = await supabase
         .from('bank_transfers')
-        .select('user_id, reference, amount')
+        .select('user_id, reference, amount, status')
         .eq('id', transferId)
         .single();
         
       if (fetchError) {
-        console.error("Impossible de récupérer les données du virement:", fetchError);
+        console.error("[FORÇAGE] Impossible de récupérer les données du transfert:", fetchError);
         return {
           success: false,
-          message: `Échec: ${fetchError.message}`
+          message: `Erreur lors de la récupération des données: ${fetchError.message}`
         };
       }
       
-      // DIRECT APPROACH: Update using a stored procedure/function that's known to work
-      if (currentData && currentData.user_id) {
-        // First, call the stored procedure to recalculate the wallet balance
-        const { error: recalcError } = await supabase.rpc('recalculate_wallet_balance', {
+      console.log("[FORÇAGE] Données actuelles du transfert:", currentData);
+      
+      if (currentData.status === 'received') {
+        console.log("[FORÇAGE] Le transfert est déjà marqué comme 'reçu'");
+        return {
+          success: true,
+          message: "Le transfert est déjà dans l'état 'reçu'"
+        };
+      }
+      
+      // 2. Mettre à jour le portefeuille de l'utilisateur via la fonction RPC
+      try {
+        console.log("[FORÇAGE] Recalcul du solde du portefeuille pour l'utilisateur", currentData.user_id);
+        const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance', {
           user_uuid: currentData.user_id
         });
         
-        if (recalcError) {
-          console.error("Erreur lors de la mise à jour du solde via RPC:", recalcError);
+        if (rpcError) {
+          console.error("[FORÇAGE] Erreur lors du recalcul du solde:", rpcError);
           return {
             success: false,
-            message: `Erreur de calcul du solde: ${recalcError.message}`
+            message: `Erreur lors du recalcul du solde: ${rpcError.message}`
           };
         }
+      } catch (err) {
+        console.error("[FORÇAGE] Exception lors du recalcul du solde:", err);
+      }
+      
+      // 3. MISE À JOUR DIRECTE SQL: Contourner les triggers et validations en utilisant une méthode de mise à jour sans hook
+      console.log("[FORÇAGE] Tentative de mise à jour directe du statut");
+      const processedDate = new Date().toISOString();
+      
+      // Préparer les données pour l'insertion/update
+      const updateData = {
+        id: transferId,
+        status: 'received',
+        processed: true,
+        processed_at: processedDate,
+        notes: `Mise à jour FORCÉE le ${new Date().toLocaleDateString('fr-FR')} par admin. Contournement des validations standard.`
+      };
+      
+      // Utilisation de upsert pour forcer la mise à jour
+      const { error: updateError } = await supabase
+        .from('bank_transfers')
+        .upsert(updateData, { onConflict: 'id' });
+      
+      if (updateError) {
+        console.error("[FORÇAGE] Erreur lors de la mise à jour directe:", updateError);
+        return {
+          success: false,
+          message: `Échec de la mise à jour directe: ${updateError.message}`
+        };
+      }
+      
+      // 4. Vérifier si la mise à jour a fonctionné
+      const { data: checkData, error: checkError } = await supabase
+        .from('bank_transfers')
+        .select('status, processed')
+        .eq('id', transferId)
+        .single();
+      
+      if (checkError) {
+        console.error("[FORÇAGE] Erreur lors de la vérification:", checkError);
+        return {
+          success: false,
+          message: "Mise à jour effectuée mais impossible de vérifier le résultat"
+        };
+      }
+      
+      const success = checkData.status === 'received';
+      
+      if (success) {
+        console.log("[FORÇAGE] Mise à jour réussie! Statut actuel:", checkData.status);
         
-        // Now update the bank transfer directly with a simple update
-        const processedDate = new Date().toISOString();
-        const { error: updateError } = await supabase
-          .from('bank_transfers')
-          .update({
-            status: 'received',
-            processed: true,
-            processed_at: processedDate,
-            notes: `Forçage de statut à reçu le ${new Date().toLocaleDateString('fr-FR')}`
-          })
-          .eq('id', transferId);
-          
-        if (updateError) {
-          console.error("Erreur lors de la mise à jour du statut:", updateError);
-          return {
-            success: false,
-            message: `Erreur de mise à jour: ${updateError.message}`
-          };
-        }
-        
-        // Add a notification
+        // 5. Ajouter une notification pour l'utilisateur
         try {
           await supabase
             .from('notifications')
             .insert({
               user_id: currentData.user_id,
-              title: "Virement reçu",
-              message: `Votre virement bancaire de ${currentData.amount}€ a été marqué comme reçu.`,
+              title: "Virement traité",
+              message: `Votre virement bancaire de ${currentData.amount}€ a été marqué comme reçu par un administrateur.`,
               type: "deposit",
               data: {
                 category: "success",
@@ -576,28 +615,189 @@ export const bankTransferService = {
                 transaction_id: transferId
               }
             });
+            
+          console.log("[FORÇAGE] Notification ajoutée avec succès");
         } catch (notificationError) {
-          console.error("Erreur lors de la création de notification:", notificationError);
-          // Don't fail the whole operation because of notification error
+          console.error("[FORÇAGE] Erreur lors de l'ajout de la notification:", notificationError);
+          // Ne pas échouer l'opération à cause de la notification
         }
         
         return {
           success: true,
-          message: 'Virement forcé à "Reçu" et solde mis à jour'
+          message: 'Virement forcé à "reçu" avec succès'
         };
       } else {
+        console.error("[FORÇAGE] La mise à jour a échoué malgré l'absence d'erreur. Statut actuel:", checkData.status);
         return {
           success: false,
-          message: 'Données de virement incomplètes ou utilisateur inconnu'
+          message: `Échec inexpliqué. Statut actuel: ${checkData.status}`
         };
       }
-      
     } catch (error: any) {
-      console.error("Erreur lors du forçage du statut:", error);
+      console.error("[FORÇAGE] Erreur critique:", error);
       return {
         success: false,
-        message: `Erreur générale: ${error.message || 'Erreur inconnue'}`
+        message: `Erreur critique: ${error.message || 'Erreur inconnue'}`
       };
+    }
+  },
+  
+  // Nouvelle méthode de forçage direct utilisant une approche complètement différente
+  async directForceBankTransfer(item: BankTransferItem): Promise<{success: boolean, message: string}> {
+    try {
+      console.log("[DIRECT FORCE] Démarrage de la procédure de forçage direct pour", item.id);
+      
+      // 1. D'abord, récupérer et afficher toutes les données actuelles pour le débogage
+      const { data: currentState, error: stateError } = await supabase
+        .from('bank_transfers')
+        .select('*')
+        .eq('id', item.id)
+        .single();
+        
+      if (stateError) {
+        console.error("[DIRECT FORCE] Erreur lecture état:", stateError);
+        return { success: false, message: `Erreur lecture: ${stateError.message}` };
+      }
+      
+      console.log("[DIRECT FORCE] État actuel:", currentState);
+      
+      // 2. Mise à jour portefeuille sans passer par les triggers
+      if (item.user_id) {
+        try {
+          console.log("[DIRECT FORCE] Mise à jour directe du portefeuille pour", item.user_id);
+          
+          // 2.1 Récupérer le solde actuel du portefeuille
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('wallet_balance')
+            .eq('id', item.user_id)
+            .single();
+            
+          console.log("[DIRECT FORCE] Solde actuel:", profileData?.wallet_balance);
+          
+          // 2.2 Mettre à jour le solde directement
+          if (item.amount && profileData) {
+            const newBalance = (profileData.wallet_balance || 0) + item.amount;
+            console.log("[DIRECT FORCE] Nouveau solde calculé:", newBalance);
+            
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ wallet_balance: newBalance })
+              .eq('id', item.user_id);
+              
+            if (updateError) {
+              console.error("[DIRECT FORCE] Erreur mise à jour solde:", updateError);
+            } else {
+              console.log("[DIRECT FORCE] Solde mis à jour avec succès");
+            }
+          }
+        } catch (e) {
+          console.error("[DIRECT FORCE] Erreur lors de la mise à jour du portefeuille:", e);
+        }
+      }
+      
+      // 3. Tenter de mettre à jour directement le statut avec plusieurs méthodes
+      
+      // Méthode 1: Update avec PATCH
+      console.log("[DIRECT FORCE] Méthode 1: Update avec PATCH");
+      const { error: patchError } = await supabase
+        .from('bank_transfers')
+        .update({
+          status: 'received',
+          processed: true,
+          processed_at: new Date().toISOString()
+        })
+        .eq('id', item.id);
+        
+      if (patchError) {
+        console.error("[DIRECT FORCE] Échec méthode 1:", patchError);
+      } else {
+        console.log("[DIRECT FORCE] Succès méthode 1");
+      }
+      
+      // Méthode 2: Upsert avec toutes les données
+      if (patchError) {
+        console.log("[DIRECT FORCE] Méthode 2: Upsert avec toutes les données");
+        const fullData = {
+          ...currentState,
+          status: 'received',
+          processed: true,
+          processed_at: new Date().toISOString(),
+          notes: (currentState.notes || '') + ' | Forcé manuellement le ' + new Date().toLocaleDateString('fr-FR')
+        };
+        
+        const { error: upsertError } = await supabase
+          .from('bank_transfers')
+          .upsert(fullData);
+          
+        if (upsertError) {
+          console.error("[DIRECT FORCE] Échec méthode 2:", upsertError);
+        } else {
+          console.log("[DIRECT FORCE] Succès méthode 2");
+        }
+      }
+      
+      // 4. Vérifier si la mise à jour a réussi
+      const { data: checkData, error: checkError } = await supabase
+        .from('bank_transfers')
+        .select('status, processed')
+        .eq('id', item.id)
+        .single();
+        
+      if (checkError) {
+        console.error("[DIRECT FORCE] Erreur vérification finale:", checkError);
+        return { success: false, message: "Impossible de vérifier le résultat" };
+      }
+      
+      console.log("[DIRECT FORCE] État final:", checkData);
+      
+      if (checkData.status === 'received') {
+        // Créer une notification
+        try {
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id: item.user_id,
+              title: "Virement traité",
+              message: `Votre virement bancaire a été traité et ajouté à votre portefeuille.`,
+              type: "deposit",
+              data: {
+                category: "success",
+                amount: item.amount,
+                reference: item.reference
+              }
+            });
+        } catch (e) {
+          console.error("[DIRECT FORCE] Erreur notification:", e);
+        }
+        
+        // Créer une transaction de portefeuille
+        try {
+          await supabase
+            .from('wallet_transactions')
+            .insert({
+              user_id: item.user_id,
+              amount: item.amount,
+              type: 'deposit',
+              description: `Virement bancaire (réf: ${item.reference || 'N/A'})`,
+              status: 'completed',
+              source: 'bank_transfers',
+              reference_id: item.id
+            });
+        } catch (e) {
+          console.error("[DIRECT FORCE] Erreur création transaction:", e);
+        }
+        
+        return { success: true, message: "Virement forcé à reçu avec succès" };
+      } else {
+        return { 
+          success: false, 
+          message: `Échec de mise à jour. Statut actuel: ${checkData.status}` 
+        };
+      }
+    } catch (error: any) {
+      console.error("[DIRECT FORCE] Erreur critique:", error);
+      return { success: false, message: `Erreur critique: ${error.message || 'Inconnu'}` };
     }
   }
 };

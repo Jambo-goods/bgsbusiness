@@ -58,51 +58,51 @@ export function useBankTransfers(onSuccess: () => void) {
   const handleForceToReceived = async (item: BankTransferItem) => {
     try {
       setProcessingId(item.id);
-      console.log("Forçage du statut à 'reçu' pour l'ID:", item.id);
+      console.log("[FORÇAGE] Mise à jour directe du statut pour l'ID:", item.id);
       
-      // First attempt
-      const { success, message } = await bankTransferService.forceUpdateToReceived(item.id);
+      // Afficher message d'information pour indiquer que l'opération est en cours
+      toast.info("Tentative de mise à jour forcée en cours...", { duration: 5000 });
       
-      if (success) {
+      // Première tentative avec l'API standard
+      const result = await bankTransferService.forceUpdateToReceived(item.id);
+      
+      if (result.success) {
         toast.success("Virement forcé à 'reçu' avec succès");
         
-        // Add extra delay to ensure database updates propagate
+        // Ajouter un délai important pour s'assurer que les triggers de base de données s'exécutent
         setTimeout(() => {
           onSuccess();
-        }, 2000); // Increased delay to 2 seconds
-      } else {
-        console.error("Échec du forçage:", message);
-        toast.error(`Échec du forçage: ${message}`);
+          toast.info("Rafraîchissement des données...");
+        }, 3000);
         
-        // Second attempt with a different approach if first attempt failed
-        if (message.includes("pending") || message.includes("échoué")) {
-          toast.info("Tentative alternative en cours...");
-          
-          // Delay before second attempt
-          setTimeout(async () => {
-            try {
-              // Try again with a different approach
-              const secondAttempt = await bankTransferService.forceUpdateToReceived(item.id);
-              
-              if (secondAttempt.success) {
-                toast.success("Seconde tentative réussie!");
-                onSuccess();
-              } else {
-                toast.error("Échec après plusieurs tentatives. Veuillez contacter le support technique.");
-              }
-            } catch (retryError) {
-              console.error("Erreur lors de la seconde tentative:", retryError);
-              toast.error("Échec de toutes les tentatives. Rechargez la page et réessayez.");
-            } finally {
-              setProcessingId(null);
-            }
-          }, 1000);
-        }
+        return;
+      }
+      
+      console.error("[FORÇAGE] Première tentative échouée:", result.message);
+      toast.warning("Première tentative échouée, essai avec méthode alternative...");
+      
+      // Deuxième tentative avec API RPC directe
+      const directResult = await bankTransferService.directForceBankTransfer(item);
+      
+      if (directResult.success) {
+        toast.success("Mise à jour réussie avec méthode alternative!");
+        
+        // Ajouter un délai encore plus long pour s'assurer que tout est bien mis à jour
+        setTimeout(() => {
+          onSuccess();
+          toast.info("Rafraîchissement des données...");
+        }, 5000);
+      } else {
+        toast.error(`Échec de toutes les tentatives: ${directResult.message}`);
+        console.error("[FORÇAGE] Toutes les tentatives ont échoué:", directResult);
       }
     } catch (error) {
-      console.error("Erreur lors du forçage du statut:", error);
-      toast.error("Une erreur est survenue lors du forçage du statut");
-      setProcessingId(null);
+      console.error("[FORÇAGE] Erreur critique lors du forçage:", error);
+      toast.error("Une erreur critique est survenue lors du forçage du statut");
+    } finally {
+      setTimeout(() => {
+        setProcessingId(null);
+      }, 1000);
     }
   };
 
