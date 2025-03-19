@@ -61,19 +61,7 @@ export default function BankTransferTableRow({
         />
       </TableCell>
       
-      <TableCell className="text-right">
-        {isProcessing ? (
-          <div className="flex justify-end">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
-          </div>
-        ) : (
-          <div className="text-sm text-gray-500">
-            {isReceiptConfirmed ? "Réception confirmée" :
-             isRejected ? "Rejeté" : 
-             "En attente"}
-          </div>
-        )}
-      </TableCell>
+      {/* Actions column removed */}
     </TableRow>
   );
 }

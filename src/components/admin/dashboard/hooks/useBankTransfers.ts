@@ -1,6 +1,5 @@
 
 import { useState } from "react";
-import { BankTransferItem } from "../types/bankTransfer";
 
 export function useBankTransfers() {
   const [processingId, setProcessingId] = useState<string | null>(null);

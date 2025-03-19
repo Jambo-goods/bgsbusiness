@@ -40,7 +40,7 @@ export default function BankTransferTable({
             <TableHead>Utilisateur</TableHead>
             <TableHead>Référence</TableHead>
             <TableHead>Réception</TableHead>
-            <TableHead className="text-right">Statut</TableHead>
+            {/* Actions column removed */}
           </TableRow>
         </TableHeader>
         <TableBody>
