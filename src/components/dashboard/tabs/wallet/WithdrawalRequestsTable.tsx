@@ -7,6 +7,7 @@ import EmptyState from "./withdrawal-table/EmptyState";
 import WithdrawalTableRow from "./withdrawal-table/WithdrawalTableRow";
 import { toast } from "sonner";
 import { notificationService } from "@/services/notifications";
+import EditWithdrawalModal from "./withdrawal-table/EditWithdrawalModal";
 
 interface WithdrawalRequest {
   id: string;
@@ -24,6 +25,8 @@ interface WithdrawalRequest {
 export default function WithdrawalRequestsTable() {
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     fetchWithdrawalRequests();
@@ -73,9 +76,6 @@ export default function WithdrawalRequestsTable() {
                 // Handle confirmed status notification
                 console.log("Withdrawal confirmed notification");
                 notificationService.withdrawalConfirmed(amount)
-                  .then(() => {
-                    console.log(`Notification sent for confirmed withdrawal of ${amount}€`);
-                  })
                   .catch(error => {
                     console.error("Error sending confirmed withdrawal notification:", error);
                   });
@@ -137,6 +137,16 @@ export default function WithdrawalRequestsTable() {
     }
   };
 
+  const handleEditWithdrawal = (withdrawal: WithdrawalRequest) => {
+    setSelectedWithdrawal(withdrawal);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedWithdrawal(null);
+  };
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -157,15 +167,27 @@ export default function WithdrawalRequestsTable() {
               <TableHead>Banque</TableHead>
               <TableHead>Compte</TableHead>
               <TableHead>Statut</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {withdrawalRequests.map((request) => (
-              <WithdrawalTableRow key={request.id} request={request} />
+              <WithdrawalTableRow 
+                key={request.id} 
+                request={request} 
+                onEdit={() => handleEditWithdrawal(request)}
+              />
             ))}
           </TableBody>
         </Table>
       </div>
+
+      <EditWithdrawalModal 
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        withdrawal={selectedWithdrawal}
+        onUpdate={fetchWithdrawalRequests}
+      />
     </div>
   );
 }
