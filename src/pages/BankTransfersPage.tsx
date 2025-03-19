@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -149,84 +148,96 @@ export default function BankTransfersPage() {
       
       console.log("Sending update with payload:", updates);
       
-      // Mise à jour du virement bancaire avec retour immédiat
-      const { error } = await supabase
+      const { data: updatedData, error } = await supabase
         .from('bank_transfers')
         .update(updates)
-        .eq('id', selectedTransfer.id);
+        .eq('id', selectedTransfer.id)
+        .select();
       
       if (error) {
         console.error("Erreur lors de la mise à jour:", error);
-        setUpdateError(`Erreur: ${error.message}`);
-        throw error;
+        console.error("Détails de l'erreur:", error.details, error.hint, error.code);
+        setUpdateError(`Première tentative échouée: ${error.message}`);
+        
+        try {
+          const { data: transferData, error: fetchError } = await supabase
+            .from('bank_transfers')
+            .select('*')
+            .eq('id', selectedTransfer.id)
+            .single();
+          
+          if (fetchError) {
+            throw new Error(`Erreur lors de la récupération du transfert: ${fetchError.message}`);
+          }
+          
+          const completeUpdate = {
+            ...transferData,
+            status: editStatus,
+            processed: editStatus === 'received' || editStatus === 'reçu',
+            processed_at: processedDate ? processedDate.toISOString() : null,
+            notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
+          };
+          
+          const { data: upsertData, error: upsertError } = await supabase
+            .from('bank_transfers')
+            .upsert(completeUpdate)
+            .select();
+          
+          if (upsertError) {
+            setUpdateError(`Seconde tentative échouée: ${upsertError.message}`);
+            throw new Error(`Seconde tentative échec: ${upsertError.message}`);
+          }
+          
+          updatedData = upsertData;
+          console.log("Mise à jour réussie via seconde tentative:", updatedData);
+        } catch (fallbackError: any) {
+          console.error("Erreur lors de la seconde tentative:", fallbackError);
+          throw fallbackError;
+        }
+      } else {
+        console.log("Mise à jour réussie:", updatedData);
       }
       
-      // Récupérer et vérifier que la transaction a bien été mise à jour
-      const { data: updatedTransfer, error: fetchError } = await supabase
+      const { data: checkData, error: checkError } = await supabase
         .from('bank_transfers')
         .select('*')
         .eq('id', selectedTransfer.id)
         .single();
-      
-      if (fetchError) {
-        console.error("Erreur lors de la vérification:", fetchError);
-        setUpdateError(`Erreur de vérification: ${fetchError.message}`);
-      } else {
-        console.log("Transfer after update:", updatedTransfer);
         
-        // Vérifier si l'état a bien été mis à jour
-        if (updatedTransfer.status !== editStatus) {
-          console.warn(`La mise à jour du statut a échoué. Statut attendu: ${editStatus}, Statut obtenu: ${updatedTransfer.status}`);
-          setUpdateError(`La mise à jour n'a pas été appliquée. Le statut est toujours "${updatedTransfer.status}".`);
-          // On essaie une mise à jour forcée avec upsert
-          const { error: retryError } = await supabase
-            .from('bank_transfers')
-            .upsert({
-              id: selectedTransfer.id,
-              status: editStatus,
-              processed_at: processedDate ? processedDate.toISOString() : null,
-              notes: `Mise à jour forcée le ${new Date().toLocaleDateString('fr-FR')}`
-            });
-            
-          if (retryError) {
-            console.error("Erreur lors de la seconde tentative:", retryError);
-            setUpdateError(`Échec de la seconde tentative: ${retryError.message}`);
-          } else {
-            console.log("Seconde tentative de mise à jour effectuée");
-          }
+      if (checkError) {
+        console.error("Erreur lors de la vérification:", checkError);
+      } else {
+        console.log("État après mise à jour:", checkData);
+        
+        if (checkData.status !== editStatus) {
+          const warningMsg = `Attention: Le statut n'a pas été correctement mis à jour. Statut actuel: ${checkData.status}`;
+          console.warn(warningMsg);
+          toast.warning(warningMsg);
         }
       }
       
-      // Si le statut est "received" ou "reçu", déclencher la mise à jour du solde du wallet
       if (editStatus === "received" || editStatus === "reçu") {
         await activateWalletUpdate(selectedTransfer);
       }
       
-      if (!updateError) {
-        toast.success("Virement bancaire mis à jour avec succès");
-        // Fermer le modal et réinitialiser les états
-        closeEditModal();
-      } else {
-        toast.error(`Problème lors de la mise à jour: ${updateError}`);
-      }
+      toast.success("Virement bancaire mis à jour");
+      closeEditModal();
       
-      // Forcer une actualisation des données immédiate
       await fetchBankTransfers();
+      
     } catch (error: any) {
       console.error("Erreur lors de la mise à jour du virement:", error);
-      toast.error(`Erreur: ${error.message || "Une erreur est survenue lors de la mise à jour"}`);
+      toast.error(`Erreur de mise à jour: ${error.message || "Une erreur est survenue"}`);
       setUpdateError(error.message || "Une erreur inconnue est survenue");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Fonction pour forcer la mise à jour du solde du wallet
   const activateWalletUpdate = async (transfer: BankTransfer) => {
     try {
       console.log("Tentative de mise à jour du solde du wallet pour l'utilisateur:", transfer.user_id);
       
-      // Utiliser la fonction RPC pour mettre à jour le solde du wallet
       const { data, error } = await supabase.rpc('recalculate_wallet_balance', {
         user_uuid: transfer.user_id
       });
@@ -238,7 +249,6 @@ export default function BankTransfersPage() {
       
       console.log("Solde du wallet mis à jour avec succès");
       
-      // Créer une notification pour l'utilisateur
       await supabase.from('notifications').insert({
         user_id: transfer.user_id,
         title: "Virement reçu",
@@ -281,11 +291,17 @@ export default function BankTransfersPage() {
     { value: "cancelled", label: "Annuler" }
   ];
 
-  // Force refresh du composant après mise à jour
   const forceRefresh = async () => {
     setIsLoading(true);
-    await fetchBankTransfers();
-    setIsLoading(false);
+    try {
+      await fetchBankTransfers();
+      toast.success("Données actualisées");
+    } catch (error) {
+      console.error("Erreur lors de l'actualisation:", error);
+      toast.error("Échec de l'actualisation des données");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
