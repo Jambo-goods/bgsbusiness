@@ -48,14 +48,49 @@ export function useBankTransferData() {
         console.log("Rôle utilisateur:", userRole);
         console.log("Fetching bank transfers with status filter:", statusFilter);
         
-        // Récupérer les données de la table bank_transfers directement sans filtres RLS initiaux
-        let { data: bankTransfersData, error: bankTransfersError } = await supabase
-          .from("bank_transfers")
-          .select("*");
+        // Utiliser la vue RPC admin_get_bank_transfers si disponible
+        // Sinon, fallback à la méthode standard
+        let bankTransfersData: any[] = [];
+        let bankTransfersError: any = null;
+        
+        try {
+          // Try using RPC first (if it exists)
+          const { data: rpcData, error: rpcError } = await supabase.rpc('admin_get_bank_transfers');
+          
+          if (!rpcError && rpcData) {
+            bankTransfersData = rpcData;
+            console.log("Données récupérées via RPC:", rpcData.length);
+          } else {
+            console.warn("RPC non disponible ou erreur:", rpcError);
+            
+            // Fallback: récupérer directement les données
+            const { data: directData, error: directError } = await supabase
+              .from("bank_transfers")
+              .select("*");
+            
+            bankTransfersData = directData || [];
+            bankTransfersError = directError;
+            
+            if (directError) {
+              console.error("Error fetching from bank_transfers:", directError);
+              console.error("Error details:", directError.details, directError.hint, directError.code);
+            } else {
+              console.log("Données récupérées directement:", directData?.length || 0);
+            }
+          }
+        } catch (e) {
+          console.error("Erreur lors de la tentative RPC/directe:", e);
+          
+          // Last fallback: récupérer sans restrictions
+          const { data: directData, error: directError } = await supabase
+            .from("bank_transfers")
+            .select("*");
+          
+          bankTransfersData = directData || [];
+          bankTransfersError = directError;
+        }
         
         if (bankTransfersError) {
-          console.error("Error fetching from bank_transfers:", bankTransfersError);
-          console.error("Error details:", bankTransfersError.details, bankTransfersError.hint, bankTransfersError.code);
           toast.error(`Erreur lors de la récupération des virements: ${bankTransfersError.message}`);
         }
         
@@ -63,21 +98,36 @@ export function useBankTransferData() {
         console.log("Nombre de virements trouvés:", bankTransfersData?.length || 0);
         
         // Récupérer les données de wallet_transactions sans filtres RLS initiaux
-        let { data: walletTransactions, error: walletError } = await supabase
-          .from("wallet_transactions")
-          .select("*")
-          .eq("type", "deposit");
+        let walletTransactions: any[] = [];
+        let walletError: any = null;
+        
+        try {
+          const { data: txData, error: txError } = await supabase
+            .from("wallet_transactions")
+            .select("*")
+            .eq("type", "deposit");
+            
+          walletTransactions = txData || [];
+          walletError = txError;
           
+          if (txError) {
+            console.error("Error fetching wallet transactions:", txError);
+            console.error("Error details:", txError.details, txError.hint, txError.code);
+          } else {
+            console.log("Données wallet récupérées:", txData?.length || 0);
+          }
+        } catch (e) {
+          console.error("Erreur lors de la récupération wallet:", e);
+        }
+        
         if (walletError) {
-          console.error("Error fetching wallet transactions:", walletError);
-          console.error("Error details:", walletError.details, walletError.hint, walletError.code);
           toast.error(`Erreur lors de la récupération des transactions: ${walletError.message}`);
         }
         
         console.log("Raw wallet_transactions data:", walletTransactions);
         console.log("Nombre de transactions trouvées:", walletTransactions?.length || 0);
         
-        // Si aucune donnée n'a été récupérée, essayer d'utiliser l'API service_role pour contourner RLS
+        // Si aucune donnée n'a été récupérée, essayer d'utiliser un service_role ou admin
         if ((!bankTransfersData || bankTransfersData.length === 0) && 
             (!walletTransactions || walletTransactions.length === 0)) {
           console.log("Aucune donnée trouvée. Cela pourrait être un problème de permissions RLS.");
@@ -87,17 +137,17 @@ export function useBankTransferData() {
         // Extraire les IDs utilisateurs uniques
         const userIdsFromTransfers = (bankTransfersData || []).map(transfer => transfer.user_id);
         const userIdsFromWallet = (walletTransactions || []).map(tx => tx.user_id);
-        const userIds = [...new Set([...userIdsFromTransfers, ...userIdsFromWallet])];
+        const uniqueUserIds = [...new Set([...userIdsFromTransfers, ...userIdsFromWallet])];
         
         // Récupérer tous les profils en une seule requête
         let profilesData: any[] = [];
         let profilesError: any = null;
         
-        if (userIds.length > 0) {
+        if (uniqueUserIds.length > 0) {
           const { data: profiles, error } = await supabase
             .from("profiles")
             .select("id, first_name, last_name, email")
-            .in("id", userIds);
+            .in("id", uniqueUserIds);
             
           profilesData = profiles || [];
           profilesError = error;
