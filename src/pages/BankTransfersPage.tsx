@@ -147,18 +147,28 @@ export default function BankTransfersPage() {
       console.log("Sending update:", updates);
       
       // Mise à jour du virement bancaire
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('bank_transfers')
         .update(updates)
-        .eq('id', selectedTransfer.id)
-        .select();
+        .eq('id', selectedTransfer.id);
       
       if (error) {
         console.error("Erreur lors de la mise à jour:", error);
         throw error;
       }
       
-      console.log("Updated transfer:", data);
+      // Vérifier que la mise à jour a bien été effectuée
+      const { data: updatedTransfer, error: checkError } = await supabase
+        .from('bank_transfers')
+        .select('*')
+        .eq('id', selectedTransfer.id)
+        .single();
+        
+      if (checkError) {
+        console.error("Erreur lors de la vérification:", checkError);
+      } else {
+        console.log("Transfer after update:", updatedTransfer);
+      }
       
       // Si le statut est "received" ou "reçu", déclencher la mise à jour du solde du wallet
       if (editStatus === "received" || editStatus === "reçu") {

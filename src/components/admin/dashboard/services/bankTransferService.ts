@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { BankTransferItem } from "../types/bankTransfer";
@@ -48,17 +47,8 @@ export const bankTransferService = {
       
       // 4. Use the notification service properly
       try {
-        // Create a deposit confirmed notification using createNotification
-        await notificationService.createNotification({
-          title: "Dépôt confirmé",
-          description: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
-          type: "deposit",
-          category: "success",
-          metadata: {
-            amount,
-            transaction_id: item.id
-          }
-        });
+        // Remove the direct call to createNotification and use the public methods
+        await notificationService.depositSuccess(amount);
         console.log("Notification de confirmation de dépôt envoyée");
       } catch (notifyError) {
         console.error("Erreur avec le service de notification:", notifyError);
