@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BankTransferTableProps, BankTransferItem } from "./types/bankTransfer";
 import BankTransferTableRow from "./BankTransferTableRow";
@@ -11,18 +11,30 @@ export default function BankTransferTable({
   refreshData
 }: BankTransferTableProps) {
   const { processingId } = useBankTransfers();
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
 
   console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers?.length || 0);
-  console.log("Transfer IDs in Table:", pendingTransfers?.map(t => t.id));
-
+  
   // Handle refresh after status update
   const handleStatusUpdate = () => {
+    setLastUpdateTime(Date.now());
     if (refreshData) {
       setTimeout(() => {
         refreshData();
       }, 500);
     }
   };
+
+  // Force a refresh every 10 seconds to catch any updates
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (refreshData) {
+        refreshData();
+      }
+    }, 10000);
+    
+    return () => clearInterval(intervalId);
+  }, [refreshData]);
 
   if (isLoading) {
     return (
@@ -55,7 +67,7 @@ export default function BankTransferTable({
         <TableBody>
           {pendingTransfers.map((item) => (
             <BankTransferTableRow
-              key={item.id}
+              key={`${item.id}-${lastUpdateTime}`}
               item={item}
               processingId={processingId}
               onStatusUpdate={handleStatusUpdate}

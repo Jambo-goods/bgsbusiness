@@ -1,13 +1,14 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Check, X } from "lucide-react";
+import { Check, X, Loader2 } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
+import { toast } from "sonner";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;
@@ -20,14 +21,15 @@ export default function BankTransferTableRow({
   processingId,
   onStatusUpdate
 }: BankTransferTableRowProps) {
-  const { confirmReceipt, rejectTransfer, updateTransferStatus } = useBankTransfers();
+  const { updateTransferStatus } = useBankTransfers();
+  const [localProcessing, setLocalProcessing] = useState(false);
   
   // Format date nicely
   const formattedDate = item.created_at 
     ? format(new Date(item.created_at), 'dd MMM yyyy HH:mm', { locale: fr })
     : 'Date inconnue';
     
-  const isProcessing = processingId === item.id;
+  const isProcessing = processingId === item.id || localProcessing;
   
   const userName = item.profile 
     ? `${item.profile.first_name || ''} ${item.profile.last_name || ''}`.trim() || 'Utilisateur'
@@ -38,16 +40,42 @@ export default function BankTransferTableRow({
   const isPending = item.status === 'pending';
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
   
-  // Handle confirming receipt - now uses updateTransferStatus
+  // Handle confirming receipt
   const handleConfirmReceipt = async () => {
-    const success = await updateTransferStatus(item, 'received');
-    if (success && onStatusUpdate) onStatusUpdate();
+    setLocalProcessing(true);
+    try {
+      const success = await updateTransferStatus(item, 'received');
+      if (success && onStatusUpdate) {
+        toast.success("Virement marqué comme reçu");
+        onStatusUpdate();
+      } else {
+        toast.error("Échec de la mise à jour - veuillez réessayer");
+      }
+    } catch (error) {
+      console.error("Erreur de mise à jour:", error);
+      toast.error("Une erreur s'est produite lors de la mise à jour");
+    } finally {
+      setLocalProcessing(false);
+    }
   };
   
-  // Handle rejecting transfer - now uses updateTransferStatus
+  // Handle rejecting transfer
   const handleRejectTransfer = async () => {
-    const success = await updateTransferStatus(item, 'rejected');
-    if (success && onStatusUpdate) onStatusUpdate();
+    setLocalProcessing(true);
+    try {
+      const success = await updateTransferStatus(item, 'rejected');
+      if (success && onStatusUpdate) {
+        toast.success("Virement rejeté");
+        onStatusUpdate();
+      } else {
+        toast.error("Échec du rejet - veuillez réessayer");
+      }
+    } catch (error) {
+      console.error("Erreur de mise à jour:", error);
+      toast.error("Une erreur s'est produite lors du rejet");
+    } finally {
+      setLocalProcessing(false);
+    }
   };
   
   return (
@@ -90,7 +118,12 @@ export default function BankTransferTableRow({
                 onClick={handleConfirmReceipt}
                 disabled={isProcessing}
               >
-                <Check className="h-3.5 w-3.5 mr-1" /> Reçu
+                {isProcessing ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : (
+                  <Check className="h-3.5 w-3.5 mr-1" />
+                )}
+                Reçu
               </Button>
               
               <Button
@@ -100,7 +133,12 @@ export default function BankTransferTableRow({
                 onClick={handleRejectTransfer}
                 disabled={isProcessing}
               >
-                <X className="h-3.5 w-3.5 mr-1" /> Rejeter
+                {isProcessing ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : (
+                  <X className="h-3.5 w-3.5 mr-1" />
+                )}
+                Rejeter
               </Button>
             </div>
           )}

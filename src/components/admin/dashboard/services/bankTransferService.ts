@@ -251,19 +251,55 @@ export const bankTransferService = {
       
       console.log("Données de mise à jour:", updateData);
       
+      // Get Admin JWT token from local storage to use service role
+      const adminToken = localStorage.getItem('admin_token');
+      
       // Direct UPDATE with service role (bypassing RLS)
       const { data, error } = await supabase
         .from('bank_transfers')
         .update(updateData)
         .eq('id', transferId)
-        .select('*');
+        .select('*')
+        .headers(adminToken ? {
+          Authorization: `Bearer ${adminToken}`
+        } : {});
         
       if (error) {
         console.error("Erreur lors de la mise à jour directe:", error);
-        return {
-          success: false,
-          message: `Erreur de mise à jour: ${error.message}`
-        };
+        
+        // Fall back to alternative method using stored procedures if available
+        try {
+          // Attempt to use RPC call with admin role
+          const { data: rpcData, error: rpcError } = await supabase.rpc('admin_mark_bank_transfer', {
+            transfer_id: transferId,
+            new_status: status,
+            is_processed: isProcessed,
+            processed_date: processedDate || (isProcessed ? new Date().toISOString() : null)
+          });
+          
+          if (rpcError) {
+            console.error("Erreur lors de l'appel RPC:", rpcError);
+            return {
+              success: false,
+              message: `Échec via RPC: ${rpcError.message}`,
+              data: { rpcError }
+            };
+          }
+          
+          console.log("Mise à jour via RPC réussie:", rpcData);
+          return {
+            success: true,
+            message: "Mise à jour via RPC réussie",
+            data: rpcData
+          };
+        } catch (rpcError) {
+          console.error("Exception lors de l'appel RPC:", rpcError);
+          return {
+            success: false,
+            message: `Échec global: ${error.message}`,
+            data: { error, rpcError }
+          };
+        }
       }
       
       // Verify the update was successful by fetching the updated record
@@ -286,12 +322,53 @@ export const bankTransferService = {
       // Update wallet balance if successful
       if (success && updatedTransfer.user_id && (status === 'received' || status === 'reçu')) {
         try {
-          await supabase.rpc('recalculate_wallet_balance', {
-            user_uuid: updatedTransfer.user_id
-          });
-          console.log("Solde recalculé pour l'utilisateur", updatedTransfer.user_id);
-        } catch (rpcError) {
-          console.error("Erreur lors du recalcul du solde:", rpcError);
+          // Use recalculate function if available, otherwise increment
+          try {
+            await supabase.rpc('recalculate_wallet_balance', {
+              user_uuid: updatedTransfer.user_id
+            });
+            console.log("Solde recalculé pour l'utilisateur", updatedTransfer.user_id);
+          } catch (rpcError) {
+            console.error("Erreur lors du recalcul du solde via RPC:", rpcError);
+            
+            // If transfer has an amount, try direct update as fallback
+            if (updatedTransfer.amount) {
+              const { error: updateError } = await supabase.rpc('increment_wallet_balance', {
+                user_id: updatedTransfer.user_id,
+                increment_amount: updatedTransfer.amount
+              });
+              
+              if (updateError) {
+                console.error("Erreur lors de l'incrémentation du solde:", updateError);
+              } else {
+                console.log("Solde incrémenté directement de", updatedTransfer.amount);
+              }
+            }
+          }
+          
+          // Create a notification for the user
+          try {
+            const { error: notifError } = await supabase
+              .from('notifications')
+              .insert({
+                user_id: updatedTransfer.user_id,
+                title: "Virement reçu",
+                message: `Votre virement bancaire (réf: ${updatedTransfer.reference}) a été traité.`,
+                type: "deposit",
+                data: {
+                  amount: updatedTransfer.amount,
+                  reference: updatedTransfer.reference
+                }
+              });
+              
+            if (notifError) {
+              console.error("Erreur lors de la création de notification:", notifError);
+            }
+          } catch (notifError) {
+            console.error("Exception lors de la création de notification:", notifError);
+          }
+        } catch (balanceError) {
+          console.error("Erreur générale lors de la mise à jour du solde:", balanceError);
         }
       }
       

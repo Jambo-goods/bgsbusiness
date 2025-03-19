@@ -7,7 +7,7 @@ import { BankTransferItem } from "../types/bankTransfer";
 export function useBankTransfers() {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  // Add function to handle marking a transfer as received
+  // Function to handle marking a transfer as received
   const confirmReceipt = async (transfer: BankTransferItem) => {
     try {
       setProcessingId(transfer.id);
@@ -29,7 +29,7 @@ export function useBankTransfers() {
     }
   };
 
-  // Add function to handle rejecting a transfer
+  // Function to handle rejecting a transfer
   const rejectTransfer = async (transfer: BankTransferItem) => {
     try {
       setProcessingId(transfer.id);
@@ -51,16 +51,23 @@ export function useBankTransfers() {
     }
   };
 
-  // Add a new function to directly update bank transfer status
+  // Function to directly update bank transfer status
   const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string) => {
     try {
       setProcessingId(transfer.id);
       
       // Use current date as processed date for received status
-      const processedDate = (newStatus === 'received' || newStatus === 'reçu') 
+      const processedDate = (newStatus === 'received' || newStatus === 'reçu' || newStatus === 'rejected') 
         ? new Date().toISOString() 
         : null;
       
+      // Store the admin token in localStorage if available
+      const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+      if (adminUser?.token) {
+        localStorage.setItem('admin_token', adminUser.token);
+      }
+      
+      // Call the service to update the transfer
       const result = await bankTransferService.updateBankTransfer(
         transfer.id,
         newStatus,
@@ -72,7 +79,7 @@ export function useBankTransfers() {
         return true;
       } else {
         console.error("Échec de mise à jour:", result);
-        toast.error(result.message);
+        toast.error(result.message || "Échec de la mise à jour");
         return false;
       }
     } catch (error: any) {
