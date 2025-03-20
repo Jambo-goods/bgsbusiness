@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BankTransferTableProps, BankTransferItem } from "./types/bankTransfer";
@@ -132,68 +133,63 @@ export default function BankTransferTable({
       'rejected': 1,
       'cancelled': 0
     };
-    return statusPriorities[status] || 0;
+    return statusPriorities[status.toLowerCase()] || 0;
   };
 
-  // Create a more effective deduplication map based on reference and amount
-  const uniqueTransfersMap = new Map<string, BankTransferItem>();
-
-  // First pass: group transfers by reference + amount and keep track of highest priority status
-  const transfersGroups = new Map<string, BankTransferItem[]>();
+  // MÉTHODE AMÉLIORÉE DE DÉDUPLICATION: utiliser une structure de données plus stricte
   
-  pendingTransfers.forEach((transfer) => {
-    // Use both reference and amount as the key for more accurate deduplication
-    const key = `${transfer.reference}-${transfer.amount}`;
-    
-    if (!transfersGroups.has(key)) {
-      transfersGroups.set(key, []);
-    }
-    
-    transfersGroups.get(key)?.push(transfer);
+  // Structure pour stocker les références uniques
+  const uniqueRefs = new Set<string>();
+  
+  // Map qui stocke pour chaque référence le meilleur enregistrement selon la priorité du statut
+  const bestTransfersByRef = new Map<string, BankTransferItem>();
+  
+  // 1. Première passe: identifier toutes les références uniques
+  pendingTransfers.forEach(transfer => {
+    // Normaliser la référence (enlever espaces, mettre en minuscules) 
+    // pour être sûr que même avec des variations légères ça compte comme même ref
+    const normalizedRef = transfer.reference.trim().toLowerCase();
+    uniqueRefs.add(normalizedRef);
   });
-
-  // Second pass: For each group, pick the item with the highest priority status
-  // If statuses are equal, pick the most recent one
-  transfersGroups.forEach((group, key) => {
-    if (group.length === 0) return;
+  
+  // 2. Pour chaque référence unique, trouver le meilleur enregistrement
+  uniqueRefs.forEach(ref => {
+    // Filtrer tous les transferts avec cette référence
+    const transfersWithThisRef = pendingTransfers.filter(
+      t => t.reference.trim().toLowerCase() === ref
+    );
     
-    // Sort the group by status priority (descending) and then by date (most recent first)
-    group.sort((a, b) => {
-      const priorityDiff = getStatusPriority(b.status) - getStatusPriority(a.status);
-      if (priorityDiff !== 0) return priorityDiff;
+    // Trier par priorité de statut (le plus élevé d'abord)
+    // Si même statut, prendre le plus récent
+    transfersWithThisRef.sort((a, b) => {
+      const priorityA = getStatusPriority(a.status);
+      const priorityB = getStatusPriority(b.status);
       
-      // If same priority, use date as tiebreaker
-      const dateA = new Date(a.created_at || 0);
-      const dateB = new Date(b.created_at || 0);
-      return dateB.getTime() - dateA.getTime();
+      if (priorityA !== priorityB) {
+        return priorityB - priorityA; // Priorité plus haute d'abord
+      }
+      
+      // Si même priorité, prendre le plus récent
+      const dateA = new Date(a.created_at || 0).getTime();
+      const dateB = new Date(b.created_at || 0).getTime();
+      return dateB - dateA;
     });
     
-    // Take the first item (highest priority or most recent)
-    uniqueTransfersMap.set(key, group[0]);
-    
-    // Log to help debug
-    if (group.length > 1) {
-      console.log(`Removed ${group.length - 1} duplicates for reference: ${group[0].reference}, amount: ${group[0].amount}`);
-      console.log(`Kept: Status=${group[0].status}, ID=${group[0].id}, Date=${group[0].created_at}`);
+    // Prendre le meilleur transfert pour cette référence
+    if (transfersWithThisRef.length > 0) {
+      bestTransfersByRef.set(ref, transfersWithThisRef[0]);
+      
+      if (transfersWithThisRef.length > 1) {
+        console.log(`Référence ${ref}: ${transfersWithThisRef.length} entrées, gardé l'entrée avec statut ${transfersWithThisRef[0].status}`);
+      }
     }
   });
   
-  // Also add transfers with unique IDs that might have been missed
-  pendingTransfers.forEach((transfer) => {
-    const key = `${transfer.reference}-${transfer.amount}`;
-    
-    // If this ID isn't represented in our map, add it as a separate entry
-    // This ensures we don't miss any unique transfers
-    if (!Array.from(uniqueTransfersMap.values()).some(t => t.id === transfer.id) && 
-        !uniqueTransfersMap.has(key)) {
-      uniqueTransfersMap.set(transfer.id, transfer);
-    }
-  });
-
-  // Convert map back to array
-  const uniqueTransfers = Array.from(uniqueTransfersMap.values());
+  // Obtenir la liste finale dédupliquée
+  const uniqueTransfers = Array.from(bestTransfersByRef.values());
   
-  console.log("Après filtrage des doublons amélioré:", uniqueTransfers.length);
+  console.log("Nombre de transferts uniques après déduplication stricte:", uniqueTransfers.length);
+  console.log("Références uniques:", Array.from(uniqueRefs));
   
   // Sort transfers by date, most recent first
   const sortedTransfers = uniqueTransfers.sort((a, b) => {
