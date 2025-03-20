@@ -54,26 +54,25 @@ export default function HistoryList({ items }: HistoryListProps) {
           withdrawalMapping[key] = [];
         }
         withdrawalMapping[key].push(item);
-        continue;
-      }
-      
-      // Otherwise, group by amount and date
-      let amount = 0;
-      
-      if (item.itemType === 'transaction') {
-        amount = item.amount;
-      } else if (item.itemType === 'notification') {
-        amount = item.metadata?.amount || 0;
-      }
-      
-      if (amount > 0) {
-        const dateStr = new Date(item.created_at).toISOString().split('T')[0];
-        const key = `withdrawal-${amount}-${dateStr}`;
+      } else {
+        // Otherwise, group by amount and date
+        let amount = 0;
         
-        if (!withdrawalMapping[key]) {
-          withdrawalMapping[key] = [];
+        if (item.itemType === 'transaction') {
+          amount = item.amount;
+        } else if (item.itemType === 'notification') {
+          amount = item.metadata?.amount || 0;
         }
-        withdrawalMapping[key].push(item);
+        
+        if (amount > 0) {
+          const dateStr = new Date(item.created_at).toISOString().split('T')[0];
+          const key = `withdrawal-${amount}-${dateStr}`;
+          
+          if (!withdrawalMapping[key]) {
+            withdrawalMapping[key] = [];
+          }
+          withdrawalMapping[key].push(item);
+        }
       }
     }
   });
