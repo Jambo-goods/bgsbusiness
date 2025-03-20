@@ -11,31 +11,32 @@ export function useBankTransfers() {
   // Function to directly update bank transfer status
   const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string, processedDate: string | null = null) => {
     try {
-      // Validation plus stricte des données du transfert
+      // Validation renforcée des données du transfert
       if (!transfer || !transfer.id) {
-        console.error("Transfert invalide:", transfer);
+        console.error("Transfert invalide pour mise à jour:", transfer);
         toast.error("Erreur: données de transfert invalides");
         return false;
       }
 
-      // Validation des données du transfert
+      // Validation stricte de l'ID du transfert
       if (typeof transfer.id !== 'string' || transfer.id.trim() === '') {
-        console.error("ID de transfert invalide:", transfer.id);
+        console.error(`ID de transfert invalide: "${transfer.id}"`);
         toast.error("Erreur: ID de transfert invalide");
         return false;
       }
 
-      // Debug log for transfer
-      console.log("Updating transfer:", {
+      // Debug log for transfer - includes detailed information for troubleshooting
+      console.log("Mise à jour du transfert:", {
         id: transfer.id,
         status: transfer.status,
         user_id: transfer.user_id,
         amount: transfer.amount
       });
 
+      // Marquer comme en cours de traitement pour l'UI
       setProcessingId(transfer.id);
       
-      // Store admin token if available
+      // Store admin token if available (for potential future auth enhancements)
       const adminUser = localStorage.getItem('admin_user') ? 
         JSON.parse(localStorage.getItem('admin_user') || '{}') : {};
       
@@ -43,13 +44,17 @@ export function useBankTransfers() {
         localStorage.setItem('admin_token', adminUser.token);
       }
       
-      // Add debug logs
-      console.log("Updating transfer status:", {
+      // Add debug logs with all relevant information
+      console.log("Détails de la mise à jour:", {
         id: transfer.id,
         currentStatus: transfer.status,
         newStatus,
-        processedDate
+        processedDate,
+        timestamp: new Date().toISOString()
       });
+      
+      // Attendre un court délai pour éviter les problèmes de concurrence
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       // Call the service to update the transfer
       const result = await bankTransferService.updateBankTransfer(
@@ -58,7 +63,7 @@ export function useBankTransfers() {
         processedDate
       );
       
-      console.log("Update result:", result);
+      console.log("Résultat de la mise à jour:", result);
       
       if (result.success) {
         toast.success(`Virement mis à jour: ${newStatus}`);
@@ -66,11 +71,19 @@ export function useBankTransfers() {
       } else {
         console.error("Échec de mise à jour:", result);
         
-        // Message d'erreur plus spécifique
+        // Message d'erreur plus spécifique basé sur le problème
         const errorMessage = result.message || "Échec de la mise à jour";
-        toast.error(errorMessage, {
-          description: "Veuillez rafraîchir la page et réessayer"
-        });
+        
+        // Afficher un message différent selon le type d'erreur
+        if (errorMessage.includes("n'existe pas")) {
+          toast.error("Le virement demandé n'existe pas ou a été supprimé", {
+            description: "Veuillez rafraîchir la page"
+          });
+        } else {
+          toast.error(errorMessage, {
+            description: "Veuillez réessayer dans quelques instants"
+          });
+        }
         
         return false;
       }
@@ -81,12 +94,12 @@ export function useBankTransfers() {
       });
       return false;
     } finally {
-      // Add small delay before clearing processing state for UI feedback
+      // Add small delay before clearing processing state for better UI feedback
       setTimeout(() => setProcessingId(null), 500);
     }
   };
 
-  // New function to restore a transfer back to pending status
+  // Function to restore a transfer back to pending status
   const restoreTransfer = async (transfer: BankTransferItem) => {
     try {
       if (!transfer || !transfer.id) {
@@ -98,7 +111,7 @@ export function useBankTransfers() {
       setProcessingId(transfer.id);
       toast.info("Restauration du virement en cours...");
       
-      console.log("Restoring transfer:", {
+      console.log("Restauration du transfert:", {
         id: transfer.id,
         currentStatus: transfer.status
       });
@@ -110,14 +123,21 @@ export function useBankTransfers() {
         null // Clear processed date
       );
       
-      console.log("Restore result:", result);
+      console.log("Résultat de la restauration:", result);
       
       if (result.success) {
         toast.success("Virement restauré avec succès");
         return true;
       } else {
         console.error("Échec de restauration:", result);
-        toast.error(result.message || "Échec de la restauration");
+        
+        // Message d'erreur spécifique selon le problème
+        if (result.message && result.message.includes("n'existe pas")) {
+          toast.error("Le virement n'existe plus dans la base de données");
+        } else {
+          toast.error(result.message || "Échec de la restauration");
+        }
+        
         return false;
       }
     } catch (error: any) {

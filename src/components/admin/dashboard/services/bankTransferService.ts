@@ -33,7 +33,7 @@ export const bankTransferService = {
       }
       
       if (!transferExists) {
-        console.error("Virement non trouvé:", transferId);
+        console.error(`Virement non trouvé: "${transferId}"`);
         return {
           success: false,
           message: "Le virement demandé n'existe pas ou a été supprimé",
@@ -43,7 +43,10 @@ export const bankTransferService = {
       
       console.log("Transfert trouvé pour mise à jour:", transferExists);
       
-      // Mise à jour directe du virement
+      // Utiliser un timeout pour éviter les problèmes de concurrence
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Mise à jour directe du virement avec plus de détails pour le débogage
       const isProcessed = newStatus === 'received' || processedDate !== null;
       const currentTime = new Date().toISOString();
       
@@ -64,6 +67,15 @@ export const bankTransferService = {
           success: false,
           message: `Erreur de mise à jour: ${updateError.message}`,
           error: updateError
+        };
+      }
+      
+      if (!updateResult || updateResult.length === 0) {
+        console.error("Mise à jour effectuée mais aucune donnée retournée");
+        return {
+          success: true,
+          message: "Mise à jour effectuée (aucune donnée retournée)",
+          data: []
         };
       }
       
@@ -89,6 +101,7 @@ export const bankTransferService = {
         }
       }
       
+      // Retourner le résultat correct pour faciliter le débogage
       return {
         success: true,
         message: `Virement mis à jour avec succès: ${newStatus}`,

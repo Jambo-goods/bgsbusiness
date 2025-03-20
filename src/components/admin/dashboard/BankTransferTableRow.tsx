@@ -82,6 +82,7 @@ export default function BankTransferTableRow({
     
     if (timeSinceLastAction < 5000) { // 5 seconds cooldown
       console.log(`Action prevented: Only ${timeSinceLastAction}ms since last action`);
+      toast.info("Veuillez patienter quelques secondes avant de réessayer");
       return true;
     }
     
@@ -111,6 +112,14 @@ export default function BankTransferTableRow({
         return;
       }
       
+      // Log des détails complets avant mise à jour
+      console.log("Confirmation avec détails complets:", {
+        id: item.id,
+        userID: item.user_id,
+        amount: item.amount,
+        profile: item.profile
+      });
+      
       // Use the updateTransferStatus function from useBankTransfers directly
       const success = await updateTransferStatus(
         item, 
@@ -126,11 +135,13 @@ export default function BankTransferTableRow({
           }, 1000);
         }
       } else {
-        toast.error("Échec de la mise à jour - veuillez réessayer");
+        toast.error("Échec de la mise à jour - veuillez réessayer", {
+          description: "Si le problème persiste, actualisez la page"
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors de la confirmation:", error);
-      toast.error("Une erreur s'est produite lors de la mise à jour");
+      toast.error(`Erreur: ${error.message || "Une erreur s'est produite lors de la mise à jour"}`);
     } finally {
       setTimeout(() => setLocalProcessing(false), 1000);
     }
@@ -155,11 +166,13 @@ export default function BankTransferTableRow({
           }, 1000);
         }
       } else {
-        toast.error("Échec du rejet - veuillez réessayer");
+        toast.error("Échec du rejet - veuillez réessayer", {
+          description: "Si le problème persiste, actualisez la page"
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur de mise à jour:", error);
-      toast.error("Une erreur s'est produite lors du rejet");
+      toast.error(`Erreur: ${error.message || "Une erreur s'est produite lors du rejet"}`);
     } finally {
       setTimeout(() => setLocalProcessing(false), 1000);
     }
@@ -195,11 +208,13 @@ export default function BankTransferTableRow({
           }, 1000);
         }
       } else {
-        toast.error("Échec de la mise à jour - veuillez réessayer");
+        toast.error("Échec de la mise à jour - veuillez réessayer", {
+          description: "Si le problème persiste, actualisez la page"
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur de mise à jour:", error);
-      toast.error("Une erreur s'est produite lors de la mise à jour");
+      toast.error(`Erreur: ${error.message || "Une erreur s'est produite lors de la mise à jour"}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -249,7 +264,7 @@ export default function BankTransferTableRow({
             {item.description || `Virement - ${item.amount || 0}€`}
           </span>
           {isDebug && (
-            <span className="text-xs text-blue-500 mt-1">ID: {item.id || 'N/A'}</span>
+            <span className="text-xs text-blue-500 mt-1 font-mono">{item.id || 'N/A'}</span>
           )}
         </div>
       </TableCell>
@@ -449,7 +464,7 @@ export default function BankTransferTableRow({
                   {isDebug && (
                     <div className="flex justify-between mt-1">
                       <span className="text-sm text-gray-500">ID :</span>
-                      <span className="text-sm font-medium text-blue-500">{item.id}</span>
+                      <span className="text-sm font-medium text-blue-500 font-mono">{item.id}</span>
                     </div>
                   )}
                 </div>

@@ -42,15 +42,42 @@ serve(async (req) => {
   
   try {
     // Get request body
-    const requestData: TransferUpdateRequest = await req.json();
-    console.log("Received update request:", requestData);
+    let requestData: TransferUpdateRequest;
+    try {
+      requestData = await req.json();
+      console.log("Received update request:", requestData);
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      return new Response(
+        JSON.stringify({ error: "Invalid request", message: "Could not parse request body" }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
+    
+    // Validate transferId more strictly
+    if (!requestData.transferId || typeof requestData.transferId !== 'string' || requestData.transferId.trim() === '') {
+      console.error("Invalid transferId:", requestData.transferId);
+      return new Response(
+        JSON.stringify({ 
+          error: "Invalid transferId", 
+          message: "transferId must be a valid UUID string" 
+        }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400
+        }
+      );
+    }
     
     // Validate required fields
-    if (!requestData.transferId || !requestData.status) {
+    if (!requestData.status) {
       return new Response(
         JSON.stringify({ 
           error: "Missing required fields", 
-          message: "transferId and status are required" 
+          message: "status is required" 
         }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -80,11 +107,11 @@ serve(async (req) => {
     // Initialize Supabase client
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Check if the transfer exists
+    // Check if the transfer exists - with explicit filtering on ID
     const { data: transferExists, error: checkError } = await supabase
       .from("bank_transfers")
       .select("id, status, user_id")
-      .eq("id", requestData.transferId)
+      .eq("id", requestData.transferId.trim())
       .maybeSingle();
     
     if (checkError) {
@@ -114,6 +141,8 @@ serve(async (req) => {
         }
       );
     }
+    
+    console.log("Transfer found:", transferExists);
     
     // Process the update
     const isProcessed = requestData.status === 'received' || 

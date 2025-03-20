@@ -26,8 +26,8 @@ export function useInvestmentConfirmation() {
   
   const updateBankTransfer = async (transferId: string, newStatus: string, processedDate: string | null = null) => {
     try {
-      if (!transferId) {
-        console.error("Transfert invalide:", transferId);
+      if (!transferId || typeof transferId !== 'string' || transferId.trim() === '') {
+        console.error("Transfert invalide pour l'investissement:", transferId);
         toast.error("Erreur: données de transfert invalides");
         return { success: false };
       }
@@ -42,7 +42,7 @@ export function useInvestmentConfirmation() {
         .maybeSingle();
         
       if (checkError) {
-        console.error("Erreur lors de la vérification:", checkError);
+        console.error("Erreur lors de la vérification de l'investissement:", checkError);
         return {
           success: false,
           message: `Erreur de vérification: ${checkError.message}`,
@@ -51,13 +51,16 @@ export function useInvestmentConfirmation() {
       }
       
       if (!existingTransfer) {
-        console.error("Transfert non trouvé:", transferId);
+        console.error("Transfert d'investissement non trouvé:", transferId);
         return {
           success: false,
           message: "Le transfert demandé n'existe pas",
           error: new Error("Transfer not found")
         };
       }
+      
+      // Ajouter un petit délai pour éviter les conflits
+      await new Promise(resolve => setTimeout(resolve, 200));
       
       // Mise à jour du transfert
       const isProcessed = newStatus === 'received' || processedDate !== null;
@@ -68,13 +71,13 @@ export function useInvestmentConfirmation() {
           status: newStatus,
           processed: isProcessed,
           processed_at: isProcessed ? (processedDate || new Date().toISOString()) : null,
-          notes: `Mise à jour le ${new Date().toLocaleDateString('fr-FR')}`
+          notes: `Mise à jour le ${new Date().toLocaleDateString('fr-FR')} (investissement)`
         })
         .eq('id', transferId)
         .select();
       
       if (updateError) {
-        console.error("Erreur de mise à jour:", updateError);
+        console.error("Erreur de mise à jour de l'investissement:", updateError);
         return {
           success: false,
           message: `Erreur de mise à jour: ${updateError.message}`,
@@ -82,11 +85,11 @@ export function useInvestmentConfirmation() {
         };
       }
       
-      console.log("Mise à jour réussie:", updateResult);
+      console.log("Mise à jour d'investissement réussie:", updateResult);
       return { success: true, data: updateResult };
       
     } catch (error: any) {
-      console.error("Erreur lors de la mise à jour:", error);
+      console.error("Erreur lors de la mise à jour de l'investissement:", error);
       return {
         success: false,
         message: `Erreur: ${error.message || 'Erreur inconnue'}`,
@@ -99,7 +102,7 @@ export function useInvestmentConfirmation() {
 
   const confirmInvestment = async (transfer: BankTransferItem) => {
     if (!transfer || !transfer.id) {
-      console.error("Données de transfert invalides pour confirmation:", transfer);
+      console.error("Données de transfert invalides pour confirmation d'investissement:", transfer);
       toast.error("Erreur: données de transfert invalides");
       return { success: false };
     }
@@ -110,7 +113,7 @@ export function useInvestmentConfirmation() {
 
   const rejectInvestment = async (transfer: BankTransferItem) => {
     if (!transfer || !transfer.id) {
-      console.error("Données de transfert invalides pour rejet:", transfer);
+      console.error("Données de transfert invalides pour rejet d'investissement:", transfer);
       toast.error("Erreur: données de transfert invalides");
       return { success: false };
     }
