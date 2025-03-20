@@ -22,13 +22,13 @@ export default function WithdrawButton({ isFormValid, isSubmitting }: WithdrawBu
             Traitement en cours...
           </>
         ) : (
-          "Demander un retrait"
+          "Soumettre une demande de retrait"
         )}
       </Button>
       
       <p className="text-xs text-gray-500 mt-2">
-        En soumettant cette demande, vous acceptez que le traitement peut prendre jusqu'à 5 jours ouvrés.
-        Les retraits sont soumis à vérification.
+        En soumettant cette demande, vous acceptez que le traitement peut prendre jusqu'à 5 jours ouvrés
+        après validation administrative. Les retraits sont soumis à vérification.
       </p>
     </>
   );

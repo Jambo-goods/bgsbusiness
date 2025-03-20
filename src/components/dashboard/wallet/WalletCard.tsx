@@ -112,7 +112,7 @@ export function WalletCard() {
           Instructions de virement
         </Button>
         <Button variant="outline" size="sm" className="w-full" onClick={handleWithdrawClick}>
-          Retirer des fonds
+          Demander un retrait
         </Button>
       </CardFooter>
     </Card>

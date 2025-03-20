@@ -68,7 +68,7 @@ export const useWithdrawForm = (balance: number, onWithdraw: () => Promise<void>
       await supabase.from('notifications').insert({
         user_id: session.session.user.id,
         title: "Demande de retrait",
-        message: `Votre demande de retrait de ${withdrawalAmount.toFixed(2)}€ a été soumise`,
+        message: `Votre demande de retrait de ${withdrawalAmount.toFixed(2)}€ a été soumise et est en attente d'approbation`,
         type: "withdrawal",
         data: {
           category: "transaction",
@@ -85,12 +85,12 @@ export const useWithdrawForm = (balance: number, onWithdraw: () => Promise<void>
         type: 'withdrawal',
         amount: withdrawalAmount,
         status: 'pending',
-        description: `Demande de retrait #${withdrawalId} - En attente`,
+        description: `Demande de retrait #${withdrawalId} - En attente d'approbation`,
         created_at: new Date().toISOString()
       });
       
       // Show success toast
-      toast.success("Votre demande de retrait a été soumise avec succès");
+      toast.success("Votre demande de retrait a été soumise avec succès et est en attente d'approbation administrative");
       
       // Reset form
       setAmount("");
