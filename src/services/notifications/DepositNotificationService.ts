@@ -1,75 +1,54 @@
 
-import { BaseNotificationService } from './BaseNotificationService';
-import { NotificationData } from './types';
+import { BaseNotificationService } from "./BaseNotificationService";
 
 export class DepositNotificationService extends BaseNotificationService {
-  async depositRequested(amount: number, reference?: string): Promise<void> {
-    const metadata: NotificationData = { 
-      amount,
-      reference,
-      category: "info",
-      timestamp: new Date().toISOString()
-    };
-    
+  depositRequested(amount: number, reference: string): Promise<void> {
     return this.createNotification({
-      title: "Virement bancaire confirmé",
-      description: `Vous avez confirmé avoir effectué un virement bancaire de ${amount}€${reference ? ` avec la référence ${reference}` : ''}`,
-      type: "deposit",
-      category: "info",
-      metadata
+      title: "Demande de dépôt",
+      description: `Votre dépôt de ${amount}€ a été demandé (réf: ${reference}).`,
+      type: 'deposit',
+      category: 'info',
+      metadata: { amount, reference }
     });
   }
-
-  async depositSuccess(amount: number, reference?: string): Promise<void> {
-    const metadata: NotificationData = { 
-      amount,
-      reference,
-      category: "success",
-      timestamp: new Date().toISOString()
-    };
-    
+  
+  depositConfirmed(amount: number): Promise<void> {
     return this.createNotification({
-      title: "Dépôt validé",
-      description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été validé et ajouté à votre portefeuille.`,
-      type: "deposit",
-      category: "success",
-      metadata
+      title: "Dépôt confirmé",
+      description: `Votre dépôt de ${amount}€ a été confirmé et ajouté à votre solde.`,
+      type: 'deposit',
+      category: 'success',
+      metadata: { amount }
     });
   }
-
-  async depositPending(amount: number, reference?: string): Promise<void> {
-    const metadata: NotificationData = { 
-      amount,
-      reference,
-      category: "info",
-      timestamp: new Date().toISOString()
-    };
-    
-    return this.createNotification({
-      title: "Dépôt en traitement",
-      description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} est en cours de traitement.`,
-      type: "deposit",
-      category: "info",
-      metadata
-    });
-  }
-
-  async depositRejected(amount: number, reference?: string): Promise<void> {
-    const metadata: NotificationData = { 
-      amount,
-      reference,
-      category: "error",
-      timestamp: new Date().toISOString()
-    };
-    
+  
+  depositRejected(amount: number, reason: string): Promise<void> {
     return this.createNotification({
       title: "Dépôt rejeté",
-      description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été rejeté.`,
-      type: "deposit",
-      category: "error",
-      metadata
+      description: `Votre dépôt de ${amount}€ a été rejeté. Raison: ${reason}`,
+      type: 'deposit',
+      category: 'error',
+      metadata: { amount, reason }
+    });
+  }
+  
+  depositSuccess(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Dépôt effectué",
+      description: `Votre dépôt de ${amount}€ a été ajouté à votre portefeuille.`,
+      type: 'deposit',
+      category: 'success',
+      metadata: { amount }
+    });
+  }
+  
+  insufficientFunds(amount: number): Promise<void> {
+    return this.createNotification({
+      title: "Fonds insuffisants",
+      description: `Vous n'avez pas suffisamment de fonds (${amount}€) pour effectuer cette opération.`,
+      type: 'deposit',
+      category: 'error',
+      metadata: { amount }
     });
   }
 }
-
-export const depositNotificationService = new DepositNotificationService();
