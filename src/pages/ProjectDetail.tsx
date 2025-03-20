@@ -63,7 +63,18 @@ export default function ProjectDetail() {
         
         if (databaseProject) {
           console.log("Projet trouvé dans la base de données:", databaseProject);
-          setProject(databaseProject);
+          
+          // Ensure all required properties have default values
+          const safeProject: Project = {
+            ...databaseProject,
+            minInvestment: databaseProject.minInvestment || 500,
+            maxInvestment: databaseProject.maxInvestment || 10000,
+            yield: databaseProject.yield || 0.08,
+            duration: databaseProject.duration || "12 mois",
+            possibleDurations: databaseProject.possibleDurations || [6, 12, 24, 36]
+          };
+          
+          setProject(safeProject);
         } else {
           console.log("Projet non trouvé avec l'ID:", id);
           setError(`Aucun projet trouvé avec l'identifiant: ${id}`);
