@@ -22,7 +22,7 @@ export const bankTransferService = {
         .from("bank_transfers")
         .select("user_id, status, processed")
         .eq("id", transferId)
-        .maybeSingle(); // Changed from single() to maybeSingle() to handle non-existent records
+        .maybeSingle(); // Using maybeSingle instead of single to handle no rows found
       
       if (transferError) {
         console.error("Erreur lors de la récupération du virement:", transferError);

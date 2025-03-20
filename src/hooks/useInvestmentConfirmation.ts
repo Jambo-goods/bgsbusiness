@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -27,7 +28,7 @@ export const useInvestmentConfirmation = (projectId: string, userId: string) => 
         .eq('user_id', userId)
         .eq('amount', amount)
         .eq('status', 'pending')
-        .single();
+        .maybeSingle(); // Changed from single() to maybeSingle() to handle non-existent records
 
       if (transferError) {
         console.error("Erreur lors de la récupération du virement bancaire:", transferError);

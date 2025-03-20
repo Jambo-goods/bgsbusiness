@@ -67,7 +67,7 @@ export function useBankTransfers() {
     }
   };
 
-  // New function to restore a transfer back to pending status
+  // Function to restore a transfer back to pending status
   const restoreTransfer = async (transfer: BankTransferItem) => {
     try {
       if (!transfer || !transfer.id) {
