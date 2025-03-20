@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -261,16 +262,6 @@ export default function BankTransferTableRow({
     }
   };
 
-  const handleTransferToReceived = () => {
-    if (!item) return;
-    setEditStatus('received');
-    setProcessedDate(new Date());
-    
-    setTimeout(() => {
-      handleSubmitEdit(new Event('submit') as any);
-    }, 100);
-  };
-
   const handleRestoreTransfer = async () => {
     if (isProcessing || shouldPreventAction()) return;
     
@@ -375,7 +366,7 @@ export default function BankTransferTableRow({
                 ) : (
                   <Check className="h-3.5 w-3.5 mr-1" />
                 )}
-                <span className="sr-only">Confirmer</span>
+                <span className="hidden sm:inline">Confirmer</span>
               </Button>
               
               <Button
@@ -390,7 +381,7 @@ export default function BankTransferTableRow({
                 ) : (
                   <X className="h-3.5 w-3.5 mr-1" />
                 )}
-                <span className="sr-only">Rejeter</span>
+                <span className="hidden sm:inline">Rejeter</span>
               </Button>
             </>
           )}
@@ -451,6 +442,7 @@ export default function BankTransferTableRow({
                         size="sm" 
                         className="w-full justify-center"
                         onClick={() => setProcessedDate(undefined)}
+                        type="button"
                       >
                         Effacer la date
                       </Button>

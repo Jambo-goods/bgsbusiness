@@ -18,12 +18,22 @@ export function useBankTransfers() {
         localStorage.setItem('admin_token', adminUser.token);
       }
       
+      // Add debug logs
+      console.log("Updating transfer status:", {
+        id: transfer.id,
+        currentStatus: transfer.status,
+        newStatus,
+        processedDate
+      });
+      
       // Call the service to update the transfer
       const result = await bankTransferService.updateBankTransfer(
         transfer.id,
         newStatus,
         processedDate
       );
+      
+      console.log("Update result:", result);
       
       if (result.success) {
         toast.success(`Virement mis à jour: ${newStatus}`);
@@ -49,12 +59,19 @@ export function useBankTransfers() {
       setProcessingId(transfer.id);
       toast.info("Restauration du virement en cours...");
       
+      console.log("Restoring transfer:", {
+        id: transfer.id,
+        currentStatus: transfer.status
+      });
+      
       // Call the service to restore the transfer (set to pending)
       const result = await bankTransferService.updateBankTransfer(
         transfer.id,
         'pending',
         null // Clear processed date
       );
+      
+      console.log("Restore result:", result);
       
       if (result.success) {
         toast.success("Virement restauré avec succès");

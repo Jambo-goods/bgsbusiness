@@ -34,7 +34,8 @@ export const bankTransferService = {
             status: newStatus,
             isProcessed: newStatus === 'received' || processedDate !== null,
             notes: `Mise à jour via service le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: transferData?.user_id
+            userId: transferData?.user_id,
+            sendNotification: newStatus === 'received'
           }
         }
       );
