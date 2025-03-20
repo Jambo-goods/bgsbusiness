@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -14,16 +13,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, 
   DialogFooter, DialogDescription 
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -44,7 +33,6 @@ export default function BankTransferTableRow({
   const [localProcessing, setLocalProcessing] = useState(false);
   const [lastActionTime, setLastActionTime] = useState<number>(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
   const [editStatus, setEditStatus] = useState<string>(item.status || 'pending');
   const [processedDate, setProcessedDate] = useState<Date | undefined>(
     item.processed_at ? new Date(item.processed_at) : undefined
@@ -191,16 +179,11 @@ export default function BankTransferTableRow({
     }
   };
 
-  const handleOpenRestoreDialog = () => {
-    setIsRestoreDialogOpen(true);
-  };
-
   const handleRestoreTransfer = async () => {
     if (isProcessing || shouldPreventAction()) return;
     
     setLocalProcessing(true);
     toast.info("Restauration en cours...");
-    setIsRestoreDialogOpen(false);
     
     try {
       console.log(`Restoring transfer ${item.id} to pending status`);
@@ -408,7 +391,7 @@ export default function BankTransferTableRow({
               size="sm"
               variant="outline"
               className="h-7 bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700"
-              onClick={handleOpenRestoreDialog}
+              onClick={handleRestoreTransfer}
               disabled={isProcessing}
               title="Restaurer en 'En attente'"
             >
@@ -421,35 +404,6 @@ export default function BankTransferTableRow({
             </Button>
           )}
         </div>
-        
-        {/* Alert Dialog for Restore Confirmation */}
-        <AlertDialog open={isRestoreDialogOpen} onOpenChange={setIsRestoreDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirmer la restauration</AlertDialogTitle>
-              <AlertDialogDescription>
-                Êtes-vous sûr de vouloir restaurer ce virement en statut "En attente" ?
-                <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-100 text-sm">
-                  <p><strong>Référence :</strong> {item.reference || 'N/A'}</p>
-                  <p><strong>Montant :</strong> {item.amount || 0} €</p>
-                  <p><strong>Statut actuel :</strong> {item.status}</p>
-                </div>
-                <p className="mt-2 text-yellow-600">
-                  Cette action annulera le statut actuel de traitement.
-                </p>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Annuler</AlertDialogCancel>
-              <AlertDialogAction 
-                className="bg-blue-600 hover:bg-blue-700"
-                onClick={handleRestoreTransfer}
-              >
-                Confirmer la restauration
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
         
         <Dialog open={isEditModalOpen} onOpenChange={(open) => !open && setIsEditModalOpen(false)}>
           <DialogContent className="sm:max-w-[425px]">
