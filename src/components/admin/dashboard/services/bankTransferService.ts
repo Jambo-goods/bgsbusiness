@@ -7,22 +7,12 @@ export const bankTransferService = {
     try {
       console.log(`Mise à jour du virement ${transferId} avec statut ${newStatus}`);
       
-      // Vérifier que l'ID du transfert est valide
-      if (!transferId || transferId.trim() === '') {
-        console.error("ID de transfert invalide");
-        return { 
-          success: false, 
-          message: "ID de transfert invalide",
-          error: new Error("ID de transfert invalide")
-        };
-      }
-      
       // Récupérer les données du virement pour obtenir l'ID utilisateur
       const { data: transferData, error: transferError } = await supabase
         .from("bank_transfers")
         .select("user_id, status, processed")
         .eq("id", transferId)
-        .maybeSingle(); // Changed from single() to maybeSingle() to handle non-existent records
+        .single();
       
       if (transferError) {
         console.error("Erreur lors de la récupération du virement:", transferError);
@@ -30,15 +20,6 @@ export const bankTransferService = {
           success: false, 
           message: `Erreur de récupération: ${transferError.message}`,
           error: transferError
-        };
-      }
-      
-      if (!transferData) {
-        console.error("Aucun transfert trouvé avec cet ID:", transferId);
-        return {
-          success: false,
-          message: "Transfert non trouvé",
-          error: new Error("Transfert non trouvé")
         };
       }
       
@@ -53,8 +34,7 @@ export const bankTransferService = {
             status: newStatus,
             isProcessed: newStatus === 'received' || processedDate !== null,
             notes: `Mise à jour via service le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: transferData?.user_id,
-            sendNotification: newStatus === 'received'
+            userId: transferData?.user_id
           }
         }
       );
@@ -112,7 +92,7 @@ export const bankTransferService = {
       
       console.log("Résultat fonction edge:", edgeFunctionData);
       
-      if (edgeFunctionData?.success) {
+      if (edgeFunctionData.success) {
         return {
           success: true,
           message: `Virement mis à jour avec succès via edge function: ${newStatus}`,
@@ -121,12 +101,12 @@ export const bankTransferService = {
       } else {
         return {
           success: false,
-          message: `Échec de la mise à jour via edge function: ${edgeFunctionData?.error || 'Erreur inconnue'}`,
-          error: edgeFunctionData?.error,
+          message: `Échec de la mise à jour via edge function: ${edgeFunctionData.error || 'Erreur inconnue'}`,
+          error: edgeFunctionData.error,
           data: transferData
         };
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur inattendue:", error);
       return {
         success: false,

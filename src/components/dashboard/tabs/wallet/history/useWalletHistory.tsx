@@ -59,9 +59,7 @@ export default function useWalletHistory() {
       
       // Convert notifications to match our Notification interface
       const typedNotifications = notificationsData?.map(item => {
-        // Ensure data is treated as NotificationData with proper typing
-        const notificationData = item.data as Record<string, any> || {};
-        
+        const data = item.data as NotificationData || {};
         return {
           id: item.id,
           title: item.title,
@@ -69,10 +67,8 @@ export default function useWalletHistory() {
           created_at: item.created_at,
           type: item.type,
           read: item.seen,
-          // Use the category from data if available, otherwise default to "info"
-          category: typeof notificationData === 'object' && notificationData.category ? notificationData.category : 'info',
-          // Ensure metadata is always an object
-          metadata: typeof notificationData === 'object' ? notificationData : { data: notificationData },
+          category: data.category || 'info',
+          metadata: data as Record<string, any>,
           itemType: 'notification' as const
         };
       }) || [];
@@ -119,15 +115,6 @@ export default function useWalletHistory() {
         filter: `user_id=eq.${supabase.auth.getSession().then(({ data }) => data.session?.user.id)}`
       }, () => {
         console.log('Transaction updated, refreshing data');
-        fetchData(false);
-      })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'wallet_transactions',
-        filter: `user_id=eq.${supabase.auth.getSession().then(({ data }) => data.session?.user.id)}`
-      }, () => {
-        console.log('New transaction inserted, refreshing data');
         fetchData(false);
       })
       .subscribe();

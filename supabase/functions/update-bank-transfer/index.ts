@@ -43,57 +43,17 @@ serve(async (req: Request) => {
     );
 
     // Parse request body
-    const { transferId, status, isProcessed, notes, userId, sendNotification } = await req.json();
+    const { transferId, status, isProcessed, notes, userId } = await req.json();
     
     // Validate required parameters
     if (!transferId || !status) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing required parameters: transferId and status are required" }),
+        JSON.stringify({ error: "Missing required parameters: transferId and status are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}`);
-
-    // Check if transfer exists before attempting update
-    const { data: existingTransfer, error: checkError } = await supabase
-      .from('bank_transfers')
-      .select('id, user_id')
-      .eq('id', transferId)
-      .maybeSingle();  // Use maybeSingle instead of single to handle when no rows are found
-      
-    if (checkError) {
-      console.error("Error checking transfer:", checkError?.message);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: checkError?.message 
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    
-    if (!existingTransfer) {
-      console.error("Transfer not found with ID:", transferId);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Transfer not found" 
-        }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Get transfer details to include in notification
-    const { data: transfer, error: transferError } = await supabase
-      .from('bank_transfers')
-      .select('amount, reference')
-      .eq('id', transferId)
-      .maybeSingle();
-      
-    if (transferError) {
-      console.error("Error fetching transfer details:", transferError.message);
-    }
 
     // Try using the updated RPC function with correct parameter naming
     const { data: rpcResult, error: rpcError } = await supabase.rpc("admin_mark_bank_transfer", {
@@ -117,7 +77,7 @@ serve(async (req: Request) => {
           notes: notes || `Mis à jour via edge function le ${new Date().toLocaleDateString('fr-FR')}`
         })
         .eq('id', transferId)
-        .select();
+        .select('*');
       
       if (error) {
         console.error("Direct update failed:", error.message);
@@ -132,11 +92,6 @@ serve(async (req: Request) => {
       // Update user wallet balance if needed
       if (userId && (status === 'received' || status === 'reçu')) {
         await updateUserWalletBalance(supabase, userId, transferId);
-        
-        // Send notification if requested and status is received
-        if (sendNotification) {
-          await sendUserNotification(supabase, userId, transfer);
-        }
       }
       
       return new Response(
@@ -150,34 +105,15 @@ serve(async (req: Request) => {
     // Check if we need to update the user's wallet balance
     if (userId && (status === 'received' || status === 'reçu')) {
       await updateUserWalletBalance(supabase, userId, transferId);
-      
-      // Send notification if requested and status is received
-      if (sendNotification) {
-        await sendUserNotification(supabase, userId, transfer);
-      }
-    }
-    
-    // Make sure we return the updated transfer data
-    const { data: updatedTransfer, error: getUpdatedError } = await supabase
-      .from('bank_transfers')
-      .select('*')
-      .eq('id', transferId)
-      .maybeSingle();
-      
-    if (getUpdatedError) {
-      console.warn("Couldn't fetch updated transfer:", getUpdatedError.message);
     }
     
     // Send success response
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        data: updatedTransfer || rpcResult || { id: transferId, status, processed: isProcessed }
-      }),
+      JSON.stringify({ success: true, data: rpcResult }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Edge function error:", error.message);
     
     return new Response(
@@ -188,7 +124,7 @@ serve(async (req: Request) => {
 });
 
 // Helper function to update the user's wallet balance
-async function updateUserWalletBalance(supabase: any, userId: string, transferId: string) {
+async function updateUserWalletBalance(supabase, userId: string, transferId: string) {
   try {
     console.log(`Recalculating wallet balance for user ${userId}`);
     
@@ -197,7 +133,7 @@ async function updateUserWalletBalance(supabase: any, userId: string, transferId
       .from('bank_transfers')
       .select('amount')
       .eq('id', transferId)
-      .maybeSingle();
+      .single();
     
     if (transferError) {
       console.error("Error fetching transfer:", transferError.message);
@@ -228,97 +164,7 @@ async function updateUserWalletBalance(supabase: any, userId: string, transferId
     } else {
       console.log("Successfully recalculated wallet balance");
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating wallet balance:", error.message);
-  }
-}
-
-// Helper function to send notification to the user
-async function sendUserNotification(supabase: any, userId: string, transfer: any) {
-  try {
-    if (!transfer) {
-      console.log("No transfer details available for notification");
-      return;
-    }
-
-    const amount = transfer.amount || 0;
-    const reference = transfer.reference || '';
-    
-    console.log(`Sending virement notification to user ${userId} for amount ${amount}`);
-    
-    // Create notification for user dashboard
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: userId,
-        title: "Virement bancaire reçu",
-        message: `Votre virement bancaire de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été confirmé et ajouté à votre portefeuille.`,
-        type: "deposit",
-        seen: false,
-        data: {
-          category: "success",
-          amount,
-          reference,
-          timestamp: new Date().toISOString()
-        }
-      });
-    
-    if (notificationError) {
-      console.error("Error creating notification:", notificationError.message);
-    } else {
-      console.log("Successfully created notification for user");
-    }
-    
-    // Create or update wallet transaction for transaction history
-    const { data: existingTransaction, error: txCheckError } = await supabase
-      .from('wallet_transactions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('description', `Virement bancaire${reference ? ` (${reference})` : ''}`)
-      .eq('type', 'deposit')
-      .limit(1);
-      
-    if (txCheckError) {
-      console.error("Error checking for existing transaction:", txCheckError.message);
-    }
-    
-    if (existingTransaction && existingTransaction.length > 0) {
-      // Update existing transaction
-      const { error: txUpdateError } = await supabase
-        .from('wallet_transactions')
-        .update({
-          amount: amount,
-          receipt_confirmed: true,
-          status: 'completed'
-        })
-        .eq('id', existingTransaction[0].id);
-        
-      if (txUpdateError) {
-        console.error("Error updating wallet transaction:", txUpdateError.message);
-      } else {
-        console.log(`Updated existing wallet transaction with ID ${existingTransaction[0].id}`);
-      }
-    } else {
-      // Create new transaction
-      const { error: txInsertError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: userId,
-          amount: amount,
-          type: 'deposit',
-          description: `Virement bancaire${reference ? ` (${reference})` : ''}`,
-          receipt_confirmed: true,
-          status: 'completed'
-        });
-        
-      if (txInsertError) {
-        console.error("Error creating wallet transaction:", txInsertError.message);
-      } else {
-        console.log("Created new wallet transaction for deposit");
-      }
-    }
-    
-  } catch (error: any) {
-    console.error("Error sending user notification:", error.message);
   }
 }

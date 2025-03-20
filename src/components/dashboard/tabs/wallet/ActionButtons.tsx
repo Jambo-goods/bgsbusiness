@@ -1,9 +1,8 @@
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { CreditCard, ArrowDownToLine, ArrowUpFromLine, RotateCw } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
-import { notificationService } from '@/services/notifications';
+
+import React from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 
 interface ActionButtonsProps {
   onDeposit: () => void;
@@ -117,19 +116,7 @@ export default function ActionButtons({
       toast.error("Une erreur s'est produite lors du retrait des fonds");
     }
   };
-
-  const handleRefresh = () => {
-    if (refreshBalance) {
-      refreshBalance();
-    }
-    toast.info("Actualisation des données...");
-  };
-
-  return (
-    <div>
-      <Button onClick={handleDeposit}>Dépôt</Button>
-      <Button onClick={handleWithdraw}>Retrait</Button>
-      <Button onClick={handleRefresh}>Rafraîchir</Button>
-    </div>
-  );
+  
+  // Return an empty fragment as we've removed the button
+  return <></>;
 }

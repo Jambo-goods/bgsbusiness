@@ -1,112 +1,86 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
-interface InvestmentData {
-  totalInvested: number;
-  investorsCount: number;
-  investmentTarget: number;
-  investmentProgress: number;
-  status: string;
-  startDate: string;
-  endDate: string;
-}
+import { useState, useEffect } from "react";
+import { Project } from "@/types/project";
+import { useToast } from "@/hooks/use-toast";
+import { notificationService } from "@/services/notifications";
+import { calculateReturns } from "@/utils/investmentCalculations";
+import { useUserBalance } from "@/hooks/useUserBalance";
+import { useInvestmentConfirmation } from "@/hooks/useInvestmentConfirmation";
 
-interface UseInvestmentReturn {
-  investmentData: InvestmentData | null;
-  isLoading: boolean;
-  error: string | null;
-  refreshData: () => void;
-}
-
-export const useInvestment = (projectId: string, userId: string | null): UseInvestmentReturn => {
-  const [investmentData, setInvestmentData] = useState<InvestmentData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+export const useInvestment = (project: Project, investorCount: number) => {
+  const [investmentAmount, setInvestmentAmount] = useState(project.minInvestment || 500);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [selectedDuration, setSelectedDuration] = useState(
+    project.possibleDurations ? project.possibleDurations[0] : parseInt(project.duration)
+  );
+  const [totalReturn, setTotalReturn] = useState(0);
+  const [monthlyReturn, setMonthlyReturn] = useState(0);
+  const { toast } = useToast();
+  
+  const { userBalance } = useUserBalance();
+  
+  // Extract constants from project
+  const minInvestment = project.minInvestment;
+  const maxInvestment = project.maxInvestment || 10000;
+  const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
+  
+  const durations = project.possibleDurations || 
+    [parseInt(project.duration.split(' ')[0])];
+  
+  // Calculate investment returns when parameters change
   useEffect(() => {
-    if (!projectId) return;
-
-    const fetchInvestmentData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('total_invested_amount, investors_count, investment_target, investment_progress, status, start_date, end_date')
-          .eq('id', projectId)
-          .single();
-
-        if (error) {
-          console.error("Error fetching investment data:", error);
-          setError(error.message);
-        } else {
-          setInvestmentData({
-            totalInvested: data.total_invested_amount,
-            investorsCount: data.investors_count,
-            investmentTarget: data.investment_target,
-            investmentProgress: data.investment_progress,
-            status: data.status,
-            startDate: data.start_date,
-            endDate: data.end_date
-          });
-        }
-      } catch (err: any) {
-        console.error("Unexpected error fetching investment data:", err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchInvestmentData();
-  }, [projectId]);
-
-  const refreshData = () => {
-    toast.info("Actualisation des données d'investissement...");
-    if (!projectId) return;
-
-    const fetchInvestmentData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('total_invested_amount, investors_count, investment_target, investment_progress, status, start_date, end_date')
-          .eq('id', projectId)
-          .single();
-
-        if (error) {
-          console.error("Error fetching investment data:", error);
-          setError(error.message);
-        } else {
-          setInvestmentData({
-            totalInvested: data.total_invested_amount,
-            investorsCount: data.investors_count,
-            investmentTarget: data.investment_target,
-            investmentProgress: data.investment_progress,
-            status: data.status,
-            startDate: data.start_date,
-            endDate: data.end_date
-          });
-        }
-      } catch (err: any) {
-        console.error("Unexpected error fetching investment data:", err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchInvestmentData();
+    const { monthlyReturn: calculatedMonthlyReturn, totalReturn: calculatedTotalReturn } = 
+      calculateReturns(investmentAmount, project.yield, selectedDuration, firstPaymentDelay);
+    
+    setMonthlyReturn(calculatedMonthlyReturn);
+    setTotalReturn(calculatedTotalReturn);
+  }, [investmentAmount, selectedDuration, project.yield, firstPaymentDelay]);
+  
+  // Validation and confirmation handling
+  const handleInvest = () => {
+    if (userBalance < investmentAmount) {
+      toast({
+        title: "Solde insuffisant",
+        description: `Vous n'avez pas assez de fonds disponibles. Votre solde: ${userBalance}€`,
+        variant: "destructive"
+      });
+      
+      // Create insufficient funds notification
+      notificationService.insufficientFunds();
+      return;
+    }
+    
+    setShowConfirmation(true);
+  };
+  
+  const cancelInvestment = () => {
+    setShowConfirmation(false);
   };
 
+  // Use the confirmation hook - with corrected parameters
+  const { isLoading: isProcessing, confirmInvestment } = useInvestmentConfirmation(
+    project, 
+    investorCount,
+    project.fundingProgress || 0,
+    () => setShowConfirmation(false)
+  );
+
   return {
-    investmentData,
-    isLoading,
-    error,
-    refreshData
+    investmentAmount,
+    setInvestmentAmount,
+    showConfirmation,
+    setShowConfirmation,
+    isProcessing,
+    selectedDuration,
+    setSelectedDuration,
+    totalReturn,
+    monthlyReturn,
+    minInvestment,
+    maxInvestment,
+    durations,
+    userBalance,
+    handleInvest,
+    cancelInvestment,
+    confirmInvestment
   };
 };
