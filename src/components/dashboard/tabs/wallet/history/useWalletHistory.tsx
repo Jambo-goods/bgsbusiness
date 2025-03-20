@@ -117,15 +117,6 @@ export default function useWalletHistory() {
         console.log('Transaction updated, refreshing data');
         fetchData(false);
       })
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'wallet_transactions',
-        filter: `user_id=eq.${supabase.auth.getSession().then(({ data }) => data.session?.user.id)}`
-      }, () => {
-        console.log('New transaction inserted, refreshing data');
-        fetchData(false);
-      })
       .subscribe();
     
     // Setup polling for transactions every 60 seconds as a fallback

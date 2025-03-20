@@ -43,7 +43,7 @@ serve(async (req: Request) => {
     );
 
     // Parse request body
-    const { transferId, status, isProcessed, notes, userId, sendNotification } = await req.json();
+    const { transferId, status, isProcessed, notes, userId } = await req.json();
     
     // Validate required parameters
     if (!transferId || !status) {
@@ -54,17 +54,6 @@ serve(async (req: Request) => {
     }
 
     console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}`);
-
-    // Get transfer details to include in notification
-    const { data: transfer, error: transferError } = await supabase
-      .from('bank_transfers')
-      .select('amount, reference')
-      .eq('id', transferId)
-      .single();
-      
-    if (transferError) {
-      console.error("Error fetching transfer details:", transferError.message);
-    }
 
     // Try using the updated RPC function with correct parameter naming
     const { data: rpcResult, error: rpcError } = await supabase.rpc("admin_mark_bank_transfer", {
@@ -103,11 +92,6 @@ serve(async (req: Request) => {
       // Update user wallet balance if needed
       if (userId && (status === 'received' || status === 'reçu')) {
         await updateUserWalletBalance(supabase, userId, transferId);
-        
-        // Send notification if requested and status is received
-        if (sendNotification) {
-          await sendUserNotification(supabase, userId, transfer);
-        }
       }
       
       return new Response(
@@ -121,11 +105,6 @@ serve(async (req: Request) => {
     // Check if we need to update the user's wallet balance
     if (userId && (status === 'received' || status === 'reçu')) {
       await updateUserWalletBalance(supabase, userId, transferId);
-      
-      // Send notification if requested and status is received
-      if (sendNotification) {
-        await sendUserNotification(supabase, userId, transfer);
-      }
     }
     
     // Send success response
@@ -187,95 +166,5 @@ async function updateUserWalletBalance(supabase, userId: string, transferId: str
     }
   } catch (error) {
     console.error("Error updating wallet balance:", error.message);
-  }
-}
-
-// Helper function to send notification to the user
-async function sendUserNotification(supabase, userId: string, transfer: any) {
-  try {
-    if (!transfer) {
-      console.log("No transfer details available for notification");
-      return;
-    }
-
-    const amount = transfer.amount || 0;
-    const reference = transfer.reference || '';
-    
-    console.log(`Sending virement notification to user ${userId} for amount ${amount}`);
-    
-    // Create notification for user dashboard
-    const { error: notificationError } = await supabase
-      .from('notifications')
-      .insert({
-        user_id: userId,
-        title: "Virement bancaire reçu",
-        message: `Votre virement bancaire de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été confirmé et ajouté à votre portefeuille.`,
-        type: "deposit",
-        seen: false,
-        data: {
-          category: "success",
-          amount,
-          reference,
-          timestamp: new Date().toISOString()
-        }
-      });
-    
-    if (notificationError) {
-      console.error("Error creating notification:", notificationError.message);
-    } else {
-      console.log("Successfully created notification for user");
-    }
-    
-    // Create or update wallet transaction for transaction history
-    const { data: existingTransaction, error: txCheckError } = await supabase
-      .from('wallet_transactions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('description', `Virement bancaire${reference ? ` (${reference})` : ''}`)
-      .eq('type', 'deposit')
-      .limit(1);
-      
-    if (txCheckError) {
-      console.error("Error checking for existing transaction:", txCheckError.message);
-    }
-    
-    if (existingTransaction && existingTransaction.length > 0) {
-      // Update existing transaction
-      const { error: txUpdateError } = await supabase
-        .from('wallet_transactions')
-        .update({
-          amount: amount,
-          receipt_confirmed: true,
-          status: 'completed'
-        })
-        .eq('id', existingTransaction[0].id);
-        
-      if (txUpdateError) {
-        console.error("Error updating wallet transaction:", txUpdateError.message);
-      } else {
-        console.log(`Updated existing wallet transaction with ID ${existingTransaction[0].id}`);
-      }
-    } else {
-      // Create new transaction
-      const { error: txInsertError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: userId,
-          amount: amount,
-          type: 'deposit',
-          description: `Virement bancaire${reference ? ` (${reference})` : ''}`,
-          receipt_confirmed: true,
-          status: 'completed'
-        });
-        
-      if (txInsertError) {
-        console.error("Error creating wallet transaction:", txInsertError.message);
-      } else {
-        console.log("Created new wallet transaction for deposit");
-      }
-    }
-    
-  } catch (error) {
-    console.error("Error sending user notification:", error.message);
   }
 }
