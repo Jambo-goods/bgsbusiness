@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -16,6 +17,7 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CalendarIcon } from "lucide-react";
+import { notificationService } from "@/services/notifications";
 
 interface WithdrawalRequest {
   id: string;
@@ -143,6 +145,33 @@ export default function WithdrawalRequestsPage() {
         .eq('id', selectedWithdrawal.id);
       
       if (error) throw error;
+      
+      // Send notifications based on the status update
+      if (editStatus === 'paid') {
+        // Notify user that withdrawal has been paid
+        await notificationService.withdrawalPaid(selectedWithdrawal.amount);
+        
+        // Create a transaction entry in the wallet_transactions table
+        await supabase.from('wallet_transactions').insert({
+          user_id: selectedWithdrawal.user_id,
+          amount: selectedWithdrawal.amount,
+          type: 'withdrawal',
+          description: `Retrait de ${selectedWithdrawal.amount}€ payé`,
+          status: 'completed'
+        });
+      } else if (editStatus === 'rejected') {
+        // Notify user that withdrawal has been rejected
+        await notificationService.withdrawalRejected(selectedWithdrawal.amount);
+        
+        // Create a transaction entry showing the rejection
+        await supabase.from('wallet_transactions').insert({
+          user_id: selectedWithdrawal.user_id,
+          amount: selectedWithdrawal.amount,
+          type: 'withdrawal',
+          description: `Retrait de ${selectedWithdrawal.amount}€ rejeté`,
+          status: 'rejected'
+        });
+      }
       
       toast.success("Demande de retrait mise à jour avec succès");
       fetchWithdrawalRequests();

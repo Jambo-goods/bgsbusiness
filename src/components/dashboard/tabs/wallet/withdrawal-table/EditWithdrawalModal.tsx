@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 
 interface WithdrawalRequest {
   id: string;
@@ -61,6 +63,33 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
         .eq('id', withdrawal.id);
       
       if (error) throw error;
+      
+      // Send notifications based on the status update
+      if (status === 'paid') {
+        // Notify user that withdrawal has been paid
+        await notificationService.withdrawalPaid(withdrawal.amount);
+        
+        // Create a transaction entry in the wallet_transactions table
+        await supabase.from('wallet_transactions').insert({
+          user_id: withdrawal.bank_info?.user_id || (await supabase.auth.getUser()).data.user?.id,
+          amount: withdrawal.amount,
+          type: 'withdrawal',
+          description: `Retrait de ${withdrawal.amount}€ payé`,
+          status: 'completed'
+        });
+      } else if (status === 'rejected') {
+        // Notify user that withdrawal has been rejected
+        await notificationService.withdrawalRejected(withdrawal.amount);
+        
+        // Create a transaction entry showing the rejection
+        await supabase.from('wallet_transactions').insert({
+          user_id: withdrawal.bank_info?.user_id || (await supabase.auth.getUser()).data.user?.id,
+          amount: withdrawal.amount,
+          type: 'withdrawal',
+          description: `Retrait de ${withdrawal.amount}€ rejeté`,
+          status: 'rejected'
+        });
+      }
       
       toast.success("Demande de retrait mise à jour avec succès");
       onUpdate();
