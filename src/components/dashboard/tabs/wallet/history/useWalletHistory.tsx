@@ -59,7 +59,9 @@ export default function useWalletHistory() {
       
       // Convert notifications to match our Notification interface
       const typedNotifications = notificationsData?.map(item => {
-        const data = item.data as NotificationData || {};
+        // Ensure data is treated as NotificationData with proper typing
+        const notificationData = item.data as Record<string, any> || {};
+        
         return {
           id: item.id,
           title: item.title,
@@ -67,8 +69,10 @@ export default function useWalletHistory() {
           created_at: item.created_at,
           type: item.type,
           read: item.seen,
-          category: data.category || 'info',
-          metadata: data as Record<string, any>,
+          // Use the category from data if available, otherwise default to "info"
+          category: typeof notificationData === 'object' && notificationData.category ? notificationData.category : 'info',
+          // Ensure metadata is always an object
+          metadata: typeof notificationData === 'object' ? notificationData : { data: notificationData },
           itemType: 'notification' as const
         };
       }) || [];
