@@ -1,11 +1,11 @@
 
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -15,54 +15,58 @@ export function WalletCard() {
   
   useEffect(() => {
     // Set up real-time subscription for wallet transactions and profile updates
-    const { data: { session } } = supabase.auth.getSession();
-    if (!session) return;
-    
-    const walletTransactionsChannel = supabase
-      .channel('wallet_transactions_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${session.user.id}` }, 
-        (payload) => {
-          console.log('Wallet transaction change detected:', payload);
-          refreshBalance();
-          
-          // Show toast notification based on transaction type
-          if (payload.eventType === 'INSERT') {
-            const newTransaction = payload.new;
-            if (newTransaction.type === 'deposit' && newTransaction.status === 'completed') {
-              toast.success(`Dépôt de ${newTransaction.amount}€ crédité sur votre compte`);
-            }
-          }
-        }
-      )
-      .subscribe();
+    const getSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
       
-    const profilesChannel = supabase
-      .channel('profiles_balance_changes')
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, 
-        (payload) => {
-          console.log('Profile change detected:', payload);
-          refreshBalance();
-          
-          // Check if wallet_balance changed
-          if (payload.old.wallet_balance !== payload.new.wallet_balance) {
-            const difference = payload.new.wallet_balance - payload.old.wallet_balance;
-            if (difference > 0) {
-              toast.success(`Votre solde a été augmenté de ${difference}€`);
+      const walletTransactionsChannel = supabase
+        .channel('wallet_transactions_changes')
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${data.session.user.id}` }, 
+          (payload) => {
+            console.log('Wallet transaction change detected:', payload);
+            refreshBalance();
+            
+            // Show toast notification based on transaction type
+            if (payload.eventType === 'INSERT') {
+              const newTransaction = payload.new;
+              if (newTransaction.type === 'deposit' && newTransaction.status === 'completed') {
+                toast.success(`Dépôt de ${newTransaction.amount}€ crédité sur votre compte`);
+              }
             }
           }
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(walletTransactionsChannel);
-      supabase.removeChannel(profilesChannel);
+        )
+        .subscribe();
+        
+      const profilesChannel = supabase
+        .channel('profiles_balance_changes')
+        .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${data.session.user.id}` }, 
+          (payload) => {
+            console.log('Profile change detected:', payload);
+            refreshBalance();
+            
+            // Check if wallet_balance changed
+            if (payload.old.wallet_balance !== payload.new.wallet_balance) {
+              const difference = payload.new.wallet_balance - payload.old.wallet_balance;
+              if (difference > 0) {
+                toast.success(`Votre solde a été augmenté de ${difference}€`);
+              }
+            }
+          }
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(walletTransactionsChannel);
+        supabase.removeChannel(profilesChannel);
+      };
     };
+    
+    getSession();
   }, [refreshBalance]);
   
-  const handleDepositClick = () => {
+  const handleInstructionsClick = () => {
     navigate("/dashboard/wallet", { state: { activeTab: "deposit" } });
   };
   
@@ -104,8 +108,8 @@ export function WalletCard() {
         )}
       </CardContent>
       <CardFooter className="flex justify-between gap-2">
-        <Button variant="outline" size="sm" className="w-full" onClick={handleDepositClick}>
-          Déposer des fonds
+        <Button variant="outline" size="sm" className="w-full" onClick={handleInstructionsClick}>
+          Instructions de virement
         </Button>
         <Button variant="outline" size="sm" className="w-full" onClick={handleWithdrawClick}>
           Retirer des fonds

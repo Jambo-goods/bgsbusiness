@@ -11,9 +11,9 @@ export function useWalletBalance() {
   // Get the current user's ID when the hook loads
   useEffect(() => {
     const getUser = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (session?.session?.user?.id) {
-        setUserId(session.session.user.id);
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user?.id) {
+        setUserId(data.session.user.id);
       }
     };
     getUser();
@@ -26,26 +26,26 @@ export function useWalletBalance() {
       }
       setError(null);
       
-      const { data: session } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession();
       
-      if (!session.session) {
+      if (!data.session) {
         setWalletBalance(0);
         setIsLoadingBalance(false);
         return;
       }
       
-      const { data, error } = await supabase
+      const { data: profileData, error: fetchError } = await supabase
         .from('profiles')
         .select('wallet_balance')
-        .eq('id', session.session.user.id)
+        .eq('id', data.session.user.id)
         .maybeSingle();
         
-      if (error) {
-        console.error("Error fetching wallet balance:", error);
+      if (fetchError) {
+        console.error("Error fetching wallet balance:", fetchError);
         setError("Erreur lors de la récupération du solde");
         setWalletBalance(0);
       } else {
-        setWalletBalance(data?.wallet_balance || 0);
+        setWalletBalance(profileData?.wallet_balance || 0);
       }
     } catch (err) {
       console.error("Error:", err);

@@ -116,13 +116,14 @@ export default function WalletTab() {
     }
   };
 
-  const handleDeposit = async () => {
-    console.log('handleDeposit called');
-    await fetchWalletBalance();
+  const handleDeposit = () => {
+    // Switch to deposit tab to show bank transfer instructions
+    setActiveTab("deposit");
   };
 
   const handleWithdraw = async () => {
     console.log('handleWithdraw called');
+    setActiveTab("withdraw");
     await fetchWalletBalance();
   };
 
@@ -141,7 +142,7 @@ export default function WalletTab() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-6">
           <TabsTrigger value="overview">Aperçu</TabsTrigger>
-          <TabsTrigger value="deposit">Dépôt</TabsTrigger>
+          <TabsTrigger value="deposit">Instructions de virement</TabsTrigger>
           <TabsTrigger value="withdraw">Retrait</TabsTrigger>
         </TabsList>
         
@@ -157,7 +158,7 @@ export default function WalletTab() {
         <TabsContent value="deposit">
           <Card>
             <CardHeader>
-              <CardTitle>Déposer des fonds par virement bancaire</CardTitle>
+              <CardTitle>Instructions pour le virement bancaire</CardTitle>
             </CardHeader>
             <CardContent>
               <BankTransferInstructions />

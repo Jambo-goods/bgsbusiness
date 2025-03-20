@@ -1,8 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { CreditCard, ArrowDownToLine, ArrowUpFromLine, RotateCw } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowUpFromLine, RotateCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/notifications';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,52 +17,6 @@ export default function ActionButtons({
   onWithdraw,
   refreshBalance
 }: ActionButtonsProps) {
-  const handleDeposit = async () => {
-    try {
-      const {
-        data: session
-      } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast.error("Veuillez vous connecter pour effectuer un dépôt");
-        return;
-      }
-
-      // Ajout d'une transaction de dépôt (simulée pour le test)
-      const depositAmount = 1000; // 1000€ pour test
-
-      // Création de la transaction
-      const {
-        error: transactionError
-      } = await supabase.from('wallet_transactions').insert({
-        user_id: session.session.user.id,
-        amount: depositAmount,
-        type: 'deposit',
-        description: 'Dépôt de fonds'
-      });
-      if (transactionError) throw transactionError;
-
-      // Mise à jour du solde du portefeuille
-      const {
-        error: walletError
-      } = await supabase.rpc('increment_wallet_balance', {
-        user_id: session.session.user.id,
-        increment_amount: depositAmount
-      });
-      if (walletError) throw walletError;
-
-      // Create notification for deposit success
-      await notificationService.depositSuccess(depositAmount);
-
-      // Appel de la fonction de rafraîchissement
-      if (refreshBalance) await refreshBalance();
-      onDeposit();
-      toast.success(`Dépôt de ${depositAmount}€ effectué avec succès`);
-    } catch (error) {
-      console.error("Erreur lors du dépôt:", error);
-      toast.error("Une erreur s'est produite lors du dépôt des fonds");
-    }
-  };
-  
   const handleWithdraw = async () => {
     try {
       const {
@@ -136,9 +89,12 @@ export default function ActionButtons({
   
   return (
     <div className="flex items-center gap-2 mt-4">
-      <Button onClick={handleDeposit} className="flex items-center gap-2 bg-bgs-blue hover:bg-bgs-blue-dark">
-        <ArrowDownToLine className="w-4 h-4" />
-        Déposer
+      <Button 
+        variant="outline" 
+        className="flex items-center gap-2 border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10"
+        onClick={onDeposit}
+      >
+        Voir les instructions de virement
       </Button>
       
       <Button onClick={handleWithdraw} variant="outline" className="flex items-center gap-2">
