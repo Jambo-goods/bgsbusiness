@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -6,7 +5,7 @@ import { fr } from "date-fns/locale";
 import { BankTransferItem } from "./types/bankTransfer";
 import { StatusBadge } from "./bank-transfer/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2, Edit, Calendar } from "lucide-react";
+import { Check, X, Loader2, Edit, Calendar, RefreshCw, AlertTriangle } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +17,16 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface BankTransferTableRowProps {
   item: BankTransferItem;
@@ -30,7 +39,7 @@ export default function BankTransferTableRow({
   processingId,
   onStatusUpdate
 }: BankTransferTableRowProps) {
-  const { updateTransferStatus } = useBankTransfers();
+  const { updateTransferStatus, restoreTransfer } = useBankTransfers();
   const [localProcessing, setLocalProcessing] = useState(false);
   const [lastActionTime, setLastActionTime] = useState<number>(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -39,6 +48,7 @@ export default function BankTransferTableRow({
     item.processed_at ? new Date(item.processed_at) : undefined
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
   
   const formattedDate = item.created_at 
     ? format(new Date(item.created_at), 'dd MMM yyyy HH:mm', { locale: fr })
@@ -54,6 +64,7 @@ export default function BankTransferTableRow({
   const isRejected = item.status === 'rejected';
   const isPending = item.status === 'pending';
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
+  const canBeRestored = (item.status === 'rejected' || item.status === 'cancelled' || isReceiptConfirmed);
   
   const shouldPreventAction = () => {
     const now = Date.now();
@@ -247,6 +258,40 @@ export default function BankTransferTableRow({
       setIsSubmitting(false);
     }
   };
+
+  const handleTransferToReceived = () => {
+    if (!item) return;
+    setEditStatus('received');
+    setProcessedDate(new Date());
+    
+    setTimeout(() => {
+      handleSubmitEdit(new Event('submit') as any);
+    }, 100);
+  };
+
+  const handleRestoreTransfer = async () => {
+    if (isProcessing || shouldPreventAction()) return;
+    
+    setLocalProcessing(true);
+    
+    try {
+      const success = await restoreTransfer(item);
+      
+      if (success && onStatusUpdate) {
+        setTimeout(() => {
+          onStatusUpdate();
+        }, 1000);
+      }
+    } finally {
+      setTimeout(() => setLocalProcessing(false), 1000);
+    }
+    
+    setIsRestoreDialogOpen(false);
+  };
+
+  const openRestoreConfirmDialog = () => {
+    setIsRestoreDialogOpen(true);
+  };
   
   return (
     <TableRow className={isProcessing ? "bg-gray-50" : ""}>
@@ -295,6 +340,24 @@ export default function BankTransferTableRow({
             <Edit className="h-4 w-4" />
             <span className="sr-only">Modifier</span>
           </Button>
+          
+          {canBeRestored && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700"
+              onClick={openRestoreConfirmDialog}
+              disabled={isProcessing}
+              title="Restaurer"
+            >
+              {isProcessing ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-1" />
+              )}
+              <span className="hidden sm:inline">Restaurer</span>
+            </Button>
+          )}
           
           {isPending && (
             <>
@@ -417,6 +480,60 @@ export default function BankTransferTableRow({
             </form>
           </DialogContent>
         </Dialog>
+        
+        <AlertDialog open={isRestoreDialogOpen} onOpenChange={setIsRestoreDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Restaurer le virement</AlertDialogTitle>
+              <AlertDialogDescription>
+                Êtes-vous sûr de vouloir restaurer ce virement ? 
+                <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm text-gray-500">Référence :</span>
+                    <span className="text-sm font-medium">{item.reference}</span>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm text-gray-500">Montant :</span>
+                    <span className="text-sm font-medium">{item.amount} €</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Statut actuel :</span>
+                    <span className="text-sm font-medium">
+                      <StatusBadge
+                        status={item.status}
+                        hasMisspelledStatus={hasMisspelledStatus}
+                        isProcessed={!!item.processed}
+                      />
+                    </span>
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center p-3 bg-amber-50 rounded-md text-amber-800 border border-amber-200">
+                  <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+                  <span className="text-sm">
+                    Cette action va replacer le virement en statut <strong>"En attente"</strong> et annuler
+                    tout traitement précédent.
+                  </span>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleRestoreTransfer}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Restauration...
+                  </>
+                ) : (
+                  "Confirmer la restauration"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </TableCell>
     </TableRow>
   );
