@@ -96,7 +96,8 @@ export default function BankTransferTableRow({
             status: 'received',
             isProcessed: true,
             notes: `Réception confirmée le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: item.user_id
+            userId: item.user_id,
+            sendNotification: true
           }
         }
       );
@@ -216,7 +217,8 @@ export default function BankTransferTableRow({
             status: editStatus,
             isProcessed: isProcessed,
             notes: `Mis à jour manuellement le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: item.user_id
+            userId: item.user_id,
+            sendNotification: editStatus === 'received'
           }
         }
       );
