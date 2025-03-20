@@ -12,7 +12,7 @@ export const bankTransferService = {
         .from("bank_transfers")
         .select("user_id, status, processed")
         .eq("id", transferId)
-        .single();
+        .maybeSingle(); // Changed from single() to maybeSingle() to handle not found case
       
       if (transferError) {
         console.error("Erreur lors de la récupération du virement:", transferError);
@@ -20,6 +20,15 @@ export const bankTransferService = {
           success: false, 
           message: `Erreur de récupération: ${transferError.message}`,
           error: transferError
+        };
+      }
+      
+      if (!transferData) {
+        console.error("Virement non trouvé:", transferId);
+        return {
+          success: false,
+          message: "Le virement demandé n'existe pas ou a été supprimé",
+          error: new Error("Transfer not found")
         };
       }
       

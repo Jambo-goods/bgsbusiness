@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Check, X, Loader2, Edit, Calendar, RefreshCw, AlertTriangle } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, 
   DialogFooter, DialogDescription 
@@ -90,7 +89,10 @@ export default function BankTransferTableRow({
       console.log(`Confirming receipt for transfer ${item.id}`);
       
       // Use the updateTransferStatus function from useBankTransfers directly
-      const success = await updateTransferStatus(item, 'received');
+      const success = await updateTransferStatus(
+        item, 
+        'received'  // Explicitly set status to 'received'
+      );
       
       if (success) {
         toast.success("Virement marqué comme reçu");

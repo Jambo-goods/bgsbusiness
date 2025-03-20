@@ -60,7 +60,7 @@ serve(async (req: Request) => {
       .from('bank_transfers')
       .select('amount, reference')
       .eq('id', transferId)
-      .single();
+      .maybeSingle();
       
     if (transferError) {
       console.error("Error fetching transfer details:", transferError.message);
@@ -134,7 +134,7 @@ serve(async (req: Request) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Edge function error:", error.message);
     
     return new Response(
@@ -145,7 +145,7 @@ serve(async (req: Request) => {
 });
 
 // Helper function to update the user's wallet balance
-async function updateUserWalletBalance(supabase, userId: string, transferId: string) {
+async function updateUserWalletBalance(supabase: any, userId: string, transferId: string) {
   try {
     console.log(`Recalculating wallet balance for user ${userId}`);
     
@@ -154,7 +154,7 @@ async function updateUserWalletBalance(supabase, userId: string, transferId: str
       .from('bank_transfers')
       .select('amount')
       .eq('id', transferId)
-      .single();
+      .maybeSingle();
     
     if (transferError) {
       console.error("Error fetching transfer:", transferError.message);
@@ -185,13 +185,13 @@ async function updateUserWalletBalance(supabase, userId: string, transferId: str
     } else {
       console.log("Successfully recalculated wallet balance");
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating wallet balance:", error.message);
   }
 }
 
 // Helper function to send notification to the user
-async function sendUserNotification(supabase, userId: string, transfer: any) {
+async function sendUserNotification(supabase: any, userId: string, transfer: any) {
   try {
     if (!transfer) {
       console.log("No transfer details available for notification");
@@ -275,7 +275,7 @@ async function sendUserNotification(supabase, userId: string, transfer: any) {
       }
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error sending user notification:", error.message);
   }
 }

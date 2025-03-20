@@ -48,16 +48,19 @@ export default function NotificationsTab() {
       }
       
       // Transform database notifications to UI notifications
-      const transformedNotifications: Notification[] = data.map(dbNotif => ({
-        id: dbNotif.id,
-        title: dbNotif.title,
-        description: dbNotif.message,
-        date: new Date(dbNotif.created_at),
-        read: dbNotif.seen,
-        type: dbNotif.type,
-        category: dbNotif.data?.category || 'info',
-        metadata: dbNotif.data || {}
-      }));
+      const transformedNotifications: Notification[] = data.map(dbNotif => {
+        const dataObj = typeof dbNotif.data === 'object' ? dbNotif.data : {};
+        return {
+          id: dbNotif.id,
+          title: dbNotif.title,
+          description: dbNotif.message,
+          date: new Date(dbNotif.created_at),
+          read: dbNotif.seen,
+          type: dbNotif.type,
+          category: dataObj?.category || 'info',
+          metadata: typeof dbNotif.data === 'object' ? dbNotif.data : {}
+        };
+      });
       
       console.log("Notifications fetched:", transformedNotifications.length);
       setNotifications(transformedNotifications);

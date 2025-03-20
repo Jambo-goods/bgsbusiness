@@ -10,10 +10,18 @@ export function useBankTransfers() {
   // Function to directly update bank transfer status
   const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string, processedDate: string | null = null) => {
     try {
+      if (!transfer || !transfer.id) {
+        console.error("Transfert invalide:", transfer);
+        toast.error("Erreur: données de transfert invalides");
+        return false;
+      }
+
       setProcessingId(transfer.id);
       
       // Store admin token if available
-      const adminUser = JSON.parse(localStorage.getItem('admin_user') || '{}');
+      const adminUser = localStorage.getItem('admin_user') ? 
+        JSON.parse(localStorage.getItem('admin_user') || '{}') : {};
+      
       if (adminUser?.token) {
         localStorage.setItem('admin_token', adminUser.token);
       }
@@ -56,6 +64,12 @@ export function useBankTransfers() {
   // New function to restore a transfer back to pending status
   const restoreTransfer = async (transfer: BankTransferItem) => {
     try {
+      if (!transfer || !transfer.id) {
+        console.error("Transfert invalide pour restauration:", transfer);
+        toast.error("Erreur: données de transfert invalides");
+        return false;
+      }
+      
       setProcessingId(transfer.id);
       toast.info("Restauration du virement en cours...");
       
