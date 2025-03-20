@@ -121,32 +121,71 @@ export default function BankTransferTable({
     );
   }
 
-  // Create a map to store the most recent transfer for each reference
-  // We need a better way to detect duplication, so we'll use reference AND amount
-  const uniqueTransfersMap = new Map();
+  // Helper function to determine the priority of a status
+  const getStatusPriority = (status: string): number => {
+    const statusPriorities: Record<string, number> = {
+      'received': 5,
+      'reçu': 5,
+      'completed': 4,
+      'processing': 3,
+      'pending': 2,
+      'rejected': 1,
+      'cancelled': 0
+    };
+    return statusPriorities[status] || 0;
+  };
+
+  // Create a more effective deduplication map based on reference and amount
+  const uniqueTransfersMap = new Map<string, BankTransferItem>();
+
+  // First pass: group transfers by reference + amount and keep track of highest priority status
+  const transfersGroups = new Map<string, BankTransferItem[]>();
   
-  // Process transfers to find the most recent for each reference
   pendingTransfers.forEach((transfer) => {
-    // Create a composite key using reference and amount
-    const referenceKey = `${transfer.reference}-${transfer.amount}`;
+    // Use both reference and amount as the key for more accurate deduplication
+    const key = `${transfer.reference}-${transfer.amount}`;
     
-    // Get the current transfer for this key if it exists
-    const existingTransfer = uniqueTransfersMap.get(referenceKey);
+    if (!transfersGroups.has(key)) {
+      transfersGroups.set(key, []);
+    }
     
-    // Use the created_at date to determine which is more recent
-    if (!existingTransfer || 
-        (transfer.status !== 'pending' && existingTransfer.status === 'pending') ||
-        new Date(transfer.created_at) > new Date(existingTransfer.created_at)) {
-      // Keep only the most recent version or one with a non-pending status
-      uniqueTransfersMap.set(referenceKey, transfer);
+    transfersGroups.get(key)?.push(transfer);
+  });
+
+  // Second pass: For each group, pick the item with the highest priority status
+  // If statuses are equal, pick the most recent one
+  transfersGroups.forEach((group, key) => {
+    if (group.length === 0) return;
+    
+    // Sort the group by status priority (descending) and then by date (most recent first)
+    group.sort((a, b) => {
+      const priorityDiff = getStatusPriority(b.status) - getStatusPriority(a.status);
+      if (priorityDiff !== 0) return priorityDiff;
+      
+      // If same priority, use date as tiebreaker
+      const dateA = new Date(a.created_at || 0);
+      const dateB = new Date(b.created_at || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    // Take the first item (highest priority or most recent)
+    uniqueTransfersMap.set(key, group[0]);
+    
+    // Log to help debug
+    if (group.length > 1) {
+      console.log(`Removed ${group.length - 1} duplicates for reference: ${group[0].reference}, amount: ${group[0].amount}`);
+      console.log(`Kept: Status=${group[0].status}, ID=${group[0].id}, Date=${group[0].created_at}`);
     }
   });
   
-  // If there are transfers with the same reference but different IDs, also keep them by ID
-  // This is a fallback for transfers that might have the same reference but are actually different
+  // Also add transfers with unique IDs that might have been missed
   pendingTransfers.forEach((transfer) => {
-    // If this transfer has a unique ID, we should keep it
-    if (!Array.from(uniqueTransfersMap.values()).some(t => t.id === transfer.id)) {
+    const key = `${transfer.reference}-${transfer.amount}`;
+    
+    // If this ID isn't represented in our map, add it as a separate entry
+    // This ensures we don't miss any unique transfers
+    if (!Array.from(uniqueTransfersMap.values()).some(t => t.id === transfer.id) && 
+        !uniqueTransfersMap.has(key)) {
       uniqueTransfersMap.set(transfer.id, transfer);
     }
   });
@@ -154,7 +193,7 @@ export default function BankTransferTable({
   // Convert map back to array
   const uniqueTransfers = Array.from(uniqueTransfersMap.values());
   
-  console.log("Après filtrage des doublons par référence:", uniqueTransfers.length);
+  console.log("Après filtrage des doublons amélioré:", uniqueTransfers.length);
   
   // Sort transfers by date, most recent first
   const sortedTransfers = uniqueTransfers.sort((a, b) => {
