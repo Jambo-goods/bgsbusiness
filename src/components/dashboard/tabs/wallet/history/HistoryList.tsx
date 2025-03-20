@@ -1,3 +1,4 @@
+
 import React from "react";
 import HistoryItem, { HistoryItemType } from "./HistoryItem";
 import EmptyState from "./EmptyState";
@@ -132,7 +133,7 @@ export default function HistoryList({ items }: HistoryListProps) {
         (g.itemType === 'notification' && g.title?.toLowerCase().includes('payé'))
       );
       
-      // Step 2: Find the initial request
+      // Step 2: Find the initial request (prioritize notification with "demande de retrait" title)
       const requestItems = group.filter(g => 
         g.itemType === 'notification' && 
         g.title?.toLowerCase().includes('demande') &&
