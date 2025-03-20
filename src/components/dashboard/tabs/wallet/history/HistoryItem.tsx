@@ -86,6 +86,13 @@ export default function HistoryItem({ item }: HistoryItemProps) {
       ? extractReference(item.description) 
       : null);
 
+  // Function to extract amount from description if not available in metadata
+  const extractAmountFromDescription = (text: string): number | null => {
+    // Look for patterns like "123€" or "123 €"
+    const match = text.match(/(\d+)\s*€/);
+    return match ? Number(match[1]) : null;
+  };
+
   if (item.itemType === 'transaction') {
     const title = item.type === 'deposit' 
       ? reference 
@@ -138,8 +145,28 @@ export default function HistoryItem({ item }: HistoryItemProps) {
       title = `Demande de retrait ${item.title.toLowerCase()}`;
     }
     
-    // Déterminer le montant à afficher: utiliser le montant correct depuis les métadonnées
-    const amount = item.metadata?.amount !== undefined ? Number(item.metadata.amount) : 0;
+    // Find the correct amount in this priority:
+    // 1. From metadata.amount
+    // 2. Extract from description if metadata amount is 0
+    // 3. Default to 0 if nothing else works
+    let amount = 0;
+    
+    if (item.metadata?.amount !== undefined) {
+      amount = Number(item.metadata.amount);
+      
+      // If amount is still 0, try to extract from description
+      if (amount === 0 && item.description) {
+        const extractedAmount = extractAmountFromDescription(item.description);
+        if (extractedAmount !== null) {
+          amount = extractedAmount;
+        }
+      }
+    } else if (item.description) {
+      const extractedAmount = extractAmountFromDescription(item.description);
+      if (extractedAmount !== null) {
+        amount = extractedAmount;
+      }
+    }
     
     return (
       <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
@@ -161,7 +188,7 @@ export default function HistoryItem({ item }: HistoryItemProps) {
               <p className="text-xs text-gray-500 mt-1">{formattedDate}</p>
             </div>
           </div>
-          {/* Afficher le montant avec des classes appropriées, le mettre en évidence même si c'est 0 */}
+          {/* Afficher le montant avec des classes appropriées */}
           <div className="text-right">
             <span className={`font-semibold ${item.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
               {item.type === 'deposit' ? '+' : '-'}{amount} €
