@@ -1,233 +1,281 @@
 
-// Edge function for updating bank transfers
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.0.0";
-
-// CORS headers for browser support
+// Configure CORS headers for browser requests
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
 };
 
-// Type definitions
-interface TransferUpdateRequest {
-  transferId: string;
-  status: string;
-  processedDate?: string | null;
-  notes?: string;
+// Create Supabase client
+const supabaseUrl = Deno.env.get("SUPABASE_URL");
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error("Required environment variables SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set");
 }
 
-serve(async (req) => {
-  console.log("Bank Transfer Edge Function - Method:", req.method, "URL:", req.url);
+// Handle HTTP request
+serve(async (req: Request) => {
+  console.log(`Bank Transfer Edge Function - Method: ${req.method}, URL: ${req.url}`);
   
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { 
-      headers: { ...corsHeaders },
-      status: 204
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders,
     });
   }
-  
-  if (req.method !== 'POST') {
-    return new Response(
-      JSON.stringify({ error: "Method not allowed", message: "Only POST requests are supported" }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 405 
-      }
-    );
-  }
-  
+
   try {
-    // Get request body
-    let requestData: TransferUpdateRequest;
-    try {
-      requestData = await req.json();
-      console.log("Received update request:", requestData);
-    } catch (parseError) {
-      console.error("Error parsing request body:", parseError);
-      return new Response(
-        JSON.stringify({ error: "Invalid request", message: "Could not parse request body" }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
-        }
-      );
-    }
-    
-    // Validate transferId more strictly
-    if (!requestData.transferId || typeof requestData.transferId !== 'string' || requestData.transferId.trim() === '') {
-      console.error("Invalid transferId:", requestData.transferId);
-      return new Response(
-        JSON.stringify({ 
-          error: "Invalid transferId", 
-          message: "transferId must be a valid UUID string" 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400
-        }
-      );
-    }
-    
-    // Validate required fields
-    if (!requestData.status) {
-      return new Response(
-        JSON.stringify({ 
-          error: "Missing required fields", 
-          message: "status is required" 
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400
-        }
-      );
-    }
-    
-    // Get Supabase credentials from environment
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-    
-    if (!supabaseUrl || !supabaseKey) {
-      console.error("Missing Supabase credentials");
-      return new Response(
-        JSON.stringify({ 
-          error: "Server configuration error", 
-          message: "Missing database connection details"
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        }
-      );
-    }
-    
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Check if the transfer exists - with explicit filtering on ID
-    const { data: transferExists, error: checkError } = await supabase
-      .from("bank_transfers")
-      .select("id, status, user_id")
-      .eq("id", requestData.transferId.trim())
-      .maybeSingle();
-    
-    if (checkError) {
-      console.error("Error checking transfer existence:", checkError);
-      return new Response(
-        JSON.stringify({ 
-          error: "Database error", 
-          message: `Error checking transfer: ${checkError.message}`
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        }
-      );
-    }
-    
-    if (!transferExists) {
-      console.error("Transfer not found:", requestData.transferId);
-      return new Response(
-        JSON.stringify({ 
-          error: "Not found", 
-          message: "The requested transfer was not found"
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 404
-        }
-      );
-    }
-    
-    console.log("Transfer found:", transferExists);
-    
-    // Process the update
-    const isProcessed = requestData.status === 'received' || 
-                       (requestData.processedDate ? true : false);
-    
-    const { data: updateResult, error: updateError } = await supabase
-      .from('bank_transfers')
-      .update({
-        status: requestData.status,
-        processed: isProcessed,
-        processed_at: isProcessed 
-          ? (requestData.processedDate || new Date().toISOString()) 
-          : null,
-        notes: requestData.notes || `Mis à jour via API le ${new Date().toISOString()}`
-      })
-      .eq('id', requestData.transferId)
-      .select();
-    
-    if (updateError) {
-      console.error("Error updating transfer:", updateError);
-      return new Response(
-        JSON.stringify({ 
-          error: "Update failed", 
-          message: `Database update error: ${updateError.message}`
-        }),
-        { 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 500
-        }
-      );
-    }
-    
-    // Update successful - handle wallet recalculation if status is 'received'
-    if (requestData.status === 'received') {
-      try {
-        // Get the user ID associated with this transfer
-        const { data: transferData } = await supabase
-          .from("bank_transfers")
-          .select("user_id")
-          .eq("id", requestData.transferId)
-          .single();
-          
-        if (transferData?.user_id) {
-          console.log("Recalculating balance for user:", transferData.user_id);
-          const { error: rpcError } = await supabase.rpc('recalculate_wallet_balance', {
-            user_uuid: transferData.user_id
-          });
-          
-          if (rpcError) {
-            console.error("Error recalculating wallet balance:", rpcError);
-            // Continue despite error since the transfer update was successful
-          } else {
-            console.log("Wallet balance recalculated successfully");
-          }
-        }
-      } catch (walletError) {
-        console.error("Error during wallet update:", walletError);
-        // Continue despite error
-      }
-    }
-    
-    // Return success response
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `Transfer updated successfully to '${requestData.status}'`,
-        data: updateResult
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200
+    // Set up Supabase client with admin privileges
+    const supabase = createClient(
+      supabaseUrl!,
+      supabaseServiceKey!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
       }
     );
+
+    // Parse request body
+    const { transferId, status, isProcessed, notes, userId, sendNotification } = await req.json();
     
-  } catch (error: any) {
-    console.error("Unexpected error processing request:", error);
-    return new Response(
-      JSON.stringify({ 
-        error: "Server error", 
-        message: error.message || "An unexpected error occurred" 
-      }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
+    // Validate required parameters
+    if (!transferId || !status) {
+      return new Response(
+        JSON.stringify({ error: "Missing required parameters: transferId and status are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}`);
+
+    // Get transfer details to include in notification
+    const { data: transfer, error: transferError } = await supabase
+      .from('bank_transfers')
+      .select('amount, reference')
+      .eq('id', transferId)
+      .single();
+      
+    if (transferError) {
+      console.error("Error fetching transfer details:", transferError.message);
+    }
+
+    // Try using the updated RPC function with correct parameter naming
+    const { data: rpcResult, error: rpcError } = await supabase.rpc("admin_mark_bank_transfer", {
+      transfer_id: transferId,
+      new_status: status,
+      is_processed: isProcessed || false,
+      notes: notes || `Mis à jour via edge function le ${new Date().toLocaleDateString('fr-FR')}`
+    });
+
+    // If RPC fails, fallback to direct update
+    if (rpcError) {
+      console.error("RPC update failed:", rpcError.message);
+      
+      // Direct update fallback
+      const { data, error } = await supabase
+        .from('bank_transfers')
+        .update({
+          status: status,
+          processed: isProcessed || false,
+          processed_at: isProcessed ? new Date().toISOString() : null,
+          notes: notes || `Mis à jour via edge function le ${new Date().toLocaleDateString('fr-FR')}`
+        })
+        .eq('id', transferId)
+        .select('*');
+      
+      if (error) {
+        console.error("Direct update failed:", error.message);
+        return new Response(
+          JSON.stringify({ success: false, error: error.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
+
+      console.log("Update successful via direct update");
+      
+      // Update user wallet balance if needed
+      if (userId && (status === 'received' || status === 'reçu')) {
+        await updateUserWalletBalance(supabase, userId, transferId);
+        
+        // Send notification if requested and status is received
+        if (sendNotification) {
+          await sendUserNotification(supabase, userId, transfer);
+        }
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, data }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Update successful via RPC");
+    
+    // Check if we need to update the user's wallet balance
+    if (userId && (status === 'received' || status === 'reçu')) {
+      await updateUserWalletBalance(supabase, userId, transferId);
+      
+      // Send notification if requested and status is received
+      if (sendNotification) {
+        await sendUserNotification(supabase, userId, transfer);
+      }
+    }
+    
+    // Send success response
+    return new Response(
+      JSON.stringify({ success: true, data: rpcResult }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Edge function error:", error.message);
+    
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
+
+// Helper function to update the user's wallet balance
+async function updateUserWalletBalance(supabase, userId: string, transferId: string) {
+  try {
+    console.log(`Recalculating wallet balance for user ${userId}`);
+    
+    // Get the transfer to check the amount
+    const { data: transfer, error: transferError } = await supabase
+      .from('bank_transfers')
+      .select('amount')
+      .eq('id', transferId)
+      .single();
+    
+    if (transferError) {
+      console.error("Error fetching transfer:", transferError.message);
+      return;
+    }
+    
+    // First try to use the recalculate function
+    const { error: recalcError } = await supabase.rpc('recalculate_wallet_balance', {
+      user_uuid: userId
+    });
+    
+    if (recalcError) {
+      console.error("Recalculate wallet balance failed:", recalcError.message);
+      
+      // If recalculate fails and we have an amount, try increment instead
+      if (transfer?.amount) {
+        const { error: incrementError } = await supabase.rpc('increment_wallet_balance', {
+          user_id: userId,
+          increment_amount: transfer.amount
+        });
+        
+        if (incrementError) {
+          console.error("Increment wallet balance failed:", incrementError.message);
+        } else {
+          console.log(`Successfully incremented wallet balance by ${transfer.amount}`);
+        }
+      }
+    } else {
+      console.log("Successfully recalculated wallet balance");
+    }
+  } catch (error) {
+    console.error("Error updating wallet balance:", error.message);
+  }
+}
+
+// Helper function to send notification to the user
+async function sendUserNotification(supabase, userId: string, transfer: any) {
+  try {
+    if (!transfer) {
+      console.log("No transfer details available for notification");
+      return;
+    }
+
+    const amount = transfer.amount || 0;
+    const reference = transfer.reference || '';
+    
+    console.log(`Sending virement notification to user ${userId} for amount ${amount}`);
+    
+    // Create notification for user dashboard
+    const { error: notificationError } = await supabase
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        title: "Virement bancaire reçu",
+        message: `Votre virement bancaire de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été confirmé et ajouté à votre portefeuille.`,
+        type: "deposit",
+        seen: false,
+        data: {
+          category: "success",
+          amount,
+          reference,
+          timestamp: new Date().toISOString()
+        }
+      });
+    
+    if (notificationError) {
+      console.error("Error creating notification:", notificationError.message);
+    } else {
+      console.log("Successfully created notification for user");
+    }
+    
+    // Create or update wallet transaction for transaction history
+    const { data: existingTransaction, error: txCheckError } = await supabase
+      .from('wallet_transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('description', `Virement bancaire${reference ? ` (${reference})` : ''}`)
+      .eq('type', 'deposit')
+      .limit(1);
+      
+    if (txCheckError) {
+      console.error("Error checking for existing transaction:", txCheckError.message);
+    }
+    
+    if (existingTransaction && existingTransaction.length > 0) {
+      // Update existing transaction
+      const { error: txUpdateError } = await supabase
+        .from('wallet_transactions')
+        .update({
+          amount: amount,
+          receipt_confirmed: true,
+          status: 'completed'
+        })
+        .eq('id', existingTransaction[0].id);
+        
+      if (txUpdateError) {
+        console.error("Error updating wallet transaction:", txUpdateError.message);
+      } else {
+        console.log(`Updated existing wallet transaction with ID ${existingTransaction[0].id}`);
+      }
+    } else {
+      // Create new transaction
+      const { error: txInsertError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: userId,
+          amount: amount,
+          type: 'deposit',
+          description: `Virement bancaire${reference ? ` (${reference})` : ''}`,
+          receipt_confirmed: true,
+          status: 'completed'
+        });
+        
+      if (txInsertError) {
+        console.error("Error creating wallet transaction:", txInsertError.message);
+      } else {
+        console.log("Created new wallet transaction for deposit");
+      }
+    }
+    
+  } catch (error) {
+    console.error("Error sending user notification:", error.message);
+  }
+}

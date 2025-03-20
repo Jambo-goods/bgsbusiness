@@ -1,165 +1,231 @@
 
-import React, { useEffect, useState } from "react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "sonner";
-import NotificationsList from "./notifications/NotificationsList";
-import NotificationHeader from "./notifications/NotificationHeader";
-import NotificationTabs from "./notifications/NotificationTabs";
-import EmptyNotifications from "./notifications/EmptyNotifications";
-import { useUser } from "@/hooks/dashboard/useUserSession";
+import { useState, useEffect, useCallback } from "react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { notificationService } from "@/services/notifications";
+import type { Notification } from "@/services/notifications/types";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import NotificationHeader from "./notifications/NotificationHeader";
+import NotificationActions from "./notifications/NotificationActions";
+import NotificationTabs from "./notifications/NotificationTabs";
+import NotificationsList from "./notifications/NotificationsList";
 
 export default function NotificationsTab() {
-  const { user } = useUser();
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("all");
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      fetchNotifications();
-      subscribeToNotifications();
-    }
-  }, [user]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
+    setIsRefreshing(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
+      console.log("Fetching notifications...");
+      // Get user session
+      const { data: session } = await supabase.auth.getSession();
       
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("*")
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
-        
-      if (error) {
-        throw error;
+      if (!session.session) {
+        console.log("No session found");
+        setError("Veuillez vous connecter pour voir vos notifications");
+        return;
       }
       
-      // Convert JSON data field to object if it's a string
-      const processedData = data.map(notification => {
-        try {
-          // Check if data is a string and try to parse it
-          if (notification.data && typeof notification.data === 'string') {
-            notification.data = JSON.parse(notification.data);
-          }
-        } catch (e) {
-          console.error("Error parsing notification data:", e);
-        }
-        return notification;
-      });
+      // Get notifications directly from supabase
+      const { data, error: notifError } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.session.user.id)
+        .order('created_at', { ascending: false });
       
-      setNotifications(processedData);
-    } catch (error) {
-      console.error("Error fetching notifications:", error);
-      toast.error("Impossible de charger vos notifications");
+      if (notifError) throw notifError;
+      
+      if (!data) {
+        console.log("No notifications data returned");
+        setNotifications([]);
+        return;
+      }
+      
+      // Transform database notifications to UI notifications
+      const transformedNotifications: Notification[] = data.map(dbNotif => ({
+        id: dbNotif.id,
+        title: dbNotif.title,
+        description: dbNotif.message,
+        date: new Date(dbNotif.created_at),
+        read: dbNotif.seen,
+        type: dbNotif.type,
+        category: dbNotif.data?.category || 'info',
+        metadata: dbNotif.data || {}
+      }));
+      
+      console.log("Notifications fetched:", transformedNotifications.length);
+      setNotifications(transformedNotifications);
+    } catch (err) {
+      console.error("Error fetching notifications:", err);
+      setError("Impossible de charger les notifications. Veuillez réessayer plus tard.");
+      toast.error("Erreur", { description: "Impossible de charger les notifications" });
     } finally {
+      setIsRefreshing(false);
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const subscribeToNotifications = () => {
+  useEffect(() => {
+    fetchNotifications();
+    
+    // Set up real-time subscription
     const channel = supabase
-      .channel('notifications_changes')
+      .channel('public:notifications')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user?.id}` }, 
+        { event: '*', schema: 'public', table: 'notifications' }, 
         () => {
+          console.log("Real-time notification update detected");
           fetchNotifications();
         }
       )
       .subscribe();
-      
+    
     return () => {
       supabase.removeChannel(channel);
     };
-  };
+  }, [fetchNotifications]);
 
-  const markAllAsRead = async () => {
+  const unreadCount = notifications.filter(n => !n.read).length;
+  
+  const filteredNotifications = filter === 'all' 
+    ? notifications 
+    : notifications.filter(n => !n.read);
+
+  const handleMarkAllAsRead = async () => {
     try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ seen: true })
-        .eq("user_id", user?.id);
-        
-      if (error) throw error;
+      const { data: session } = await supabase.auth.getSession();
       
-      fetchNotifications();
-      toast.success("Toutes les notifications marquées comme lues");
-    } catch (error) {
-      console.error("Error marking notifications as read:", error);
-      toast.error("Impossible de mettre à jour les notifications");
+      if (!session.session) {
+        toast.error("Veuillez vous connecter pour marquer les notifications comme lues");
+        return;
+      }
+      
+      // Update notifications in the database
+      await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('user_id', session.session.user.id);
+      
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, read: true }))
+      );
+      
+      toast.success("Toutes les notifications ont été marquées comme lues");
+    } catch (err) {
+      console.error("Error marking all as read:", err);
+      toast.error("Erreur", { description: "Impossible de marquer toutes les notifications comme lues" });
     }
   };
 
-  const markAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("notifications")
+      // Update notification in the database
+      await supabase
+        .from('notifications')
         .update({ seen: true })
-        .eq("id", notificationId);
-        
-      if (error) throw error;
+        .eq('id', id);
       
-      fetchNotifications();
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-      toast.error("Impossible de mettre à jour la notification");
+      // Update local state
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id ? { ...notification, read: true } : notification
+        )
+      );
+    } catch (err) {
+      console.error("Error marking notification as read:", err);
+      toast.error("Erreur", { description: "Impossible de marquer la notification comme lue" });
     }
   };
 
-  const deleteNotification = async (notificationId: string) => {
+  const handleDeleteNotification = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("notifications")
+      // Delete notification from the database
+      await supabase
+        .from('notifications')
         .delete()
-        .eq("id", notificationId);
-        
-      if (error) throw error;
+        .eq('id', id);
       
-      fetchNotifications();
+      // Update local state
+      setNotifications(prev => 
+        prev.filter(notification => notification.id !== id)
+      );
+      
       toast.success("Notification supprimée");
     } catch (error) {
       console.error("Error deleting notification:", error);
-      toast.error("Impossible de supprimer la notification");
+      toast.error("Erreur", { description: "Impossible de supprimer la notification" });
     }
   };
 
-  const filteredNotifications = notifications.filter(notification => {
-    if (activeTab === "all") return true;
-    if (activeTab === "unread") return !notification.seen;
-    return notification.type === activeTab;
-  });
+  const handleRefresh = async () => {
+    await fetchNotifications();
+    toast.info("Notifications actualisées");
+  };
+
+  const handleFilterChange = (newFilter: 'all' | 'unread') => {
+    setFilter(newFilter);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+        <h3 className="text-lg font-medium text-red-800 mb-2">Erreur de chargement</h3>
+        <p className="text-red-600">{error}</p>
+        <button 
+          onClick={fetchNotifications}
+          className="mt-4 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition-colors"
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <NotificationHeader 
-        notificationCount={notifications.length} 
-        markAllAsRead={markAllAsRead} 
-      />
-      
-      <Card>
+    <div className="space-y-6 max-w-4xl mx-auto">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <NotificationHeader notificationCount={notifications.length} />
+        <NotificationActions
+          unreadCount={unreadCount}
+          isRefreshing={isRefreshing}
+          onRefresh={fetchNotifications}
+          onMarkAllAsRead={handleMarkAllAsRead}
+          totalCount={notifications.length}
+        />
+      </div>
+
+      <Tabs defaultValue="all" className="w-full">
         <NotificationTabs 
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          totalCount={notifications.length}
+          unreadCount={unreadCount}
+          filter={filter}
+          onFilterChange={handleFilterChange}
         />
         
-        <CardContent className="pt-6">
-          {isLoading ? (
-            <div className="flex justify-center items-center h-40">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            </div>
-          ) : filteredNotifications.length > 0 ? (
-            <NotificationsList
-              notifications={filteredNotifications}
-              markAsRead={markAsRead}
-              deleteNotification={deleteNotification}
-            />
-          ) : (
-            <EmptyNotifications activeTab={activeTab} />
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="all" className="mt-4">
+          <NotificationsList 
+            notifications={filteredNotifications}
+            onMarkAsRead={handleMarkAsRead}
+            onDelete={handleDeleteNotification}
+            filter={filter}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Check, X, Loader2, Edit, Calendar, RefreshCw, AlertTriangle } from "lucide-react";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Dialog, DialogContent, DialogHeader, DialogTitle, 
   DialogFooter, DialogDescription 
@@ -39,7 +40,7 @@ export default function BankTransferTableRow({
   processingId,
   onStatusUpdate
 }: BankTransferTableRowProps) {
-  const { updateTransferStatus, restoreTransfer, isDebug } = useBankTransfers();
+  const { updateTransferStatus, restoreTransfer } = useBankTransfers();
   const [localProcessing, setLocalProcessing] = useState(false);
   const [lastActionTime, setLastActionTime] = useState<number>(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -66,23 +67,12 @@ export default function BankTransferTableRow({
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
   const canBeRestored = (item.status === 'rejected' || item.status === 'cancelled' || isReceiptConfirmed);
   
-  // Afficher les informations de débogage si nécessaire
-  if (isDebug) {
-    console.log(`Rendering transfer row:`, {
-      id: item.id,
-      status: item.status,
-      processed: item.processed,
-      user: item.profile ? item.profile.email : 'unknown'
-    });
-  }
-  
   const shouldPreventAction = () => {
     const now = Date.now();
     const timeSinceLastAction = now - lastActionTime;
     
     if (timeSinceLastAction < 5000) { // 5 seconds cooldown
       console.log(`Action prevented: Only ${timeSinceLastAction}ms since last action`);
-      toast.info("Veuillez patienter quelques secondes avant de réessayer");
       return true;
     }
     
@@ -99,49 +89,48 @@ export default function BankTransferTableRow({
     try {
       console.log(`Confirming receipt for transfer ${item.id}`);
       
-      if (!item.id) {
-        console.error("ID de transfert manquant");
-        toast.error("Erreur: ID de transfert manquant");
-        return;
-      }
-      
-      // Vérifier si l'ID est valide et non vide
-      if (typeof item.id !== 'string' || item.id.trim() === '') {
-        console.error("ID de transfert invalide:", item.id);
-        toast.error("Erreur: ID de transfert invalide");
-        return;
-      }
-      
-      // Log des détails complets avant mise à jour
-      console.log("Confirmation avec détails complets:", {
-        id: item.id,
-        userID: item.user_id,
-        amount: item.amount,
-        profile: item.profile
-      });
-      
-      // Use the updateTransferStatus function from useBankTransfers directly
-      const success = await updateTransferStatus(
-        item, 
-        'received',  // Explicitly set status to 'received'
-        new Date().toISOString() // Use current date as processed date
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
+        'update-bank-transfer',
+        {
+          body: {
+            transferId: item.id,
+            status: 'received',
+            isProcessed: true,
+            notes: `Réception confirmée le ${new Date().toLocaleDateString('fr-FR')}`,
+            userId: item.user_id,
+            sendNotification: true
+          }
+        }
       );
       
-      if (success) {
-        toast.success("Virement marqué comme reçu");
-        if (onStatusUpdate) {
-          setTimeout(() => {
-            onStatusUpdate();
-          }, 1000);
+      if (edgeFunctionError) {
+        console.error("Erreur fonction edge:", edgeFunctionError);
+        toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
+        
+        const success = await updateTransferStatus(item, 'received');
+        if (success && onStatusUpdate) {
+          toast.success("Virement marqué comme reçu");
+          onStatusUpdate();
+        } else {
+          toast.error("Échec de la mise à jour - veuillez réessayer");
         }
       } else {
-        toast.error("Échec de la mise à jour - veuillez réessayer", {
-          description: "Si le problème persiste, actualisez la page"
-        });
+        console.log("Résultat fonction edge:", edgeFunctionData);
+        
+        if (edgeFunctionData.success) {
+          toast.success("Virement marqué comme reçu");
+          if (onStatusUpdate) {
+            setTimeout(() => {
+              onStatusUpdate();
+            }, 1000);
+          }
+        } else {
+          toast.error(`Échec de la mise à jour: ${edgeFunctionData.error || 'Erreur inconnue'}`);
+        }
       }
-    } catch (error: any) {
-      console.error("Erreur lors de la confirmation:", error);
-      toast.error(`Erreur: ${error.message || "Une erreur s'est produite lors de la mise à jour"}`);
+    } catch (error) {
+      console.error("Erreur de mise à jour:", error);
+      toast.error("Une erreur s'est produite lors de la mise à jour");
     } finally {
       setTimeout(() => setLocalProcessing(false), 1000);
     }
@@ -156,23 +145,47 @@ export default function BankTransferTableRow({
     try {
       console.log(`Rejecting transfer ${item.id}`);
       
-      const success = await updateTransferStatus(item, 'rejected');
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
+        'update-bank-transfer',
+        {
+          body: {
+            transferId: item.id,
+            status: 'rejected',
+            isProcessed: true,
+            notes: `Virement rejeté le ${new Date().toLocaleDateString('fr-FR')}`,
+            userId: item.user_id
+          }
+        }
+      );
       
-      if (success) {
-        toast.success("Virement rejeté avec succès");
-        if (onStatusUpdate) {
-          setTimeout(() => {
-            onStatusUpdate();
-          }, 1000);
+      if (edgeFunctionError) {
+        console.error("Erreur fonction edge:", edgeFunctionError);
+        toast.error(`Erreur de rejet: ${edgeFunctionError.message}`);
+        
+        const success = await updateTransferStatus(item, 'rejected');
+        if (success && onStatusUpdate) {
+          toast.success("Virement rejeté");
+          onStatusUpdate();
+        } else {
+          toast.error("Échec du rejet - veuillez réessayer");
         }
       } else {
-        toast.error("Échec du rejet - veuillez réessayer", {
-          description: "Si le problème persiste, actualisez la page"
-        });
+        console.log("Résultat fonction edge:", edgeFunctionData);
+        
+        if (edgeFunctionData.success) {
+          toast.success("Virement rejeté avec succès");
+          if (onStatusUpdate) {
+            setTimeout(() => {
+              onStatusUpdate();
+            }, 1000);
+          }
+        } else {
+          toast.error(`Échec du rejet: ${edgeFunctionData.error || 'Erreur inconnue'}`);
+        }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur de mise à jour:", error);
-      toast.error(`Erreur: ${error.message || "Une erreur s'est produite lors du rejet"}`);
+      toast.error("Une erreur s'est produite lors du rejet");
     } finally {
       setTimeout(() => setLocalProcessing(false), 1000);
     }
@@ -195,26 +208,55 @@ export default function BankTransferTableRow({
     try {
       console.log(`Updating transfer ${item.id} with status ${editStatus} and processed date ${processedDate}`);
       
-      const processedDateStr = processedDate ? processedDate.toISOString() : null;
-      const success = await updateTransferStatus(item, editStatus, processedDateStr);
+      const isProcessed = (editStatus === 'received' || editStatus === 'rejected') || processedDate !== undefined;
       
-      if (success) {
-        toast.success("Virement mis à jour avec succès");
-        setIsEditModalOpen(false);
+      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
+        'update-bank-transfer',
+        {
+          body: {
+            transferId: item.id,
+            status: editStatus,
+            isProcessed: isProcessed,
+            notes: `Mis à jour manuellement le ${new Date().toLocaleDateString('fr-FR')}`,
+            userId: item.user_id,
+            sendNotification: editStatus === 'received'
+          }
+        }
+      );
+      
+      if (edgeFunctionError) {
+        console.error("Erreur fonction edge:", edgeFunctionError);
+        toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
-        if (onStatusUpdate) {
-          setTimeout(() => {
-            onStatusUpdate();
-          }, 1000);
+        const processedDateStr = processedDate ? processedDate.toISOString() : null;
+        const success = await updateTransferStatus(item, editStatus, processedDateStr);
+        
+        if (success && onStatusUpdate) {
+          toast.success("Virement mis à jour avec succès");
+          setIsEditModalOpen(false);
+          onStatusUpdate();
+        } else {
+          toast.error("Échec de la mise à jour - veuillez réessayer");
         }
       } else {
-        toast.error("Échec de la mise à jour - veuillez réessayer", {
-          description: "Si le problème persiste, actualisez la page"
-        });
+        console.log("Résultat fonction edge:", edgeFunctionData);
+        
+        if (edgeFunctionData.success) {
+          toast.success("Virement mis à jour avec succès");
+          setIsEditModalOpen(false);
+          
+          if (onStatusUpdate) {
+            setTimeout(() => {
+              onStatusUpdate();
+            }, 1000);
+          }
+        } else {
+          toast.error(`Échec de la mise à jour: ${edgeFunctionData.error || 'Erreur inconnue'}`);
+        }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur de mise à jour:", error);
-      toast.error(`Erreur: ${error.message || "Une erreur s'est produite lors de la mise à jour"}`);
+      toast.error("Une erreur s'est produite lors de la mise à jour");
     } finally {
       setIsSubmitting(false);
     }
@@ -263,9 +305,6 @@ export default function BankTransferTableRow({
           <span className="text-xs text-gray-500">
             {item.description || `Virement - ${item.amount || 0}€`}
           </span>
-          {isDebug && (
-            <span className="text-xs text-blue-500 mt-1 font-mono">{item.id || 'N/A'}</span>
-          )}
         </div>
       </TableCell>
       
@@ -353,7 +392,7 @@ export default function BankTransferTableRow({
             <DialogHeader>
               <DialogTitle>Modifier le virement</DialogTitle>
               <DialogDescription>
-                Référence: {item.reference} {isDebug && `(ID: ${item.id})`}
+                Référence: {item.reference}
               </DialogDescription>
             </DialogHeader>
             
@@ -461,12 +500,6 @@ export default function BankTransferTableRow({
                       />
                     </span>
                   </div>
-                  {isDebug && (
-                    <div className="flex justify-between mt-1">
-                      <span className="text-sm text-gray-500">ID :</span>
-                      <span className="text-sm font-medium text-blue-500 font-mono">{item.id}</span>
-                    </div>
-                  )}
                 </div>
                 <div className="mt-4 flex items-center p-3 bg-amber-50 rounded-md text-amber-800 border border-amber-200">
                   <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
