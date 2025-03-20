@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, CheckCircle, XCircle } from "lucide-react";
+import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, CheckCircle, XCircle, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
 import { Toaster } from "sonner";
@@ -18,6 +18,16 @@ import { CalendarIcon } from "lucide-react";
 import StatusBadge from "@/components/dashboard/tabs/wallet/withdrawal-table/StatusBadge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { bankTransferService } from "@/components/admin/dashboard/services/bankTransferService";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface BankTransfer {
   id: string;
@@ -52,6 +62,9 @@ export default function BankTransfersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [updateDetails, setUpdateDetails] = useState<any>(null);
+  const [selectedTransferForRestore, setSelectedTransferForRestore] = useState<BankTransfer | null>(null);
+  const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
 
   const fetchBankTransfers = useCallback(async () => {
     try {
@@ -268,6 +281,39 @@ export default function BankTransfersPage() {
     }, 100);
   };
 
+  const handleRestoreTransfer = (transfer: BankTransfer) => {
+    setSelectedTransferForRestore(transfer);
+    setIsRestoreDialogOpen(true);
+  };
+
+  const confirmRestoreTransfer = async () => {
+    if (!selectedTransferForRestore || isRestoring) return;
+    
+    setIsRestoring(true);
+    toast.info("Restauration du virement en cours...");
+    
+    try {
+      const result = await bankTransferService.updateBankTransfer(
+        selectedTransferForRestore.id,
+        'pending',
+        null
+      );
+      
+      if (result.success) {
+        toast.success("Virement restauré avec succès");
+        await fetchBankTransfers();
+        setIsRestoreDialogOpen(false);
+      } else {
+        toast.error(`Échec de la restauration: ${result.message || "Erreur inconnue"}`);
+      }
+    } catch (error: any) {
+      console.error("Erreur de restauration:", error);
+      toast.error(`Erreur: ${error.message || "Une erreur est survenue"}`);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster />
@@ -378,12 +424,14 @@ export default function BankTransfersPage() {
                       </button>
                     </TableHead>
                     <TableHead>Notes</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredTransfers.map(transfer => {
                     const user = userData[transfer.user_id] || { first_name: null, last_name: null, email: null };
                     const isPending = transfer.status === 'pending';
+                    const canBeRestored = (transfer.status === 'rejected' || transfer.status === 'cancelled' || transfer.processed);
                     
                     return (
                       <TableRow key={transfer.id}>
@@ -431,6 +479,22 @@ export default function BankTransfersPage() {
                         <TableCell>
                           <div className="max-w-xs truncate">
                             {transfer.notes || "-"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col sm:flex-row gap-2">
+                            {canBeRestored && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 bg-blue-50 border-blue-200 hover:bg-blue-100 text-blue-700"
+                                onClick={() => handleRestoreTransfer(transfer)}
+                                disabled={isLoading || isRestoring}
+                              >
+                                <History className="h-4 w-4 mr-1" />
+                                Restaurer
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -597,6 +661,62 @@ export default function BankTransfersPage() {
           </form>
         </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={isRestoreDialogOpen} onOpenChange={setIsRestoreDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Restaurer le virement</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir restaurer ce virement ? 
+              {selectedTransferForRestore && (
+                <div className="mt-4 p-3 bg-gray-50 rounded-md">
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm text-gray-500">Référence :</span>
+                    <span className="text-sm font-medium">{selectedTransferForRestore.reference}</span>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <span className="text-sm text-gray-500">Montant :</span>
+                    <span className="text-sm font-medium">{selectedTransferForRestore.amount} €</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Statut actuel :</span>
+                    <span className="text-sm font-medium">
+                      <StatusBadge status={selectedTransferForRestore.status || 'pending'} />
+                      {selectedTransferForRestore.processed && 
+                        <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Traité</span>
+                      }
+                    </span>
+                  </div>
+                </div>
+              )}
+              <div className="mt-4 flex items-center p-3 bg-amber-50 rounded-md text-amber-800 border border-amber-200">
+                <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />
+                <span className="text-sm">
+                  Cette action va replacer le virement en statut <strong>"En attente"</strong> et annuler
+                  tout traitement précédent.
+                </span>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmRestoreTransfer}
+              className="bg-blue-600 hover:bg-blue-700"
+              disabled={isRestoring}
+            >
+              {isRestoring ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Restauration...
+                </>
+              ) : (
+                "Confirmer la restauration"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
