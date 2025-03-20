@@ -138,6 +138,9 @@ export default function HistoryItem({ item }: HistoryItemProps) {
       title = `Demande de retrait ${item.title.toLowerCase()}`;
     }
     
+    // Déterminer le montant à afficher: utiliser le montant correct depuis les métadonnées
+    const amount = item.metadata?.amount !== undefined ? Number(item.metadata.amount) : 0;
+    
     return (
       <div className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
         {/* Show confirmation alert when withdrawal request is confirmed and notification is related to withdrawal */}
@@ -158,13 +161,12 @@ export default function HistoryItem({ item }: HistoryItemProps) {
               <p className="text-xs text-gray-500 mt-1">{formattedDate}</p>
             </div>
           </div>
-          {item.metadata?.amount && (
-            <div className="text-right">
-              <span className={`font-semibold ${item.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
-                {item.type === 'deposit' ? '+' : '-'}{item.metadata.amount} €
-              </span>
-            </div>
-          )}
+          {/* Afficher le montant avec des classes appropriées, le mettre en évidence même si c'est 0 */}
+          <div className="text-right">
+            <span className={`font-semibold ${item.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
+              {item.type === 'deposit' ? '+' : '-'}{amount} €
+            </span>
+          </div>
         </div>
       </div>
     );
