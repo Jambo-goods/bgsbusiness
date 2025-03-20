@@ -2,5 +2,11 @@
 {
   "tasks": {
     "start": "deno run --allow-net --allow-env index.ts"
+  },
+  "imports": {
+    "./": "./",
+    "./corsUtils.ts": "./corsUtils.ts",
+    "./walletHelpers.ts": "./walletHelpers.ts",
+    "./notificationHelpers.ts": "./notificationHelpers.ts"
   }
 }
