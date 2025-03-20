@@ -81,7 +81,7 @@ export default function HistoryList({ items }: HistoryListProps) {
     }
   });
   
-  // Filter items to avoid duplicates with improved priority logic
+  // Enhanced filtering logic - only keep the initial request and the final payment status
   const filteredItems = items.filter(item => {
     // Skip non-withdrawal/deposit items
     if (item.type !== 'withdrawal' && item.type !== 'deposit') {
@@ -125,67 +125,32 @@ export default function HistoryList({ items }: HistoryListProps) {
       const group = withdrawalMapping[key];
       if (!group || group.length <= 1) return true;
       
-      // Priority order for withdrawal items:
-      // 1. Always keep "paid" or "completed" status (highest priority)
-      // 2. Don't show pending if a paid version exists for the same amount/ID
-      // 3. Don't show validation notifications if paid version exists
-      
-      // Check if there's a paid item in the group
-      const hasPaidItem = group.some(g => {
-        if (g.itemType === 'transaction' && g.status === 'completed') return true;
-        if (g.itemType === 'notification' && g.title?.toLowerCase().includes('payé')) return true;
-        return false;
-      });
-      
-      // Check if the current item is paid
-      const isCurrentItemPaid = (
-        (item.itemType === 'transaction' && item.status === 'completed') || 
-        (item.itemType === 'notification' && item.title?.toLowerCase().includes('payé'))
+      // For withdrawals, only keep the initial request and final payment status
+      // Step 1: Check if there's a "paid" item in the group
+      const paidItem = group.find(g => 
+        (g.itemType === 'transaction' && g.status === 'completed') || 
+        (g.itemType === 'notification' && g.title?.toLowerCase().includes('payé'))
       );
       
-      // If there's a paid item and current item is not paid, filter it out
-      if (hasPaidItem && !isCurrentItemPaid) {
-        return false;
-      }
-      
-      // If the current item is paid, keep it
-      if (isCurrentItemPaid) {
-        return true;
-      }
-      
-      // For remaining items (no paid items in group), use standard logic
-      if (item.itemType === 'notification' && item.title) {
-        if (item.title.toLowerCase().includes('rejeté')) return true;
-        
-        if (item.title.toLowerCase().includes('validé')) {
-          const validatedItems = group.filter(g => 
-            g.itemType === 'notification' && 
-            g.title?.toLowerCase().includes('validé')
-          );
-          
-          if (validatedItems.length > 1) {
-            const sortedValidated = [...validatedItems].sort((a, b) => 
-              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            );
-            return item.id === sortedValidated[0].id;
-          }
-          return true;
-        }
-      }
-      
-      const hasTransaction = group.some(g => g.itemType === 'transaction');
-      
-      if (hasTransaction) {
-        return item.itemType === 'transaction';
-      }
-      
-      const sortedGroup = [...group].sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      // Step 2: Find the initial request
+      const requestItems = group.filter(g => 
+        g.itemType === 'notification' && 
+        g.title?.toLowerCase().includes('demande') &&
+        !g.title?.toLowerCase().includes('validé')
       );
-      return item.id === sortedGroup[0].id;
+      
+      const initialRequest = requestItems.length > 0 
+        ? requestItems.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0] 
+        : null;
+      
+      // Only keep the initial request and the paid notification
+      return (
+        (paidItem && item.id === paidItem.id) || 
+        (initialRequest && item.id === initialRequest.id)
+      );
     }
     
-    // Deposit handling
+    // Deposit handling - similar approach
     let ref = null;
     
     if (item.itemType === 'transaction' && item.description) {
@@ -201,19 +166,28 @@ export default function HistoryList({ items }: HistoryListProps) {
     const group = refMapping[ref];
     if (!group || group.length <= 1) return true;
     
-    // For deposits, prioritize:
-    // 1. Keep transaction records over notifications
-    // 2. If no transaction, keep the most recent notification
-    const hasTransaction = group.some(g => g.itemType === 'transaction');
-    
-    if (hasTransaction) {
-      return item.itemType === 'transaction';
-    }
-    
-    const sortedGroup = [...group].sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    // For deposits, only keep the initial request and confirmation
+    // Find the confirmation notification (already received)
+    const confirmationItem = group.find(g => 
+      (g.itemType === 'transaction') || 
+      (g.itemType === 'notification' && g.title?.toLowerCase().includes('reçu'))
     );
-    return item.id === sortedGroup[0].id;
+    
+    // Find the initial request
+    const depositRequests = group.filter(g => 
+      g.itemType === 'notification' && 
+      g.title?.toLowerCase().includes('demande de dépôt')
+    );
+    
+    const initialDepositRequest = depositRequests.length > 0 
+      ? depositRequests.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0] 
+      : null;
+    
+    // Only keep these two items
+    return (
+      (confirmationItem && item.id === confirmationItem.id) || 
+      (initialDepositRequest && item.id === initialDepositRequest.id)
+    );
   });
 
   // Final sorting by date (most recent first)
