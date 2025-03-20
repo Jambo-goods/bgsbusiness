@@ -128,10 +128,31 @@ export default function ActionButtons({
   };
 
   return (
-    <div>
-      <Button onClick={handleDeposit}>Dépôt</Button>
-      <Button onClick={handleWithdraw}>Retrait</Button>
-      <Button onClick={handleRefresh}>Rafraîchir</Button>
+    <div className="flex space-x-4 mt-4">
+      <Button 
+        onClick={handleDeposit}
+        className="flex items-center"
+        variant="outline"
+      >
+        <ArrowDownToLine className="mr-2 h-4 w-4" />
+        Dépôt
+      </Button>
+      <Button 
+        onClick={handleWithdraw}
+        className="flex items-center"
+        variant="outline"
+      >
+        <ArrowUpFromLine className="mr-2 h-4 w-4" />
+        Retrait
+      </Button>
+      <Button 
+        onClick={handleRefresh}
+        variant="ghost"
+        className="flex items-center"
+      >
+        <RotateCw className="mr-2 h-4 w-4" />
+        Rafraîchir
+      </Button>
     </div>
   );
 }

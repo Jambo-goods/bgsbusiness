@@ -21,7 +21,7 @@ export default function WalletTab() {
     // Create polling for balance updates
     const balanceInterval = setInterval(() => {
       fetchWalletBalance(false); // Silent refresh (no loading indicator)
-    }, 30000); // Check every 30 seconds
+    }, 15000); // Check every 15 seconds
     
     // Set up realtime listener for scheduled payments to update balance
     const scheduledPaymentsChannel = supabase
@@ -56,10 +56,54 @@ export default function WalletTab() {
       )
       .subscribe();
     
+    // Set up realtime listener for wallet transactions
+    const walletTransactionsChannel = supabase
+      .channel('wallet-transactions')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'wallet_transactions' },
+        async (payload) => {
+          const { data: session } = await supabase.auth.getSession();
+          
+          // Only update if this is the current user's transaction
+          if (session.session?.user.id === payload.new.user_id) {
+            console.log('New wallet transaction:', payload.new);
+            fetchWalletBalance(false); // Refresh balance without loading state
+          }
+        }
+      )
+      .subscribe();
+      
+    // Set up realtime listener for bank transfers
+    const bankTransfersChannel = supabase
+      .channel('bank-transfers')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'bank_transfers' },
+        async (payload) => {
+          const { data: session } = await supabase.auth.getSession();
+          
+          // Only update if this is the current user's bank transfer
+          if (session.session?.user.id === payload.new.user_id) {
+            console.log('Bank transfer updated:', payload.new);
+            
+            // If the status changed to 'received', update balance
+            if (payload.new.status === 'received' && payload.old.status !== 'received') {
+              toast.success("Virement bancaire reçu !", {
+                description: `Votre virement de ${payload.new.amount}€ a été confirmé.`,
+              });
+              
+              fetchWalletBalance(); // Refresh balance
+            }
+          }
+        }
+      )
+      .subscribe();
+    
     return () => {
       clearInterval(balanceInterval);
       supabase.removeChannel(scheduledPaymentsChannel);
       supabase.removeChannel(profilesChannel);
+      supabase.removeChannel(walletTransactionsChannel);
+      supabase.removeChannel(bankTransfersChannel);
     };
   }, []);
 
