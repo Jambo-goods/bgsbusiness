@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -75,13 +74,9 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
   };
 
   const statusOptions = [
-    { value: "received", label: "Reçue" },
-    { value: "confirmed", label: "Confirmée" },
-    { value: "scheduled", label: "Programmée" },
-    { value: "approved", label: "Approuvée" },
-    { value: "completed", label: "Complétée" },
-    { value: "paid", label: "Payée" },
-    { value: "rejected", label: "Rejetée" }
+    { value: "pending", label: "En attente" },
+    { value: "paid", label: "Payé" },
+    { value: "rejected", label: "Rejeté" }
   ];
 
   return (

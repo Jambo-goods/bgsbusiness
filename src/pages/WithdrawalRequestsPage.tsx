@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -46,7 +45,6 @@ export default function WithdrawalRequestsPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [userData, setUserData] = useState<Record<string, UserData>>({});
   
-  // États pour l'édition
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WithdrawalRequest | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editStatus, setEditStatus] = useState<string>("");
@@ -56,7 +54,6 @@ export default function WithdrawalRequestsPage() {
   useEffect(() => {
     fetchWithdrawalRequests();
 
-    // Set up real-time listener for the withdrawal_requests table
     const withdrawalChannel = supabase
       .channel("withdrawal_requests_changes")
       .on("postgres_changes", {
@@ -87,7 +84,6 @@ export default function WithdrawalRequestsPage() {
       const withdrawalData = data || [];
       setWithdrawalRequests(withdrawalData as WithdrawalRequest[]);
 
-      // Fetch user data for all requests
       const userIds = Array.from(new Set(withdrawalData.map(w => w.user_id)));
       if (userIds.length > 0) {
         const { data: users, error: userError } = await supabase
@@ -177,13 +173,8 @@ export default function WithdrawalRequestsPage() {
 
   const statusOptions = [
     { value: "pending", label: "En attente" },
-    { value: "received", label: "Reçue" },
-    { value: "confirmed", label: "Confirmée" },
-    { value: "scheduled", label: "Programmée" },
-    { value: "approved", label: "Approuvée" },
-    { value: "completed", label: "Complétée" },
-    { value: "paid", label: "Payée" },
-    { value: "rejected", label: "Rejetée" }
+    { value: "paid", label: "Payé" },
+    { value: "rejected", label: "Rejeté" }
   ];
 
   return (
@@ -306,7 +297,6 @@ export default function WithdrawalRequestsPage() {
         </div>
       </div>
 
-      {/* Modal d'édition */}
       <Dialog open={isEditModalOpen} onOpenChange={open => !open && closeEditModal()}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
