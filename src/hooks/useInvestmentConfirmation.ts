@@ -76,6 +76,19 @@ export const useInvestmentConfirmation = (projectId: string, userId: string) => 
           return;
         }
 
+        // Update the user's wallet balance directly
+        const { error: walletError2 } = await supabase.rpc('increment_wallet_balance', {
+          user_id: userId,
+          increment_amount: amount
+        });
+
+        if (walletError2) {
+          console.error("Erreur lors de la mise à jour du solde:", walletError2);
+          setError("Erreur lors de la mise à jour du solde.");
+          toast.error("Erreur lors de la mise à jour du solde.");
+          return;
+        }
+
         // Update the investment status to 'active'
         const { error: investmentError } = await supabase
           .from('investments')
@@ -102,6 +115,17 @@ export const useInvestmentConfirmation = (projectId: string, userId: string) => 
         setError("Erreur lors de la confirmation du virement.");
         toast.error("Erreur lors de la confirmation du virement.");
         return;
+      }
+
+      // Directly update the user's wallet balance
+      const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
+        user_id: userId,
+        increment_amount: amount
+      });
+
+      if (balanceError) {
+        console.error("Erreur lors de la mise à jour du solde:", balanceError);
+        // We continue anyway as the transfer was marked as received, which should trigger balance update
       }
 
       // Update the investment status to 'active'
