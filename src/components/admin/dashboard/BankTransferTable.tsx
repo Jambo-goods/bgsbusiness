@@ -29,13 +29,14 @@ export default function BankTransferTable({
       setTimeout(() => {
         refreshData();
         setIsRefreshing(false);
-      }, 1000); // Slightly reduced delay for better UX
+      }, 800);
     }
   }, [refreshData, isRefreshing]);
 
-  // Subscribe to real-time updates on bank_transfers table
+  // Subscribe to real-time updates on both tables
   useEffect(() => {
-    const subscription = supabase
+    // Subscribe to bank_transfers table
+    const bankTransfersSubscription = supabase
       .channel('bank_transfers_updates')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'bank_transfers' }, 
@@ -44,19 +45,41 @@ export default function BankTransferTable({
           
           if (!isRefreshing && refreshData) {
             setIsRefreshing(true);
-            toast.info("Mise à jour détectée, actualisation en cours...");
+            toast.info("Mise à jour détectée sur bank_transfers, actualisation en cours...");
             
             setTimeout(() => {
               refreshData();
               setIsRefreshing(false);
-            }, 1000);
+            }, 800);
+          }
+        }
+      )
+      .subscribe();
+      
+    // Subscribe to wallet_transactions table
+    const walletTransactionsSubscription = supabase
+      .channel('wallet_transactions_updates')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'wallet_transactions' }, 
+        (payload) => {
+          console.log('Changement détecté sur wallet_transactions via subscription:', payload);
+          
+          if (!isRefreshing && refreshData) {
+            setIsRefreshing(true);
+            toast.info("Mise à jour détectée sur wallet_transactions, actualisation en cours...");
+            
+            setTimeout(() => {
+              refreshData();
+              setIsRefreshing(false);
+            }, 800);
           }
         }
       )
       .subscribe();
       
     return () => {
-      supabase.removeChannel(subscription);
+      supabase.removeChannel(bankTransfersSubscription);
+      supabase.removeChannel(walletTransactionsSubscription);
     };
   }, [refreshData, isRefreshing]);
 
@@ -66,12 +89,11 @@ export default function BankTransferTable({
       if (refreshData && !isRefreshing) {
         setIsRefreshing(true);
         refreshData();
-        // Set timeout to ensure we set isRefreshing back to false
         setTimeout(() => {
           setIsRefreshing(false);
-        }, 1000);
+        }, 800);
       }
-    }, 15000); // Slightly longer interval to reduce load
+    }, 10000);
     
     return () => clearInterval(intervalId);
   }, [refreshData, isRefreshing]);

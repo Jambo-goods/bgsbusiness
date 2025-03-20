@@ -21,14 +21,14 @@ export const useInvestmentConfirmation = (projectId: string, userId: string) => 
         return;
       }
 
-      // Fetch the bank transfer details
+      // First try to find the bank transfer in the bank_transfers table
       const { data: transfer, error: transferError } = await supabase
         .from('bank_transfers')
         .select('*')
         .eq('user_id', userId)
         .eq('amount', amount)
         .eq('status', 'pending')
-        .maybeSingle(); // Changed from single() to maybeSingle() to handle non-existent records
+        .maybeSingle();
 
       if (transferError) {
         console.error("Erreur lors de la récupération du virement bancaire:", transferError);
@@ -37,13 +37,65 @@ export const useInvestmentConfirmation = (projectId: string, userId: string) => 
         return;
       }
 
+      // If not found in bank_transfers, check wallet_transactions
       if (!transfer) {
-        setError("Aucun virement bancaire en attente trouvé avec ce montant.");
-        toast.error("Aucun virement bancaire en attente trouvé avec ce montant.");
+        const { data: walletTransfer, error: walletError } = await supabase
+          .from('wallet_transactions')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('amount', amount)
+          .eq('status', 'pending')
+          .maybeSingle();
+
+        if (walletError) {
+          console.error("Erreur lors de la récupération de la transaction:", walletError);
+          setError("Erreur lors de la vérification de la transaction.");
+          toast.error("Erreur lors de la vérification de la transaction.");
+          return;
+        }
+
+        if (!walletTransfer) {
+          setError("Aucun virement bancaire en attente trouvé avec ce montant.");
+          toast.error("Aucun virement bancaire en attente trouvé avec ce montant.");
+          return;
+        }
+
+        // Update the wallet transaction
+        const { error: updateError } = await supabase
+          .from('wallet_transactions')
+          .update({ 
+            status: 'completed',
+            receipt_confirmed: true
+          })
+          .eq('id', walletTransfer.id);
+
+        if (updateError) {
+          console.error("Erreur lors de la mise à jour de la transaction:", updateError);
+          setError("Erreur lors de la confirmation de la transaction.");
+          toast.error("Erreur lors de la confirmation de la transaction.");
+          return;
+        }
+
+        // Update the investment status to 'active'
+        const { error: investmentError } = await supabase
+          .from('investments')
+          .update({ status: 'active' })
+          .eq('project_id', projectId)
+          .eq('user_id', userId);
+
+        if (investmentError) {
+          console.error("Erreur lors de la mise à jour de l'investissement:", investmentError);
+          setError("Erreur lors de l'activation de l'investissement.");
+          toast.error("Erreur lors de l'activation de l'investissement.");
+          return;
+        }
+
+        setIsSuccess(true);
+        toast.success("Investissement confirmé avec succès!");
         return;
       }
 
-      // Update the bank transfer status to 'received'
+      // If we found a bank_transfer, update it using the bankTransferService
       const result = await bankTransferService.updateBankTransfer(transfer.id, 'received');
 
       if (!result.success) {

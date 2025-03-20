@@ -55,12 +55,58 @@ serve(async (req: Request) => {
 
     console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}`);
 
-    // Check if transfer exists before attempting update
+    // First try to find the transfer in bank_transfers
     const { data: existingTransfer, error: checkError } = await supabase
       .from('bank_transfers')
       .select('id, user_id')
       .eq('id', transferId)
-      .maybeSingle();  // Use maybeSingle instead of single to handle when no rows are found
+      .maybeSingle();
+      
+    // If not found in bank_transfers, check wallet_transactions
+    if (!existingTransfer && !checkError) {
+      const { data: walletTransfer, error: walletError } = await supabase
+        .from('wallet_transactions')
+        .select('id, user_id')
+        .eq('id', transferId)
+        .maybeSingle();
+        
+      if (walletTransfer) {
+        console.log("Transfer found in wallet_transactions:", walletTransfer);
+        
+        // Update the wallet transaction
+        const { data, error } = await supabase
+          .from('wallet_transactions')
+          .update({
+            status: status === 'received' ? 'completed' : status,
+            receipt_confirmed: status === 'received',
+          })
+          .eq('id', transferId)
+          .select();
+          
+        if (error) {
+          console.error("Error updating wallet transaction:", error.message);
+          return new Response(
+            JSON.stringify({ success: false, error: error.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Update user wallet balance if needed
+        if (status === 'received' && walletTransfer.user_id) {
+          await updateUserWalletBalance(supabase, walletTransfer.user_id, transferId);
+          
+          // Send notification if requested
+          if (sendNotification) {
+            await sendUserNotification(supabase, walletTransfer.user_id, { amount: 0 });
+          }
+        }
+        
+        return new Response(
+          JSON.stringify({ success: true, data }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
       
     if (checkError) {
       console.error("Error checking transfer:", checkError?.message);
