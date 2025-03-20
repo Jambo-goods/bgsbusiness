@@ -28,6 +28,26 @@ export const getStatusPriority = (status: string): number => {
 };
 
 /**
+ * Extract the base reference from various formats
+ * For example: "virementbancaireconfirmrfdep-123456" -> "dep-123456"
+ */
+export const extractBaseReference = (reference: string): string => {
+  // Handle the case where reference might be undefined
+  if (!reference) return '';
+  
+  // Normalize first
+  const normalized = normalizeReference(reference);
+  
+  // Check if it contains "dep-" pattern
+  const depMatch = normalized.match(/dep-\d+/);
+  if (depMatch) {
+    return depMatch[0]; // Return just the dep-XXXXXX part
+  }
+  
+  return normalized;
+};
+
+/**
  * Deduplicate bank transfers by reference, keeping the one with highest priority status
  * or most recent date if status priorities are the same
  */
@@ -38,30 +58,30 @@ export const deduplicateTransfers = (transfers: BankTransferItem[]): BankTransfe
   
   console.log("Starting deduplication of", transfers.length, "transfers");
   
-  // Step 1: Create a standardized reference map
+  // Step 1: Create a base reference map (extracting the core reference value)
   const referenceMap = new Map<string, BankTransferItem[]>();
   
-  // Group transfers by normalized reference
+  // Group transfers by base reference
   transfers.forEach(transfer => {
-    // Standardize reference format
-    const normalizedRef = normalizeReference(transfer.reference || '');
+    // Extract the base reference
+    const baseRef = extractBaseReference(transfer.reference || '');
       
-    // If this reference already exists in the map, add this transfer to the array
-    if (referenceMap.has(normalizedRef)) {
-      referenceMap.get(normalizedRef)!.push(transfer);
+    // If this base reference already exists in the map, add this transfer to the array
+    if (referenceMap.has(baseRef)) {
+      referenceMap.get(baseRef)!.push(transfer);
     } else {
       // Otherwise, create a new array with this transfer
-      referenceMap.set(normalizedRef, [transfer]);
+      referenceMap.set(baseRef, [transfer]);
     }
   });
   
-  console.log("Grouped transfers by normalized reference:", referenceMap.size, "unique references");
+  console.log("Grouped transfers by base reference:", referenceMap.size, "unique references");
   
   // Step 2: For each reference, select the best transfer based on status and date
   const dedupedTransfers: BankTransferItem[] = [];
   
-  referenceMap.forEach((transfers, normalizedRef) => {
-    console.log(`Reference ${normalizedRef}: ${transfers.length} entries`);
+  referenceMap.forEach((transfers, baseRef) => {
+    console.log(`Base reference ${baseRef}: ${transfers.length} entries`);
     
     if (transfers.length === 1) {
       // If only one transfer for this reference, add it directly
@@ -88,7 +108,7 @@ export const deduplicateTransfers = (transfers: BankTransferItem[]): BankTransfe
     // The first transfer is now the one with highest priority and most recent date
     dedupedTransfers.push(sortedTransfers[0]);
     
-    console.log(`Kept transfer for ${normalizedRef}: ID=${sortedTransfers[0].id}, Status=${sortedTransfers[0].status}`);
+    console.log(`Kept transfer for ${baseRef}: ID=${sortedTransfers[0].id}, Status=${sortedTransfers[0].status}`);
     if (transfers.length > 1) {
       console.log(`  Discarded ${transfers.length - 1} duplicate(s) with lower priority/older date`);
     }
