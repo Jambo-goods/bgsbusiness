@@ -5,10 +5,62 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { RefreshCw } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function WalletCard() {
-  const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
+  const { walletBalance, isLoadingBalance, refreshBalance, error } = useWalletBalance();
   const navigate = useNavigate();
+  
+  useEffect(() => {
+    // Set up real-time subscription for wallet transactions and profile updates
+    const { data: { session } } = supabase.auth.getSession();
+    if (!session) return;
+    
+    const walletTransactionsChannel = supabase
+      .channel('wallet_transactions_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${session.user.id}` }, 
+        (payload) => {
+          console.log('Wallet transaction change detected:', payload);
+          refreshBalance();
+          
+          // Show toast notification based on transaction type
+          if (payload.eventType === 'INSERT') {
+            const newTransaction = payload.new;
+            if (newTransaction.type === 'deposit' && newTransaction.status === 'completed') {
+              toast.success(`Dépôt de ${newTransaction.amount}€ crédité sur votre compte`);
+            }
+          }
+        }
+      )
+      .subscribe();
+      
+    const profilesChannel = supabase
+      .channel('profiles_balance_changes')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${session.user.id}` }, 
+        (payload) => {
+          console.log('Profile change detected:', payload);
+          refreshBalance();
+          
+          // Check if wallet_balance changed
+          if (payload.old.wallet_balance !== payload.new.wallet_balance) {
+            const difference = payload.new.wallet_balance - payload.old.wallet_balance;
+            if (difference > 0) {
+              toast.success(`Votre solde a été augmenté de ${difference}€`);
+            }
+          }
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(walletTransactionsChannel);
+      supabase.removeChannel(profilesChannel);
+    };
+  }, [refreshBalance]);
   
   const handleDepositClick = () => {
     navigate("/dashboard/wallet", { state: { activeTab: "deposit" } });
@@ -46,6 +98,9 @@ export function WalletCard() {
             <div className="text-3xl font-bold text-bgs-blue">{walletBalance.toLocaleString('fr-FR')} €</div>
             <p className="text-muted-foreground mt-2">Solde disponible</p>
           </div>
+        )}
+        {error && (
+          <p className="text-red-500 text-sm mt-2 text-center">{error}</p>
         )}
       </CardContent>
       <CardFooter className="flex justify-between gap-2">

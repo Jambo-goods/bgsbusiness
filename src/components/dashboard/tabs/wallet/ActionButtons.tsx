@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CreditCard, ArrowDownToLine, ArrowUpFromLine, RotateCw } from 'lucide-react';
@@ -5,11 +6,13 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/notifications';
 import { supabase } from '@/integrations/supabase/client';
+
 interface ActionButtonsProps {
   onDeposit: () => void;
   onWithdraw: () => void;
   refreshBalance?: () => Promise<void>;
 }
+
 export default function ActionButtons({
   onDeposit,
   onWithdraw,
@@ -60,6 +63,7 @@ export default function ActionButtons({
       toast.error("Une erreur s'est produite lors du dépôt des fonds");
     }
   };
+  
   const handleWithdraw = async () => {
     try {
       const {
@@ -117,6 +121,7 @@ export default function ActionButtons({
       toast.error("Une erreur s'est produite lors du retrait des fonds");
     }
   };
+  
   const handleRefresh = async () => {
     if (refreshBalance) {
       try {
@@ -128,5 +133,28 @@ export default function ActionButtons({
       }
     }
   };
-  return;
+  
+  return (
+    <div className="flex items-center gap-2 mt-4">
+      <Button onClick={handleDeposit} className="flex items-center gap-2 bg-bgs-blue hover:bg-bgs-blue-dark">
+        <ArrowDownToLine className="w-4 h-4" />
+        Déposer
+      </Button>
+      
+      <Button onClick={handleWithdraw} variant="outline" className="flex items-center gap-2">
+        <ArrowUpFromLine className="w-4 h-4" />
+        Retirer
+      </Button>
+      
+      <Button
+        onClick={handleRefresh}
+        variant="ghost"
+        size="icon"
+        className="ml-auto"
+        title="Actualiser le solde"
+      >
+        <RotateCw className="w-4 h-4" />
+      </Button>
+    </div>
+  );
 }

@@ -6,6 +6,18 @@ export function useWalletBalance() {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Get the current user's ID when the hook loads
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session?.session?.user?.id) {
+        setUserId(session.session.user.id);
+      }
+    };
+    getUser();
+  }, []);
 
   const fetchWalletBalance = useCallback(async (showLoading = true) => {
     try {
@@ -47,7 +59,42 @@ export function useWalletBalance() {
   useEffect(() => {
     fetchWalletBalance();
     
-    // Set up polling to check balance every minute
+    // Set up realtime subscription for profile changes to reflect wallet balance updates
+    if (userId) {
+      const subscription = supabase
+        .channel('profile_wallet_changes')
+        .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
+          payload => {
+            console.log("Profile updated:", payload);
+            if (payload.new && payload.new.wallet_balance !== undefined) {
+              setWalletBalance(payload.new.wallet_balance);
+            }
+          }
+        )
+        .subscribe();
+        
+      // Also listen for wallet transactions which might indirectly affect balance
+      const txSubscription = supabase
+        .channel('wallet_tx_changes')
+        .on('postgres_changes', 
+          { event: 'INSERT', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
+          () => {
+            // Refetch balance when new transactions occur
+            fetchWalletBalance(false);
+          }
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(subscription);
+        supabase.removeChannel(txSubscription);
+      };
+    }
+  }, [userId, fetchWalletBalance]);
+  
+  // Set up polling to check balance every minute as a fallback
+  useEffect(() => {
     const pollingInterval = setInterval(() => {
       fetchWalletBalance(false); // Don't show loading state for automatic updates
     }, 60000);

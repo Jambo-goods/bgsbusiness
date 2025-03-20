@@ -62,7 +62,7 @@ serve(async (req: Request) => {
     // First try to find the transfer in bank_transfers
     const { data: existingTransfer, error: checkError } = await supabase
       .from('bank_transfers')
-      .select('id, user_id, amount')
+      .select('id, user_id, amount, reference')
       .eq('id', transferId)
       .maybeSingle();
       
@@ -70,7 +70,7 @@ serve(async (req: Request) => {
     if (!existingTransfer && !checkError) {
       const { data: walletTransfer, error: walletError } = await supabase
         .from('wallet_transactions')
-        .select('id, user_id, amount')
+        .select('id, user_id, amount, description')
         .eq('id', transferId)
         .maybeSingle();
         
@@ -98,7 +98,10 @@ serve(async (req: Request) => {
           
           // Send notification if requested
           if (sendNotification) {
-            await sendUserNotification(supabase, walletTransfer.user_id, { amount: walletTransfer.amount });
+            await sendUserNotification(supabase, walletTransfer.user_id, { 
+              amount: walletTransfer.amount,
+              reference: walletTransfer.description
+            });
           }
         }
         
@@ -120,17 +123,6 @@ serve(async (req: Request) => {
         success: false, 
         error: "Transfer not found" 
       }, 404);
-    }
-
-    // Get transfer details to include in notification
-    const { data: transfer, error: transferError } = await supabase
-      .from('bank_transfers')
-      .select('amount, reference')
-      .eq('id', transferId)
-      .maybeSingle();
-      
-    if (transferError) {
-      console.error("Error fetching transfer details:", transferError.message);
     }
 
     // Try using the updated RPC function with correct parameter naming
@@ -166,14 +158,14 @@ serve(async (req: Request) => {
       
       // Update user wallet balance if needed and should credit wallet
       const userIdToUpdate = userId || existingTransfer.user_id;
-      const transferAmount = transfer?.amount || existingTransfer.amount || 0;
+      const transferAmount = existingTransfer.amount || 0;
       
       if (userIdToUpdate && (status === 'received' || status === 'reçu') && creditWallet) {
         await updateUserWalletBalance(supabase, userIdToUpdate, transferAmount);
         
         // Send notification if requested and status is received
         if (sendNotification) {
-          await sendUserNotification(supabase, userIdToUpdate, transfer || { amount: transferAmount });
+          await sendUserNotification(supabase, userIdToUpdate, existingTransfer);
         }
       }
       
@@ -184,14 +176,14 @@ serve(async (req: Request) => {
     
     // Check if we need to update the user's wallet balance
     const userIdToUpdate = userId || existingTransfer.user_id;
-    const transferAmount = transfer?.amount || existingTransfer.amount || 0;
+    const transferAmount = existingTransfer.amount || 0;
     
     if (userIdToUpdate && (status === 'received' || status === 'reçu') && creditWallet) {
-      await updateUserWalletBalance(supabase, userIdToUpdate, transferId, transferAmount);
+      await updateUserWalletBalance(supabase, userIdToUpdate, transferAmount);
       
       // Send notification if requested and status is received
       if (sendNotification) {
-        await sendUserNotification(supabase, userIdToUpdate, transfer || { amount: transferAmount });
+        await sendUserNotification(supabase, userIdToUpdate, existingTransfer);
       }
     }
     
