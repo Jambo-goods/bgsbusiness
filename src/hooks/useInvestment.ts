@@ -169,7 +169,29 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         throw transactionError;
       }
       
-      // 4. Update user's profile statistics
+      // 4. Create a notification for the investment
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          title: "Investissement confirmé",
+          message: `Votre investissement de ${investmentAmount}€ dans ${project.name} a été confirmé.`,
+          type: 'investment',
+          seen: false,
+          data: { 
+            category: 'success',
+            amount: investmentAmount,
+            projectName: project.name,
+            projectId: project.id
+          }
+        });
+        
+      if (notificationError) {
+        console.error("Error creating notification:", notificationError);
+        throw notificationError;
+      }
+      
+      // 5. Update user's profile statistics
       const { error: profileError } = await supabase.rpc(
         'update_user_profile_investment',
         {
@@ -183,7 +205,7 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         throw profileError;
       }
       
-      // 5. Store investment in local storage to immediately display it
+      // 6. Store investment in local storage to immediately display it
       // (as a backup in case realtime subscriptions are slow)
       const recentInvestment = {
         projectId: project.id,

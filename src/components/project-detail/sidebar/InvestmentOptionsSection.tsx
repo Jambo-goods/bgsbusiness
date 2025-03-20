@@ -1,14 +1,11 @@
 
-import React from "react";
-import { ArrowRight } from "lucide-react";
+import React, { useState } from "react";
 import { Project } from "@/types/project";
-import { useInvestment } from "@/hooks/useInvestment";
-
-// Import our components
-import InvestmentAmountSection from "./InvestmentAmountSection";
-import DurationSection from "./DurationSection";
-import InvestmentSummary from "./InvestmentSummary";
 import InvestmentConfirmation from "./InvestmentConfirmation";
+import DurationSection from "./DurationSection";
+import InvestmentAmountSection from "./InvestmentAmountSection";
+import InvestmentSummary from "./InvestmentSummary";
+import { useInvestment } from "@/hooks/useInvestment";
 
 interface InvestmentOptionsSectionProps {
   project: Project;
@@ -37,45 +34,32 @@ export default function InvestmentOptionsSection({
   } = useInvestment(project, investorCount);
 
   return (
-    <div className="bg-white p-5 rounded-xl shadow-md border border-gray-100 transform transition-all duration-300 hover:shadow-lg">
-      <h3 className="text-xl font-semibold text-bgs-blue mb-5 flex items-center">
-        <span className="bg-bgs-orange/10 text-bgs-orange p-1.5 rounded-lg mr-2">
-          <ArrowRight size={16} />
-        </span>
-        Investir maintenant
-      </h3>
+    <div className="bg-white border border-bgs-gray-light rounded-lg p-4 mb-4">
+      <h3 className="font-medium text-bgs-blue mb-4">Options d'investissement</h3>
       
       {!showConfirmation ? (
         <>
-          <div className="mb-6 space-y-4">
-            <InvestmentAmountSection 
-              investmentAmount={investmentAmount}
-              setInvestmentAmount={setInvestmentAmount}
-              minInvestment={minInvestment}
-              maxInvestment={maxInvestment}
-            />
-            
-            <DurationSection
-              selectedDuration={selectedDuration}
-              setSelectedDuration={setSelectedDuration}
-              durations={durations}
-            />
-            
-            <InvestmentSummary 
-              project={project} 
-              selectedDuration={selectedDuration}
-              monthlyReturn={monthlyReturn}
-              totalReturn={totalReturn}
-            />
-          </div>
+          <DurationSection 
+            durations={durations}
+            selectedDuration={selectedDuration}
+            onChange={setSelectedDuration}
+          />
           
-          <button 
-            onClick={handleInvest} 
-            className="w-full btn-primary flex items-center justify-center gap-2 transform transition-all duration-300 hover:scale-[1.02]"
-          >
-            Investir maintenant
-            <ArrowRight size={18} />
-          </button>
+          <InvestmentAmountSection 
+            minInvestment={minInvestment}
+            maxInvestment={maxInvestment}
+            investmentAmount={investmentAmount}
+            onChange={setInvestmentAmount}
+          />
+          
+          <InvestmentSummary 
+            project={project}
+            investmentAmount={investmentAmount}
+            duration={selectedDuration}
+            onInvest={handleInvest}
+            monthlyReturn={monthlyReturn}
+            totalReturn={totalReturn}
+          />
         </>
       ) : (
         <InvestmentConfirmation
