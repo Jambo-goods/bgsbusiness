@@ -1,9 +1,11 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CreditCard, ArrowDownToLine, ArrowUpFromLine, RotateCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/notifications';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ActionButtonsProps {
   onDeposit: () => void;
