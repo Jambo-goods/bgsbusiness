@@ -556,6 +556,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      decrement_wallet_balance: {
+        Args: {
+          user_id: string
+          decrement_amount: number
+        }
+        Returns: number
+      }
       increment_wallet_balance: {
         Args: {
           user_id: string

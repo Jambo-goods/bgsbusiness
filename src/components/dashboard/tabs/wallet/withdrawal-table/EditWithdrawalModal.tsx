@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,7 @@ interface WithdrawalRequest {
     accountName: string;
     bankName: string;
     accountNumber: string;
+    user_id?: string;
   } | Record<string, any>;
 }
 
@@ -71,34 +71,8 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
       
       // Handle wallet balance updates and notifications based on status changes
       if (status === 'paid' && previousStatus !== 'paid') {
-        // Update user's wallet balance by deducting the withdrawal amount
-        const { error: balanceError } = await supabase
-          .from('profiles')
-          .update({ wallet_balance: supabase.rpc('decrement_wallet_balance', { 
-            user_id: userId,
-            decrement_amount: withdrawal.amount 
-          })})
-          .eq('id', userId);
-          
-        if (balanceError) {
-          console.error("Error updating wallet balance:", balanceError);
-          
-          // Fallback direct update if RPC fails
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('wallet_balance')
-            .eq('id', userId)
-            .single();
-            
-          if (!profileError && profileData) {
-            const newBalance = Math.max(0, (profileData.wallet_balance || 0) - withdrawal.amount);
-            
-            await supabase
-              .from('profiles')
-              .update({ wallet_balance: newBalance })
-              .eq('id', userId);
-          }
-        }
+        // Note: The balance update will be handled by database trigger automatically
+        // We still need to create a transaction entry and send notification
         
         // Notify user that withdrawal has been paid
         await notificationService.withdrawalPaid(withdrawal.amount);
@@ -112,16 +86,13 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
           status: 'completed'
         });
       } else if (status === 'rejected' && previousStatus !== 'rejected') {
-        // If rejecting a pending withdrawal, we should refund the amount to the user's wallet
+        // If rejecting a pending withdrawal, refund amount to the user's wallet
         if (previousStatus === 'pending') {
           // Increment the user's wallet balance with the withdrawal amount
-          const { error: balanceError } = await supabase
-            .from('profiles')
-            .update({ wallet_balance: supabase.rpc('increment_wallet_balance', { 
-              user_id: userId,
-              increment_amount: withdrawal.amount 
-            })})
-            .eq('id', userId);
+          const { error: balanceError } = await supabase.rpc('increment_wallet_balance', { 
+            user_id: userId,
+            increment_amount: withdrawal.amount 
+          });
             
           if (balanceError) {
             console.error("Error updating wallet balance:", balanceError);
