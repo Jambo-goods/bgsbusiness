@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BankTransferTableProps, BankTransferItem } from "./types/bankTransfer";
@@ -122,8 +121,21 @@ export default function BankTransferTable({
     );
   }
 
+  // Remove duplicates by creating a Map using ID as key
+  const uniqueTransfersMap = new Map();
+  pendingTransfers.forEach(transfer => {
+    // Only keep the most recent entry for each unique ID
+    if (!uniqueTransfersMap.has(transfer.id) || 
+        new Date(transfer.created_at) > new Date(uniqueTransfersMap.get(transfer.id).created_at)) {
+      uniqueTransfersMap.set(transfer.id, transfer);
+    }
+  });
+
+  // Convert Map back to array and sort
+  const uniqueTransfers = Array.from(uniqueTransfersMap.values());
+  
   // Sort transfers by date, most recent first
-  const sortedTransfers = [...pendingTransfers].sort((a, b) => {
+  const sortedTransfers = uniqueTransfers.sort((a, b) => {
     const dateA = new Date(a.created_at || 0);
     const dateB = new Date(b.created_at || 0);
     return dateB.getTime() - dateA.getTime();
