@@ -103,6 +103,14 @@ export default function HistoryItem({ item }: HistoryItemProps) {
     return null;
   };
 
+  // Determine status display for notifications based on title
+  const getStatusFromTitle = (title: string): string => {
+    if (title.toLowerCase().includes('payé')) return 'completed';
+    if (title.toLowerCase().includes('rejeté')) return 'rejected';
+    if (title.toLowerCase().includes('validé')) return 'processing';
+    return 'pending';
+  };
+
   if (item.itemType === 'transaction') {
     const title = item.type === 'deposit' 
       ? reference 
@@ -148,6 +156,7 @@ export default function HistoryItem({ item }: HistoryItemProps) {
     // It's a notification
     // Améliorer l'affichage des notifications pour les virements bancaires
     let title = item.title;
+    let status = item.type === 'withdrawal' ? getStatusFromTitle(item.title) : 'pending';
     
     if (item.type === 'deposit' && reference) {
       title = `Virement bancaire confirmé (réf: ${reference})`;
@@ -227,11 +236,11 @@ export default function HistoryItem({ item }: HistoryItemProps) {
               <p className="text-xs text-gray-500 mt-1">{formattedDate}</p>
             </div>
           </div>
-          {/* Afficher le montant avec des classes appropriées */}
-          <div className="text-right">
+          <div className="flex flex-col items-end gap-1">
             <span className={`font-semibold ${item.type === 'deposit' ? 'text-green-600' : 'text-red-600'}`}>
               {item.type === 'deposit' ? '+' : '-'}{amount} €
             </span>
+            {item.type === 'withdrawal' && <StatusBadge status={status} />}
           </div>
         </div>
       </div>

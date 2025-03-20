@@ -39,12 +39,25 @@ export default function HistoryList({ items }: HistoryListProps) {
     if (item.type === 'withdrawal') {
       // Extract withdrawalId first (highest priority identifier)
       let withdrawalId = '';
+      let amount = 0;
       
       if (item.itemType === 'transaction' && item.description) {
         const idMatch = item.description.match(/#([a-f0-9-]+)/i);
         withdrawalId = idMatch ? idMatch[1] : '';
+        amount = item.amount;
       } else if (item.itemType === 'notification' && item.metadata?.withdrawalId) {
         withdrawalId = item.metadata.withdrawalId;
+        amount = item.metadata?.amount || 0;
+      } else if (item.itemType === 'notification') {
+        amount = item.metadata?.amount || 0;
+      }
+      
+      // Try to extract amount from description if not found elsewhere
+      if (amount === 0 && item.description) {
+        const amountMatch = item.description.match(/(\d+)€/);
+        if (amountMatch) {
+          amount = parseInt(amountMatch[1], 10);
+        }
       }
       
       // If we have a withdrawal ID, use it as the key
@@ -54,31 +67,27 @@ export default function HistoryList({ items }: HistoryListProps) {
           withdrawalMapping[key] = [];
         }
         withdrawalMapping[key].push(item);
-      } else {
-        // Otherwise, group by amount and date
-        let amount = 0;
+      } 
+      // Otherwise, group by amount and date
+      else if (amount > 0) {
+        const dateStr = new Date(item.created_at).toISOString().split('T')[0];
+        const key = `withdrawal-${amount}-${dateStr}`;
         
-        if (item.itemType === 'transaction') {
-          amount = item.amount;
-        } else if (item.itemType === 'notification') {
-          amount = item.metadata?.amount || 0;
+        if (!withdrawalMapping[key]) {
+          withdrawalMapping[key] = [];
         }
-        
-        if (amount > 0) {
-          const dateStr = new Date(item.created_at).toISOString().split('T')[0];
-          const key = `withdrawal-${amount}-${dateStr}`;
-          
-          if (!withdrawalMapping[key]) {
-            withdrawalMapping[key] = [];
-          }
-          withdrawalMapping[key].push(item);
-        }
+        withdrawalMapping[key].push(item);
       }
     }
   });
   
   // Filter items to avoid duplicates with improved priority logic
   const filteredItems = items.filter(item => {
+    // Skip non-withdrawal/deposit items
+    if (item.type !== 'withdrawal' && item.type !== 'deposit') {
+      return true;
+    }
+    
     // Withdrawal handling
     if (item.type === 'withdrawal') {
       // Extract withdrawalId (highest priority identifier)
@@ -92,6 +101,14 @@ export default function HistoryList({ items }: HistoryListProps) {
       } else if (item.itemType === 'notification') {
         withdrawalId = item.metadata?.withdrawalId || '';
         amount = item.metadata?.amount || 0;
+      }
+      
+      // Try to extract amount from description if not found elsewhere
+      if (amount === 0 && item.description) {
+        const amountMatch = item.description.match(/(\d+)€/);
+        if (amountMatch) {
+          amount = parseInt(amountMatch[1], 10);
+        }
       }
       
       // Determine the group key
@@ -108,15 +125,36 @@ export default function HistoryList({ items }: HistoryListProps) {
       const group = withdrawalMapping[key];
       if (!group || group.length <= 1) return true;
       
-      // Priority order for withdrawal notifications:
-      // 1. Keep "paid" notifications (highest priority)
-      // 2. Keep "rejected" notifications
-      // 3. Keep "validated" notifications (but only most recent if multiple)
-      // 4. Keep transaction records
-      // 5. Keep most recent notification for other statuses
+      // Priority order for withdrawal items:
+      // 1. Always keep "paid" or "completed" status (highest priority)
+      // 2. Don't show pending if a paid version exists for the same amount/ID
+      // 3. Don't show validation notifications if paid version exists
       
+      // Check if there's a paid item in the group
+      const hasPaidItem = group.some(g => {
+        if (g.itemType === 'transaction' && g.status === 'completed') return true;
+        if (g.itemType === 'notification' && g.title?.toLowerCase().includes('payé')) return true;
+        return false;
+      });
+      
+      // Check if the current item is paid
+      const isCurrentItemPaid = (
+        (item.itemType === 'transaction' && item.status === 'completed') || 
+        (item.itemType === 'notification' && item.title?.toLowerCase().includes('payé'))
+      );
+      
+      // If there's a paid item and current item is not paid, filter it out
+      if (hasPaidItem && !isCurrentItemPaid) {
+        return false;
+      }
+      
+      // If the current item is paid, keep it
+      if (isCurrentItemPaid) {
+        return true;
+      }
+      
+      // For remaining items (no paid items in group), use standard logic
       if (item.itemType === 'notification' && item.title) {
-        if (item.title.toLowerCase().includes('payé')) return true;
         if (item.title.toLowerCase().includes('rejeté')) return true;
         
         if (item.title.toLowerCase().includes('validé')) {
@@ -178,9 +216,14 @@ export default function HistoryList({ items }: HistoryListProps) {
     return item.id === sortedGroup[0].id;
   });
 
+  // Final sorting by date (most recent first)
+  const sortedItems = [...filteredItems].sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
   return (
     <div className="space-y-4">
-      {filteredItems.map((item) => (
+      {sortedItems.map((item) => (
         <HistoryItem key={item.id} item={item} />
       ))}
     </div>
