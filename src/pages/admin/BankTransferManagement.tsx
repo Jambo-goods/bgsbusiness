@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import BankTransferTable from "@/components/admin/dashboard/BankTransferTable";
 import { Helmet } from "react-helmet-async";
-import { RefreshCcw, AlertTriangle, Database, Shield } from "lucide-react";
+import { RefreshCcw, AlertTriangle, Database } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import BankTransferStats from "@/components/admin/dashboard/BankTransferStats";
 import BankTransferFilters from "@/components/admin/dashboard/BankTransferFilters";
@@ -146,16 +146,7 @@ export default function BankTransferManagement() {
           </Alert>
         )}
         
-        {/* Role alert */}
-        {authStatus === "authenticated" && userRole !== "admin" && (
-          <Alert>
-            <Shield className="h-4 w-4" />
-            <AlertTitle>Permissions limitées</AlertTitle>
-            <AlertDescription>
-              Vous êtes connecté avec un rôle limité ({userRole}). Certaines données peuvent ne pas être accessibles.
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Removed the Role alert that was here */}
         
         {/* No data alert */}
         {!isLoading && (!rawBankTransfers || rawBankTransfers.length === 0) && 
