@@ -54,6 +54,11 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
     setIsSubmitting(true);
     
     try {
+      // Store the previous status to check if we're changing from pending to paid/rejected
+      const previousStatus = withdrawal.status;
+      const userId = withdrawal.bank_info?.user_id || (await supabase.auth.getUser()).data.user?.id;
+      
+      // Update the withdrawal request status
       const { error } = await supabase
         .from('withdrawal_requests')
         .update({
@@ -64,26 +69,87 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
       
       if (error) throw error;
       
-      // Send notifications based on the status update
-      if (status === 'paid') {
+      // Handle wallet balance updates and notifications based on status changes
+      if (status === 'paid' && previousStatus !== 'paid') {
+        // Update user's wallet balance by deducting the withdrawal amount
+        const { error: balanceError } = await supabase
+          .from('profiles')
+          .update({ wallet_balance: supabase.rpc('decrement_wallet_balance', { 
+            user_id: userId,
+            decrement_amount: withdrawal.amount 
+          })})
+          .eq('id', userId);
+          
+        if (balanceError) {
+          console.error("Error updating wallet balance:", balanceError);
+          
+          // Fallback direct update if RPC fails
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('wallet_balance')
+            .eq('id', userId)
+            .single();
+            
+          if (!profileError && profileData) {
+            const newBalance = Math.max(0, (profileData.wallet_balance || 0) - withdrawal.amount);
+            
+            await supabase
+              .from('profiles')
+              .update({ wallet_balance: newBalance })
+              .eq('id', userId);
+          }
+        }
+        
         // Notify user that withdrawal has been paid
         await notificationService.withdrawalPaid(withdrawal.amount);
         
         // Create a transaction entry in the wallet_transactions table
         await supabase.from('wallet_transactions').insert({
-          user_id: withdrawal.bank_info?.user_id || (await supabase.auth.getUser()).data.user?.id,
+          user_id: userId,
           amount: withdrawal.amount,
           type: 'withdrawal',
           description: `Retrait de ${withdrawal.amount}€ payé`,
           status: 'completed'
         });
-      } else if (status === 'rejected') {
+      } else if (status === 'rejected' && previousStatus !== 'rejected') {
+        // If rejecting a pending withdrawal, we should refund the amount to the user's wallet
+        if (previousStatus === 'pending') {
+          // Increment the user's wallet balance with the withdrawal amount
+          const { error: balanceError } = await supabase
+            .from('profiles')
+            .update({ wallet_balance: supabase.rpc('increment_wallet_balance', { 
+              user_id: userId,
+              increment_amount: withdrawal.amount 
+            })})
+            .eq('id', userId);
+            
+          if (balanceError) {
+            console.error("Error updating wallet balance:", balanceError);
+            
+            // Fallback direct update if RPC fails
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('wallet_balance')
+              .eq('id', userId)
+              .single();
+              
+            if (!profileError && profileData) {
+              const newBalance = (profileData.wallet_balance || 0) + withdrawal.amount;
+              
+              await supabase
+                .from('profiles')
+                .update({ wallet_balance: newBalance })
+                .eq('id', userId);
+            }
+          }
+        }
+        
         // Notify user that withdrawal has been rejected
         await notificationService.withdrawalRejected(withdrawal.amount);
         
         // Create a transaction entry showing the rejection
         await supabase.from('wallet_transactions').insert({
-          user_id: withdrawal.bank_info?.user_id || (await supabase.auth.getUser()).data.user?.id,
+          user_id: userId,
           amount: withdrawal.amount,
           type: 'withdrawal',
           description: `Retrait de ${withdrawal.amount}€ rejeté`,
