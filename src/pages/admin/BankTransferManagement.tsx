@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import BankTransferTable from "@/components/admin/dashboard/BankTransferTable";
 import { Helmet } from "react-helmet-async";
@@ -27,14 +28,14 @@ export default function BankTransferManagement() {
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [databasePolicies, setDatabasePolicies] = useState<any[]>([]);
 
-  // Vérifier directement les deux tables au chargement du composant et périodiquement
+  // Check both tables on component load and periodically
   useEffect(() => {
     fetchAllTransfers();
     
-    // Configurer un timer pour vérifier périodiquement la base de données
+    // Set up a timer to periodically check the database
     const intervalId = setInterval(fetchAllTransfers, 30000);
     
-    // Nettoyer l'intervalle lors du démontage du composant
+    // Clean up the interval when the component unmounts
     return () => clearInterval(intervalId);
   }, []);
 
@@ -42,7 +43,7 @@ export default function BankTransferManagement() {
     try {
       setDebugInfo("Récupération des données de toutes les tables...");
       
-      // Vérifier le statut d'authentification
+      // Check authentication status
       const { data: authData, error: authError } = await supabase.auth.getSession();
       if (authError) {
         setDebugInfo(prev => prev + "\nErreur lors de la vérification de la session: " + authError.message);
@@ -55,7 +56,7 @@ export default function BankTransferManagement() {
           setDebugInfo(prev => prev + `\nEmail User: ${authData.session?.user.email}`);
           setDebugInfo(prev => prev + `\nRole User: ${authData.session?.user.app_metadata?.role || 'standard'}`);
           
-          // Tenter de récupérer les polices RLS (nécessite des privilèges admin)
+          // Try to retrieve RLS policies (requires admin privileges)
           try {
             // Using a different function that exists in the database
             const { data: policies, error: policiesError } = await supabase
@@ -73,10 +74,11 @@ export default function BankTransferManagement() {
         }
       }
       
-      // Vérifier la table bank_transfers
+      // Check the bank_transfers table
       const { data: bankTransfers, error: bankTransfersError } = await supabase
         .from("bank_transfers")
-        .select("*");
+        .select("*")
+        .order('confirmed_at', { ascending: false });
       
       if (bankTransfersError) {
         console.error("Erreur lors de la récupération des bank_transfers:", bankTransfersError);
@@ -89,7 +91,7 @@ export default function BankTransferManagement() {
         setDebugInfo(prev => prev + `\nTrouvé ${bankTransfers?.length || 0} enregistrements dans la table bank_transfers`);
       }
       
-      // Vérifier la table wallet_transactions
+      // Check the wallet_transactions table
       const { data: walletTransactions, error: walletError } = await supabase
         .from("wallet_transactions")
         .select("*")
@@ -132,7 +134,7 @@ export default function BankTransferManagement() {
           </button>
         </div>
         
-        {/* Alerte d'authentification */}
+        {/* Authentication alert */}
         {authStatus !== "authenticated" && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -144,7 +146,7 @@ export default function BankTransferManagement() {
           </Alert>
         )}
         
-        {/* Alerte de rôle */}
+        {/* Role alert */}
         {authStatus === "authenticated" && userRole !== "admin" && (
           <Alert>
             <Shield className="h-4 w-4" />
@@ -155,7 +157,7 @@ export default function BankTransferManagement() {
           </Alert>
         )}
         
-        {/* Alerte d'absence de données */}
+        {/* No data alert */}
         {!isLoading && (!rawBankTransfers || rawBankTransfers.length === 0) && 
          (!rawWalletTransactions || rawWalletTransactions.length === 0) && (
           <Alert>
@@ -176,14 +178,14 @@ export default function BankTransferManagement() {
         )}
 
         <BankTransferStats 
-          transfers={pendingTransfers} 
+          transfers={pendingTransfers || rawBankTransfers} 
           isLoading={isLoading} 
         />
         
         <BankTransferFilters 
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
-          totalCount={pendingTransfers?.length || 0}
+          totalCount={pendingTransfers?.length || rawBankTransfers?.length || 0}
           isLoading={isLoading}
         />
 
@@ -191,7 +193,7 @@ export default function BankTransferManagement() {
           <Card>
             <CardContent className="p-0">
               <BankTransferTable 
-                pendingTransfers={pendingTransfers || []}
+                pendingTransfers={pendingTransfers && pendingTransfers.length > 0 ? pendingTransfers : rawBankTransfers}
                 isLoading={isLoading}
                 refreshData={refetch}
               />
@@ -199,7 +201,7 @@ export default function BankTransferManagement() {
           </Card>
         </div>
         
-        {/* Panneau d'informations de débogage */}
+        {/* Debug info panel */}
         <div className="mt-8 p-4 bg-gray-50 rounded-md border border-gray-200">
           <h3 className="text-lg font-semibold mb-2">Informations de débogage détaillées</h3>
           
