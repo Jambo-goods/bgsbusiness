@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CreditCard, ArrowDownToLine, ArrowUpFromLine, RotateCw } from 'lucide-react';
@@ -6,13 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { notificationService } from '@/services/notifications';
 import { supabase } from '@/integrations/supabase/client';
-
 interface ActionButtonsProps {
   onDeposit: () => void;
   onWithdraw: () => void;
   refreshBalance?: () => Promise<void>;
 }
-
 export default function ActionButtons({
   onDeposit,
   onWithdraw,
@@ -50,21 +47,19 @@ export default function ActionButtons({
         increment_amount: depositAmount
       });
       if (walletError) throw walletError;
-      
+
       // Create notification for deposit success
       await notificationService.depositSuccess(depositAmount);
-      
+
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();
       onDeposit();
-      
       toast.success(`Dépôt de ${depositAmount}€ effectué avec succès`);
     } catch (error) {
       console.error("Erreur lors du dépôt:", error);
       toast.error("Une erreur s'est produite lors du dépôt des fonds");
     }
   };
-  
   const handleWithdraw = async () => {
     try {
       const {
@@ -109,21 +104,19 @@ export default function ActionButtons({
         increment_amount: -withdrawalAmount
       });
       if (walletError) throw walletError;
-      
+
       // Create notification for withdrawal
       await notificationService.withdrawalValidated(withdrawalAmount);
-      
+
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();
       onWithdraw();
-      
       toast.success(`Retrait de ${withdrawalAmount}€ effectué avec succès`);
     } catch (error) {
       console.error("Erreur lors du retrait:", error);
       toast.error("Une erreur s'est produite lors du retrait des fonds");
     }
   };
-
   const handleRefresh = async () => {
     if (refreshBalance) {
       try {
@@ -135,35 +128,5 @@ export default function ActionButtons({
       }
     }
   };
-
-  return (
-    <div className="flex space-x-3 my-4">
-      <Button 
-        onClick={handleDeposit} 
-        className="flex items-center space-x-2"
-        variant="outline"
-      >
-        <ArrowDownToLine className="h-4 w-4" />
-        <span>Déposer</span>
-      </Button>
-      
-      <Button 
-        onClick={handleWithdraw} 
-        className="flex items-center space-x-2"
-        variant="outline"
-      >
-        <ArrowUpFromLine className="h-4 w-4" />
-        <span>Retirer</span>
-      </Button>
-      
-      <Button 
-        onClick={handleRefresh} 
-        className="flex items-center space-x-2"
-        variant="ghost"
-      >
-        <RotateCw className="h-4 w-4" />
-        <span>Actualiser</span>
-      </Button>
-    </div>
-  );
+  return;
 }
