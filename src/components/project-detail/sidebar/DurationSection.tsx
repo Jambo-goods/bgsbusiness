@@ -1,66 +1,35 @@
 
 import React from "react";
-import { Slider } from "@/components/ui/slider";
-import { Input } from "@/components/ui/input";
 
 interface DurationSectionProps {
-  selectedDuration: number;
-  setSelectedDuration: (duration: number) => void;
   durations: number[];
+  selectedDuration: number;
+  onChange: (duration: number) => void;
 }
 
 export default function DurationSection({
+  durations,
   selectedDuration,
-  setSelectedDuration,
-  durations
+  onChange
 }: DurationSectionProps) {
-  const handleDurationChange = (values: number[]) => {
-    setSelectedDuration(values[0]);
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value.replace(/\D/g, ''));
-    if (!isNaN(value)) {
-      const minDuration = Math.min(...durations);
-      const maxDuration = Math.max(...durations);
-      setSelectedDuration(
-        Math.min(Math.max(value, minDuration), maxDuration)
-      );
-    }
-  };
-
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-bgs-blue">Durée d'investissement</label>
-      
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Input 
-            type="text" 
-            value={selectedDuration.toString()}
-            onChange={handleInputChange}
-            className="pr-12 font-medium text-right"
-          />
-          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-bgs-blue font-medium">
-            mois
-          </span>
-        </div>
-      </div>
-      
-      <Slider
-        defaultValue={[selectedDuration]}
-        max={Math.max(...durations)}
-        min={Math.min(...durations)}
-        step={durations.length > 1 ? undefined : 1}
-        value={[selectedDuration]}
-        onValueChange={handleDurationChange}
-        className="my-4"
-        minStepsBetweenThumbs={1}
-      />
-      
-      <div className="flex justify-between text-xs text-bgs-blue/60">
-        <span>Min: {Math.min(...durations)} mois</span>
-        <span>Max: {Math.max(...durations)} mois</span>
+    <div className="mb-4">
+      <h4 className="text-sm font-medium text-bgs-blue mb-2">Durée</h4>
+      <div className="grid grid-cols-3 gap-2">
+        {durations.map((duration) => (
+          <button
+            key={duration}
+            type="button"
+            className={`py-2 px-3 text-sm rounded-md transition-colors ${
+              selectedDuration === duration
+                ? "bg-bgs-blue text-white"
+                : "bg-white border border-bgs-gray-light text-bgs-blue hover:bg-bgs-gray-light"
+            }`}
+            onClick={() => onChange(duration)}
+          >
+            {duration} mois
+          </button>
+        ))}
       </div>
     </div>
   );

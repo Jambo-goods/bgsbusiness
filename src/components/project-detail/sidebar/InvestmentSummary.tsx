@@ -5,14 +5,18 @@ import { TrendingUp, Clock, Calculator } from "lucide-react";
 
 interface InvestmentSummaryProps {
   project: Project;
-  selectedDuration: number;
+  investmentAmount: number;
+  duration: number;
+  onInvest: () => void;
   monthlyReturn: number;
   totalReturn: number;
 }
 
 export default function InvestmentSummary({ 
   project, 
-  selectedDuration,
+  investmentAmount,
+  duration,
+  onInvest,
   monthlyReturn,
   totalReturn
 }: InvestmentSummaryProps) {
@@ -52,7 +56,7 @@ export default function InvestmentSummary({
             </div>
             <span>Durée</span>
           </div>
-          <span className="font-semibold text-bgs-blue">{selectedDuration} mois</span>
+          <span className="font-semibold text-bgs-blue">{duration} mois</span>
         </div>
         
         <div className="flex justify-between items-center text-sm">
@@ -85,6 +89,14 @@ export default function InvestmentSummary({
           <span className="font-semibold text-purple-600">{totalReturn.toFixed(2)}€</span>
         </div>
       </div>
+      
+      {/* Add investment button */}
+      <button 
+        onClick={onInvest}
+        className="w-full btn-primary mt-4"
+      >
+        Investir {investmentAmount}€
+      </button>
     </div>
   );
 }

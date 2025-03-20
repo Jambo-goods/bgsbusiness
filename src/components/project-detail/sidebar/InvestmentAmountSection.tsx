@@ -1,61 +1,67 @@
 
 import React from "react";
-import { Slider } from "@/components/ui/slider";
-import { Input } from "@/components/ui/input";
 
 interface InvestmentAmountSectionProps {
-  investmentAmount: number;
-  setInvestmentAmount: (amount: number) => void;
   minInvestment: number;
   maxInvestment: number;
+  investmentAmount: number;
+  onChange: (amount: number) => void;
 }
 
 export default function InvestmentAmountSection({
-  investmentAmount,
-  setInvestmentAmount,
   minInvestment,
-  maxInvestment
+  maxInvestment,
+  investmentAmount,
+  onChange
 }: InvestmentAmountSectionProps) {
-  // Handle input changes with proper validation
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value.replace(/\D/g, ''));
-    if (!isNaN(value)) {
-      setInvestmentAmount(
-        Math.min(Math.max(value, minInvestment), maxInvestment)
-      );
-    }
+  // Generate quick amount options
+  const quickAmounts = [
+    minInvestment,
+    Math.min(maxInvestment, minInvestment * 5),
+    Math.min(maxInvestment, minInvestment * 10)
+  ];
+  
+  const handleManualInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10) || 0;
+    onChange(value);
   };
   
   return (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-bgs-blue">Montant à investir</label>
+    <div className="mb-4">
+      <h4 className="text-sm font-medium text-bgs-blue mb-2">Montant à investir</h4>
       
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1">
-          <Input 
-            type="text" 
-            value={investmentAmount.toLocaleString()}
-            onChange={handleInputChange}
-            className="pr-8 font-medium text-right"
-          />
-          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-bgs-blue font-medium">
-            €
-          </span>
-        </div>
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {quickAmounts.map((amount) => (
+          <button
+            key={amount}
+            type="button"
+            className={`py-2 px-3 text-sm rounded-md transition-colors ${
+              investmentAmount === amount
+                ? "bg-bgs-blue text-white"
+                : "bg-white border border-bgs-gray-light text-bgs-blue hover:bg-bgs-gray-light"
+            }`}
+            onClick={() => onChange(amount)}
+          >
+            {amount}€
+          </button>
+        ))}
       </div>
       
-      <Slider
-        value={[investmentAmount]}
-        min={minInvestment}
-        max={maxInvestment}
-        step={100}
-        onValueChange={(value) => setInvestmentAmount(value[0])}
-      />
-      
-      <div className="flex justify-between text-xs text-bgs-blue/60">
-        <span>Min: {minInvestment}€</span>
-        <span>Max: {maxInvestment}€</span>
+      <div className="relative">
+        <input
+          type="number"
+          value={investmentAmount}
+          onChange={handleManualInput}
+          className="w-full px-4 py-2 border border-bgs-gray-light rounded-md focus:outline-none focus:ring-2 focus:ring-bgs-blue/30"
+          min={minInvestment}
+          max={maxInvestment}
+        />
+        <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-bgs-blue">€</span>
       </div>
+      
+      <p className="text-xs text-bgs-blue/70 mt-1">
+        Min: {minInvestment}€ • Max: {maxInvestment}€
+      </p>
     </div>
   );
 }
