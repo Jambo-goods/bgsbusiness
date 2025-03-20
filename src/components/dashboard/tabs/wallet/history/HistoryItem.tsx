@@ -86,11 +86,21 @@ export default function HistoryItem({ item }: HistoryItemProps) {
       ? extractReference(item.description) 
       : null);
 
-  // Function to extract amount from description if not available in metadata
+  // Function to extract amount from description
   const extractAmountFromDescription = (text: string): number | null => {
-    // Look for patterns like "123€" or "123 €"
-    const match = text.match(/(\d+)\s*€/);
-    return match ? Number(match[1]) : null;
+    // First try to match patterns like "123€" or "123 €"
+    let match = text.match(/(\d+)\s*€/);
+    if (match) return Number(match[1]);
+    
+    // Then try to look for format like "de 123 a été" or "de 1000€ a"
+    match = text.match(/de\s+(\d+)(?:\s*€)?\s+/);
+    if (match) return Number(match[1]);
+    
+    // Try another pattern common in notification messages
+    match = text.match(/dépôt\s+de\s+(\d+)(?:\s*€)?/i);
+    if (match) return Number(match[1]);
+    
+    return null;
   };
 
   if (item.itemType === 'transaction') {
@@ -146,25 +156,54 @@ export default function HistoryItem({ item }: HistoryItemProps) {
     }
     
     // Find the correct amount in this priority:
-    // 1. From metadata.amount
-    // 2. Extract from description if metadata amount is 0
-    // 3. Default to 0 if nothing else works
+    // 1. From metadata.amount if it's not 0
+    // 2. Extract from description
+    // 3. Default to 0 only if nothing else works
     let amount = 0;
     
-    if (item.metadata?.amount !== undefined) {
+    // Console log for debugging the notification data
+    console.log(`Processing notification: ${item.id}`, {
+      title: item.title,
+      description: item.description,
+      metadata: item.metadata
+    });
+    
+    // Try to get amount from metadata first (if it's not 0)
+    if (item.metadata?.amount !== undefined && Number(item.metadata.amount) > 0) {
       amount = Number(item.metadata.amount);
-      
-      // If amount is still 0, try to extract from description
-      if (amount === 0 && item.description) {
-        const extractedAmount = extractAmountFromDescription(item.description);
-        if (extractedAmount !== null) {
-          amount = extractedAmount;
+    } 
+    // If metadata amount is 0 or undefined, try to extract from description
+    else if (item.description) {
+      const extractedAmount = extractAmountFromDescription(item.description);
+      if (extractedAmount !== null && extractedAmount > 0) {
+        amount = extractedAmount;
+      }
+      // If we still don't have an amount, try to extract reference and get amount from title
+      else if (reference && item.title) {
+        const extractedFromTitle = extractAmountFromDescription(item.title);
+        if (extractedFromTitle !== null && extractedFromTitle > 0) {
+          amount = extractedFromTitle;
         }
       }
-    } else if (item.description) {
-      const extractedAmount = extractAmountFromDescription(item.description);
-      if (extractedAmount !== null) {
-        amount = extractedAmount;
+    }
+    
+    // For deposit confirmations with 0 amount, try to find the pending notification 
+    // with the same reference and use its amount
+    if (amount === 0 && item.title.includes("reçu") && reference) {
+      // This is where we would ideally look for the matching pending deposit
+      // But this is complex to implement in the current component.
+      // For now we'll rely on the description parsing
+      
+      // Last resort: Check if the reference is in the description and try to extract amount again
+      if (item.description.includes(reference)) {
+        const parts = item.description.split(reference);
+        if (parts.length > 1) {
+          const afterRef = parts[1];
+          const extractedAfterRef = extractAmountFromDescription(afterRef);
+          if (extractedAfterRef !== null && extractedAfterRef > 0) {
+            amount = extractedAfterRef;
+          }
+        }
       }
     }
     
