@@ -234,20 +234,42 @@ export function useBankTransferData() {
             };
           });
           
-          // Add wallet transactions to formatted transfers, avoiding duplicates by ID
-          const existingIds = new Set(formattedTransfers.map(t => t.id));
+          // Add wallet transactions to formatted transfers, avoiding duplicates by reference
+          // This is more robust than avoiding duplication by ID
+          const existingRefs = new Set(formattedTransfers.map(t => `${t.reference}-${t.amount}`));
+          
           walletTransfers.forEach(transfer => {
-            if (!existingIds.has(transfer.id)) {
+            const refKey = `${transfer.reference}-${transfer.amount}`;
+            if (!existingRefs.has(refKey)) {
               formattedTransfers.push(transfer);
-              existingIds.add(transfer.id);
+              existingRefs.add(refKey);
             }
           });
         }
         
+        // First-level duplicate removal - detect duplicates with the same reference but different statuses
+        const referenceMap = new Map();
+        
+        formattedTransfers.forEach(transfer => {
+          const refKey = `${transfer.reference}-${transfer.amount}`;
+          
+          // Either this is a new reference or we have a more recent/important status
+          if (!referenceMap.has(refKey) || 
+              getPriorityScore(transfer.status) > getPriorityScore(referenceMap.get(refKey).status) ||
+              (referenceMap.get(refKey).status === transfer.status && 
+               new Date(transfer.created_at) > new Date(referenceMap.get(refKey).created_at))) {
+            
+            referenceMap.set(refKey, transfer);
+          }
+        });
+        
+        // Replace the original array with de-duplicated one
+        formattedTransfers = Array.from(referenceMap.values());
+        
         // Log all transfers before filtering
-        console.log("AVANT FILTRAGE - Tous les transferts:", formattedTransfers.length);
+        console.log("APRÈS DÉDUPLICATION - Tous les transferts:", formattedTransfers.length);
         formattedTransfers.forEach((transfer, index) => {
-          console.log(`Transfert ${index + 1}:`, transfer.id, transfer.status, transfer.amount, transfer.description);
+          console.log(`Transfert ${index + 1}:`, transfer.id, transfer.status, transfer.amount, transfer.reference);
         });
         
         // Apply status filter if not "all"
@@ -276,6 +298,22 @@ export function useBankTransferData() {
     staleTime: 10000, // Consider data fresh for 10 seconds
     retry: 3 // Retry failed requests up to 3 times
   });
+
+  // Helper function to rank status importance
+  const getPriorityScore = (status: string): number => {
+    // Prioritize statuses in this order - completed/received is higher priority than pending
+    const priorities: Record<string, number> = {
+      'received': 4,
+      'reçu': 4, 
+      'completed': 3,
+      'processing': 2,
+      'pending': 1,
+      'rejected': 0,
+      'cancelled': 0
+    };
+    
+    return priorities[status] || 0;
+  };
 
   const handleManualRefresh = () => {
     toast.info("Actualisation des données...");

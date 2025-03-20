@@ -121,18 +121,40 @@ export default function BankTransferTable({
     );
   }
 
-  // Remove duplicates by creating a Map using ID as key
+  // Create a map to store the most recent transfer for each reference
+  // We need a better way to detect duplication, so we'll use reference AND amount
   const uniqueTransfersMap = new Map();
-  pendingTransfers.forEach(transfer => {
-    // Only keep the most recent entry for each unique ID
-    if (!uniqueTransfersMap.has(transfer.id) || 
-        new Date(transfer.created_at) > new Date(uniqueTransfersMap.get(transfer.id).created_at)) {
+  
+  // Process transfers to find the most recent for each reference
+  pendingTransfers.forEach((transfer) => {
+    // Create a composite key using reference and amount
+    const referenceKey = `${transfer.reference}-${transfer.amount}`;
+    
+    // Get the current transfer for this key if it exists
+    const existingTransfer = uniqueTransfersMap.get(referenceKey);
+    
+    // Use the created_at date to determine which is more recent
+    if (!existingTransfer || 
+        (transfer.status !== 'pending' && existingTransfer.status === 'pending') ||
+        new Date(transfer.created_at) > new Date(existingTransfer.created_at)) {
+      // Keep only the most recent version or one with a non-pending status
+      uniqueTransfersMap.set(referenceKey, transfer);
+    }
+  });
+  
+  // If there are transfers with the same reference but different IDs, also keep them by ID
+  // This is a fallback for transfers that might have the same reference but are actually different
+  pendingTransfers.forEach((transfer) => {
+    // If this transfer has a unique ID, we should keep it
+    if (!Array.from(uniqueTransfersMap.values()).some(t => t.id === transfer.id)) {
       uniqueTransfersMap.set(transfer.id, transfer);
     }
   });
 
-  // Convert Map back to array and sort
+  // Convert map back to array
   const uniqueTransfers = Array.from(uniqueTransfersMap.values());
+  
+  console.log("Après filtrage des doublons par référence:", uniqueTransfers.length);
   
   // Sort transfers by date, most recent first
   const sortedTransfers = uniqueTransfers.sort((a, b) => {
