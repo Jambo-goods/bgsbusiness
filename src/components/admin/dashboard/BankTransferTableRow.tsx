@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -96,7 +97,8 @@ export default function BankTransferTableRow({
             status: 'received',
             isProcessed: true,
             notes: `Réception confirmée le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: item.user_id
+            userId: item.user_id,
+            sendNotification: true
           }
         }
       );
@@ -216,7 +218,8 @@ export default function BankTransferTableRow({
             status: editStatus,
             isProcessed: isProcessed,
             notes: `Mis à jour manuellement le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: item.user_id
+            userId: item.user_id,
+            sendNotification: editStatus === 'received'
           }
         }
       );
@@ -257,16 +260,6 @@ export default function BankTransferTableRow({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleTransferToReceived = () => {
-    if (!item) return;
-    setEditStatus('received');
-    setProcessedDate(new Date());
-    
-    setTimeout(() => {
-      handleSubmitEdit(new Event('submit') as any);
-    }, 100);
   };
 
   const handleRestoreTransfer = async () => {
@@ -373,7 +366,7 @@ export default function BankTransferTableRow({
                 ) : (
                   <Check className="h-3.5 w-3.5 mr-1" />
                 )}
-                <span className="sr-only">Confirmer</span>
+                <span className="hidden sm:inline">Confirmer</span>
               </Button>
               
               <Button
@@ -388,7 +381,7 @@ export default function BankTransferTableRow({
                 ) : (
                   <X className="h-3.5 w-3.5 mr-1" />
                 )}
-                <span className="sr-only">Rejeter</span>
+                <span className="hidden sm:inline">Rejeter</span>
               </Button>
             </>
           )}
@@ -449,6 +442,7 @@ export default function BankTransferTableRow({
                         size="sm" 
                         className="w-full justify-center"
                         onClick={() => setProcessedDate(undefined)}
+                        type="button"
                       >
                         Effacer la date
                       </Button>

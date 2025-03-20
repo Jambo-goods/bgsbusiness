@@ -10,6 +10,12 @@ export function useBankTransfers() {
   // Function to directly update bank transfer status
   const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string, processedDate: string | null = null) => {
     try {
+      if (!transfer || !transfer.id) {
+        console.error("Transfert invalide", transfer);
+        toast.error("Transfert invalide ou incomplet");
+        return false;
+      }
+      
       setProcessingId(transfer.id);
       
       // Store admin token if available
@@ -18,6 +24,14 @@ export function useBankTransfers() {
         localStorage.setItem('admin_token', adminUser.token);
       }
       
+      // Add debug logs
+      console.log("Updating transfer status:", {
+        id: transfer.id,
+        currentStatus: transfer.status,
+        newStatus,
+        processedDate
+      });
+      
       // Call the service to update the transfer
       const result = await bankTransferService.updateBankTransfer(
         transfer.id,
@@ -25,12 +39,22 @@ export function useBankTransfers() {
         processedDate
       );
       
+      console.log("Update result:", result);
+      
       if (result.success) {
         toast.success(`Virement mis à jour: ${newStatus}`);
         return true;
       } else {
         console.error("Échec de mise à jour:", result);
-        toast.error(result.message || "Échec de la mise à jour");
+        
+        // Show more specific error messages based on the error
+        if (result.message && result.message.includes("Transfer not found")) {
+          toast.error("Virement introuvable. Veuillez rafraîchir la page.");
+        } else if (result.message && result.message.includes("Edge Function")) {
+          toast.error("Erreur de connexion au serveur. Veuillez réessayer.");
+        } else {
+          toast.error(result.message || "Échec de la mise à jour");
+        }
         return false;
       }
     } catch (error: any) {
@@ -43,11 +67,22 @@ export function useBankTransfers() {
     }
   };
 
-  // New function to restore a transfer back to pending status
+  // Function to restore a transfer back to pending status
   const restoreTransfer = async (transfer: BankTransferItem) => {
     try {
+      if (!transfer || !transfer.id) {
+        console.error("Transfert invalide", transfer);
+        toast.error("Transfert invalide ou incomplet");
+        return false;
+      }
+      
       setProcessingId(transfer.id);
       toast.info("Restauration du virement en cours...");
+      
+      console.log("Restoring transfer:", {
+        id: transfer.id,
+        currentStatus: transfer.status
+      });
       
       // Call the service to restore the transfer (set to pending)
       const result = await bankTransferService.updateBankTransfer(
@@ -56,12 +91,22 @@ export function useBankTransfers() {
         null // Clear processed date
       );
       
+      console.log("Restore result:", result);
+      
       if (result.success) {
         toast.success("Virement restauré avec succès");
         return true;
       } else {
         console.error("Échec de restauration:", result);
-        toast.error(result.message || "Échec de la restauration");
+        
+        // Show more specific error messages based on the error
+        if (result.message && result.message.includes("Transfer not found")) {
+          toast.error("Virement introuvable. Veuillez rafraîchir la page.");
+        } else if (result.message && result.message.includes("Edge Function")) {
+          toast.error("Erreur de connexion au serveur. Veuillez réessayer.");
+        } else {
+          toast.error(result.message || "Échec de la restauration");
+        }
         return false;
       }
     } catch (error: any) {
