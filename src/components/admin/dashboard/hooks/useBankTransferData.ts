@@ -10,7 +10,7 @@ export function useBankTransferData() {
   const [authStatus, setAuthStatus] = useState<string>("checking");
   const [userRole, setUserRole] = useState<string>("unknown");
   
-  // Check authentication status at startup
+  // Vérifier le statut d'authentification au démarrage
   useEffect(() => {
     const checkAuth = async () => {
       try {
@@ -23,7 +23,7 @@ export function useBankTransferData() {
         
         setAuthStatus(data.session ? "authenticated" : "not authenticated");
         if (data.session) {
-          // Check if the user is admin
+          // Vérifier si l'utilisateur est admin
           const { data: userData } = await supabase.auth.getUser();
           if (userData?.user) {
             const role = userData.user.app_metadata?.role || "utilisateur";
@@ -63,8 +63,7 @@ export function useBankTransferData() {
             // Try direct query now that we know we have admin access
             const { data: directData, error: directError } = await supabase
               .from("bank_transfers")
-              .select("*")
-              .order('confirmed_at', { ascending: false });
+              .select("*");
             
             bankTransfersData = directData || [];
             bankTransfersError = directError;
@@ -78,11 +77,10 @@ export function useBankTransferData() {
           } else {
             console.warn("Not admin or admin check error:", isAdminError);
             
-            // Fallback: retrieve data directly with RLS limitations
+            // Fallback: récupérer directement les données avec limitations RLS
             const { data: directData, error: directError } = await supabase
               .from("bank_transfers")
-              .select("*")
-              .order('confirmed_at', { ascending: false });
+              .select("*");
             
             bankTransfersData = directData || [];
             bankTransfersError = directError;
@@ -90,11 +88,10 @@ export function useBankTransferData() {
         } catch (e) {
           console.error("Erreur lors de la tentative RPC/directe:", e);
           
-          // Last fallback: retrieve without restrictions
+          // Last fallback: récupérer sans restrictions
           const { data: directData, error: directError } = await supabase
             .from("bank_transfers")
-            .select("*")
-            .order('confirmed_at', { ascending: false });
+            .select("*");
           
           bankTransfersData = directData || [];
           bankTransfersError = directError;
@@ -107,7 +104,7 @@ export function useBankTransferData() {
         console.log("Raw bank_transfers data:", bankTransfersData);
         console.log("Nombre de virements trouvés:", bankTransfersData?.length || 0);
         
-        // Retrieve wallet_transactions data without initial RLS filters
+        // Récupérer les données de wallet_transactions sans filtres RLS initiaux
         let walletTransactions: any[] = [];
         let walletError: any = null;
         
@@ -137,19 +134,19 @@ export function useBankTransferData() {
         console.log("Raw wallet_transactions data:", walletTransactions);
         console.log("Nombre de transactions trouvées:", walletTransactions?.length || 0);
         
-        // If no data was retrieved, try using a service_role or admin
+        // Si aucune donnée n'a été récupérée, essayer d'utiliser un service_role ou admin
         if ((!bankTransfersData || bankTransfersData.length === 0) && 
             (!walletTransactions || walletTransactions.length === 0)) {
           console.log("Aucune donnée trouvée. Cela pourrait être un problème de permissions RLS.");
           toast.warning("Aucune donnée trouvée. Vérifiez les permissions de la base de données.");
         }
         
-        // Extract unique user IDs
+        // Extraire les IDs utilisateurs uniques
         const userIdsFromTransfers = (bankTransfersData || []).map(transfer => transfer.user_id);
         const userIdsFromWallet = (walletTransactions || []).map(tx => tx.user_id);
         const uniqueUserIds = [...new Set([...userIdsFromTransfers, ...userIdsFromWallet])];
         
-        // Retrieve all profiles in a single query
+        // Récupérer tous les profils en une seule requête
         let profilesData: any[] = [];
         let profilesError: any = null;
         
@@ -168,13 +165,13 @@ export function useBankTransferData() {
           }
         }
         
-        // Create a map of user profiles for quick lookup
+        // Créer une map des profils utilisateurs pour une recherche rapide
         const profilesMap = (profilesData || []).reduce((map, profile) => {
           map[profile.id] = profile;
           return map;
         }, {} as Record<string, any>);
         
-        // Format bank transfers
+        // Formater les virements bancaires
         let formattedTransfers = (bankTransfersData || []).map(transfer => {
           const profile = profilesMap[transfer.user_id] || {
             first_name: "Utilisateur",
@@ -182,7 +179,7 @@ export function useBankTransferData() {
             email: null
           };
           
-          // Ensure all required fields are present
+          // S'assurer que tous les champs requis sont présents
           return {
             id: transfer.id,
             created_at: transfer.confirmed_at || new Date().toISOString(),
@@ -204,7 +201,7 @@ export function useBankTransferData() {
           };
         });
         
-        // Format wallet transactions
+        // Formater les transactions de portefeuille
         if (walletTransactions && walletTransactions.length > 0) {
           const walletTransfers = walletTransactions.map(tx => {
             const profile = profilesMap[tx.user_id] || {
@@ -234,7 +231,7 @@ export function useBankTransferData() {
             };
           });
           
-          // Add wallet transactions to formatted transfers, avoiding duplicates by ID
+          // Ajouter les transactions wallet aux transferts formatés, en évitant les doublons par ID
           const existingIds = new Set(formattedTransfers.map(t => t.id));
           walletTransfers.forEach(transfer => {
             if (!existingIds.has(transfer.id)) {
@@ -244,13 +241,13 @@ export function useBankTransferData() {
           });
         }
         
-        // Log all transfers before filtering
+        // Journaliser tous les transferts avant filtrage
         console.log("AVANT FILTRAGE - Tous les transferts:", formattedTransfers.length);
         formattedTransfers.forEach((transfer, index) => {
           console.log(`Transfert ${index + 1}:`, transfer.id, transfer.status, transfer.amount, transfer.description);
         });
         
-        // Apply status filter if not "all"
+        // Appliquer le filtre de statut si ce n'est pas "all"
         if (statusFilter !== "all" && formattedTransfers.length > 0) {
           console.log(`Application du filtre statut: ${statusFilter}`);
           formattedTransfers = formattedTransfers.filter(item => {
@@ -261,7 +258,7 @@ export function useBankTransferData() {
           console.log(`Après filtrage par statut: ${formattedTransfers.length} transferts restants`);
         }
         
-        // Log the final list of transfers
+        // Journaliser la liste finale des transferts
         console.log("FINAL - Liste des transferts:", formattedTransfers);
         console.log("IDs des transferts finaux:", formattedTransfers.map(t => t.id));
         
@@ -272,9 +269,9 @@ export function useBankTransferData() {
         return [];
       }
     },
-    refetchInterval: 15000, // Automatically refresh every 15 seconds
-    staleTime: 10000, // Consider data fresh for 10 seconds
-    retry: 3 // Retry failed requests up to 3 times
+    refetchInterval: 15000, // Rafraîchir automatiquement toutes les 15 secondes
+    staleTime: 10000, // Considérer les données fraîches pendant 10 secondes
+    retry: 3 // Réessayer les requêtes échouées jusqu'à 3 fois
   });
 
   const handleManualRefresh = () => {

@@ -71,13 +71,6 @@ export default function BankTransferTable({
     );
   }
 
-  // Sort transfers by date, most recent first
-  const sortedTransfers = [...pendingTransfers].sort((a, b) => {
-    const dateA = new Date(a.created_at || 0);
-    const dateB = new Date(b.created_at || 0);
-    return dateB.getTime() - dateA.getTime();
-  });
-
   return (
     <div className="rounded-md border">
       <Table>
@@ -86,13 +79,12 @@ export default function BankTransferTable({
             <TableHead>Date</TableHead>
             <TableHead>Utilisateur</TableHead>
             <TableHead>Référence</TableHead>
-            <TableHead>Montant</TableHead>
-            <TableHead>Statut</TableHead>
+            <TableHead>Réception</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {sortedTransfers.map((item) => (
+          {pendingTransfers.map((item) => (
             <BankTransferTableRow
               key={`${item.id}-${lastUpdateTime}`}
               item={item}

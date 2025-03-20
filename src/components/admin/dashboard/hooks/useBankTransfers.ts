@@ -43,39 +43,8 @@ export function useBankTransfers() {
     }
   };
 
-  // New function to restore a transfer back to pending status
-  const restoreTransfer = async (transfer: BankTransferItem) => {
-    try {
-      setProcessingId(transfer.id);
-      toast.info("Restauration du virement en cours...");
-      
-      // Call the service to restore the transfer (set to pending)
-      const result = await bankTransferService.updateBankTransfer(
-        transfer.id,
-        'pending',
-        null // Clear processed date
-      );
-      
-      if (result.success) {
-        toast.success("Virement restauré avec succès");
-        return true;
-      } else {
-        console.error("Échec de restauration:", result);
-        toast.error(result.message || "Échec de la restauration");
-        return false;
-      }
-    } catch (error: any) {
-      console.error("Erreur lors de la restauration:", error);
-      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
-      return false;
-    } finally {
-      setTimeout(() => setProcessingId(null), 500);
-    }
-  };
-
   return {
     processingId,
-    updateTransferStatus,
-    restoreTransfer
+    updateTransferStatus
   };
 }
