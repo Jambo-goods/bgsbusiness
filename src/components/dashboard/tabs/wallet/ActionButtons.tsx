@@ -30,14 +30,6 @@ export default function ActionButtons({
   
   return (
     <div className="flex items-center gap-2 mt-4">
-      <Button 
-        onClick={onWithdraw} 
-        variant="outline" 
-        className="flex items-center gap-2"
-      >
-        Demander un retrait
-      </Button>
-      
       <Button
         onClick={handleRefresh}
         variant="ghost"
