@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BankTransferTableProps, BankTransferItem } from "./types/bankTransfer";
-import BankTransferTableRow from "./BankTransferTableRow";
+
+import React from "react";
+import { BankTransferTableProps } from "./types/bankTransfer";
 import { useBankTransfers } from "./hooks/useBankTransfers";
-import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useTransferSubscriptions } from "./hooks/useTransferSubscriptions";
+import { deduplicateTransfers, sortTransfersByDate } from "./utils/transferUtils";
+import TransferListView from "./components/TransferListView";
+import LoadingView from "./components/LoadingView";
 
 export default function BankTransferTable({ 
   pendingTransfers, 
@@ -12,104 +13,12 @@ export default function BankTransferTable({
   refreshData
 }: BankTransferTableProps) {
   const { processingId } = useBankTransfers();
-  const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
-  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const { lastUpdateTime, isRefreshing, handleStatusUpdate } = useTransferSubscriptions({ refreshData });
 
   console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers?.length || 0);
   
-  // Handle refresh after status update with debounce
-  const handleStatusUpdate = useCallback(() => {
-    setLastUpdateTime(Date.now());
-    if (refreshData && !isRefreshing) {
-      setIsRefreshing(true);
-      toast.info("Actualisation des données en cours...");
-      
-      // Add a slight delay to ensure database operations have completed
-      setTimeout(() => {
-        refreshData();
-        setIsRefreshing(false);
-      }, 800);
-    }
-  }, [refreshData, isRefreshing]);
-
-  // Subscribe to real-time updates on both tables
-  useEffect(() => {
-    // Subscribe to bank_transfers table
-    const bankTransfersSubscription = supabase
-      .channel('bank_transfers_updates')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'bank_transfers' }, 
-        (payload) => {
-          console.log('Changement détecté sur bank_transfers via subscription:', payload);
-          
-          if (!isRefreshing && refreshData) {
-            setIsRefreshing(true);
-            toast.info("Mise à jour détectée sur bank_transfers, actualisation en cours...");
-            
-            setTimeout(() => {
-              refreshData();
-              setIsRefreshing(false);
-            }, 800);
-          }
-        }
-      )
-      .subscribe();
-      
-    // Subscribe to wallet_transactions table
-    const walletTransactionsSubscription = supabase
-      .channel('wallet_transactions_updates')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'wallet_transactions' }, 
-        (payload) => {
-          console.log('Changement détecté sur wallet_transactions via subscription:', payload);
-          
-          if (!isRefreshing && refreshData) {
-            setIsRefreshing(true);
-            toast.info("Mise à jour détectée sur wallet_transactions, actualisation en cours...");
-            
-            setTimeout(() => {
-              refreshData();
-              setIsRefreshing(false);
-            }, 800);
-          }
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(bankTransfersSubscription);
-      supabase.removeChannel(walletTransactionsSubscription);
-    };
-  }, [refreshData, isRefreshing]);
-
-  // Force a refresh every 10 seconds to catch any updates
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (refreshData && !isRefreshing) {
-        setIsRefreshing(true);
-        refreshData();
-        setTimeout(() => {
-          setIsRefreshing(false);
-        }, 800);
-      }
-    }, 10000);
-    
-    return () => clearInterval(intervalId);
-  }, [refreshData, isRefreshing]);
-
-  // Initial data load
-  useEffect(() => {
-    if (refreshData) {
-      refreshData();
-    }
-  }, [refreshData]);
-
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-48">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bgs-blue"></div>
-      </div>
-    );
+    return <LoadingView />;
   }
 
   if (!pendingTransfers || pendingTransfers.length === 0) {
@@ -121,120 +30,19 @@ export default function BankTransferTable({
     );
   }
 
-  // Helper function to determine the priority of a status
-  const getStatusPriority = (status: string): number => {
-    const statusPriorities: Record<string, number> = {
-      'received': 5,
-      'reçu': 5,
-      'completed': 4,
-      'processing': 3,
-      'pending': 2,
-      'rejected': 1,
-      'cancelled': 0
-    };
-    return statusPriorities[status.toLowerCase()] || 0;
-  };
-
   // ADVANCED DEDUPLICATION METHOD
-  // Step 1: Create a standardized reference map
-  const referenceMap = new Map<string, BankTransferItem[]>();
-  
-  // Normalize references (remove spaces, make lowercase)
-  pendingTransfers.forEach(transfer => {
-    // Standardize reference format - lowercase, no spaces, remove special characters
-    const normalizedRef = transfer.reference
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[^\w-]/g, '');
-      
-    // If this reference already exists in the map, add this transfer to the array
-    if (referenceMap.has(normalizedRef)) {
-      referenceMap.get(normalizedRef)!.push(transfer);
-    } else {
-      // Otherwise, create a new array with this transfer
-      referenceMap.set(normalizedRef, [transfer]);
-    }
-  });
-  
-  console.log("Grouped transfers by normalized reference:", referenceMap.size, "unique references");
-  
-  // Step 2: For each reference, select the best transfer based on status and date
-  const dedupedTransfers: BankTransferItem[] = [];
-  
-  referenceMap.forEach((transfers, normalizedRef) => {
-    console.log(`Reference ${normalizedRef}: ${transfers.length} entries`);
-    
-    if (transfers.length === 1) {
-      // If only one transfer for this reference, add it directly
-      dedupedTransfers.push(transfers[0]);
-      return;
-    }
-    
-    // Sort transfers by status priority (highest first) and then by date (most recent first)
-    const sortedTransfers = [...transfers].sort((a, b) => {
-      const priorityA = getStatusPriority(a.status);
-      const priorityB = getStatusPriority(b.status);
-      
-      // If priorities are different, sort by priority
-      if (priorityA !== priorityB) {
-        return priorityB - priorityA;
-      }
-      
-      // If same priority, sort by date (most recent first)
-      const dateA = new Date(a.created_at || 0).getTime();
-      const dateB = new Date(b.created_at || 0).getTime();
-      return dateB - dateA;
-    });
-    
-    // The first transfer is now the one with highest priority and most recent date
-    dedupedTransfers.push(sortedTransfers[0]);
-    
-    console.log(`Kept transfer for ${normalizedRef}: ID=${sortedTransfers[0].id}, Status=${sortedTransfers[0].status}`);
-    if (transfers.length > 1) {
-      console.log(`  Discarded ${transfers.length - 1} duplicate(s) with lower priority/older date`);
-    }
-  });
-  
-  // Log deduplication results
-  console.log(`FINAL DEDUPLICATION RESULTS: ${pendingTransfers.length} original -> ${dedupedTransfers.length} after deduplication`);
+  const dedupedTransfers = deduplicateTransfers(pendingTransfers);
   
   // Sort transfers by date, most recent first
-  const sortedTransfers = dedupedTransfers.sort((a, b) => {
-    const dateA = new Date(a.created_at || 0);
-    const dateB = new Date(b.created_at || 0);
-    return dateB.getTime() - dateA.getTime();
-  });
+  const sortedTransfers = sortTransfersByDate(dedupedTransfers);
 
   return (
-    <div className="rounded-md border">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Utilisateur</TableHead>
-            <TableHead>Référence</TableHead>
-            <TableHead>Montant</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {sortedTransfers.map((item) => (
-            <BankTransferTableRow
-              key={`${item.id}-${lastUpdateTime}`}
-              item={item}
-              processingId={processingId}
-              onStatusUpdate={handleStatusUpdate}
-            />
-          ))}
-        </TableBody>
-      </Table>
-      {isRefreshing && (
-        <div className="text-center p-2 text-xs text-gray-500">
-          Actualisation en cours...
-        </div>
-      )}
-    </div>
+    <TransferListView 
+      transfers={sortedTransfers}
+      processingId={processingId}
+      lastUpdateTime={lastUpdateTime}
+      onStatusUpdate={handleStatusUpdate}
+      isRefreshing={isRefreshing}
+    />
   );
 }
