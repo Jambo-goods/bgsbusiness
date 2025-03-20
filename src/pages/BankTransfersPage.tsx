@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
-import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, CheckCircle, XCircle, RotateCcw } from "lucide-react";
+import { Search, ArrowDown, ArrowUp, Loader2, RefreshCw, CheckCircle, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/components/dashboard/tabs/wallet/withdrawal-table/formatUtils";
 import { Toaster } from "sonner";
@@ -161,31 +161,6 @@ export default function BankTransfersPage() {
       }
     } catch (error: any) {
       console.error(`Erreur lors de la mise à jour du statut:`, error);
-      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRestore = async (transferId: string) => {
-    try {
-      setIsLoading(true);
-      
-      const result = await bankTransferService.updateBankTransfer(
-        transferId,
-        'pending',
-        null
-      );
-      
-      if (result.success) {
-        toast.success("Virement restauré en statut 'En attente'");
-        await fetchBankTransfers();
-      } else {
-        console.error("Échec de la restauration:", result);
-        toast.error(`Échec de la restauration: ${result.message}`);
-      }
-    } catch (error: any) {
-      console.error(`Erreur lors de la restauration:`, error);
       toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
     } finally {
       setIsLoading(false);
@@ -409,10 +384,6 @@ export default function BankTransfersPage() {
                   {filteredTransfers.map(transfer => {
                     const user = userData[transfer.user_id] || { first_name: null, last_name: null, email: null };
                     const isPending = transfer.status === 'pending';
-                    const isProcessed = transfer.processed === true || 
-                                        transfer.status === 'received' || 
-                                        transfer.status === 'rejected' || 
-                                        transfer.status === 'cancelled';
                     
                     return (
                       <TableRow key={transfer.id}>
@@ -453,20 +424,6 @@ export default function BankTransfersPage() {
                                   Annuler
                                 </Button>
                               </div>
-                            )}
-                            
-                            {isProcessed && !isPending && (
-                              <Button 
-                                size="sm" 
-                                variant="ghost" 
-                                className="h-8 px-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                onClick={() => handleRestore(transfer.id)}
-                                disabled={isLoading}
-                                title="Restaurer en 'En attente'"
-                              >
-                                <RotateCcw className="h-4 w-4 mr-1" />
-                                Restaurer
-                              </Button>
                             )}
                           </div>
                         </TableCell>

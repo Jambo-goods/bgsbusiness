@@ -26,26 +26,7 @@ export function useBankTransfers() {
       );
       
       if (result.success) {
-        let message = "";
-        
-        switch (newStatus) {
-          case 'received':
-            message = "Virement marqué comme reçu";
-            break;
-          case 'rejected':
-            message = "Virement rejeté";
-            break;
-          case 'cancelled':
-            message = "Virement annulé";
-            break;
-          case 'pending':
-            message = "Virement restauré en statut 'En attente'";
-            break;
-          default:
-            message = `Virement mis à jour: ${newStatus}`;
-        }
-        
-        toast.success(message);
+        toast.success(`Virement mis à jour: ${newStatus}`);
         return true;
       } else {
         console.error("Échec de mise à jour:", result);
