@@ -109,8 +109,88 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
     setIsProcessing(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Utilisateur non connecté", {
+          description: "Veuillez vous connecter pour investir."
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      // 1. Record the investment in the database
+      const { data: investmentData, error: investmentError } = await supabase
+        .from('investments')
+        .insert({
+          user_id: user.id,
+          project_id: project.id,
+          amount: investmentAmount,
+          duration: selectedDuration,
+          yield_rate: project.yield,
+          status: 'active'
+        })
+        .select('id')
+        .single();
+        
+      if (investmentError) {
+        console.error("Error recording investment:", investmentError);
+        throw investmentError;
+      }
+      
+      // 2. Deduct the amount from the user's wallet balance
+      const { error: walletError } = await supabase.rpc(
+        'decrement_wallet_balance',
+        { 
+          user_id: user.id, 
+          decrement_amount: investmentAmount 
+        }
+      );
+      
+      if (walletError) {
+        console.error("Error updating wallet balance:", walletError);
+        throw walletError;
+      }
+      
+      // 3. Record the transaction
+      const { error: transactionError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: user.id,
+          amount: investmentAmount,
+          type: 'investment',
+          description: `Investissement dans ${project.name}`,
+          status: 'completed'
+        });
+        
+      if (transactionError) {
+        console.error("Error recording transaction:", transactionError);
+        throw transactionError;
+      }
+      
+      // 4. Update user's profile statistics
+      const { error: profileError } = await supabase.rpc(
+        'update_user_profile_investment',
+        {
+          user_id: user.id,
+          investment_amount: investmentAmount
+        }
+      );
+      
+      if (profileError) {
+        console.error("Error updating profile statistics:", profileError);
+        throw profileError;
+      }
+      
+      // 5. Store investment in local storage to immediately display it
+      // (as a backup in case realtime subscriptions are slow)
+      const recentInvestment = {
+        projectId: project.id,
+        amount: investmentAmount,
+        date: new Date().toISOString()
+      };
+      localStorage.setItem("recentInvestment", JSON.stringify(recentInvestment));
       
       // Show success message
       toast.success("Investissement effectué", {
@@ -120,7 +200,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
       // Reset form
       setShowConfirmation(false);
       
-      // Redirect or show success view could be added here
     } catch (err) {
       console.error("Error processing investment:", err);
       toast.error("Erreur", {
