@@ -43,7 +43,15 @@ serve(async (req: Request) => {
     );
 
     // Parse request body
-    const { transferId, status, isProcessed, notes, userId, sendNotification } = await req.json();
+    const { 
+      transferId, 
+      status, 
+      isProcessed, 
+      notes, 
+      userId, 
+      sendNotification,
+      creditWallet = true // Default to true for backward compatibility
+    } = await req.json();
     
     // Validate required parameters
     if (!transferId || !status) {
@@ -53,12 +61,12 @@ serve(async (req: Request) => {
       );
     }
 
-    console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}`);
+    console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}, CreditWallet=${creditWallet}`);
 
     // First try to find the transfer in bank_transfers
     const { data: existingTransfer, error: checkError } = await supabase
       .from('bank_transfers')
-      .select('id, user_id')
+      .select('id, user_id, amount')
       .eq('id', transferId)
       .maybeSingle();
       
@@ -66,7 +74,7 @@ serve(async (req: Request) => {
     if (!existingTransfer && !checkError) {
       const { data: walletTransfer, error: walletError } = await supabase
         .from('wallet_transactions')
-        .select('id, user_id')
+        .select('id, user_id, amount')
         .eq('id', transferId)
         .maybeSingle();
         
@@ -91,13 +99,13 @@ serve(async (req: Request) => {
           );
         }
         
-        // Update user wallet balance if needed
-        if (status === 'received' && walletTransfer.user_id) {
-          await updateUserWalletBalance(supabase, walletTransfer.user_id, transferId);
+        // Update user wallet balance if needed and requested
+        if (status === 'received' && walletTransfer.user_id && creditWallet) {
+          await updateUserWalletBalance(supabase, walletTransfer.user_id, walletTransfer.amount);
           
           // Send notification if requested
           if (sendNotification) {
-            await sendUserNotification(supabase, walletTransfer.user_id, { amount: 0 });
+            await sendUserNotification(supabase, walletTransfer.user_id, { amount: walletTransfer.amount });
           }
         }
         
@@ -175,13 +183,16 @@ serve(async (req: Request) => {
 
       console.log("Update successful via direct update");
       
-      // Update user wallet balance if needed
-      if (userId && (status === 'received' || status === 'reçu')) {
-        await updateUserWalletBalance(supabase, userId, transferId);
+      // Update user wallet balance if needed and should credit wallet
+      const userIdToUpdate = userId || existingTransfer.user_id;
+      const transferAmount = transfer?.amount || existingTransfer.amount || 0;
+      
+      if (userIdToUpdate && (status === 'received' || status === 'reçu') && creditWallet) {
+        await updateUserWalletBalance(supabase, userIdToUpdate, transferAmount);
         
         // Send notification if requested and status is received
         if (sendNotification) {
-          await sendUserNotification(supabase, userId, transfer);
+          await sendUserNotification(supabase, userIdToUpdate, transfer || { amount: transferAmount });
         }
       }
       
@@ -194,12 +205,15 @@ serve(async (req: Request) => {
     console.log("Update successful via RPC");
     
     // Check if we need to update the user's wallet balance
-    if (userId && (status === 'received' || status === 'reçu')) {
-      await updateUserWalletBalance(supabase, userId, transferId);
+    const userIdToUpdate = userId || existingTransfer.user_id;
+    const transferAmount = transfer?.amount || existingTransfer.amount || 0;
+    
+    if (userIdToUpdate && (status === 'received' || status === 'reçu') && creditWallet) {
+      await updateUserWalletBalance(supabase, userIdToUpdate, transferId, transferAmount);
       
       // Send notification if requested and status is received
       if (sendNotification) {
-        await sendUserNotification(supabase, userId, transfer);
+        await sendUserNotification(supabase, userIdToUpdate, transfer || { amount: transferAmount });
       }
     }
     
@@ -233,44 +247,85 @@ serve(async (req: Request) => {
   }
 });
 
-// Helper function to update the user's wallet balance
-async function updateUserWalletBalance(supabase: any, userId: string, transferId: string) {
+// Updated helper function to update the user's wallet balance
+async function updateUserWalletBalance(supabase: any, userId: string, transferId: string | number, amount?: number) {
   try {
-    console.log(`Recalculating wallet balance for user ${userId}`);
+    console.log(`Updating wallet balance for user ${userId}`);
     
-    // Get the transfer to check the amount
-    const { data: transfer, error: transferError } = await supabase
-      .from('bank_transfers')
-      .select('amount')
-      .eq('id', transferId)
-      .maybeSingle();
+    let transferAmount = amount;
     
-    if (transferError) {
-      console.error("Error fetching transfer:", transferError.message);
-      return;
+    // If amount not provided directly, try to get it from the transfer
+    if (transferAmount === undefined && typeof transferId === 'string') {
+      // Get the transfer to check the amount
+      const { data: transfer, error: transferError } = await supabase
+        .from('bank_transfers')
+        .select('amount')
+        .eq('id', transferId)
+        .maybeSingle();
+      
+      if (transferError) {
+        console.error("Error fetching transfer:", transferError.message);
+      } else {
+        transferAmount = transfer?.amount;
+      }
     }
     
-    // First try to use the recalculate function
+    // If we have a valid amount, directly increment the wallet balance first
+    if (transferAmount !== undefined && transferAmount > 0) {
+      // Direct increment has higher priority for immediate feedback
+      const { error: incrementError } = await supabase.rpc('increment_wallet_balance', {
+        user_id: userId,
+        increment_amount: transferAmount
+      });
+      
+      if (incrementError) {
+        console.error("Increment wallet balance failed:", incrementError.message);
+      } else {
+        console.log(`Successfully incremented wallet balance by ${transferAmount}`);
+        
+        // Also create or update a wallet transaction to ensure visibility in transaction history
+        const { data: existingTransaction } = await supabase
+          .from('wallet_transactions')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('amount', transferAmount)
+          .eq('type', 'deposit')
+          .limit(1);
+          
+        if (existingTransaction && existingTransaction.length > 0) {
+          // Update existing transaction to completed status
+          await supabase
+            .from('wallet_transactions')
+            .update({
+              status: 'completed',
+              receipt_confirmed: true
+            })
+            .eq('id', existingTransaction[0].id);
+        } else {
+          // Create a new transaction for this deposit
+          await supabase
+            .from('wallet_transactions')
+            .insert({
+              user_id: userId,
+              amount: transferAmount,
+              type: 'deposit',
+              description: 'Dépôt de fonds (virement bancaire)',
+              receipt_confirmed: true,
+              status: 'completed'
+            });
+        }
+        
+        return; // Exit early as we've already updated the balance
+      }
+    }
+    
+    // Fallback to recalculation function if direct increment didn't work
     const { error: recalcError } = await supabase.rpc('recalculate_wallet_balance', {
       user_uuid: userId
     });
     
     if (recalcError) {
       console.error("Recalculate wallet balance failed:", recalcError.message);
-      
-      // If recalculate fails and we have an amount, try increment instead
-      if (transfer?.amount) {
-        const { error: incrementError } = await supabase.rpc('increment_wallet_balance', {
-          user_id: userId,
-          increment_amount: transfer.amount
-        });
-        
-        if (incrementError) {
-          console.error("Increment wallet balance failed:", incrementError.message);
-        } else {
-          console.log(`Successfully incremented wallet balance by ${transfer.amount}`);
-        }
-      }
     } else {
       console.log("Successfully recalculated wallet balance");
     }

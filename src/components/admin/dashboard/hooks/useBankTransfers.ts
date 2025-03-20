@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { bankTransferService } from "../services/bankTransferService";
 import { BankTransferItem } from "../types/bankTransfer";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useBankTransfers() {
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -32,6 +33,41 @@ export function useBankTransfers() {
         processedDate
       });
       
+      // Check if wallet balance should be updated (if status is received/reçu)
+      const shouldUpdateWallet = newStatus === 'received' || newStatus === 'reçu';
+      
+      if (shouldUpdateWallet && transfer.user_id && transfer.amount) {
+        console.log(`Will update wallet balance for user ${transfer.user_id} with amount ${transfer.amount}`);
+        
+        // Use increment_wallet_balance RPC to update wallet balance directly
+        const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
+          user_id: transfer.user_id,
+          increment_amount: transfer.amount
+        });
+        
+        if (walletError) {
+          console.error("Failed to update wallet balance:", walletError);
+        } else {
+          console.log("Wallet balance updated successfully");
+          
+          // Create a wallet transaction for this deposit if it doesn't exist
+          const { error: txError } = await supabase
+            .from('wallet_transactions')
+            .insert({
+              user_id: transfer.user_id,
+              amount: transfer.amount,
+              type: 'deposit',
+              description: `Virement bancaire${transfer.reference ? ` (${transfer.reference})` : ''}`,
+              receipt_confirmed: true,
+              status: 'completed'
+            });
+            
+          if (txError) {
+            console.error("Failed to create wallet transaction:", txError);
+          }
+        }
+      }
+      
       // Call the service to update the transfer
       const result = await bankTransferService.updateBankTransfer(
         transfer.id,
@@ -42,7 +78,10 @@ export function useBankTransfers() {
       console.log("Update result:", result);
       
       if (result.success) {
-        toast.success(`Virement mis à jour: ${newStatus}`);
+        const message = shouldUpdateWallet 
+          ? `Virement mis à jour: ${newStatus} et solde utilisateur crédité`
+          : `Virement mis à jour: ${newStatus}`;
+        toast.success(message);
         return true;
       } else {
         console.error("Échec de mise à jour:", result);

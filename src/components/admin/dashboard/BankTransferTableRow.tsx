@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -98,7 +97,8 @@ export default function BankTransferTableRow({
             isProcessed: true,
             notes: `Réception confirmée le ${new Date().toLocaleDateString('fr-FR')}`,
             userId: item.user_id,
-            sendNotification: true
+            sendNotification: true,
+            creditWallet: true
           }
         }
       );
@@ -107,9 +107,30 @@ export default function BankTransferTableRow({
         console.error("Erreur fonction edge:", edgeFunctionError);
         toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', item.user_id)
+          .single();
+          
+        if (!profileError && profileData) {
+          console.log("Current wallet balance:", profileData.wallet_balance);
+          
+          const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
+            user_id: item.user_id,
+            increment_amount: item.amount || 0
+          });
+          
+          if (walletError) {
+            console.error("Failed to update wallet balance:", walletError);
+          } else {
+            console.log(`Wallet balance updated by ${item.amount}`);
+          }
+        }
+        
         const success = await updateTransferStatus(item, 'received');
         if (success && onStatusUpdate) {
-          toast.success("Virement marqué comme reçu");
+          toast.success("Virement marqué comme reçu et solde mis à jour");
           onStatusUpdate();
         } else {
           toast.error("Échec de la mise à jour - veuillez réessayer");
@@ -118,7 +139,7 @@ export default function BankTransferTableRow({
         console.log("Résultat fonction edge:", edgeFunctionData);
         
         if (edgeFunctionData.success) {
-          toast.success("Virement marqué comme reçu");
+          toast.success("Virement marqué comme reçu et solde mis à jour");
           if (onStatusUpdate) {
             setTimeout(() => {
               onStatusUpdate();
@@ -209,6 +230,7 @@ export default function BankTransferTableRow({
       console.log(`Updating transfer ${item.id} with status ${editStatus} and processed date ${processedDate}`);
       
       const isProcessed = (editStatus === 'received' || editStatus === 'rejected') || processedDate !== undefined;
+      const shouldCreditWallet = editStatus === 'received';
       
       const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
         'update-bank-transfer',
@@ -219,7 +241,8 @@ export default function BankTransferTableRow({
             isProcessed: isProcessed,
             notes: `Mis à jour manuellement le ${new Date().toLocaleDateString('fr-FR')}`,
             userId: item.user_id,
-            sendNotification: editStatus === 'received'
+            sendNotification: shouldCreditWallet,
+            creditWallet: shouldCreditWallet
           }
         }
       );
@@ -228,11 +251,26 @@ export default function BankTransferTableRow({
         console.error("Erreur fonction edge:", edgeFunctionError);
         toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
+        if (shouldCreditWallet) {
+          const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
+            user_id: item.user_id,
+            increment_amount: item.amount || 0
+          });
+          
+          if (walletError) {
+            console.error("Failed to update wallet balance:", walletError);
+          } else {
+            console.log(`Wallet balance incremented by ${item.amount}`);
+          }
+        }
+        
         const processedDateStr = processedDate ? processedDate.toISOString() : null;
         const success = await updateTransferStatus(item, editStatus, processedDateStr);
         
         if (success && onStatusUpdate) {
-          toast.success("Virement mis à jour avec succès");
+          toast.success(shouldCreditWallet 
+            ? "Virement mis à jour et solde utilisateur crédité"
+            : "Virement mis à jour avec succès");
           setIsEditModalOpen(false);
           onStatusUpdate();
         } else {
@@ -242,7 +280,9 @@ export default function BankTransferTableRow({
         console.log("Résultat fonction edge:", edgeFunctionData);
         
         if (edgeFunctionData.success) {
-          toast.success("Virement mis à jour avec succès");
+          toast.success(shouldCreditWallet 
+            ? "Virement mis à jour et solde utilisateur crédité"
+            : "Virement mis à jour avec succès");
           setIsEditModalOpen(false);
           
           if (onStatusUpdate) {
