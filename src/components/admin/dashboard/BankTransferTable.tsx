@@ -1,11 +1,10 @@
 
-import React from "react";
-import { BankTransferTableProps } from "./types/bankTransfer";
+import React, { useState, useEffect } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { BankTransferTableProps, BankTransferItem } from "./types/bankTransfer";
+import BankTransferTableRow from "./BankTransferTableRow";
 import { useBankTransfers } from "./hooks/useBankTransfers";
-import { useTransferSubscriptions } from "./hooks/useTransferSubscriptions";
-import { deduplicateTransfers, sortTransfersByDate } from "./utils/transferUtils";
-import TransferListView from "./components/TransferListView";
-import LoadingView from "./components/LoadingView";
+import { toast } from "sonner";
 
 export default function BankTransferTable({ 
   pendingTransfers, 
@@ -13,12 +12,54 @@ export default function BankTransferTable({
   refreshData
 }: BankTransferTableProps) {
   const { processingId } = useBankTransfers();
-  const { lastUpdateTime, isRefreshing, handleStatusUpdate } = useTransferSubscriptions({ refreshData });
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
   console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers?.length || 0);
   
+  // Handle refresh after status update with debounce
+  const handleStatusUpdate = () => {
+    setLastUpdateTime(Date.now());
+    if (refreshData && !isRefreshing) {
+      setIsRefreshing(true);
+      
+      // Add a slight delay to ensure database operations have completed
+      setTimeout(() => {
+        refreshData();
+        setIsRefreshing(false);
+      }, 2000); // Increased delay for better stability
+    }
+  };
+
+  // Force a refresh every 10 seconds to catch any updates
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (refreshData && !isRefreshing) {
+        setIsRefreshing(true);
+        refreshData();
+        // Set timeout to ensure we set isRefreshing back to false
+        setTimeout(() => {
+          setIsRefreshing(false);
+        }, 1000);
+      }
+    }, 15000); // Slightly longer interval to reduce load
+    
+    return () => clearInterval(intervalId);
+  }, [refreshData, isRefreshing]);
+
+  // Initial data load
+  useEffect(() => {
+    if (refreshData) {
+      refreshData();
+    }
+  }, [refreshData]);
+
   if (isLoading) {
-    return <LoadingView />;
+    return (
+      <div className="flex justify-center items-center h-48">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-bgs-blue"></div>
+      </div>
+    );
   }
 
   if (!pendingTransfers || pendingTransfers.length === 0) {
@@ -30,19 +71,42 @@ export default function BankTransferTable({
     );
   }
 
-  // ADVANCED DEDUPLICATION METHOD
-  const dedupedTransfers = deduplicateTransfers(pendingTransfers);
-  
   // Sort transfers by date, most recent first
-  const sortedTransfers = sortTransfersByDate(dedupedTransfers);
+  const sortedTransfers = [...pendingTransfers].sort((a, b) => {
+    const dateA = new Date(a.created_at || 0);
+    const dateB = new Date(b.created_at || 0);
+    return dateB.getTime() - dateA.getTime();
+  });
 
   return (
-    <TransferListView 
-      transfers={sortedTransfers}
-      processingId={processingId}
-      lastUpdateTime={lastUpdateTime}
-      onStatusUpdate={handleStatusUpdate}
-      isRefreshing={isRefreshing}
-    />
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Utilisateur</TableHead>
+            <TableHead>Référence</TableHead>
+            <TableHead>Montant</TableHead>
+            <TableHead>Statut</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {sortedTransfers.map((item) => (
+            <BankTransferTableRow
+              key={`${item.id}-${lastUpdateTime}`}
+              item={item}
+              processingId={processingId}
+              onStatusUpdate={handleStatusUpdate}
+            />
+          ))}
+        </TableBody>
+      </Table>
+      {isRefreshing && (
+        <div className="text-center p-2 text-xs text-gray-500">
+          Actualisation en cours...
+        </div>
+      )}
+    </div>
   );
 }

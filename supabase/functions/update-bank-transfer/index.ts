@@ -48,94 +48,19 @@ serve(async (req: Request) => {
     // Validate required parameters
     if (!transferId || !status) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing required parameters: transferId and status are required" }),
+        JSON.stringify({ error: "Missing required parameters: transferId and status are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}`);
 
-    // First try to find the transfer in bank_transfers
-    const { data: existingTransfer, error: checkError } = await supabase
-      .from('bank_transfers')
-      .select('id, user_id')
-      .eq('id', transferId)
-      .maybeSingle();
-      
-    // If not found in bank_transfers, check wallet_transactions
-    if (!existingTransfer && !checkError) {
-      const { data: walletTransfer, error: walletError } = await supabase
-        .from('wallet_transactions')
-        .select('id, user_id')
-        .eq('id', transferId)
-        .maybeSingle();
-        
-      if (walletTransfer) {
-        console.log("Transfer found in wallet_transactions:", walletTransfer);
-        
-        // Update the wallet transaction
-        const { data, error } = await supabase
-          .from('wallet_transactions')
-          .update({
-            status: status === 'received' ? 'completed' : status,
-            receipt_confirmed: status === 'received',
-          })
-          .eq('id', transferId)
-          .select();
-          
-        if (error) {
-          console.error("Error updating wallet transaction:", error.message);
-          return new Response(
-            JSON.stringify({ success: false, error: error.message }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        
-        // Update user wallet balance if needed
-        if (status === 'received' && walletTransfer.user_id) {
-          await updateUserWalletBalance(supabase, walletTransfer.user_id, transferId);
-          
-          // Send notification if requested
-          if (sendNotification) {
-            await sendUserNotification(supabase, walletTransfer.user_id, { amount: 0 });
-          }
-        }
-        
-        return new Response(
-          JSON.stringify({ success: true, data }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-      
-    if (checkError) {
-      console.error("Error checking transfer:", checkError?.message);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: checkError?.message 
-        }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    
-    if (!existingTransfer) {
-      console.error("Transfer not found with ID:", transferId);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: "Transfer not found" 
-        }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Get transfer details to include in notification
     const { data: transfer, error: transferError } = await supabase
       .from('bank_transfers')
       .select('amount, reference')
       .eq('id', transferId)
-      .maybeSingle();
+      .single();
       
     if (transferError) {
       console.error("Error fetching transfer details:", transferError.message);
@@ -163,7 +88,7 @@ serve(async (req: Request) => {
           notes: notes || `Mis à jour via edge function le ${new Date().toLocaleDateString('fr-FR')}`
         })
         .eq('id', transferId)
-        .select();
+        .select('*');
       
       if (error) {
         console.error("Direct update failed:", error.message);
@@ -203,27 +128,13 @@ serve(async (req: Request) => {
       }
     }
     
-    // Make sure we return the updated transfer data
-    const { data: updatedTransfer, error: getUpdatedError } = await supabase
-      .from('bank_transfers')
-      .select('*')
-      .eq('id', transferId)
-      .maybeSingle();
-      
-    if (getUpdatedError) {
-      console.warn("Couldn't fetch updated transfer:", getUpdatedError.message);
-    }
-    
     // Send success response
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        data: updatedTransfer || rpcResult || { id: transferId, status, processed: isProcessed }
-      }),
+      JSON.stringify({ success: true, data: rpcResult }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error: any) {
+  } catch (error) {
     console.error("Edge function error:", error.message);
     
     return new Response(
@@ -234,7 +145,7 @@ serve(async (req: Request) => {
 });
 
 // Helper function to update the user's wallet balance
-async function updateUserWalletBalance(supabase: any, userId: string, transferId: string) {
+async function updateUserWalletBalance(supabase, userId: string, transferId: string) {
   try {
     console.log(`Recalculating wallet balance for user ${userId}`);
     
@@ -243,7 +154,7 @@ async function updateUserWalletBalance(supabase: any, userId: string, transferId
       .from('bank_transfers')
       .select('amount')
       .eq('id', transferId)
-      .maybeSingle();
+      .single();
     
     if (transferError) {
       console.error("Error fetching transfer:", transferError.message);
@@ -274,13 +185,13 @@ async function updateUserWalletBalance(supabase: any, userId: string, transferId
     } else {
       console.log("Successfully recalculated wallet balance");
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating wallet balance:", error.message);
   }
 }
 
 // Helper function to send notification to the user
-async function sendUserNotification(supabase: any, userId: string, transfer: any) {
+async function sendUserNotification(supabase, userId: string, transfer: any) {
   try {
     if (!transfer) {
       console.log("No transfer details available for notification");
@@ -364,7 +275,7 @@ async function sendUserNotification(supabase: any, userId: string, transfer: any
       }
     }
     
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error sending user notification:", error.message);
   }
 }
