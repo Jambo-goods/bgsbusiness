@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +13,6 @@ export function WalletCard() {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Set up real-time subscription for wallet transactions and profile updates
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) return;
@@ -27,7 +25,6 @@ export function WalletCard() {
             console.log('Wallet transaction change detected:', payload);
             refreshBalance();
             
-            // Show toast notification based on transaction type
             if (payload.eventType === 'INSERT') {
               const newTransaction = payload.new;
               if (newTransaction.type === 'deposit' && newTransaction.status === 'completed') {
@@ -46,7 +43,6 @@ export function WalletCard() {
             console.log('Profile change detected:', payload);
             refreshBalance();
             
-            // Check if wallet_balance changed
             if (payload.old.wallet_balance !== payload.new.wallet_balance) {
               const difference = payload.new.wallet_balance - payload.old.wallet_balance;
               if (difference > 0) {
@@ -108,9 +104,6 @@ export function WalletCard() {
         )}
       </CardContent>
       <CardFooter className="flex justify-between gap-2">
-        <Button variant="outline" size="sm" className="w-full" onClick={handleInstructionsClick}>
-          Instructions de virement
-        </Button>
         <Button variant="outline" size="sm" className="w-full" onClick={handleWithdrawClick}>
           Demander un retrait
         </Button>

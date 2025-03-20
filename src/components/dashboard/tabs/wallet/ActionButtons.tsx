@@ -31,14 +31,6 @@ export default function ActionButtons({
   return (
     <div className="flex items-center gap-2 mt-4">
       <Button 
-        variant="outline" 
-        className="flex items-center gap-2 border-bgs-blue text-bgs-blue hover:bg-bgs-blue/10"
-        onClick={onDeposit}
-      >
-        Voir les instructions de virement
-      </Button>
-      
-      <Button 
         onClick={onWithdraw} 
         variant="outline" 
         className="flex items-center gap-2"
