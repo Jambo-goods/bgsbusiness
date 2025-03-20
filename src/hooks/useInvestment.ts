@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Project } from '@/types/project';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { notificationService } from '@/services/notifications';
 
 interface UseInvestmentReturn {
   investmentAmount: number;
@@ -129,7 +130,8 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
           amount: investmentAmount,
           duration: selectedDuration,
           yield_rate: project.yield,
-          status: 'active'
+          status: 'active',
+          date: new Date().toISOString()
         })
         .select('id')
         .single();
@@ -153,7 +155,7 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         throw walletError;
       }
       
-      // 3. Record the transaction
+      // 3. Record the transaction in wallet_transactions
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
@@ -170,26 +172,7 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
       }
       
       // 4. Create a notification for the investment
-      const { error: notificationError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: user.id,
-          title: "Investissement confirmé",
-          message: `Votre investissement de ${investmentAmount}€ dans ${project.name} a été confirmé.`,
-          type: 'investment',
-          seen: false,
-          data: { 
-            category: 'success',
-            amount: investmentAmount,
-            projectName: project.name,
-            projectId: project.id
-          }
-        });
-        
-      if (notificationError) {
-        console.error("Error creating notification:", notificationError);
-        throw notificationError;
-      }
+      await notificationService.investmentConfirmed(investmentAmount, project.name);
       
       // 5. Update user's profile statistics
       const { error: profileError } = await supabase.rpc(

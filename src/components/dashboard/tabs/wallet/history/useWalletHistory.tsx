@@ -27,7 +27,7 @@ export default function useWalletHistory() {
         return;
       }
 
-      // Récupération des transactions de l'utilisateur connecté
+      // Récupération des transactions de l'utilisateur connecté, incluant les transactions d'investissement
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('wallet_transactions')
         .select('*')
@@ -37,23 +37,24 @@ export default function useWalletHistory() {
 
       if (transactionsError) throw transactionsError;
       
-      // Récupération des notifications liées aux dépôts et retraits
+      // Récupération des notifications liées aux dépôts, retraits et investissements
       const { data: notificationsData, error: notificationsError } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', session.session.user.id)
-        .in('type', ['deposit', 'withdrawal'])
+        .in('type', ['deposit', 'withdrawal', 'investment'])
         .order('created_at', { ascending: false })
         .limit(15);
         
       if (notificationsError) throw notificationsError;
       
+      console.log("Transactions récupérées:", transactionsData);
       console.log("Notifications récupérées:", notificationsData);
       
       // Convert database types to our interface types
       const typedTransactions = transactionsData?.map(item => ({
         ...item,
-        type: item.type as 'deposit' | 'withdrawal',
+        type: item.type as 'deposit' | 'withdrawal' | 'investment',
         itemType: 'transaction' as const
       })) || [];
       
