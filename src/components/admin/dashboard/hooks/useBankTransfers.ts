@@ -46,7 +46,15 @@ export function useBankTransfers() {
         return true;
       } else {
         console.error("Échec de mise à jour:", result);
-        toast.error(result.message || "Échec de la mise à jour");
+        
+        // Show more specific error messages based on the error
+        if (result.message && result.message.includes("Transfer not found")) {
+          toast.error("Virement introuvable. Veuillez rafraîchir la page.");
+        } else if (result.message && result.message.includes("Edge Function")) {
+          toast.error("Erreur de connexion au serveur. Veuillez réessayer.");
+        } else {
+          toast.error(result.message || "Échec de la mise à jour");
+        }
         return false;
       }
     } catch (error: any) {
@@ -90,7 +98,15 @@ export function useBankTransfers() {
         return true;
       } else {
         console.error("Échec de restauration:", result);
-        toast.error(result.message || "Échec de la restauration");
+        
+        // Show more specific error messages based on the error
+        if (result.message && result.message.includes("Transfer not found")) {
+          toast.error("Virement introuvable. Veuillez rafraîchir la page.");
+        } else if (result.message && result.message.includes("Edge Function")) {
+          toast.error("Erreur de connexion au serveur. Veuillez réessayer.");
+        } else {
+          toast.error(result.message || "Échec de la restauration");
+        }
         return false;
       }
     } catch (error: any) {

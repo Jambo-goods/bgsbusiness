@@ -48,7 +48,7 @@ serve(async (req: Request) => {
     // Validate required parameters
     if (!transferId || !status) {
       return new Response(
-        JSON.stringify({ error: "Missing required parameters: transferId and status are required" }),
+        JSON.stringify({ success: false, error: "Missing required parameters: transferId and status are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -60,14 +60,25 @@ serve(async (req: Request) => {
       .from('bank_transfers')
       .select('id, user_id')
       .eq('id', transferId)
-      .single();
+      .maybeSingle();  // Use maybeSingle instead of single to handle when no rows are found
       
-    if (checkError || !existingTransfer) {
-      console.error("Transfer not found or error checking:", checkError?.message || "Not found");
+    if (checkError) {
+      console.error("Error checking transfer:", checkError?.message);
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: checkError?.message || "Transfer not found" 
+          error: checkError?.message 
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (!existingTransfer) {
+      console.error("Transfer not found with ID:", transferId);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Transfer not found" 
         }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -78,7 +89,7 @@ serve(async (req: Request) => {
       .from('bank_transfers')
       .select('amount, reference')
       .eq('id', transferId)
-      .single();
+      .maybeSingle();
       
     if (transferError) {
       console.error("Error fetching transfer details:", transferError.message);
@@ -151,7 +162,7 @@ serve(async (req: Request) => {
       .from('bank_transfers')
       .select('*')
       .eq('id', transferId)
-      .single();
+      .maybeSingle();
       
     if (getUpdatedError) {
       console.warn("Couldn't fetch updated transfer:", getUpdatedError.message);
@@ -186,7 +197,7 @@ async function updateUserWalletBalance(supabase: any, userId: string, transferId
       .from('bank_transfers')
       .select('amount')
       .eq('id', transferId)
-      .single();
+      .maybeSingle();
     
     if (transferError) {
       console.error("Error fetching transfer:", transferError.message);

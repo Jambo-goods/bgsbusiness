@@ -22,7 +22,7 @@ export const bankTransferService = {
         .from("bank_transfers")
         .select("user_id, status, processed")
         .eq("id", transferId)
-        .single();
+        .maybeSingle(); // Changed from single() to maybeSingle() to handle non-existent records
       
       if (transferError) {
         console.error("Erreur lors de la récupération du virement:", transferError);
@@ -34,7 +34,7 @@ export const bankTransferService = {
       }
       
       if (!transferData) {
-        console.error("Aucun transfert trouvé avec cet ID");
+        console.error("Aucun transfert trouvé avec cet ID:", transferId);
         return {
           success: false,
           message: "Transfert non trouvé",
@@ -112,7 +112,7 @@ export const bankTransferService = {
       
       console.log("Résultat fonction edge:", edgeFunctionData);
       
-      if (edgeFunctionData.success) {
+      if (edgeFunctionData?.success) {
         return {
           success: true,
           message: `Virement mis à jour avec succès via edge function: ${newStatus}`,
@@ -121,8 +121,8 @@ export const bankTransferService = {
       } else {
         return {
           success: false,
-          message: `Échec de la mise à jour via edge function: ${edgeFunctionData.error || 'Erreur inconnue'}`,
-          error: edgeFunctionData.error,
+          message: `Échec de la mise à jour via edge function: ${edgeFunctionData?.error || 'Erreur inconnue'}`,
+          error: edgeFunctionData?.error,
           data: transferData
         };
       }

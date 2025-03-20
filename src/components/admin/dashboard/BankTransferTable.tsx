@@ -5,6 +5,7 @@ import { BankTransferTableProps, BankTransferItem } from "./types/bankTransfer";
 import BankTransferTableRow from "./BankTransferTableRow";
 import { useBankTransfers } from "./hooks/useBankTransfers";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function BankTransferTable({ 
   pendingTransfers, 
@@ -28,8 +29,35 @@ export default function BankTransferTable({
       setTimeout(() => {
         refreshData();
         setIsRefreshing(false);
-      }, 1500); // Slightly reduced delay for better UX
+      }, 1000); // Slightly reduced delay for better UX
     }
+  }, [refreshData, isRefreshing]);
+
+  // Subscribe to real-time updates on bank_transfers table
+  useEffect(() => {
+    const subscription = supabase
+      .channel('bank_transfers_updates')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'bank_transfers' }, 
+        (payload) => {
+          console.log('Changement détecté sur bank_transfers via subscription:', payload);
+          
+          if (!isRefreshing && refreshData) {
+            setIsRefreshing(true);
+            toast.info("Mise à jour détectée, actualisation en cours...");
+            
+            setTimeout(() => {
+              refreshData();
+              setIsRefreshing(false);
+            }, 1000);
+          }
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(subscription);
+    };
   }, [refreshData, isRefreshing]);
 
   // Force a refresh every 10 seconds to catch any updates
