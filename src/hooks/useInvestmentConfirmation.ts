@@ -16,7 +16,6 @@ interface BankTransferItem {
   created_at?: string;
   updated_at?: string;
   profile?: {
-    id?: string;
     first_name?: string;
     last_name?: string;
     email?: string;
@@ -35,6 +34,31 @@ export function useInvestmentConfirmation() {
       }
 
       setProcessingId(transferId);
+      
+      // Vérifier si le transfert existe
+      const { data: existingTransfer, error: checkError } = await supabase
+        .from('bank_transfers')
+        .select('id, status')
+        .eq('id', transferId)
+        .maybeSingle();
+        
+      if (checkError) {
+        console.error("Erreur lors de la vérification:", checkError);
+        return {
+          success: false,
+          message: `Erreur de vérification: ${checkError.message}`,
+          error: checkError
+        };
+      }
+      
+      if (!existingTransfer) {
+        console.error("Transfert non trouvé:", transferId);
+        return {
+          success: false,
+          message: "Le transfert demandé n'existe pas",
+          error: new Error("Transfer not found")
+        };
+      }
       
       // Mise à jour du transfert
       const isProcessed = newStatus === 'received' || processedDate !== null;
@@ -75,10 +99,24 @@ export function useInvestmentConfirmation() {
   };
 
   const confirmInvestment = async (transfer: BankTransferItem) => {
+    if (!transfer || !transfer.id) {
+      console.error("Données de transfert invalides pour confirmation:", transfer);
+      toast.error("Erreur: données de transfert invalides");
+      return { success: false };
+    }
+    
+    console.log("Confirmation d'investissement pour:", transfer.id);
     return updateBankTransfer(transfer.id, 'received');
   };
 
   const rejectInvestment = async (transfer: BankTransferItem) => {
+    if (!transfer || !transfer.id) {
+      console.error("Données de transfert invalides pour rejet:", transfer);
+      toast.error("Erreur: données de transfert invalides");
+      return { success: false };
+    }
+    
+    console.log("Rejet d'investissement pour:", transfer.id);
     return updateBankTransfer(transfer.id, 'rejected');
   };
 

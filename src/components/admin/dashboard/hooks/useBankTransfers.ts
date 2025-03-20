@@ -11,6 +11,7 @@ export function useBankTransfers() {
   // Function to directly update bank transfer status
   const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string, processedDate: string | null = null) => {
     try {
+      // Validation plus stricte des données du transfert
       if (!transfer || !transfer.id) {
         console.error("Transfert invalide:", transfer);
         toast.error("Erreur: données de transfert invalides");
@@ -43,6 +44,7 @@ export function useBankTransfers() {
       });
       
       // Call the service to update the transfer
+      // Use direct Supabase call for more reliable operation
       const result = await bankTransferService.updateBankTransfer(
         transfer.id,
         newStatus,

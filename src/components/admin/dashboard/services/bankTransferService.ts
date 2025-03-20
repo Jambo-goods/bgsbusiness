@@ -19,7 +19,7 @@ export const bankTransferService = {
       // Vérifier si le transfert existe avant de tenter une mise à jour
       const { data: transferExists, error: checkError } = await supabase
         .from("bank_transfers")
-        .select("id")
+        .select("id, status")
         .eq("id", transferId)
         .maybeSingle();
       
@@ -41,34 +41,7 @@ export const bankTransferService = {
         };
       }
       
-      console.log("Transfert trouvé, procédant à la mise à jour:", transferId);
-      
-      // Récupérer les données du virement pour obtenir l'ID utilisateur
-      const { data: transferData, error: transferError } = await supabase
-        .from("bank_transfers")
-        .select("user_id, status, processed")
-        .eq("id", transferId)
-        .maybeSingle();
-      
-      if (transferError) {
-        console.error("Erreur lors de la récupération des données du virement:", transferError);
-        return { 
-          success: false, 
-          message: `Erreur de récupération: ${transferError.message}`,
-          error: transferError
-        };
-      }
-      
-      if (!transferData) {
-        console.error("Données du virement introuvables:", transferId);
-        return {
-          success: false,
-          message: "Les données du virement sont introuvables",
-          error: new Error("Transfer data not found")
-        };
-      }
-      
-      console.log("Données du virement récupérées:", transferData);
+      console.log("Transfert trouvé, procédant à la mise à jour:", transferExists);
       
       // Mise à jour directe du virement
       const isProcessed = newStatus === 'received' || processedDate !== null;
@@ -89,26 +62,33 @@ export const bankTransferService = {
         return {
           success: false,
           message: `Erreur de mise à jour: ${updateError.message}`,
-          error: updateError,
-          data: transferData
+          error: updateError
         };
       }
       
       console.log("Mise à jour directe réussie:", updateResult);
       
       // Si le statut est 'received', mettre à jour le solde du portefeuille
-      if (newStatus === 'received' && transferData?.user_id) {
+      if (newStatus === 'received') {
         try {
-          console.log("Recalcul du solde pour l'utilisateur:", transferData.user_id);
-          const { error: walletError } = await supabase.rpc('recalculate_wallet_balance', {
-            user_uuid: transferData.user_id
-          });
-          
-          if (walletError) {
-            console.error("Erreur de recalcul du solde:", walletError);
-            // On continue malgré l'erreur car la mise à jour du virement a réussi
-          } else {
-            console.log("Solde recalculé avec succès");
+          const { data: transferData } = await supabase
+            .from("bank_transfers")
+            .select("user_id")
+            .eq("id", transferId)
+            .single();
+            
+          if (transferData?.user_id) {
+            console.log("Recalcul du solde pour l'utilisateur:", transferData.user_id);
+            const { error: walletError } = await supabase.rpc('recalculate_wallet_balance', {
+              user_uuid: transferData.user_id
+            });
+            
+            if (walletError) {
+              console.error("Erreur de recalcul du solde:", walletError);
+              // On continue malgré l'erreur car la mise à jour du virement a réussi
+            } else {
+              console.log("Solde recalculé avec succès");
+            }
           }
         } catch (walletUpdateError) {
           console.error("Erreur lors de la mise à jour du portefeuille:", walletUpdateError);
@@ -122,7 +102,7 @@ export const bankTransferService = {
         data: updateResult
       };
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur inattendue lors de la mise à jour:", error);
       return {
         success: false,
@@ -133,7 +113,7 @@ export const bankTransferService = {
   },
   
   // Abonner aux changements en temps réel sur la table des virements
-  subscribeToTransferChanges(callback) {
+  subscribeToTransferChanges(callback: Function) {
     return supabase
       .channel('bank_transfers_changes')
       .on('postgres_changes', 

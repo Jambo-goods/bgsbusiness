@@ -72,7 +72,7 @@ export default function BankTransferTableRow({
       id: item.id,
       status: item.status,
       processed: item.processed,
-      user: item.profile?.id || 'unknown'
+      user: item.profile ? item.profile.email : 'unknown'
     });
   }
   
