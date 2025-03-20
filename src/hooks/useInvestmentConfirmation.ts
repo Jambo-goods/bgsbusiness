@@ -1,5 +1,4 @@
 
-// Cette version est compatible avec celle du dossier admin
 import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +37,7 @@ export function useInvestmentConfirmation() {
       // Vérifier si le transfert existe
       const { data: existingTransfer, error: checkError } = await supabase
         .from('bank_transfers')
-        .select('id, status')
+        .select('id, status, user_id')
         .eq('id', transferId)
         .maybeSingle();
         

@@ -1,146 +1,165 @@
 
-import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import React, { useEffect, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
+import NotificationsList from "./notifications/NotificationsList";
+import NotificationHeader from "./notifications/NotificationHeader";
+import NotificationTabs from "./notifications/NotificationTabs";
+import EmptyNotifications from "./notifications/EmptyNotifications";
+import { useUser } from "@/hooks/dashboard/useUserSession";
 import { supabase } from "@/integrations/supabase/client";
-import { NotificationsList } from "./notifications/NotificationsList";
-import { NotificationHeader } from "./notifications/NotificationHeader";
-import { NotificationTabs } from "./notifications/NotificationTabs";
-import { EmptyNotifications } from "./notifications/EmptyNotifications";
-import { useAuth } from "@supabase/auth-helpers-react";
-import { Loader2 } from "lucide-react";
 
 export default function NotificationsTab() {
-  const [activeTab, setActiveTab] = React.useState<string>("all");
-  const { user } = useAuth();
+  const { user } = useUser();
+  const [notifications, setNotifications] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("all");
 
-  // Fetch notifications from Supabase
-  const { data: notifications, isLoading, error, refetch } = useQuery({
-    queryKey: ["notifications", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      subscribeToNotifications();
+    }
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    try {
+      setIsLoading(true);
       
-      // Fetch notifications from Supabase
       const { data, error } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user?.id)
         .order("created_at", { ascending: false });
-      
+        
       if (error) {
-        console.error("Error fetching notifications:", error);
         throw error;
       }
       
-      // Transform the data to include proper category info from the data field
-      return data.map(notification => {
-        let category = "info";
-        
-        // Check if data exists and is an object with a category property
-        if (notification.data) {
-          try {
-            // If data is a string, try to parse it
-            const dataObj = typeof notification.data === 'string' 
-              ? JSON.parse(notification.data) 
-              : notification.data;
-            
-            // Check if dataObj is an object with a category property
-            if (dataObj && typeof dataObj === 'object' && !Array.isArray(dataObj)) {
-              category = dataObj.category || 
-                         (notification.type === "deposit" ? "success" : 
-                         notification.type === "withdrawal" ? "warning" : "info");
-            }
-          } catch (e) {
-            console.error("Error parsing notification data:", e);
+      // Convert JSON data field to object if it's a string
+      const processedData = data.map(notification => {
+        try {
+          // Check if data is a string and try to parse it
+          if (notification.data && typeof notification.data === 'string') {
+            notification.data = JSON.parse(notification.data);
           }
-        } else {
-          // Default categories based on notification type
-          category = notification.type === "deposit" ? "success" : 
-                     notification.type === "withdrawal" ? "warning" : "info";
+        } catch (e) {
+          console.error("Error parsing notification data:", e);
         }
-        
-        return {
-          ...notification,
-          category
-        };
+        return notification;
       });
-    },
-    enabled: !!user?.id,
+      
+      setNotifications(processedData);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      toast.error("Impossible de charger vos notifications");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const subscribeToNotifications = () => {
+    const channel = supabase
+      .channel('notifications_changes')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user?.id}` }, 
+        () => {
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ seen: true })
+        .eq("user_id", user?.id);
+        
+      if (error) throw error;
+      
+      fetchNotifications();
+      toast.success("Toutes les notifications marquées comme lues");
+    } catch (error) {
+      console.error("Error marking notifications as read:", error);
+      toast.error("Impossible de mettre à jour les notifications");
+    }
+  };
+
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ seen: true })
+        .eq("id", notificationId);
+        
+      if (error) throw error;
+      
+      fetchNotifications();
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      toast.error("Impossible de mettre à jour la notification");
+    }
+  };
+
+  const deleteNotification = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from("notifications")
+        .delete()
+        .eq("id", notificationId);
+        
+      if (error) throw error;
+      
+      fetchNotifications();
+      toast.success("Notification supprimée");
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      toast.error("Impossible de supprimer la notification");
+    }
+  };
+
+  const filteredNotifications = notifications.filter(notification => {
+    if (activeTab === "all") return true;
+    if (activeTab === "unread") return !notification.seen;
+    return notification.type === activeTab;
   });
-
-  // Mark notification as seen
-  const markAsSeen = async (id: string) => {
-    if (!user?.id) return;
-    
-    try {
-      await supabase
-        .from("notifications")
-        .update({ seen: true })
-        .eq("id", id);
-      
-      refetch();
-    } catch (error) {
-      console.error("Error marking notification as seen:", error);
-    }
-  };
-
-  // Mark all notifications as seen
-  const markAllAsSeen = async () => {
-    if (!user?.id) return;
-    
-    try {
-      await supabase
-        .from("notifications")
-        .update({ seen: true })
-        .eq("user_id", user.id)
-        .eq("seen", false);
-      
-      refetch();
-    } catch (error) {
-      console.error("Error marking all notifications as seen:", error);
-    }
-  };
-
-  // Filter notifications based on active tab
-  const filteredNotifications = React.useMemo(() => {
-    if (!notifications) return [];
-    
-    if (activeTab === "all") {
-      return notifications;
-    } else if (activeTab === "unread") {
-      return notifications.filter(notification => !notification.seen);
-    } else {
-      return notifications.filter(notification => notification.type === activeTab);
-    }
-  }, [notifications, activeTab]);
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
-        <p>Une erreur est survenue lors du chargement des notifications.</p>
-        <p className="text-sm mt-2">Veuillez rafraîchir la page ou réessayer plus tard.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
-      <NotificationHeader notificationsCount={filteredNotifications.length} markAllAsSeen={markAllAsSeen} />
+      <NotificationHeader 
+        notificationCount={notifications.length} 
+        markAllAsRead={markAllAsRead} 
+      />
       
-      <NotificationTabs activeTab={activeTab} setActiveTab={setActiveTab} notifications={notifications || []} />
-
-      {filteredNotifications.length > 0 ? (
-        <NotificationsList notifications={filteredNotifications} markAsSeen={markAsSeen} />
-      ) : (
-        <EmptyNotifications activeTab={activeTab} />
-      )}
+      <Card>
+        <NotificationTabs 
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
+        
+        <CardContent className="pt-6">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-40">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            </div>
+          ) : filteredNotifications.length > 0 ? (
+            <NotificationsList
+              notifications={filteredNotifications}
+              markAsRead={markAsRead}
+              deleteNotification={deleteNotification}
+            />
+          ) : (
+            <EmptyNotifications activeTab={activeTab} />
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

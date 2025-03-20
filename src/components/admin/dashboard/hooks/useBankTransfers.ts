@@ -25,6 +25,14 @@ export function useBankTransfers() {
         return false;
       }
 
+      // Debug log for transfer
+      console.log("Updating transfer:", {
+        id: transfer.id,
+        status: transfer.status,
+        user_id: transfer.user_id,
+        amount: transfer.amount
+      });
+
       setProcessingId(transfer.id);
       
       // Store admin token if available
@@ -44,7 +52,6 @@ export function useBankTransfers() {
       });
       
       // Call the service to update the transfer
-      // Use direct Supabase call for more reliable operation
       const result = await bankTransferService.updateBankTransfer(
         transfer.id,
         newStatus,

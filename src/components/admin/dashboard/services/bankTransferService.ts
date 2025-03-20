@@ -7,7 +7,7 @@ export const bankTransferService = {
     try {
       console.log(`Mise à jour du virement ${transferId} avec statut ${newStatus}`);
       
-      if (!transferId) {
+      if (!transferId || typeof transferId !== 'string' || transferId.trim() === '') {
         console.error("ID de transfert invalide:", transferId);
         return { 
           success: false, 
@@ -19,7 +19,7 @@ export const bankTransferService = {
       // Vérifier si le transfert existe avant de tenter une mise à jour
       const { data: transferExists, error: checkError } = await supabase
         .from("bank_transfers")
-        .select("id, status")
+        .select("id, status, user_id, amount")
         .eq("id", transferId)
         .maybeSingle();
       
@@ -41,17 +41,18 @@ export const bankTransferService = {
         };
       }
       
-      console.log("Transfert trouvé, procédant à la mise à jour:", transferExists);
+      console.log("Transfert trouvé pour mise à jour:", transferExists);
       
       // Mise à jour directe du virement
       const isProcessed = newStatus === 'received' || processedDate !== null;
+      const currentTime = new Date().toISOString();
       
       const { data: updateResult, error: updateError } = await supabase
         .from('bank_transfers')
         .update({
           status: newStatus,
           processed: isProcessed,
-          processed_at: isProcessed ? (processedDate || new Date().toISOString()) : null,
+          processed_at: isProcessed ? (processedDate || currentTime) : null,
           notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
         })
         .eq('id', transferId)
@@ -69,26 +70,18 @@ export const bankTransferService = {
       console.log("Mise à jour directe réussie:", updateResult);
       
       // Si le statut est 'received', mettre à jour le solde du portefeuille
-      if (newStatus === 'received') {
+      if (newStatus === 'received' && transferExists.user_id) {
         try {
-          const { data: transferData } = await supabase
-            .from("bank_transfers")
-            .select("user_id")
-            .eq("id", transferId)
-            .single();
-            
-          if (transferData?.user_id) {
-            console.log("Recalcul du solde pour l'utilisateur:", transferData.user_id);
-            const { error: walletError } = await supabase.rpc('recalculate_wallet_balance', {
-              user_uuid: transferData.user_id
-            });
-            
-            if (walletError) {
-              console.error("Erreur de recalcul du solde:", walletError);
-              // On continue malgré l'erreur car la mise à jour du virement a réussi
-            } else {
-              console.log("Solde recalculé avec succès");
-            }
+          console.log("Recalcul du solde pour l'utilisateur:", transferExists.user_id);
+          const { error: walletError } = await supabase.rpc('recalculate_wallet_balance', {
+            user_uuid: transferExists.user_id
+          });
+          
+          if (walletError) {
+            console.error("Erreur de recalcul du solde:", walletError);
+            // On continue malgré l'erreur car la mise à jour du virement a réussi
+          } else {
+            console.log("Solde recalculé avec succès");
           }
         } catch (walletUpdateError) {
           console.error("Erreur lors de la mise à jour du portefeuille:", walletUpdateError);

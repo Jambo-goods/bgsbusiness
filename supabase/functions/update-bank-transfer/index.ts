@@ -83,7 +83,7 @@ serve(async (req) => {
     // Check if the transfer exists
     const { data: transferExists, error: checkError } = await supabase
       .from("bank_transfers")
-      .select("id, status")
+      .select("id, status, user_id")
       .eq("id", requestData.transferId)
       .maybeSingle();
     
@@ -188,7 +188,7 @@ serve(async (req) => {
       }
     );
     
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error processing request:", error);
     return new Response(
       JSON.stringify({ 
