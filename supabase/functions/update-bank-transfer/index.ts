@@ -55,6 +55,24 @@ serve(async (req: Request) => {
 
     console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}`);
 
+    // Check if transfer exists before attempting update
+    const { data: existingTransfer, error: checkError } = await supabase
+      .from('bank_transfers')
+      .select('id, user_id')
+      .eq('id', transferId)
+      .single();
+      
+    if (checkError || !existingTransfer) {
+      console.error("Transfer not found or error checking:", checkError?.message || "Not found");
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: checkError?.message || "Transfer not found" 
+        }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Get transfer details to include in notification
     const { data: transfer, error: transferError } = await supabase
       .from('bank_transfers')
@@ -88,7 +106,7 @@ serve(async (req: Request) => {
           notes: notes || `Mis à jour via edge function le ${new Date().toLocaleDateString('fr-FR')}`
         })
         .eq('id', transferId)
-        .select('*');
+        .select();
       
       if (error) {
         console.error("Direct update failed:", error.message);
@@ -128,13 +146,27 @@ serve(async (req: Request) => {
       }
     }
     
+    // Make sure we return the updated transfer data
+    const { data: updatedTransfer, error: getUpdatedError } = await supabase
+      .from('bank_transfers')
+      .select('*')
+      .eq('id', transferId)
+      .single();
+      
+    if (getUpdatedError) {
+      console.warn("Couldn't fetch updated transfer:", getUpdatedError.message);
+    }
+    
     // Send success response
     return new Response(
-      JSON.stringify({ success: true, data: rpcResult }),
+      JSON.stringify({ 
+        success: true, 
+        data: updatedTransfer || rpcResult || { id: transferId, status, processed: isProcessed }
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Edge function error:", error.message);
     
     return new Response(
@@ -145,7 +177,7 @@ serve(async (req: Request) => {
 });
 
 // Helper function to update the user's wallet balance
-async function updateUserWalletBalance(supabase, userId: string, transferId: string) {
+async function updateUserWalletBalance(supabase: any, userId: string, transferId: string) {
   try {
     console.log(`Recalculating wallet balance for user ${userId}`);
     
@@ -185,13 +217,13 @@ async function updateUserWalletBalance(supabase, userId: string, transferId: str
     } else {
       console.log("Successfully recalculated wallet balance");
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating wallet balance:", error.message);
   }
 }
 
 // Helper function to send notification to the user
-async function sendUserNotification(supabase, userId: string, transfer: any) {
+async function sendUserNotification(supabase: any, userId: string, transfer: any) {
   try {
     if (!transfer) {
       console.log("No transfer details available for notification");
@@ -275,7 +307,7 @@ async function sendUserNotification(supabase, userId: string, transfer: any) {
       }
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error sending user notification:", error.message);
   }
 }

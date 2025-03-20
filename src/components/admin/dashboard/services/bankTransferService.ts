@@ -7,6 +7,16 @@ export const bankTransferService = {
     try {
       console.log(`Mise à jour du virement ${transferId} avec statut ${newStatus}`);
       
+      // Vérifier que l'ID du transfert est valide
+      if (!transferId || transferId.trim() === '') {
+        console.error("ID de transfert invalide");
+        return { 
+          success: false, 
+          message: "ID de transfert invalide",
+          error: new Error("ID de transfert invalide")
+        };
+      }
+      
       // Récupérer les données du virement pour obtenir l'ID utilisateur
       const { data: transferData, error: transferError } = await supabase
         .from("bank_transfers")
@@ -20,6 +30,15 @@ export const bankTransferService = {
           success: false, 
           message: `Erreur de récupération: ${transferError.message}`,
           error: transferError
+        };
+      }
+      
+      if (!transferData) {
+        console.error("Aucun transfert trouvé avec cet ID");
+        return {
+          success: false,
+          message: "Transfert non trouvé",
+          error: new Error("Transfert non trouvé")
         };
       }
       
@@ -107,7 +126,7 @@ export const bankTransferService = {
           data: transferData
         };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur inattendue:", error);
       return {
         success: false,

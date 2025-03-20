@@ -10,6 +10,12 @@ export function useBankTransfers() {
   // Function to directly update bank transfer status
   const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string, processedDate: string | null = null) => {
     try {
+      if (!transfer || !transfer.id) {
+        console.error("Transfert invalide", transfer);
+        toast.error("Transfert invalide ou incomplet");
+        return false;
+      }
+      
       setProcessingId(transfer.id);
       
       // Store admin token if available
@@ -56,6 +62,12 @@ export function useBankTransfers() {
   // New function to restore a transfer back to pending status
   const restoreTransfer = async (transfer: BankTransferItem) => {
     try {
+      if (!transfer || !transfer.id) {
+        console.error("Transfert invalide", transfer);
+        toast.error("Transfert invalide ou incomplet");
+        return false;
+      }
+      
       setProcessingId(transfer.id);
       toast.info("Restauration du virement en cours...");
       

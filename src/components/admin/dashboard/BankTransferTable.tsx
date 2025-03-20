@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BankTransferTableProps, BankTransferItem } from "./types/bankTransfer";
 import BankTransferTableRow from "./BankTransferTableRow";
@@ -18,18 +18,19 @@ export default function BankTransferTable({
   console.log("Bank Transfer Table - Rendering transfers:", pendingTransfers?.length || 0);
   
   // Handle refresh after status update with debounce
-  const handleStatusUpdate = () => {
+  const handleStatusUpdate = useCallback(() => {
     setLastUpdateTime(Date.now());
     if (refreshData && !isRefreshing) {
       setIsRefreshing(true);
+      toast.info("Actualisation des données en cours...");
       
       // Add a slight delay to ensure database operations have completed
       setTimeout(() => {
         refreshData();
         setIsRefreshing(false);
-      }, 2000); // Increased delay for better stability
+      }, 1500); // Slightly reduced delay for better UX
     }
-  };
+  }, [refreshData, isRefreshing]);
 
   // Force a refresh every 10 seconds to catch any updates
   useEffect(() => {
