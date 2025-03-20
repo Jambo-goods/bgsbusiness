@@ -14,12 +14,13 @@ export default function HistoryList({ items }: HistoryListProps) {
 
   // Créer un mapping des références pour identifier les transactions et notifications liées
   const refMapping: Record<string, HistoryItemType[]> = {};
+  const withdrawalMapping: Record<string, HistoryItemType[]> = {};
   
-  // Première passe: grouper les éléments par référence
+  // Première passe: grouper les éléments par référence (dépôts) et par montant (retraits)
   items.forEach(item => {
+    // Gestion des dépôts
     let ref = null;
     
-    // Extraire la référence selon le type d'élément
     if (item.itemType === 'transaction' && item.description) {
       const match = item.description.match(/DEP-\d+/);
       ref = match ? match[0] : null;
@@ -35,16 +36,87 @@ export default function HistoryList({ items }: HistoryListProps) {
       }
       refMapping[ref].push(item);
     }
+    
+    // Gestion des retraits
+    if (item.type === 'withdrawal') {
+      let amount = 0;
+      let withdrawalRef = '';
+      
+      // Extraire le montant selon le type d'élément
+      if (item.itemType === 'transaction') {
+        amount = item.amount;
+        // Essayer d'extraire withdrawalId s'il existe dans la description
+        const idMatch = item.description?.match(/#([a-f0-9-]+)/i);
+        withdrawalRef = idMatch ? idMatch[1] : `withdrawal-${amount}-${new Date(item.created_at).getTime()}`;
+      } else if (item.itemType === 'notification') {
+        amount = item.metadata?.amount || 0;
+        withdrawalRef = item.metadata?.withdrawalId || `withdrawal-${amount}-${new Date(item.created_at).getTime()}`;
+      }
+      
+      const key = withdrawalRef;
+      
+      if (!withdrawalMapping[key]) {
+        withdrawalMapping[key] = [];
+      }
+      withdrawalMapping[key].push(item);
+    }
   });
   
   // Filtrer les éléments pour éviter les doublons
   const filteredItems = items.filter(item => {
-    // Les demandes de retrait doivent toujours être affichées
-    if (item.itemType === 'notification' && item.type === 'withdrawal') {
-      return true;
+    // Pour les retraits, on applique une logique spécifique
+    if (item.type === 'withdrawal') {
+      let amount = 0;
+      let withdrawalRef = '';
+      
+      // Extraire le montant selon le type d'élément
+      if (item.itemType === 'transaction') {
+        amount = item.amount;
+        // Essayer d'extraire withdrawalId s'il existe dans la description
+        const idMatch = item.description?.match(/#([a-f0-9-]+)/i);
+        withdrawalRef = idMatch ? idMatch[1] : `withdrawal-${amount}-${new Date(item.created_at).getTime()}`;
+      } else if (item.itemType === 'notification') {
+        amount = item.metadata?.amount || 0;
+        withdrawalRef = item.metadata?.withdrawalId || `withdrawal-${amount}-${new Date(item.created_at).getTime()}`;
+      }
+      
+      const key = withdrawalRef;
+      const group = withdrawalMapping[key];
+      
+      // S'il n'y a qu'un seul élément ou pas de groupe, on garde
+      if (!group || group.length <= 1) {
+        return true;
+      }
+      
+      // Pour les groupes de retraits: privilégier les transactions sur les notifications
+      // sauf pour les statuts qui n'apparaissent que dans les notifications
+      const hasTransaction = group.some(grpItem => 
+        grpItem.itemType === 'transaction' && 
+        grpItem.status !== 'scheduled' // "scheduled" est un statut intermédiaire qu'on veut conserver
+      );
+      
+      // On garde toujours les notifications avec des statuts spécifiques (confirmé, validé, etc.)
+      if (item.itemType === 'notification' && 
+          item.title && 
+          (item.title.includes('validé') || 
+           item.title.includes('confirmé') || 
+           item.title.includes('programmé'))) {
+        return true;
+      }
+      
+      if (hasTransaction) {
+        // On garde la transaction et on supprime les notifications redondantes
+        return item.itemType === 'transaction';
+      } else {
+        // Pas de transaction valide, on garde uniquement la notification la plus récente
+        const sortedGroup = [...group].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        return item.id === sortedGroup[0].id;
+      }
     }
     
-    // Cas 1: L'élément n'a pas de référence DEP-XXXXX, on le garde toujours
+    // Cas des dépôts
     let ref = null;
     
     if (item.itemType === 'transaction' && item.description) {
@@ -79,7 +151,6 @@ export default function HistoryList({ items }: HistoryListProps) {
       return false;
     } else {
       // Pas de transaction, on garde uniquement la notification la plus récente
-      // (celle qui a la date la plus récente, donc la première dans le groupe trié)
       const sortedGroup = [...group].sort((a, b) => 
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
