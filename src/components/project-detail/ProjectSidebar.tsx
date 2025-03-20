@@ -17,11 +17,19 @@ export default function ProjectSidebar({
   remainingDays,
   investorCount
 }: ProjectSidebarProps) {
+  // Add default values for project to prevent undefined errors
+  const safeProject = {
+    ...project,
+    minInvestment: project.minInvestment || 500,
+    yield: project.yield || 0.8,
+    duration: project.duration || "12 mois"
+  };
+
   return (
     <div className="sticky top-24 space-y-4 animate-fade-up">
-      <CompanyInfoSection project={project} />
-      <InvestmentOptionsSection project={project} investorCount={investorCount} />
-      <PerformanceSection project={project} />
+      <CompanyInfoSection project={safeProject} />
+      <InvestmentOptionsSection project={safeProject} investorCount={investorCount} />
+      <PerformanceSection project={safeProject} />
       <ViewCounter />
     </div>
   );

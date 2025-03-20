@@ -5,8 +5,9 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
-import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
+import ProjectNotFound from "@/components/project-detail/ProjectNotFound";
+import ProjectLoading from "@/components/project-detail/ProjectLoading";
 
 // Import refactored components
 import ProjectHeader from "@/components/project-detail/ProjectHeader";
@@ -15,8 +16,6 @@ import ProjectOverviewTab from "@/components/project-detail/ProjectOverviewTab";
 import ProjectDocumentsTab from "@/components/project-detail/ProjectDocumentsTab";
 import ProjectUpdatesTab from "@/components/project-detail/ProjectUpdatesTab";
 import ProjectSidebar from "@/components/project-detail/ProjectSidebar";
-import ProjectLoading from "@/components/project-detail/ProjectLoading";
-import ProjectNotFound from "@/components/project-detail/ProjectNotFound";
 import ProjectInvestmentSimulator from "@/components/project-detail/ProjectInvestmentSimulator";
 
 export default function ProjectDetail() {
@@ -28,7 +27,6 @@ export default function ProjectDetail() {
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'updates'>('overview');
   const [remainingDays] = useState(Math.floor(Math.random() * 30) + 10); // Simulate remaining days
   const [investorCount] = useState(Math.floor(Math.random() * 20) + 5); // Simulate investor count
-  const { toast: uiToast } = useToast();
 
   useEffect(() => {
     // Redirect if the user came from the old path "/projects/:id"
@@ -94,25 +92,7 @@ export default function ProjectDetail() {
   }
 
   if (error || !project) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="container mx-auto px-4 py-24">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Erreur</h1>
-            <p className="mb-4">{error || "Aucun projet trouvé"}</p>
-            <p className="mb-4">ID du projet: {id || "Non spécifié"}</p>
-            <button 
-              onClick={() => navigate('/projects')}
-              className="px-4 py-2 bg-bgs-blue text-white rounded-md"
-            >
-              Retour à la liste des projets
-            </button>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
+    return <ProjectNotFound />;
   }
 
   return (
