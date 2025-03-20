@@ -57,6 +57,8 @@ export default function ActionButtons({
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();
       onDeposit();
+      
+      toast.success(`Dépôt de ${depositAmount}€ effectué avec succès`);
     } catch (error) {
       console.error("Erreur lors du dépôt:", error);
       toast.error("Une erreur s'est produite lors du dépôt des fonds");
@@ -114,24 +116,54 @@ export default function ActionButtons({
       // Appel de la fonction de rafraîchissement
       if (refreshBalance) await refreshBalance();
       onWithdraw();
+      
+      toast.success(`Retrait de ${withdrawalAmount}€ effectué avec succès`);
     } catch (error) {
       console.error("Erreur lors du retrait:", error);
       toast.error("Une erreur s'est produite lors du retrait des fonds");
     }
   };
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     if (refreshBalance) {
-      refreshBalance();
+      try {
+        await refreshBalance();
+        toast.info("Actualisation des données...");
+      } catch (error) {
+        console.error("Erreur lors de l'actualisation:", error);
+        toast.error("Erreur lors de l'actualisation des données");
+      }
     }
-    toast.info("Actualisation des données...");
   };
 
   return (
-    <div>
-      <Button onClick={handleDeposit}>Dépôt</Button>
-      <Button onClick={handleWithdraw}>Retrait</Button>
-      <Button onClick={handleRefresh}>Rafraîchir</Button>
+    <div className="flex space-x-3 my-4">
+      <Button 
+        onClick={handleDeposit} 
+        className="flex items-center space-x-2"
+        variant="outline"
+      >
+        <ArrowDownToLine className="h-4 w-4" />
+        <span>Déposer</span>
+      </Button>
+      
+      <Button 
+        onClick={handleWithdraw} 
+        className="flex items-center space-x-2"
+        variant="outline"
+      >
+        <ArrowUpFromLine className="h-4 w-4" />
+        <span>Retirer</span>
+      </Button>
+      
+      <Button 
+        onClick={handleRefresh} 
+        className="flex items-center space-x-2"
+        variant="ghost"
+      >
+        <RotateCw className="h-4 w-4" />
+        <span>Actualiser</span>
+      </Button>
     </div>
   );
 }
