@@ -39,7 +39,7 @@ export default function BankTransferTableRow({
   processingId,
   onStatusUpdate
 }: BankTransferTableRowProps) {
-  const { updateTransferStatus, restoreTransfer } = useBankTransfers();
+  const { updateTransferStatus, restoreTransfer, isDebug } = useBankTransfers();
   const [localProcessing, setLocalProcessing] = useState(false);
   const [lastActionTime, setLastActionTime] = useState<number>(0);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -66,6 +66,16 @@ export default function BankTransferTableRow({
   const hasMisspelledStatus = item.status === 'receveid'; // Handle this specific case
   const canBeRestored = (item.status === 'rejected' || item.status === 'cancelled' || isReceiptConfirmed);
   
+  // Afficher les informations de débogage si nécessaire
+  if (isDebug) {
+    console.log(`Rendering transfer row:`, {
+      id: item.id,
+      status: item.status,
+      processed: item.processed,
+      user: item.profile?.id || 'unknown'
+    });
+  }
+  
   const shouldPreventAction = () => {
     const now = Date.now();
     const timeSinceLastAction = now - lastActionTime;
@@ -88,10 +98,24 @@ export default function BankTransferTableRow({
     try {
       console.log(`Confirming receipt for transfer ${item.id}`);
       
+      if (!item.id) {
+        console.error("ID de transfert manquant");
+        toast.error("Erreur: ID de transfert manquant");
+        return;
+      }
+      
+      // Vérifier si l'ID est valide et non vide
+      if (typeof item.id !== 'string' || item.id.trim() === '') {
+        console.error("ID de transfert invalide:", item.id);
+        toast.error("Erreur: ID de transfert invalide");
+        return;
+      }
+      
       // Use the updateTransferStatus function from useBankTransfers directly
       const success = await updateTransferStatus(
         item, 
-        'received'  // Explicitly set status to 'received'
+        'received',  // Explicitly set status to 'received'
+        new Date().toISOString() // Use current date as processed date
       );
       
       if (success) {
@@ -224,6 +248,9 @@ export default function BankTransferTableRow({
           <span className="text-xs text-gray-500">
             {item.description || `Virement - ${item.amount || 0}€`}
           </span>
+          {isDebug && (
+            <span className="text-xs text-blue-500 mt-1">ID: {item.id || 'N/A'}</span>
+          )}
         </div>
       </TableCell>
       
@@ -311,7 +338,7 @@ export default function BankTransferTableRow({
             <DialogHeader>
               <DialogTitle>Modifier le virement</DialogTitle>
               <DialogDescription>
-                Référence: {item.reference}
+                Référence: {item.reference} {isDebug && `(ID: ${item.id})`}
               </DialogDescription>
             </DialogHeader>
             
@@ -419,6 +446,12 @@ export default function BankTransferTableRow({
                       />
                     </span>
                   </div>
+                  {isDebug && (
+                    <div className="flex justify-between mt-1">
+                      <span className="text-sm text-gray-500">ID :</span>
+                      <span className="text-sm font-medium text-blue-500">{item.id}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-4 flex items-center p-3 bg-amber-50 rounded-md text-amber-800 border border-amber-200">
                   <AlertTriangle className="h-4 w-4 mr-2 flex-shrink-0" />

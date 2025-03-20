@@ -1,111 +1,90 @@
+
+// Cette version est compatible avec celle du dossier admin
 import { useState } from "react";
 import { toast } from "sonner";
-import { bankTransferService } from "../services/bankTransferService";
-import { BankTransferItem } from "../types/bankTransfer";
+import { supabase } from "@/integrations/supabase/client";
 
-export function useBankTransfers() {
+interface BankTransferItem {
+  id: string;
+  user_id?: string;
+  amount?: number;
+  status?: string;
+  reference?: string;
+  description?: string;
+  processed?: boolean;
+  processed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  profile?: {
+    id?: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+  };
+}
+
+export function useInvestmentConfirmation() {
   const [processingId, setProcessingId] = useState<string | null>(null);
-
-  // Function to directly update bank transfer status
-  const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string, processedDate: string | null = null) => {
+  
+  const updateBankTransfer = async (transferId: string, newStatus: string, processedDate: string | null = null) => {
     try {
-      if (!transfer || !transfer.id) {
-        console.error("Transfert invalide:", transfer);
+      if (!transferId) {
+        console.error("Transfert invalide:", transferId);
         toast.error("Erreur: données de transfert invalides");
-        return false;
+        return { success: false };
       }
 
-      setProcessingId(transfer.id);
+      setProcessingId(transferId);
       
-      // Store admin token if available
-      const adminUser = localStorage.getItem('admin_user') ? 
-        JSON.parse(localStorage.getItem('admin_user') || '{}') : {};
+      // Mise à jour du transfert
+      const isProcessed = newStatus === 'received' || processedDate !== null;
       
-      if (adminUser?.token) {
-        localStorage.setItem('admin_token', adminUser.token);
+      const { data: updateResult, error: updateError } = await supabase
+        .from('bank_transfers')
+        .update({
+          status: newStatus,
+          processed: isProcessed,
+          processed_at: isProcessed ? (processedDate || new Date().toISOString()) : null,
+          notes: `Mise à jour le ${new Date().toLocaleDateString('fr-FR')}`
+        })
+        .eq('id', transferId)
+        .select();
+      
+      if (updateError) {
+        console.error("Erreur de mise à jour:", updateError);
+        return {
+          success: false,
+          message: `Erreur de mise à jour: ${updateError.message}`,
+          error: updateError
+        };
       }
       
-      // Add debug logs
-      console.log("Updating transfer status:", {
-        id: transfer.id,
-        currentStatus: transfer.status,
-        newStatus,
-        processedDate
-      });
+      console.log("Mise à jour réussie:", updateResult);
+      return { success: true, data: updateResult };
       
-      // Call the service to update the transfer
-      const result = await bankTransferService.updateBankTransfer(
-        transfer.id,
-        newStatus,
-        processedDate
-      );
-      
-      console.log("Update result:", result);
-      
-      if (result.success) {
-        toast.success(`Virement mis à jour: ${newStatus}`);
-        return true;
-      } else {
-        console.error("Échec de mise à jour:", result);
-        toast.error(result.message || "Échec de la mise à jour");
-        return false;
-      }
     } catch (error: any) {
-      console.error("Erreur lors de la mise à jour du statut:", error);
-      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
-      return false;
+      console.error("Erreur lors de la mise à jour:", error);
+      return {
+        success: false,
+        message: `Erreur: ${error.message || 'Erreur inconnue'}`,
+        error
+      };
     } finally {
-      // Add small delay before clearing processing state for UI feedback
       setTimeout(() => setProcessingId(null), 500);
     }
   };
 
-  // New function to restore a transfer back to pending status
-  const restoreTransfer = async (transfer: BankTransferItem) => {
-    try {
-      if (!transfer || !transfer.id) {
-        console.error("Transfert invalide pour restauration:", transfer);
-        toast.error("Erreur: données de transfert invalides");
-        return false;
-      }
-      
-      setProcessingId(transfer.id);
-      toast.info("Restauration du virement en cours...");
-      
-      console.log("Restoring transfer:", {
-        id: transfer.id,
-        currentStatus: transfer.status
-      });
-      
-      // Call the service to restore the transfer (set to pending)
-      const result = await bankTransferService.updateBankTransfer(
-        transfer.id,
-        'pending',
-        null // Clear processed date
-      );
-      
-      console.log("Restore result:", result);
-      
-      if (result.success) {
-        toast.success("Virement restauré avec succès");
-        return true;
-      } else {
-        console.error("Échec de restauration:", result);
-        toast.error(result.message || "Échec de la restauration");
-        return false;
-      }
-    } catch (error: any) {
-      console.error("Erreur lors de la restauration:", error);
-      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
-      return false;
-    } finally {
-      setTimeout(() => setProcessingId(null), 500);
-    }
+  const confirmInvestment = async (transfer: BankTransferItem) => {
+    return updateBankTransfer(transfer.id, 'received');
+  };
+
+  const rejectInvestment = async (transfer: BankTransferItem) => {
+    return updateBankTransfer(transfer.id, 'rejected');
   };
 
   return {
     processingId,
-    updateTransferStatus,
-    restoreTransfer
+    confirmInvestment,
+    rejectInvestment
   };
 }

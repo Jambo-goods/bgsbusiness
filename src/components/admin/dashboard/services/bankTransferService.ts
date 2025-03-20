@@ -7,23 +7,32 @@ export const bankTransferService = {
     try {
       console.log(`Mise à jour du virement ${transferId} avec statut ${newStatus}`);
       
-      // Récupérer les données du virement pour obtenir l'ID utilisateur
-      const { data: transferData, error: transferError } = await supabase
-        .from("bank_transfers")
-        .select("user_id, status, processed")
-        .eq("id", transferId)
-        .maybeSingle(); // Changed from single() to maybeSingle() to handle not found case
-      
-      if (transferError) {
-        console.error("Erreur lors de la récupération du virement:", transferError);
+      if (!transferId) {
+        console.error("ID de transfert invalide:", transferId);
         return { 
           success: false, 
-          message: `Erreur de récupération: ${transferError.message}`,
-          error: transferError
+          message: "ID de transfert invalide",
+          error: new Error("Invalid transfer ID")
+        };
+      }
+
+      // Vérifier si le transfert existe avant de tenter une mise à jour
+      const { data: transferExists, error: checkError } = await supabase
+        .from("bank_transfers")
+        .select("id")
+        .eq("id", transferId)
+        .maybeSingle();
+      
+      if (checkError) {
+        console.error("Erreur lors de la vérification du transfert:", checkError);
+        return { 
+          success: false, 
+          message: `Erreur de vérification: ${checkError.message}`,
+          error: checkError
         };
       }
       
-      if (!transferData) {
+      if (!transferExists) {
         console.error("Virement non trouvé:", transferId);
         return {
           success: false,
@@ -32,92 +41,89 @@ export const bankTransferService = {
         };
       }
       
-      console.log("Données du virement récupérées:", transferData);
+      console.log("Transfert trouvé, procédant à la mise à jour:", transferId);
       
-      // Utiliser la fonction edge pour mise à jour avec privilèges admin
-      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
-        'update-bank-transfer',
-        {
-          body: {
-            transferId: transferId,
-            status: newStatus,
-            isProcessed: newStatus === 'received' || processedDate !== null,
-            notes: `Mise à jour via service le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: transferData.user_id,
-            sendNotification: newStatus === 'received'
-          }
-        }
-      );
+      // Récupérer les données du virement pour obtenir l'ID utilisateur
+      const { data: transferData, error: transferError } = await supabase
+        .from("bank_transfers")
+        .select("user_id, status, processed")
+        .eq("id", transferId)
+        .maybeSingle();
       
-      if (edgeFunctionError) {
-        console.error("Erreur fonction edge:", edgeFunctionError);
-        
-        // Fallback à la mise à jour directe si la fonction edge échoue
-        const isProcessed = newStatus === 'received' || processedDate !== null;
-        
-        const { data, error } = await supabase
-          .from('bank_transfers')
-          .update({
-            status: newStatus,
-            processed: isProcessed,
-            processed_at: isProcessed ? (processedDate || new Date().toISOString()) : null,
-            notes: `Mise à jour via service le ${new Date().toLocaleDateString('fr-FR')}`
-          })
-          .eq('id', transferId)
-          .select();
-        
-        if (error) {
-          console.error("Erreur de mise à jour directe:", error);
-          return {
-            success: false,
-            message: `Erreur de mise à jour: ${error.message}`,
-            error: error,
-            data: transferData
-          };
-        }
-        
-        console.log("Mise à jour directe réussie:", data);
-        
-        // Si le statut est 'received', mettre à jour le solde du portefeuille
-        if (newStatus === 'received' && transferData?.user_id) {
-          try {
-            const { error: walletError } = await supabase.rpc('recalculate_wallet_balance', {
-              user_uuid: transferData.user_id
-            });
-            
-            if (walletError) {
-              console.error("Erreur de recalcul du solde:", walletError);
-            }
-          } catch (walletUpdateError) {
-            console.error("Erreur lors de la mise à jour du portefeuille:", walletUpdateError);
-          }
-        }
-        
-        return {
-          success: true,
-          message: `Virement mis à jour avec succès: ${newStatus}`,
-          data: data
+      if (transferError) {
+        console.error("Erreur lors de la récupération des données du virement:", transferError);
+        return { 
+          success: false, 
+          message: `Erreur de récupération: ${transferError.message}`,
+          error: transferError
         };
       }
       
-      console.log("Résultat fonction edge:", edgeFunctionData);
-      
-      if (edgeFunctionData.success) {
-        return {
-          success: true,
-          message: `Virement mis à jour avec succès via edge function: ${newStatus}`,
-          data: edgeFunctionData.data
-        };
-      } else {
+      if (!transferData) {
+        console.error("Données du virement introuvables:", transferId);
         return {
           success: false,
-          message: `Échec de la mise à jour via edge function: ${edgeFunctionData.error || 'Erreur inconnue'}`,
-          error: edgeFunctionData.error,
+          message: "Les données du virement sont introuvables",
+          error: new Error("Transfer data not found")
+        };
+      }
+      
+      console.log("Données du virement récupérées:", transferData);
+      
+      // Mise à jour directe du virement
+      const isProcessed = newStatus === 'received' || processedDate !== null;
+      
+      const { data: updateResult, error: updateError } = await supabase
+        .from('bank_transfers')
+        .update({
+          status: newStatus,
+          processed: isProcessed,
+          processed_at: isProcessed ? (processedDate || new Date().toISOString()) : null,
+          notes: `Mise à jour manuelle le ${new Date().toLocaleDateString('fr-FR')}`
+        })
+        .eq('id', transferId)
+        .select();
+      
+      if (updateError) {
+        console.error("Erreur de mise à jour directe:", updateError);
+        return {
+          success: false,
+          message: `Erreur de mise à jour: ${updateError.message}`,
+          error: updateError,
           data: transferData
         };
       }
+      
+      console.log("Mise à jour directe réussie:", updateResult);
+      
+      // Si le statut est 'received', mettre à jour le solde du portefeuille
+      if (newStatus === 'received' && transferData?.user_id) {
+        try {
+          console.log("Recalcul du solde pour l'utilisateur:", transferData.user_id);
+          const { error: walletError } = await supabase.rpc('recalculate_wallet_balance', {
+            user_uuid: transferData.user_id
+          });
+          
+          if (walletError) {
+            console.error("Erreur de recalcul du solde:", walletError);
+            // On continue malgré l'erreur car la mise à jour du virement a réussi
+          } else {
+            console.log("Solde recalculé avec succès");
+          }
+        } catch (walletUpdateError) {
+          console.error("Erreur lors de la mise à jour du portefeuille:", walletUpdateError);
+          // On continue malgré l'erreur
+        }
+      }
+      
+      return {
+        success: true,
+        message: `Virement mis à jour avec succès: ${newStatus}`,
+        data: updateResult
+      };
+      
     } catch (error) {
-      console.error("Erreur inattendue:", error);
+      console.error("Erreur inattendue lors de la mise à jour:", error);
       return {
         success: false,
         message: `Erreur système: ${error.message || 'Erreur inconnue'}`,

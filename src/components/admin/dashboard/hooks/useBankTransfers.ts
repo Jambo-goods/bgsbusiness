@@ -6,7 +6,7 @@ import { BankTransferItem } from "../types/bankTransfer";
 
 export function useBankTransfers() {
   const [processingId, setProcessingId] = useState<string | null>(null);
-  const [isDebug, setIsDebug] = useState<boolean>(false);
+  const [isDebug, setIsDebug] = useState<boolean>(true); // Activer le mode debug par défaut
 
   // Function to directly update bank transfer status
   const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string, processedDate: string | null = null) => {
@@ -14,6 +14,13 @@ export function useBankTransfers() {
       if (!transfer || !transfer.id) {
         console.error("Transfert invalide:", transfer);
         toast.error("Erreur: données de transfert invalides");
+        return false;
+      }
+
+      // Validation des données du transfert
+      if (typeof transfer.id !== 'string' || transfer.id.trim() === '') {
+        console.error("ID de transfert invalide:", transfer.id);
+        toast.error("Erreur: ID de transfert invalide");
         return false;
       }
 
@@ -49,12 +56,20 @@ export function useBankTransfers() {
         return true;
       } else {
         console.error("Échec de mise à jour:", result);
-        toast.error(result.message || "Échec de la mise à jour");
+        
+        // Message d'erreur plus spécifique
+        const errorMessage = result.message || "Échec de la mise à jour";
+        toast.error(errorMessage, {
+          description: "Veuillez rafraîchir la page et réessayer"
+        });
+        
         return false;
       }
     } catch (error: any) {
       console.error("Erreur lors de la mise à jour du statut:", error);
-      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
+      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`, {
+        description: "Problème technique lors de la mise à jour"
+      });
       return false;
     } finally {
       // Add small delay before clearing processing state for UI feedback
