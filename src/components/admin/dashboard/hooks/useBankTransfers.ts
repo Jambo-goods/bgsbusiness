@@ -6,6 +6,7 @@ import { BankTransferItem } from "../types/bankTransfer";
 
 export function useBankTransfers() {
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [isDebug, setIsDebug] = useState<boolean>(false);
 
   // Function to directly update bank transfer status
   const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string, processedDate: string | null = null) => {
@@ -107,6 +108,8 @@ export function useBankTransfers() {
   return {
     processingId,
     updateTransferStatus,
-    restoreTransfer
+    restoreTransfer,
+    isDebug,
+    setIsDebug
   };
 }

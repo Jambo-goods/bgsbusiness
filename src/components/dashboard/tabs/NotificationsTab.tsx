@@ -1,234 +1,146 @@
 
-import { useState, useEffect, useCallback } from "react";
-import { Tabs, TabsContent } from "@/components/ui/tabs";
-import { notificationService } from "@/services/notifications";
-import type { Notification } from "@/services/notifications/types";
+import React from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
-import NotificationHeader from "./notifications/NotificationHeader";
-import NotificationActions from "./notifications/NotificationActions";
-import NotificationTabs from "./notifications/NotificationTabs";
-import NotificationsList from "./notifications/NotificationsList";
+import { NotificationsList } from "./notifications/NotificationsList";
+import { NotificationHeader } from "./notifications/NotificationHeader";
+import { NotificationTabs } from "./notifications/NotificationTabs";
+import { EmptyNotifications } from "./notifications/EmptyNotifications";
+import { useAuth } from "@supabase/auth-helpers-react";
+import { Loader2 } from "lucide-react";
 
 export default function NotificationsTab() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState<string>("all");
+  const { user } = useAuth();
 
-  const fetchNotifications = useCallback(async () => {
-    setIsRefreshing(true);
-    setError(null);
-    
-    try {
-      console.log("Fetching notifications...");
-      // Get user session
-      const { data: session } = await supabase.auth.getSession();
+  // Fetch notifications from Supabase
+  const { data: notifications, isLoading, error, refetch } = useQuery({
+    queryKey: ["notifications", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
       
-      if (!session.session) {
-        console.log("No session found");
-        setError("Veuillez vous connecter pour voir vos notifications");
-        return;
+      // Fetch notifications from Supabase
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      
+      if (error) {
+        console.error("Error fetching notifications:", error);
+        throw error;
       }
       
-      // Get notifications directly from supabase
-      const { data, error: notifError } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', session.session.user.id)
-        .order('created_at', { ascending: false });
-      
-      if (notifError) throw notifError;
-      
-      if (!data) {
-        console.log("No notifications data returned");
-        setNotifications([]);
-        return;
-      }
-      
-      // Transform database notifications to UI notifications
-      const transformedNotifications: Notification[] = data.map(dbNotif => {
-        const dataObj = typeof dbNotif.data === 'object' ? dbNotif.data : {};
+      // Transform the data to include proper category info from the data field
+      return data.map(notification => {
+        let category = "info";
+        
+        // Check if data exists and is an object with a category property
+        if (notification.data) {
+          try {
+            // If data is a string, try to parse it
+            const dataObj = typeof notification.data === 'string' 
+              ? JSON.parse(notification.data) 
+              : notification.data;
+            
+            // Check if dataObj is an object with a category property
+            if (dataObj && typeof dataObj === 'object' && !Array.isArray(dataObj)) {
+              category = dataObj.category || 
+                         (notification.type === "deposit" ? "success" : 
+                         notification.type === "withdrawal" ? "warning" : "info");
+            }
+          } catch (e) {
+            console.error("Error parsing notification data:", e);
+          }
+        } else {
+          // Default categories based on notification type
+          category = notification.type === "deposit" ? "success" : 
+                     notification.type === "withdrawal" ? "warning" : "info";
+        }
+        
         return {
-          id: dbNotif.id,
-          title: dbNotif.title,
-          description: dbNotif.message,
-          date: new Date(dbNotif.created_at),
-          read: dbNotif.seen,
-          type: dbNotif.type,
-          category: dataObj?.category || 'info',
-          metadata: typeof dbNotif.data === 'object' ? dbNotif.data : {}
+          ...notification,
+          category
         };
       });
-      
-      console.log("Notifications fetched:", transformedNotifications.length);
-      setNotifications(transformedNotifications);
-    } catch (err) {
-      console.error("Error fetching notifications:", err);
-      setError("Impossible de charger les notifications. Veuillez réessayer plus tard.");
-      toast.error("Erreur", { description: "Impossible de charger les notifications" });
-    } finally {
-      setIsRefreshing(false);
-      setIsLoading(false);
-    }
-  }, []);
+    },
+    enabled: !!user?.id,
+  });
 
-  useEffect(() => {
-    fetchNotifications();
+  // Mark notification as seen
+  const markAsSeen = async (id: string) => {
+    if (!user?.id) return;
     
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('public:notifications')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'notifications' }, 
-        () => {
-          console.log("Real-time notification update detected");
-          fetchNotifications();
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchNotifications]);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
-  
-  const filteredNotifications = filter === 'all' 
-    ? notifications 
-    : notifications.filter(n => !n.read);
-
-  const handleMarkAllAsRead = async () => {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        toast.error("Veuillez vous connecter pour marquer les notifications comme lues");
-        return;
-      }
-      
-      // Update notifications in the database
       await supabase
-        .from('notifications')
+        .from("notifications")
         .update({ seen: true })
-        .eq('user_id', session.session.user.id);
+        .eq("id", id);
       
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notification => ({ ...notification, read: true }))
-      );
-      
-      toast.success("Toutes les notifications ont été marquées comme lues");
-    } catch (err) {
-      console.error("Error marking all as read:", err);
-      toast.error("Erreur", { description: "Impossible de marquer toutes les notifications comme lues" });
-    }
-  };
-
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      // Update notification in the database
-      await supabase
-        .from('notifications')
-        .update({ seen: true })
-        .eq('id', id);
-      
-      // Update local state
-      setNotifications(prev => 
-        prev.map(notification => 
-          notification.id === id ? { ...notification, read: true } : notification
-        )
-      );
-    } catch (err) {
-      console.error("Error marking notification as read:", err);
-      toast.error("Erreur", { description: "Impossible de marquer la notification comme lue" });
-    }
-  };
-
-  const handleDeleteNotification = async (id: string) => {
-    try {
-      // Delete notification from the database
-      await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id);
-      
-      // Update local state
-      setNotifications(prev => 
-        prev.filter(notification => notification.id !== id)
-      );
-      
-      toast.success("Notification supprimée");
+      refetch();
     } catch (error) {
-      console.error("Error deleting notification:", error);
-      toast.error("Erreur", { description: "Impossible de supprimer la notification" });
+      console.error("Error marking notification as seen:", error);
     }
   };
 
-  const handleRefresh = async () => {
-    await fetchNotifications();
-    toast.info("Notifications actualisées");
+  // Mark all notifications as seen
+  const markAllAsSeen = async () => {
+    if (!user?.id) return;
+    
+    try {
+      await supabase
+        .from("notifications")
+        .update({ seen: true })
+        .eq("user_id", user.id)
+        .eq("seen", false);
+      
+      refetch();
+    } catch (error) {
+      console.error("Error marking all notifications as seen:", error);
+    }
   };
 
-  const handleFilterChange = (newFilter: 'all' | 'unread') => {
-    setFilter(newFilter);
-  };
+  // Filter notifications based on active tab
+  const filteredNotifications = React.useMemo(() => {
+    if (!notifications) return [];
+    
+    if (activeTab === "all") {
+      return notifications;
+    } else if (activeTab === "unread") {
+      return notifications.filter(notification => !notification.seen);
+    } else {
+      return notifications.filter(notification => notification.type === activeTab);
+    }
+  }, [notifications, activeTab]);
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-        <h3 className="text-lg font-medium text-red-800 mb-2">Erreur de chargement</h3>
-        <p className="text-red-600">{error}</p>
-        <button 
-          onClick={fetchNotifications}
-          className="mt-4 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-md transition-colors"
-        >
-          Réessayer
-        </button>
+      <div className="p-4 bg-red-50 border border-red-200 rounded-md text-red-600">
+        <p>Une erreur est survenue lors du chargement des notifications.</p>
+        <p className="text-sm mt-2">Veuillez rafraîchir la page ou réessayer plus tard.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <NotificationHeader notificationCount={notifications.length} />
-        <NotificationActions
-          unreadCount={unreadCount}
-          isRefreshing={isRefreshing}
-          onRefresh={fetchNotifications}
-          onMarkAllAsRead={handleMarkAllAsRead}
-          totalCount={notifications.length}
-        />
-      </div>
+    <div className="space-y-6">
+      <NotificationHeader notificationsCount={filteredNotifications.length} markAllAsSeen={markAllAsSeen} />
+      
+      <NotificationTabs activeTab={activeTab} setActiveTab={setActiveTab} notifications={notifications || []} />
 
-      <Tabs defaultValue="all" className="w-full">
-        <NotificationTabs 
-          totalCount={notifications.length}
-          unreadCount={unreadCount}
-          filter={filter}
-          onFilterChange={handleFilterChange}
-        />
-        
-        <TabsContent value="all" className="mt-4">
-          <NotificationsList 
-            notifications={filteredNotifications}
-            onMarkAsRead={handleMarkAsRead}
-            onDelete={handleDeleteNotification}
-            filter={filter}
-          />
-        </TabsContent>
-      </Tabs>
+      {filteredNotifications.length > 0 ? (
+        <NotificationsList notifications={filteredNotifications} markAsSeen={markAsSeen} />
+      ) : (
+        <EmptyNotifications activeTab={activeTab} />
+      )}
     </div>
   );
 }

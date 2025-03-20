@@ -1,294 +1,111 @@
-
 import { useState } from "react";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { notificationService } from "@/services/notifications";
-import { Project } from "@/types/project";
-import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { bankTransferService } from "../services/bankTransferService";
+import { BankTransferItem } from "../types/bankTransfer";
 
-// Calculate total expected return
-const calculateTotalReturn = (investmentAmount: number, yieldPerc: number, durationMonths: number) => {
-  const monthlyYield = yieldPerc / 100;
-  return investmentAmount + (investmentAmount * monthlyYield * durationMonths);
-};
+export function useBankTransfers() {
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
-// Save investment to supabase
-const saveInvestment = async (
-  projectId: string, 
-  investmentAmount: number, 
-  project: Project,
-  userId: string,
-  duration: number
-) => {
-  try {
-    const { error } = await supabase
-      .from("investments")
-      .insert({
-        user_id: userId,
-        project_id: projectId,
-        amount: investmentAmount,
-        status: "active",
-        yield_rate: project.yield,
-        duration: duration // Add the duration field
-      });
-
-    if (error) throw error;
-    
-    return { success: true, error: null };
-  } catch (error) {
-    console.error("Erreur lors de l'enregistrement de l'investissement:", error);
-    return { success: false, error };
-  }
-};
-
-// Update project stats (using the correct column name in database)
-const updateProjectStats = async (
-  projectId: string, 
-  totalRaised: number,
-  investmentAmount: number
-) => {
-  try {
-    const { error } = await supabase
-      .from("projects")
-      .update({
-        raised: totalRaised + investmentAmount  // Using 'raised' instead of 'total_raised'
-      })
-      .eq("id", projectId);
-
-    if (error) throw error;
-    
-    return { success: true, error: null };
-  } catch (error) {
-    console.error("Erreur lors de la mise à jour des statistiques du projet:", error);
-    return { success: false, error };
-  }
-};
-
-// Record the amount in wallet transactions
-const recordWalletTransaction = async (
-  userId: string,
-  investmentAmount: number,
-  projectName: string
-) => {
-  try {
-    const { error } = await supabase
-      .from("wallet_transactions")
-      .insert({
-        user_id: userId,
-        amount: investmentAmount,
-        type: "investment",
-        description: `Investissement dans ${projectName}`,
-        status: "completed"
-      });
-
-    if (error) throw error;
-    
-    return { success: true, error: null };
-  } catch (error) {
-    console.error("Erreur lors de l'enregistrement de la transaction:", error);
-    return { success: false, error };
-  }
-};
-
-// Update user wallet balance
-const updateWalletBalance = async (
-  userId: string,
-  currentBalance: number,
-  investmentAmount: number
-) => {
-  try {
-    if (currentBalance < investmentAmount) {
-      throw new Error("Solde insuffisant");
-    }
-    
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        wallet_balance: currentBalance - investmentAmount
-      })
-      .eq("id", userId);
-
-    if (error) throw error;
-    
-    return { success: true, error: null };
-  } catch (error) {
-    console.error("Erreur lors de la mise à jour du solde:", error);
-    return { success: false, error };
-  }
-};
-
-// Store payment records for this investment
-const storePaymentSchedule = async (
-  projectId: string,
-  userId: string,
-  investmentAmount: number,
-  yieldPerc: number,
-  durationMonths: number,
-  firstPaymentDelay: number
-) => {
-  // Logic to calculate and store expected payment schedule
-  // Implementation here
-};
-
-// Store recent investment in local storage
-const storeRecentInvestment = (investmentData: any) => {
-  localStorage.setItem("recentInvestment", JSON.stringify(investmentData));
-};
-
-// Create confirmation notification
-const createConfirmationNotification = async (investmentAmount: number, projectName: string, projectId: string) => {
-  try {
-    await notificationService.investmentConfirmed(investmentAmount, projectName, projectId);
-  } catch (error) {
-    console.error("Erreur lors de la création de la notification:", error);
-    // Non-critical error, continue execution
-  }
-};
-
-export const useInvestmentConfirmation = (
-  project: Project,
-  investorCount: number,
-  totalRaised: number,
-  onClose: () => void
-) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-
-  const confirmInvestment = async (investmentAmount: number, selectedDuration: number = 24) => {
-    if (!investmentAmount || investmentAmount <= 0) {
-      toast({
-        title: "Montant invalide",
-        description: "Veuillez entrer un montant d'investissement valide.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
-    // Fetch user details
-    const { data: userDetails, error: userError } = await supabase.auth.getUser();
-    if (userError || !userDetails?.user) {
-      toast({
-        title: "Erreur d'authentification",
-        description: "Impossible de récupérer les informations de l'utilisateur.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-    const user = userDetails.user;
-
-    // Fetch user profile to get current wallet balance
-    const { data: profileData, error: profileError } = await supabase
-      .from("profiles")
-      .select("wallet_balance")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profileData) {
-      toast({
-        title: "Erreur de profil",
-        description: "Impossible de récupérer le solde du portefeuille.",
-        variant: "destructive",
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    const currentBalance = profileData.wallet_balance || 0;
-    const projectId = project.id;
-    const durationMonths = selectedDuration;
-    const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
-
+  // Function to directly update bank transfer status
+  const updateTransferStatus = async (transfer: BankTransferItem, newStatus: string, processedDate: string | null = null) => {
     try {
-      // Step 1: Save investment
-      const { success: saveSuccess, error: saveError } = await saveInvestment(
-        projectId,
-        investmentAmount,
-        project,
-        user.id,
-        durationMonths // Pass the duration to saveInvestment
-      );
-      if (!saveSuccess || saveError) throw new Error("Erreur lors de l'enregistrement de l'investissement");
+      if (!transfer || !transfer.id) {
+        console.error("Transfert invalide:", transfer);
+        toast.error("Erreur: données de transfert invalides");
+        return false;
+      }
 
-      // Step 2: Update project stats (using the correct property name)
-      const { success: statsSuccess, error: statsError } = await updateProjectStats(
-        projectId,
-        project.raised || 0, // Use project.raised instead of totalRaised
-        investmentAmount
-      );
-      if (!statsSuccess || statsError) throw new Error("Erreur lors de la mise à jour des statistiques du projet");
-
-      // Step 3: Record wallet transaction
-      const { success: recordSuccess, error: recordError } = await recordWalletTransaction(
-        user.id,
-        investmentAmount,
-        project.name
-      );
-      if (!recordSuccess || recordError) throw new Error("Erreur lors de l'enregistrement de la transaction");
-
-      // Step 4: Update wallet balance
-      const { success: balanceSuccess, error: balanceError } = await updateWalletBalance(
-        user.id,
-        currentBalance,
-        investmentAmount
-      );
-      if (!balanceSuccess || balanceError) throw new Error("Erreur lors de la mise à jour du solde");
+      setProcessingId(transfer.id);
       
-      // Calculate total expected return
-      const totalReturn = calculateTotalReturn(
-        investmentAmount, 
-        project.yield, 
-        durationMonths
-      );
+      // Store admin token if available
+      const adminUser = localStorage.getItem('admin_user') ? 
+        JSON.parse(localStorage.getItem('admin_user') || '{}') : {};
       
-      // Store payment schedule if this is not a test/demo environment
-      if (process.env.NODE_ENV !== "development") {
-        await storePaymentSchedule(
-          projectId, 
-          user.id, 
-          investmentAmount, 
-          project.yield, 
-          durationMonths, 
-          firstPaymentDelay
-        );
+      if (adminUser?.token) {
+        localStorage.setItem('admin_token', adminUser.token);
       }
       
-      // Create confirmation notification - always create notification
-      await createConfirmationNotification(investmentAmount, project.name, projectId);
-      
-      toast({
-        title: "Investissement réussi !",
-        description: `Vous avez investi ${investmentAmount}€ dans ${project.name}.`,
+      // Add debug logs
+      console.log("Updating transfer status:", {
+        id: transfer.id,
+        currentStatus: transfer.status,
+        newStatus,
+        processedDate
       });
       
-      // Store recent investment in local storage
-      storeRecentInvestment({
-        projectName: project.name,
-        amount: investmentAmount,
-        expectedReturn: totalReturn,
-      });
-
-      // Close the modal and navigate to dashboard
-      onClose();
-      navigate("/dashboard");
+      // Call the service to update the transfer
+      const result = await bankTransferService.updateBankTransfer(
+        transfer.id,
+        newStatus,
+        processedDate
+      );
       
+      console.log("Update result:", result);
+      
+      if (result.success) {
+        toast.success(`Virement mis à jour: ${newStatus}`);
+        return true;
+      } else {
+        console.error("Échec de mise à jour:", result);
+        toast.error(result.message || "Échec de la mise à jour");
+        return false;
+      }
     } catch (error: any) {
-      console.error("Erreur lors de la confirmation de l'investissement:", error);
-      toast({
-        title: "Erreur d'investissement",
-        description: error.message || "Une erreur est survenue lors de la confirmation de l'investissement.",
-        variant: "destructive",
-      });
+      console.error("Erreur lors de la mise à jour du statut:", error);
+      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
+      return false;
     } finally {
-      setIsLoading(false);
+      // Add small delay before clearing processing state for UI feedback
+      setTimeout(() => setProcessingId(null), 500);
+    }
+  };
+
+  // New function to restore a transfer back to pending status
+  const restoreTransfer = async (transfer: BankTransferItem) => {
+    try {
+      if (!transfer || !transfer.id) {
+        console.error("Transfert invalide pour restauration:", transfer);
+        toast.error("Erreur: données de transfert invalides");
+        return false;
+      }
+      
+      setProcessingId(transfer.id);
+      toast.info("Restauration du virement en cours...");
+      
+      console.log("Restoring transfer:", {
+        id: transfer.id,
+        currentStatus: transfer.status
+      });
+      
+      // Call the service to restore the transfer (set to pending)
+      const result = await bankTransferService.updateBankTransfer(
+        transfer.id,
+        'pending',
+        null // Clear processed date
+      );
+      
+      console.log("Restore result:", result);
+      
+      if (result.success) {
+        toast.success("Virement restauré avec succès");
+        return true;
+      } else {
+        console.error("Échec de restauration:", result);
+        toast.error(result.message || "Échec de la restauration");
+        return false;
+      }
+    } catch (error: any) {
+      console.error("Erreur lors de la restauration:", error);
+      toast.error(`Erreur: ${error.message || "Erreur inconnue"}`);
+      return false;
+    } finally {
+      setTimeout(() => setProcessingId(null), 500);
     }
   };
 
   return {
-    confirmInvestment,
-    isLoading,
+    processingId,
+    updateTransferStatus,
+    restoreTransfer
   };
-};
+}

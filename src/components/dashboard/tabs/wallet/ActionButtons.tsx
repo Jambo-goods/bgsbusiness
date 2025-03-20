@@ -1,122 +1,133 @@
-
-import React from "react";
-import { supabase } from "@/integrations/supabase/client";
+import React, { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { PlusCircle, ArrowDownToLine, ArrowUpFromLine, RefreshCw, Loader2 } from "lucide-react";
+import { useRouter } from "next/router";
 import { toast } from "sonner";
-import { notificationService } from "@/services/notifications";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@supabase/auth-helpers-react";
 
 interface ActionButtonsProps {
-  onDeposit: () => void;
-  onWithdraw: () => void;
-  refreshBalance?: () => Promise<void>;
+  onRefreshWallet?: () => void;
+  isRefreshing?: boolean;
+  showWithdraw?: boolean;
+  showDeposit?: boolean;
+  showInvest?: boolean;
+  size?: "default" | "sm" | "lg" | "icon";
+  variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
+  className?: string;
 }
 
 export default function ActionButtons({
-  onDeposit,
-  onWithdraw,
-  refreshBalance
+  onRefreshWallet,
+  isRefreshing = false,
+  showWithdraw = true,
+  showDeposit = true,
+  showInvest = true,
+  size = "default",
+  variant = "outline",
+  className = ""
 }: ActionButtonsProps) {
-  const handleDeposit = async () => {
-    try {
-      const {
-        data: session
-      } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast.error("Veuillez vous connecter pour effectuer un dépôt");
-        return;
+  const router = useRouter();
+  const { user } = useAuth();
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleRefresh = async () => {
+    if (onRefreshWallet) {
+      onRefreshWallet();
+    } else {
+      // Default refresh behavior if no callback provided
+      setIsUpdating(true);
+      try {
+        if (user?.id) {
+          const { error } = await supabase.rpc('recalculate_wallet_balance', {
+            user_uuid: user.id
+          });
+          
+          if (error) {
+            console.error("Error recalculating wallet balance:", error);
+            toast.error("Erreur lors de l'actualisation du solde");
+          } else {
+            toast.success("Solde actualisé avec succès");
+          }
+        }
+      } catch (error) {
+        console.error("Error in wallet refresh:", error);
+        toast.error("Une erreur est survenue");
+      } finally {
+        setIsUpdating(false);
       }
-
-      // Ajout d'une transaction de dépôt (simulée pour le test)
-      const depositAmount = 1000; // 1000€ pour test
-
-      // Création de la transaction
-      const {
-        error: transactionError
-      } = await supabase.from('wallet_transactions').insert({
-        user_id: session.session.user.id,
-        amount: depositAmount,
-        type: 'deposit',
-        description: 'Dépôt de fonds'
-      });
-      if (transactionError) throw transactionError;
-
-      // Mise à jour du solde du portefeuille
-      const {
-        error: walletError
-      } = await supabase.rpc('increment_wallet_balance', {
-        user_id: session.session.user.id,
-        increment_amount: depositAmount
-      });
-      if (walletError) throw walletError;
-      
-      // Create notification for deposit success
-      await notificationService.depositSuccess(depositAmount);
-      
-      // Appel de la fonction de rafraîchissement
-      if (refreshBalance) await refreshBalance();
-      onDeposit();
-    } catch (error) {
-      console.error("Erreur lors du dépôt:", error);
-      toast.error("Une erreur s'est produite lors du dépôt des fonds");
     }
   };
-  
-  const handleWithdraw = async () => {
-    try {
-      const {
-        data: session
-      } = await supabase.auth.getSession();
-      if (!session.session) {
-        toast.error("Veuillez vous connecter pour effectuer un retrait");
-        return;
-      }
 
-      // Récupération du solde actuel
-      const {
-        data: profileData,
-        error: profileError
-      } = await supabase.from('profiles').select('wallet_balance').eq('id', session.session.user.id).single();
-      if (profileError) throw profileError;
-      const withdrawalAmount = 500; // 500€ pour test
-
-      // Vérification que le solde est suffisant
-      if (profileData.wallet_balance < withdrawalAmount) {
-        toast.error("Vous n'avez pas assez de fonds pour effectuer ce retrait");
-        await notificationService.insufficientFunds();
-        return;
-      }
-
-      // Création de la transaction
-      const {
-        error: transactionError
-      } = await supabase.from('wallet_transactions').insert({
-        user_id: session.session.user.id,
-        amount: withdrawalAmount,
-        type: 'withdrawal',
-        description: 'Retrait de fonds'
-      });
-      if (transactionError) throw transactionError;
-
-      // Mise à jour du solde du portefeuille (soustraction)
-      const {
-        error: walletError
-      } = await supabase.rpc('increment_wallet_balance', {
-        user_id: session.session.user.id,
-        increment_amount: -withdrawalAmount
-      });
-      if (walletError) throw walletError;
-      
-      // Create notification for withdrawal
-      await notificationService.withdrawalValidated(withdrawalAmount);
-      
-      // Appel de la fonction de rafraîchissement
-      if (refreshBalance) await refreshBalance();
-      onWithdraw();
-    } catch (error) {
-      console.error("Erreur lors du retrait:", error);
-      toast.error("Une erreur s'est produite lors du retrait des fonds");
-    }
+  const handleDeposit = () => {
+    router.push("/dashboard/wallet/deposit");
   };
-  
-  // Return an empty fragment as we've removed the button
-  return <></>;
+
+  const handleWithdraw = () => {
+    router.push("/dashboard/wallet/withdraw");
+  };
+
+  const handleInvest = () => {
+    router.push("/dashboard/projects");
+  };
+
+  return (
+    <div className={`flex flex-wrap gap-2 ${className}`}>
+      <Button
+        variant={variant}
+        size={size}
+        onClick={handleRefresh}
+        disabled={isRefreshing || isUpdating}
+        className="bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100"
+      >
+        {isRefreshing || isUpdating ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Actualisation...
+          </>
+        ) : (
+          <>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Actualiser
+          </>
+        )}
+      </Button>
+
+      {showDeposit && (
+        <Button
+          variant={variant}
+          size={size}
+          onClick={handleDeposit}
+          className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+        >
+          <ArrowDownToLine className="mr-2 h-4 w-4" />
+          Déposer
+        </Button>
+      )}
+
+      {showWithdraw && (
+        <Button
+          variant={variant}
+          size={size}
+          onClick={handleWithdraw}
+          className="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+        >
+          <ArrowUpFromLine className="mr-2 h-4 w-4" />
+          Retirer
+        </Button>
+      )}
+
+      {showInvest && (
+        <Button
+          variant={variant}
+          size={size}
+          onClick={handleInvest}
+          className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+        >
+          <PlusCircle className="mr-2 h-4 w-4" />
+          Investir
+        </Button>
+      )}
+    </div>
+  );
 }
