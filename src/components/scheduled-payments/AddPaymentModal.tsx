@@ -12,6 +12,7 @@ import { CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { toast } from 'sonner';
+import { fr } from 'date-fns/locale';
 
 interface AddPaymentModalProps {
   isOpen: boolean;
@@ -61,8 +62,10 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       }
     };
     
-    fetchProjects();
-  }, []);
+    if (isOpen) {
+      fetchProjects();
+    }
+  }, [isOpen]);
 
   // Calculate scheduled amount based on percentage and total investment
   useEffect(() => {
@@ -74,14 +77,34 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
 
   const handleProjectSelect = (projectId: string) => {
     setSelectedProject(projectId);
-    const selectedProjectName = projects.find(p => p.id === projectId)?.name || '';
-    setProjectName(selectedProjectName);
+    const selected = projects.find(p => p.id === projectId);
+    if (selected) {
+      setProjectName(selected.name || '');
+    }
     setOpenProjectSelect(false);
   };
 
   const handleStatusSelect = (statusValue: string) => {
     setStatus(statusValue);
     setOpenStatusSelect(false);
+  };
+
+  const resetForm = () => {
+    setSelectedProject(null);
+    setProjectName('');
+    setSelectedDate(new Date());
+    setPercentage('');
+    setStatus('pending');
+    setTotalInvestment('');
+    setScheduledAmount('');
+    setInvestorsCount('');
+    setCumulativeAmount('');
+    setNotes('');
+  };
+
+  const handleModalClose = () => {
+    resetForm();
+    onClose();
   };
 
   const handleAddPayment = () => {
@@ -112,11 +135,11 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     };
 
     onAddPayment(paymentData);
-    onClose();
+    handleModalClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleModalClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Ajouter un paiement planifié</DialogTitle>
@@ -129,70 +152,74 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
             <Label htmlFor="project" className="text-right">
               Projet
             </Label>
-            <Popover open={openProjectSelect} onOpenChange={setOpenProjectSelect}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openProjectSelect}
-                  className="col-span-3 justify-between"
-                >
-                  {projectName || "Sélectionner un projet"}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0">
-                <Command>
-                  <CommandInput placeholder="Rechercher un projet..." />
-                  <CommandEmpty>Aucun projet trouvé</CommandEmpty>
-                  <CommandGroup className="max-h-[200px] overflow-y-auto">
-                    {projects.map((project) => (
-                      <CommandItem
-                        key={project.id}
-                        value={project.id}
-                        onSelect={() => handleProjectSelect(project.id)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            selectedProject === project.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {project.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <div className="col-span-3">
+              <Popover open={openProjectSelect} onOpenChange={setOpenProjectSelect}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openProjectSelect}
+                    className="w-full justify-between"
+                  >
+                    {projectName || "Sélectionner un projet"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[300px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Rechercher un projet..." />
+                    <CommandEmpty>Aucun projet trouvé</CommandEmpty>
+                    <CommandGroup className="max-h-[200px] overflow-y-auto">
+                      {projects.map((project) => (
+                        <CommandItem
+                          key={project.id}
+                          value={project.id}
+                          onSelect={() => handleProjectSelect(project.id)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedProject === project.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {project.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="date" className="text-right">
               Date de paiement
             </Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant={'outline'}
-                  className={cn(
-                    'w-[240px] justify-start text-left font-normal col-span-3',
-                    !selectedDate && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDate ? format(selectedDate, 'dd/MM/yyyy') : <span>Choisir une date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={setSelectedDate}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
-              </PopoverContent>
-            </Popover>
+            <div className="col-span-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={'outline'}
+                    className={cn(
+                      'w-full justify-start text-left font-normal',
+                      !selectedDate && 'text-muted-foreground'
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: fr }) : <span>Choisir une date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={setSelectedDate}
+                    initialFocus
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="percentage" className="text-right">
@@ -213,40 +240,42 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
             <Label htmlFor="status" className="text-right">
               Statut
             </Label>
-            <Popover open={openStatusSelect} onOpenChange={setOpenStatusSelect}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={openStatusSelect}
-                  className="col-span-3 justify-between"
-                >
-                  {statusOptions.find(s => s.value === status)?.label || "Sélectionner un statut"}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-0">
-                <Command>
-                  <CommandGroup>
-                    {statusOptions.map((statusOption) => (
-                      <CommandItem
-                        key={statusOption.value}
-                        value={statusOption.value}
-                        onSelect={() => handleStatusSelect(statusOption.value)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            status === statusOption.value ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {statusOption.label}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <div className="col-span-3">
+              <Popover open={openStatusSelect} onOpenChange={setOpenStatusSelect}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openStatusSelect}
+                    className="w-full justify-between"
+                  >
+                    {statusOptions.find(s => s.value === status)?.label || "Sélectionner un statut"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[200px] p-0">
+                  <Command>
+                    <CommandGroup>
+                      {statusOptions.map((statusOption) => (
+                        <CommandItem
+                          key={statusOption.value}
+                          value={statusOption.value}
+                          onSelect={() => handleStatusSelect(statusOption.value)}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              status === statusOption.value ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {statusOption.label}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="totalInvestment" className="text-right">
@@ -289,11 +318,16 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
             <Label htmlFor="notes" className="text-right">
               Notes
             </Label>
-            <Input id="notes" value={notes} className="col-span-3" onChange={(e) => setNotes(e.target.value)} />
+            <Input 
+              id="notes" 
+              value={notes} 
+              className="col-span-3" 
+              onChange={(e) => setNotes(e.target.value)} 
+            />
           </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onClose}>
+          <Button type="button" variant="secondary" onClick={handleModalClose}>
             Annuler
           </Button>
           <Button type="submit" onClick={handleAddPayment}>
