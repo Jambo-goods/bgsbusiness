@@ -301,18 +301,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
             />
           </div>
 
-          {/* Notes Input */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="notes" className="text-right">
-              Notes
-            </Label>
-            <Input 
-              id="notes" 
-              value={notes} 
-              className="col-span-3" 
-              onChange={(e) => setNotes(e.target.value)} 
-            />
-          </div>
+          {/* Notes Input - This is the div we're removing */}
         </div>
 
         {/* Dialog Footer */}
