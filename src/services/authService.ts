@@ -25,8 +25,21 @@ export const registerUser = async (userData: UserRegistrationData) => {
     // Clean the referral code if provided
     const cleanReferralCode = userData.referralCode ? userData.referralCode.trim() : null;
     
-    // Simplified signup - just pass the data to Supabase Auth
-    // Use the exact format expected by the trigger function
+    // Vérifier d'abord si l'utilisateur existe déjà
+    const { data: existingUser } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('email', userData.email)
+      .maybeSingle();
+      
+    if (existingUser) {
+      return { 
+        success: false, 
+        error: "Cet email est déjà utilisé. Veuillez vous connecter."
+      };
+    }
+    
+    // Inscription avec Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
@@ -51,6 +64,11 @@ export const registerUser = async (userData: UserRegistrationData) => {
     if (error.message.includes("User already registered")) {
       toast.error("Cet email est déjà utilisé. Veuillez vous connecter.");
       return { success: false, error: "Cet email est déjà utilisé" };
+    }
+
+    if (error.message.includes("permission denied")) {
+      toast.error("Erreur de permission lors de l'inscription. L'administrateur a été notifié.");
+      return { success: false, error: "Erreur de permission lors de l'inscription" };
     }
 
     toast.error(error.message || "Erreur lors de l'inscription");

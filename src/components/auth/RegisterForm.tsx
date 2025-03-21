@@ -13,6 +13,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { toast } from "sonner";
 
 export default function RegisterForm() {
   const [firstName, setFirstName] = useState("");
@@ -25,7 +26,7 @@ export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: toastOriginal } = useToast();
   const [searchParams] = useSearchParams();
 
   // Check for referral code in URL parameters
@@ -67,21 +68,36 @@ export default function RegisterForm() {
     try {
       console.log("Tentative d'inscription avec:", { firstName, lastName, email, referralCode });
       
-      // Simplify registration by directly using the referral code
+      // Vérifier si le code parrain existe si fourni
+      let validReferral = true;
+      if (referralCode && referralCode.trim() !== "") {
+        try {
+          const { data: referrerCheck } = await fetch(`/api/check-referral-code?code=${referralCode}`)
+            .then(res => res.json())
+            .catch(() => ({ data: null }));
+          
+          if (!referrerCheck) {
+            validReferral = false;
+            toast.warning("Le code parrain n'est pas valide, mais vous pouvez quand même vous inscrire");
+          }
+        } catch (err) {
+          console.log("Erreur lors de la vérification du code parrain:", err);
+          // Continue despite referral check error
+        }
+      }
+      
+      // Proceed with registration
       const result = await registerUser({
         firstName,
         lastName,
         email,
         password,
-        referralCode: referralCode || undefined
+        referralCode: validReferral ? referralCode : undefined
       });
 
       if (result.success) {
         console.log("Inscription réussie:", result.data);
-        toast({
-          title: "Inscription réussie",
-          description: "Votre compte a été créé avec succès. Vous pourrez trouver votre code de parrainage dans la section Parrainage du tableau de bord."
-        });
+        toast.success("Inscription réussie! Vous pourrez trouver votre code de parrainage dans la section Parrainage du tableau de bord.");
         
         // Redirection vers le tableau de bord après inscription réussie
         navigate("/dashboard");
@@ -89,9 +105,9 @@ export default function RegisterForm() {
         console.error("Erreur d'inscription:", result.error);
         setError(result.error || "Une erreur s'est produite lors de l'inscription");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Registration error:", err);
-      setError("Une erreur s'est produite lors de l'inscription");
+      setError(err.message || "Une erreur s'est produite lors de l'inscription");
     } finally {
       setIsLoading(false);
     }
