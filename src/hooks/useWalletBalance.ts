@@ -8,7 +8,6 @@ export function useWalletBalance() {
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [lastRefreshTime, setLastRefreshTime] = useState(Date.now());
 
   // Get the current user's ID when the hook loads
   useEffect(() => {
@@ -16,7 +15,6 @@ export function useWalletBalance() {
       const { data } = await supabase.auth.getSession();
       if (data.session?.user?.id) {
         setUserId(data.session.user.id);
-        console.log("useWalletBalance: User ID set to", data.session.user.id);
       }
     };
     getUser();
@@ -39,7 +37,7 @@ export function useWalletBalance() {
       
       console.log("Fetching wallet balance for user:", data.session.user.id);
       
-      // Fetch the fresh wallet balance directly from profiles table
+      // Fetch the fresh wallet balance
       const { data: profileData, error: fetchError } = await supabase
         .from('profiles')
         .select('wallet_balance')
@@ -52,15 +50,8 @@ export function useWalletBalance() {
         setWalletBalance(0);
       } else {
         console.log("Fetched wallet balance:", profileData?.wallet_balance);
-        if (typeof profileData?.wallet_balance === 'number') {
-          setWalletBalance(profileData.wallet_balance);
-        } else {
-          setWalletBalance(0);
-        }
+        setWalletBalance(profileData?.wallet_balance || 0);
       }
-      
-      // Update last refresh time
-      setLastRefreshTime(Date.now());
     } catch (err) {
       console.error("Error:", err);
       setError("Une erreur est survenue");
@@ -84,7 +75,7 @@ export function useWalletBalance() {
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
           payload => {
             console.log("Profile updated for balance:", payload);
-            if (payload.new && typeof payload.new.wallet_balance === 'number') {
+            if (payload.new && payload.new.wallet_balance !== undefined) {
               setWalletBalance(payload.new.wallet_balance);
               
               // If balance increased, show toast notification
@@ -93,9 +84,6 @@ export function useWalletBalance() {
                 toast.success(`Votre solde a été crédité de ${difference}€`);
               }
             }
-            
-            // Force a refresh to ensure data consistency
-            setTimeout(() => fetchWalletBalance(false), 500);
           }
         )
         .subscribe();
@@ -107,16 +95,10 @@ export function useWalletBalance() {
           { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
           payload => {
             console.log("Wallet transaction detected:", payload);
-            
-            // Force a refresh regardless of the transaction type to ensure we have latest data
-            fetchWalletBalance(false);
-            
-            // Show notification for completed deposits
-            if (payload.new && 
-                payload.new.status === 'completed' && 
-                payload.new.type === 'deposit' &&
-                (!payload.old || payload.old.status !== 'completed')) {
-              toast.success(`Dépôt de ${payload.new.amount}€ confirmé`);
+            // Specifically check for completed deposits
+            if (payload.new && payload.new.status === 'completed' && payload.new.type === 'deposit') {
+              console.log("Completed deposit detected, refreshing balance");
+              fetchWalletBalance(false);
             }
           }
         )
@@ -129,15 +111,9 @@ export function useWalletBalance() {
           { event: '*', schema: 'public', table: 'bank_transfers', filter: `user_id=eq.${userId}` }, 
           payload => {
             console.log("Bank transfer updated:", payload);
-            
-            // Force a refresh regardless of the status change
-            fetchWalletBalance(false);
-            
-            // Show notification for completed transfers
-            if (payload.new && 
-                (payload.new.status === 'completed' || payload.new.status === 'received') &&
-                (!payload.old || (payload.old.status !== 'completed' && payload.old.status !== 'received'))) {
-              toast.success(`Virement de ${payload.new.amount}€ confirmé`);
+            if (payload.new && (payload.new.status === 'completed' || payload.new.status === 'received')) {
+              console.log("Bank transfer completed, refreshing balance");
+              fetchWalletBalance(false);
             }
           }
         )
@@ -152,20 +128,16 @@ export function useWalletBalance() {
     }
   }, [userId, fetchWalletBalance]);
   
-  // Set up very aggressive polling to check balance every 3 seconds as a fallback
+  // Set up aggressive polling to check balance every 10 seconds as a fallback
   useEffect(() => {
     const pollingInterval = setInterval(() => {
-      // Only refresh if last refresh was more than 2 seconds ago
-      // This prevents too many concurrent requests
-      if (Date.now() - lastRefreshTime > 2000) {
-        fetchWalletBalance(false); // Don't show loading state for automatic updates
-      }
-    }, 3000);
+      fetchWalletBalance(false); // Don't show loading state for automatic updates
+    }, 10000); // Check every 10 seconds instead of 60 to ensure we catch updates quickly
     
     return () => {
       clearInterval(pollingInterval);
     };
-  }, [fetchWalletBalance, lastRefreshTime]);
+  }, [fetchWalletBalance]);
 
   // Function to manually refresh the balance
   const refreshBalance = async (showLoading = true) => {
