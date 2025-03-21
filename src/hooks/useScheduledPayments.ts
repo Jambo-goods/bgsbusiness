@@ -105,16 +105,20 @@ export const useScheduledPayments = () => {
             // Update the state directly for immediate reflection of changes
             if (payload.eventType === 'UPDATE' && 'id' in payload.new) {
               setScheduledPayments(prevPayments => 
-                prevPayments.map(payment => 
-                  payment.id === payload.new.id 
-                    ? { 
-                        ...payment, 
-                        ...payload.new,
-                        // Preserve the projects data that may not be in the payload
-                        projects: payment.projects 
-                      } 
-                    : payment
-                )
+                prevPayments.map(payment => {
+                  if (payment.id === payload.new.id) {
+                    // Ensure the status is one of the allowed values
+                    const updatedStatus = payload.new.status as 'pending' | 'scheduled' | 'paid';
+                    return { 
+                      ...payment, 
+                      ...payload.new,
+                      status: updatedStatus,
+                      // Preserve the projects data that may not be in the payload
+                      projects: payment.projects 
+                    } as ScheduledPayment;
+                  }
+                  return payment;
+                })
               );
             } else if (payload.eventType === 'INSERT' && 'id' in payload.new) {
               // For new records, fetch the complete data including projects
@@ -174,7 +178,15 @@ export const useScheduledPayments = () => {
           total_scheduled_amount,
           investors_count
         })
-        .select();
+        .select(`
+          *,
+          projects (
+            name,
+            image,
+            status,
+            company_name
+          )
+        `);
 
       if (error) {
         console.error('Error adding scheduled payment:', error);
@@ -185,7 +197,13 @@ export const useScheduledPayments = () => {
       
       // Instead of fetching all payments again, we can update the state directly
       if (data && data.length > 0) {
-        setScheduledPayments(prev => [...prev, data[0]]);
+        // Ensure correct typing for the new payment data
+        const typedData = data.map(payment => ({
+          ...payment,
+          status: (payment.status as 'pending' | 'scheduled' | 'paid') || 'pending'
+        }));
+        
+        setScheduledPayments(prev => [...prev, ...typedData]);
       } else {
         // Fallback to fetching all if needed
         await fetchScheduledPayments();
@@ -209,7 +227,7 @@ export const useScheduledPayments = () => {
     try {
       // Prepare update object
       const updateData: {
-        status: string;
+        status: 'pending' | 'scheduled' | 'paid';
         processed_at?: string | null;
         payment_date?: string;
         percentage?: number;
@@ -253,9 +271,15 @@ export const useScheduledPayments = () => {
       
       // Update the state directly for immediate UI reflection
       if (data && data.length > 0) {
+        // Ensure correct typing for the updated payment data
+        const typedData = data.map(payment => ({
+          ...payment,
+          status: (payment.status as 'pending' | 'scheduled' | 'paid') || 'pending'
+        }));
+        
         setScheduledPayments(prev => 
           prev.map(payment => 
-            payment.id === paymentId ? data[0] : payment
+            payment.id === paymentId ? typedData[0] : payment
           )
         );
       } else {
