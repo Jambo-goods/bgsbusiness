@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -14,8 +15,7 @@ export type UserRegistrationData = UserCredentials & {
 
 export const registerUser = async (userData: UserRegistrationData) => {
   try {
-    // First, check if the referral code is valid (if provided)
-    let referrerId = null;
+    // Verify referral code if provided, but don't try to fetch the profile if not needed
     if (userData.referralCode) {
       const { data: referrerData, error: referralError } = await supabase
         .from('profiles')
@@ -28,14 +28,12 @@ export const registerUser = async (userData: UserRegistrationData) => {
         return { success: false, error: "Erreur lors de la vérification du code parrain" };
       }
       
-      if (referrerData) {
-        referrerId = referrerData.id;
-      } else if (userData.referralCode) {
+      if (!referrerData) {
         return { success: false, error: "Code parrain invalide" };
       }
     }
     
-    // Sign up the user - the trigger in Supabase will create the profile
+    // Let's sign up the user - pass the referral code in user metadata so the Supabase trigger can handle it
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
@@ -52,7 +50,7 @@ export const registerUser = async (userData: UserRegistrationData) => {
     
     console.log("User registration successful:", data);
     
-    // Let the Supabase trigger handle profile creation
+    // Let the Supabase trigger handle both profile creation and referral linking
     // No need to manually create profile here, as it causes permission issues
 
     return { success: true, data };
