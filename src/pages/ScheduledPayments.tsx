@@ -1,18 +1,18 @@
+
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useScheduledPayments } from "@/hooks/useScheduledPayments";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, RefreshCw } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import EditPaymentModal from "@/components/scheduled-payments/EditPaymentModal";
 import AddPaymentModal from "@/components/scheduled-payments/AddPaymentModal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function ScheduledPayments() {
-  const { scheduledPayments, isLoading, addScheduledPayment, refetch } = useScheduledPayments();
+  const { scheduledPayments, isLoading, addScheduledPayment } = useScheduledPayments();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleEditPayment = (payment: any) => {
     setSelectedPayment(payment);
@@ -32,35 +32,18 @@ export default function ScheduledPayments() {
     }
   };
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await refetch();
-    setTimeout(() => setIsRefreshing(false), 500); // Give visual feedback for at least half a second
-  };
-
   return (
     <div className="min-h-full">
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Paiements Programmés</h1>
-          <div className="flex items-center gap-2">
-            <Button 
-              onClick={handleRefresh}
-              variant="outline"
-              className="flex items-center gap-2"
-              disabled={isRefreshing || isLoading}
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Actualiser
-            </Button>
-            <Button 
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus size={16} />
-              Ajouter un paiement
-            </Button>
-          </div>
+          <Button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus size={16} />
+            Ajouter un paiement
+          </Button>
         </div>
         
         <Card className="bg-white rounded-lg shadow">
@@ -139,6 +122,7 @@ export default function ScheduledPayments() {
         </Card>
       </div>
       
+      {/* Modals for adding and editing payments */}
       <AddPaymentModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 

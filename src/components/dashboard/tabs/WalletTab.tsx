@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WalletBalance from "./wallet/WalletBalance";
@@ -9,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
-import RefreshBalanceButton from "./wallet/RefreshBalanceButton";
 
 export default function WalletTab() {
   const [balance, setBalance] = useState(0);
@@ -134,17 +132,11 @@ export default function WalletTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <WalletBalance 
-          balance={balance} 
-          isLoading={isLoading} 
-          onTabChange={handleTabChange}
-        />
-        <RefreshBalanceButton 
-          onRefresh={() => fetchWalletBalance(true)}
-          disabled={isLoading}
-        />
-      </div>
+      <WalletBalance 
+        balance={balance} 
+        isLoading={isLoading} 
+        onTabChange={handleTabChange}
+      />
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-6">
