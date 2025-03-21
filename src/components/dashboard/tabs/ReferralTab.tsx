@@ -34,6 +34,7 @@ export default function ReferralTab() {
         
         const userId = session.session.user.id;
         
+        // Fetch user's referral code
         const { data: profile } = await supabase
           .from('profiles')
           .select('referral_code')
@@ -41,6 +42,7 @@ export default function ReferralTab() {
           .single();
         
         if (!profile?.referral_code) {
+          // Generate a new referral code if not present
           const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
           await supabase
             .from('profiles')
@@ -52,20 +54,45 @@ export default function ReferralTab() {
           setReferralCode(profile.referral_code);
         }
         
-        const { data: referralsData } = await supabase
-          .from('profiles')
-          .select('id, first_name, last_name, created_at, wallet_balance')
-          .eq('referred_by', userId);
+        // Fetch all referrals (profiles who used this user's referral code)
+        // First, get referrals from the referrals table
+        const { data: referralData } = await supabase
+          .from('referrals')
+          .select('referred_id, status, created_at')
+          .eq('referrer_id', userId);
           
-        if (referralsData) {
-          setReferrals(referralsData);
-          setStats(prev => ({
-            ...prev,
-            totalReferrals: referralsData.length,
-            activeReferrals: referralsData.filter(r => r.wallet_balance > 0).length
-          }));
+        if (referralData && referralData.length > 0) {
+          // Get detailed profile information for each referred user
+          const referredIds = referralData.map(ref => ref.referred_id);
+          
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, first_name, last_name, created_at, wallet_balance')
+            .in('id', referredIds);
+            
+          if (profilesData) {
+            // Combine referral data with profile data
+            const combinedData = profilesData.map(profile => {
+              const referral = referralData.find(r => r.referred_id === profile.id);
+              return {
+                ...profile,
+                referral_status: referral?.status || 'pending',
+                referral_date: referral?.created_at || profile.created_at
+              };
+            });
+            
+            setReferrals(combinedData);
+            setStats(prev => ({
+              ...prev,
+              totalReferrals: combinedData.length,
+              activeReferrals: combinedData.filter(r => r.wallet_balance > 0).length
+            }));
+          }
+        } else {
+          setReferrals([]);
         }
         
+        // Fetch all commission transactions
         const { data: commissionsData } = await supabase
           .from('wallet_transactions')
           .select('*')
@@ -173,7 +200,7 @@ export default function ReferralTab() {
         </Card>
       </div>
       
-      {/* Referral Link and Code - Changed border from amber to gray */}
+      {/* Referral Link and Code */}
       <Card className="overflow-hidden border-2 border-gray-200">
         <CardHeader className="bg-gray-50">
           <CardTitle className="text-gray-800">Votre code de parrainage</CardTitle>

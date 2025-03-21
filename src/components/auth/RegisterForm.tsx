@@ -68,31 +68,13 @@ export default function RegisterForm() {
     try {
       console.log("Tentative d'inscription avec:", { firstName, lastName, email, referralCode });
       
-      // Vérifier si le code parrain existe si fourni
-      let validReferral = true;
-      if (referralCode && referralCode.trim() !== "") {
-        try {
-          const { data: referrerCheck } = await fetch(`/api/check-referral-code?code=${referralCode}`)
-            .then(res => res.json())
-            .catch(() => ({ data: null }));
-          
-          if (!referrerCheck) {
-            validReferral = false;
-            toast.warning("Le code parrain n'est pas valide, mais vous pouvez quand même vous inscrire");
-          }
-        } catch (err) {
-          console.log("Erreur lors de la vérification du code parrain:", err);
-          // Continue despite referral check error
-        }
-      }
-      
       // Proceed with registration
       const result = await registerUser({
         firstName,
         lastName,
         email,
         password,
-        referralCode: validReferral ? referralCode : undefined
+        referralCode: referralCode ? referralCode.trim() : undefined
       });
 
       if (result.success) {
