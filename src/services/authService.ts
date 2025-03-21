@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -22,24 +21,7 @@ export const registerUser = async (userData: UserRegistrationData) => {
       referralCode: userData.referralCode 
     });
     
-    // First, verify if the referral code exists if one was provided
-    if (userData.referralCode) {
-      const { data: referrerData, error: referrerError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('referral_code', userData.referralCode)
-        .single();
-        
-      if (referrerError) {
-        if (referrerError.message.includes('No rows found')) {
-          return { success: false, error: "Code parrain invalide" };
-        }
-        console.error("Erreur de vérification du code parrain:", referrerError);
-        return { success: false, error: "Erreur lors de la vérification du code parrain" };
-      }
-    }
-    
-    // Now, sign up the user with the validated referral code
+    // Sign up the user with the proper data structure to let Supabase triggers handle everything
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
@@ -47,7 +29,7 @@ export const registerUser = async (userData: UserRegistrationData) => {
         data: {
           first_name: userData.firstName,
           last_name: userData.lastName,
-          referral_code_used: userData.referralCode || null,
+          referral_code_used: userData.referralCode ? userData.referralCode.trim() : null,
         },
       },
     });

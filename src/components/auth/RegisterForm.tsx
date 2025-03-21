@@ -22,7 +22,6 @@ export default function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [referralCode, setReferralCode] = useState("");
-  const [referralError, setReferralError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -40,7 +39,6 @@ export default function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    setReferralError("");
 
     // Validation
     if (!firstName.trim() || !lastName.trim()) {
@@ -86,11 +84,7 @@ export default function RegisterForm() {
         navigate("/dashboard");
       } else {
         console.error("Erreur d'inscription:", result.error);
-        if (result.error === "Code parrain invalide") {
-          setReferralError(result.error);
-        } else {
-          setError(result.error || "Une erreur s'est produite lors de l'inscription");
-        }
+        setError(result.error || "Une erreur s'est produite lors de l'inscription");
       }
     } catch (err) {
       console.error("Registration error:", err);
@@ -164,14 +158,12 @@ export default function RegisterForm() {
               value={referralCode}
               onChange={(e) => {
                 setReferralCode(e.target.value);
-                setReferralError("");
               }}
               placeholder="Entrez le code parrain si vous en avez un"
-              className={`pl-9 ${referralError ? 'border-red-500' : ''}`}
+              className="pl-9"
             />
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-bgs-blue/60" />
           </div>
-          {referralError && <p className="text-red-500 text-sm mt-1">{referralError}</p>}
           <p className="text-sm text-bgs-blue/70">
             {searchParams.get("ref") ? (
               <>Un code parrain a été automatiquement ajouté depuis votre lien d'invitation.</>
