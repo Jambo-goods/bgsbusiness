@@ -52,7 +52,17 @@ export const registerUser = async (userData: UserRegistrationData) => {
       },
     });
 
-    if (error) throw error;
+    if (error) {
+      // If there's a permission error, provide more specific feedback
+      if (error.message.includes("permission denied")) {
+        console.error("Permission error during signup:", error);
+        return { 
+          success: false, 
+          error: "Erreur de permission lors de l'inscription. Veuillez contacter l'administrateur."
+        };
+      }
+      throw error;
+    }
     
     console.log("User registration successful:", data);
     
