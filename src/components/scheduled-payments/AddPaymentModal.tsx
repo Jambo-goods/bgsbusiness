@@ -114,8 +114,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       return;
     }
 
-    // Since we no longer collect total_invested_amount, we'll set it to 0
-    // The scheduled amount will also be 0 since it depends on total investment
+    // Removed notes field as it doesn't exist in the database schema
     const paymentData = {
       project_id: selectedProject,
       payment_date: selectedDate?.toISOString() || new Date().toISOString(),
@@ -123,8 +122,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       percentage: parseFloat(percentage) || 0,
       total_invested_amount: 0,
       total_scheduled_amount: 0,
-      investors_count: 0,
-      notes: ''
+      investors_count: 0
     };
 
     onAddPayment(paymentData);

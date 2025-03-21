@@ -127,11 +127,28 @@ export const useScheduledPayments = () => {
         throw new Error('La date de paiement est invalide');
       }
       
+      // Make sure we're not sending 'notes' field which doesn't exist in the database
+      // Remove any fields not in the schema
+      const { 
+        project_id, 
+        payment_date, 
+        status, 
+        percentage,
+        total_invested_amount,
+        total_scheduled_amount,
+        investors_count
+      } = newPayment;
+      
       const { data, error } = await supabase
         .from('scheduled_payments')
         .insert({
-          ...newPayment,
-          payment_date: paymentDate.toISOString().split('T')[0] // Format as YYYY-MM-DD
+          project_id,
+          payment_date: paymentDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+          status,
+          percentage,
+          total_invested_amount,
+          total_scheduled_amount,
+          investors_count
         })
         .select();
 
