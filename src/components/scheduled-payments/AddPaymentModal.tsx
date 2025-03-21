@@ -41,7 +41,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const [status, setStatus] = useState<string>('pending');
   const [totalInvestment, setTotalInvestment] = useState('');
   const [scheduledAmount, setScheduledAmount] = useState('');
-  const [investorsCount, setInvestorsCount] = useState('');
   
   // UI state
   const [projects, setProjects] = useState<Project[]>([]);
@@ -94,7 +93,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     setStatus('pending');
     setTotalInvestment('');
     setScheduledAmount('');
-    setInvestorsCount('');
     setOpenDateSelect(false);
   };
 
@@ -135,7 +133,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       percentage: parseFloat(percentage) || 0,
       total_invested_amount: parseInt(totalInvestment) || 0,
       total_scheduled_amount: parseInt(scheduledAmount) || 0,
-      investors_count: parseInt(investorsCount) || 0,
+      investors_count: 0,
       notes: ''
     };
 
@@ -281,20 +279,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               onChange={(e) => setScheduledAmount(e.target.value)}
               className="col-span-3"
               readOnly={percentage !== '' && totalInvestment !== ''}
-            />
-          </div>
-
-          {/* Investors Count Input */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="investorsCount" className="text-right">
-              Nombre d'investisseurs
-            </Label>
-            <Input
-              type="number"
-              id="investorsCount"
-              value={investorsCount}
-              onChange={(e) => setInvestorsCount(e.target.value)}
-              className="col-span-3"
             />
           </div>
         </div>
