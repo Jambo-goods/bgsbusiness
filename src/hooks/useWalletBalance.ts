@@ -48,18 +48,6 @@ export function useWalletBalance() {
       if (fetchError) {
         console.error("Error fetching wallet balance:", fetchError);
         setError("Erreur lors de la récupération du solde");
-        
-        // Try an alternative approach if direct fetch fails
-        const { data: altProfileData } = await supabase.rpc('get_user_profile', {
-          user_id: data.session.user.id
-        });
-        
-        if (altProfileData && altProfileData.wallet_balance !== undefined) {
-          console.log("Retrieved balance via RPC:", altProfileData.wallet_balance);
-          setWalletBalance(altProfileData.wallet_balance || 0);
-        } else {
-          setWalletBalance(0);
-        }
       } else {
         console.log("Fetched wallet balance:", profileData?.wallet_balance);
         setWalletBalance(profileData?.wallet_balance || 0);
@@ -94,18 +82,8 @@ export function useWalletBalance() {
         { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
         payload => {
           console.log("Wallet transaction detected:", payload);
-          const transaction = payload.new || {};
-          
-          // Force refresh when a deposit is completed
-          if (transaction.type === 'deposit' && transaction.status === 'completed') {
-            console.log("Completed deposit detected, refreshing balance");
-            fetchWalletBalance(false);
-            
-            // Notify if it was changed from pending to completed
-            if (payload.old && payload.old.status !== 'completed') {
-              toast.success(`Dépôt de ${transaction.amount}€ crédité sur votre compte`);
-            }
-          }
+          // Force refresh when a transaction affects wallet
+          fetchWalletBalance(false);
         }
       )
       .subscribe();
@@ -119,7 +97,7 @@ export function useWalletBalance() {
           console.log("Profile updated for balance:", payload);
           
           if (payload.new && payload.old && 
-              payload.new.wallet_balance !== undefined && 
+              typeof payload.new.wallet_balance === 'number' && 
               payload.new.wallet_balance !== payload.old.wallet_balance) {
             
             console.log(`Balance changed from ${payload.old.wallet_balance} to ${payload.new.wallet_balance}`);
@@ -142,16 +120,8 @@ export function useWalletBalance() {
         { event: '*', schema: 'public', table: 'bank_transfers', filter: `user_id=eq.${userId}` }, 
         payload => {
           console.log("Bank transfer change detected:", payload);
-          
-          // Refresh balance when a transfer is marked as received or completed
-          if (payload.new && 
-              (payload.new.status === 'completed' || 
-               payload.new.status === 'received' || 
-               payload.new.status === 'reçu')) {
-            
-            console.log("Bank transfer completed, refreshing balance");
-            fetchWalletBalance(false);
-          }
+          // Refresh balance on any bank transfer change
+          fetchWalletBalance(false);
         }
       )
       .subscribe();

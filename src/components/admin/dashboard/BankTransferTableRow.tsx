@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -107,6 +108,7 @@ export default function BankTransferTableRow({
         console.error("Erreur fonction edge:", edgeFunctionError);
         toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
+        // Plan B: Mettre à jour directement le solde de l'utilisateur
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('wallet_balance')
@@ -123,6 +125,19 @@ export default function BankTransferTableRow({
           
           if (walletError) {
             console.error("Failed to update wallet balance:", walletError);
+            
+            // Plan C: Mise à jour directe du profil
+            const newBalance = (profileData.wallet_balance || 0) + (item.amount || 0);
+            const { error: directUpdateError } = await supabase
+              .from('profiles')
+              .update({ wallet_balance: newBalance })
+              .eq('id', item.user_id);
+              
+            if (directUpdateError) {
+              console.error("Direct balance update failed:", directUpdateError);
+            } else {
+              console.log(`Wallet balance directly updated to ${newBalance}`);
+            }
           } else {
             console.log(`Wallet balance updated by ${item.amount}`);
           }
@@ -252,15 +267,39 @@ export default function BankTransferTableRow({
         toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
         if (shouldCreditWallet) {
-          const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
-            user_id: item.user_id,
-            increment_amount: item.amount || 0
-          });
-          
-          if (walletError) {
-            console.error("Failed to update wallet balance:", walletError);
-          } else {
-            console.log(`Wallet balance incremented by ${item.amount}`);
+          // Plan B: Mettre à jour directement le solde de l'utilisateur
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('wallet_balance')
+            .eq('id', item.user_id)
+            .single();
+            
+          if (!profileError && profileData) {
+            console.log("Current wallet balance:", profileData.wallet_balance);
+            
+            const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
+              user_id: item.user_id,
+              increment_amount: item.amount || 0
+            });
+            
+            if (walletError) {
+              console.error("Failed to update wallet balance:", walletError);
+              
+              // Plan C: Mise à jour directe du profil
+              const newBalance = (profileData.wallet_balance || 0) + (item.amount || 0);
+              const { error: directUpdateError } = await supabase
+                .from('profiles')
+                .update({ wallet_balance: newBalance })
+                .eq('id', item.user_id);
+                
+              if (directUpdateError) {
+                console.error("Direct balance update failed:", directUpdateError);
+              } else {
+                console.log(`Wallet balance directly updated to ${newBalance}`);
+              }
+            } else {
+              console.log(`Wallet balance updated by ${item.amount}`);
+            }
           }
         }
         

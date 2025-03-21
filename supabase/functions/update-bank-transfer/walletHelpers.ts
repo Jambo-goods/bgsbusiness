@@ -15,24 +15,17 @@ export async function updateUserWalletBalance(supabase: any, userId: string, amo
       return;
     }
     
-    // First check if the wallet was already credited for this amount recently (last 5 minutes)
-    // to avoid double crediting
-    const fiveMinutesAgo = new Date();
-    fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+    // Get current wallet balance
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('wallet_balance')
+      .eq('id', userId)
+      .single();
     
-    const { data: recentTransactions, error: txError } = await supabase
-      .from('wallet_transactions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('amount', amount)
-      .eq('type', 'deposit')
-      .eq('status', 'completed')
-      .gte('created_at', fiveMinutesAgo.toISOString())
-      .limit(1);
-      
-    if (!txError && recentTransactions && recentTransactions.length > 0) {
-      console.log(`Found recent completed transaction with same amount. Potential duplicate, skipping wallet update.`);
-      return;
+    if (profileError) {
+      console.error("Error fetching current wallet balance:", profileError.message);
+    } else {
+      console.log(`Current wallet balance: ${profileData?.wallet_balance || 0}`);
     }
     
     // Try to use RPC function first (most reliable method)
