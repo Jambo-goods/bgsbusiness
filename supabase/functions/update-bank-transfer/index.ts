@@ -62,7 +62,7 @@ serve(async (req: Request) => {
     // First try to find the transfer in bank_transfers
     const { data: existingTransfer, error: checkError } = await supabase
       .from('bank_transfers')
-      .select('id, user_id, amount, reference')
+      .select('id, user_id, amount, reference, status')
       .eq('id', transferId)
       .maybeSingle();
       
@@ -70,12 +70,22 @@ serve(async (req: Request) => {
     if (!existingTransfer && !checkError) {
       const { data: walletTransfer, error: walletError } = await supabase
         .from('wallet_transactions')
-        .select('id, user_id, amount, description')
+        .select('id, user_id, amount, description, status')
         .eq('id', transferId)
         .maybeSingle();
         
       if (walletTransfer) {
         console.log("Transfer found in wallet_transactions:", walletTransfer);
+        
+        // Vérifier si cette transaction a déjà été traitée pour éviter un double traitement
+        if (walletTransfer.status === 'completed' && status === 'received') {
+          console.log("Transaction already completed, skipping update");
+          return createResponse({ 
+            success: true, 
+            message: "Transaction already completed", 
+            data: walletTransfer 
+          });
+        }
         
         // Update the wallet transaction
         const { data, error } = await supabase
@@ -124,6 +134,16 @@ serve(async (req: Request) => {
         error: "Transfer not found" 
       }, 404);
     }
+    
+    // Vérifier si ce transfert a déjà été traité pour éviter un double traitement
+    if (existingTransfer.status === 'received' && status === 'received') {
+      console.log("Transfer already received, skipping update");
+      return createResponse({ 
+        success: true, 
+        message: "Transfer already received", 
+        data: existingTransfer 
+      });
+    }
 
     // Try using the updated RPC function with correct parameter naming
     const { data: rpcResult, error: rpcError } = await supabase.rpc("admin_mark_bank_transfer", {
@@ -156,6 +176,40 @@ serve(async (req: Request) => {
 
       console.log("Update successful via direct update");
       
+      // Vérifier s'il existe déjà une transaction de portefeuille correspondante
+      const { data: existingTx, error: txError } = await supabase
+        .from('wallet_transactions')
+        .select('id, status')
+        .eq('user_id', bankTransferData?.user_id)
+        .eq('description', `Virement bancaire (${existingTransfer.reference})`)
+        .maybeSingle();
+      
+      // Mettre à jour la transaction existante ou en créer une nouvelle
+      if (status === 'received' || status === 'reçu') {
+        if (existingTx) {
+          // Mettre à jour la transaction existante
+          await supabase
+            .from('wallet_transactions')
+            .update({
+              status: 'completed',
+              receipt_confirmed: true
+            })
+            .eq('id', existingTx.id);
+        } else {
+          // Créer une nouvelle transaction complétée
+          await supabase
+            .from('wallet_transactions')
+            .insert({
+              user_id: userIdToUpdate,
+              amount: transferAmount,
+              type: 'deposit',
+              description: `Virement bancaire (${existingTransfer.reference})`,
+              status: 'completed',
+              receipt_confirmed: true
+            });
+        }
+      }
+      
       // Update user wallet balance if needed and should credit wallet
       const userIdToUpdate = userId || existingTransfer.user_id;
       const transferAmount = existingTransfer.amount || 0;
@@ -177,6 +231,39 @@ serve(async (req: Request) => {
     // Check if we need to update the user's wallet balance
     const userIdToUpdate = userId || existingTransfer.user_id;
     const transferAmount = existingTransfer.amount || 0;
+    
+    // Vérifier s'il existe déjà une transaction de portefeuille correspondante
+    const { data: existingTx, error: txError } = await supabase
+      .from('wallet_transactions')
+      .select('id, status')
+      .eq('user_id', userIdToUpdate)
+      .ilike('description', `%${existingTransfer.reference}%`)
+      .maybeSingle();
+    
+    if (status === 'received' || status === 'reçu') {
+      if (existingTx) {
+        // Mettre à jour la transaction existante
+        await supabase
+          .from('wallet_transactions')
+          .update({
+            status: 'completed',
+            receipt_confirmed: true
+          })
+          .eq('id', existingTx.id);
+      } else {
+        // Créer une nouvelle transaction complétée
+        await supabase
+          .from('wallet_transactions')
+          .insert({
+            user_id: userIdToUpdate,
+            amount: transferAmount,
+            type: 'deposit',
+            description: `Virement bancaire (${existingTransfer.reference})`,
+            status: 'completed',
+            receipt_confirmed: true
+          });
+      }
+    }
     
     if (userIdToUpdate && (status === 'received' || status === 'reçu') && creditWallet) {
       await updateUserWalletBalance(supabase, userIdToUpdate, transferAmount);

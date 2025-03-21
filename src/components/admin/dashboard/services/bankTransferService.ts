@@ -48,6 +48,16 @@ export const bankTransferService = {
       
       console.log("Données du virement récupérées:", bankTransferData);
       
+      // Vérifier si le virement a déjà été traité
+      if (bankTransferData.status === 'received' && newStatus === 'received') {
+        console.log("Ce virement a déjà été traité comme reçu");
+        return {
+          success: true,
+          message: "Ce virement a déjà été traité comme reçu",
+          data: bankTransferData
+        };
+      }
+      
       // Try to use the edge function first
       const { success: edgeFunctionSuccess, data: edgeFunctionData, error: edgeFunctionError } = 
         await edgeFunctionService.invokeUpdateTransferEdgeFunction(

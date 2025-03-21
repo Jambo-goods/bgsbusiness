@@ -66,6 +66,7 @@ export default function BankTransferInstructions() {
         seen: false
       });
       
+      // Créer l'enregistrement de virement bancaire, mais sans créditer le portefeuille automatiquement
       await supabase.from('bank_transfers').insert({
         user_id: userId,
         reference: bankDetails.reference,
@@ -74,11 +75,12 @@ export default function BankTransferInstructions() {
         notes: 'Confirmation de virement par l\'utilisateur'
       });
       
+      // Créer une transaction en statut "pending" qui sera mise à jour lorsque l'admin confirme
       await supabase.from('wallet_transactions').insert({
         user_id: userId,
         amount: parseInt(transferAmount),
         type: "deposit",
-        status: "pending",
+        status: "pending", // Statut en attente
         description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
       });
       
