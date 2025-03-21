@@ -8,11 +8,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Check, ChevronsUpDown, Search } from 'lucide-react';
+import { CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { toast } from 'sonner';
 import { fr } from 'date-fns/locale';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AddPaymentModalProps {
   isOpen: boolean;
@@ -36,7 +37,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   // Form state
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string>('');
-  const [projectSearchTerm, setProjectSearchTerm] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [percentage, setPercentage] = useState<string>('');
   const [status, setStatus] = useState<string>('pending');
@@ -47,10 +47,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   
   // UI state
   const [projects, setProjects] = useState<Project[]>([]);
-  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
-  const [openProjectSelect, setOpenProjectSelect] = useState(false);
-  const [openStatusSelect, setOpenStatusSelect] = useState(false);
   const [openDateSelect, setOpenDateSelect] = useState(false);
 
   // Fetch projects from the database
@@ -73,7 +70,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
         
         console.log('Projets récupérés:', data);
         setProjects(data || []);
-        setFilteredProjects(data || []);
       } catch (error) {
         console.error('Error in fetchProjects:', error);
       } finally {
@@ -83,18 +79,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     
     fetchProjects();
   }, [isOpen]);
-
-  // Filter projects based on search term
-  useEffect(() => {
-    if (projectSearchTerm.trim() === '') {
-      setFilteredProjects(projects);
-    } else {
-      const filtered = projects.filter(project => 
-        project.name.toLowerCase().includes(projectSearchTerm.toLowerCase())
-      );
-      setFilteredProjects(filtered);
-    }
-  }, [projectSearchTerm, projects]);
 
   // Calculate scheduled amount based on percentage and total investment
   useEffect(() => {
@@ -107,7 +91,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const resetForm = () => {
     setSelectedProject(null);
     setProjectName('');
-    setProjectSearchTerm('');
     setSelectedDate(new Date());
     setPercentage('');
     setStatus('pending');
@@ -115,8 +98,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     setScheduledAmount('');
     setInvestorsCount('');
     setNotes('');
-    setOpenProjectSelect(false);
-    setOpenStatusSelect(false);
     setOpenDateSelect(false);
   };
 
@@ -131,18 +112,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       console.log('Projet sélectionné:', project);
       setSelectedProject(projectId);
       setProjectName(project.name);
-      setProjectSearchTerm(project.name);
     }
-    setTimeout(() => {
-      setOpenProjectSelect(false);
-    }, 100);
-  };
-
-  const handleStatusSelect = (value: string) => {
-    setStatus(value);
-    setTimeout(() => {
-      setOpenStatusSelect(false);
-    }, 100);
   };
 
   const handleAddPayment = () => {
@@ -192,59 +162,24 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               Projet
             </Label>
             <div className="col-span-3">
-              <Popover open={openProjectSelect} onOpenChange={setOpenProjectSelect}>
-                <PopoverTrigger asChild>
-                  <div className="relative">
-                    <Input
-                      id="project-search"
-                      className="w-full pr-10"
-                      placeholder="Rechercher un projet..."
-                      value={projectSearchTerm}
-                      onChange={(e) => setProjectSearchTerm(e.target.value)}
-                      onClick={() => setOpenProjectSelect(true)}
-                    />
-                    <ChevronsUpDown className="absolute right-3 top-3 h-4 w-4 shrink-0 opacity-50" />
-                  </div>
-                </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0" align="start">
-                  {isLoadingProjects ? (
-                    <div className="p-4 text-center">
-                      <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent mx-auto"></div>
-                      <p className="mt-2 text-sm">Chargement des projets...</p>
-                    </div>
-                  ) : filteredProjects && filteredProjects.length > 0 ? (
-                    <Command>
-                      <CommandInput 
-                        placeholder="Rechercher un projet..." 
-                        value={projectSearchTerm}
-                        onValueChange={setProjectSearchTerm}
-                      />
-                      <CommandEmpty>Aucun projet trouvé</CommandEmpty>
-                      <CommandGroup className="max-h-[200px] overflow-y-auto">
-                        {filteredProjects.map((project) => (
-                          <CommandItem
-                            key={project.id}
-                            value={project.id}
-                            onSelect={() => handleProjectSelect(project.id)}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedProject === project.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {project.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </Command>
-                  ) : (
-                    <div className="p-4 text-center text-sm">
-                      Aucun projet disponible
-                    </div>
-                  )}
-                </PopoverContent>
-              </Popover>
+              {isLoadingProjects ? (
+                <div className="w-full h-10 flex items-center justify-center border rounded-md border-input bg-background">
+                  <div className="animate-spin h-4 w-4 border-2 border-primary rounded-full border-t-transparent"></div>
+                </div>
+              ) : (
+                <Select value={selectedProject || ""} onValueChange={handleProjectSelect}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sélectionner un projet" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
 
@@ -308,42 +243,18 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               Statut
             </Label>
             <div className="col-span-3">
-              <Popover open={openStatusSelect} onOpenChange={setOpenStatusSelect}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openStatusSelect}
-                    className="w-full justify-between"
-                    onClick={() => setOpenStatusSelect(true)}
-                    type="button"
-                  >
-                    {statusOptions.find(s => s.value === status)?.label || "Sélectionner un statut"}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[200px] p-0" align="start">
-                  <Command>
-                    <CommandGroup>
-                      {statusOptions.map((statusOption) => (
-                        <CommandItem
-                          key={statusOption.value}
-                          value={statusOption.value}
-                          onSelect={() => handleStatusSelect(statusOption.value)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              status === statusOption.value ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {statusOption.label}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Sélectionner un statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
