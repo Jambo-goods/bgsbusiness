@@ -55,10 +55,13 @@ serve(async (req: Request) => {
       }, 400);
     }
 
-    console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}, CreditWallet=${creditWallet}`);
+    // Normalize status - convert "reçu" to "received" if needed
+    const normalizedStatus = status === 'reçu' ? 'received' : status;
+
+    console.log(`Processing bank transfer update: ID=${transferId}, Status=${normalizedStatus}, Processed=${isProcessed}, CreditWallet=${creditWallet}`);
 
     // Determine if this status should trigger wallet crediting
-    const shouldCreditWallet = creditWallet && (status === 'completed' || status === 'received');
+    const shouldCreditWallet = creditWallet && (normalizedStatus === 'completed' || normalizedStatus === 'received');
     
     // First try to find the transfer in bank_transfers
     const { data: existingTransfer, error: checkError } = await supabase
@@ -183,7 +186,7 @@ serve(async (req: Request) => {
     // Try using the updated RPC function with correct parameter naming
     const { data: rpcResult, error: rpcError } = await supabase.rpc("admin_mark_bank_transfer", {
       transfer_id: transferId,
-      new_status: status,
+      new_status: normalizedStatus, // Use normalized status
       is_processed: isProcessed || false,
       notes: notes || `Mis à jour via edge function le ${new Date().toLocaleDateString('fr-FR')}`
     });

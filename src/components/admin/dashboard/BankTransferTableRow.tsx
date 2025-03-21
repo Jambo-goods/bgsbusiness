@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -108,7 +107,6 @@ export default function BankTransferTableRow({
         console.error("Erreur fonction edge:", edgeFunctionError);
         toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
-        // Plan B: Mettre à jour directement le solde de l'utilisateur
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('wallet_balance')
@@ -126,17 +124,15 @@ export default function BankTransferTableRow({
           if (walletError) {
             console.error("Failed to update wallet balance:", walletError);
             
-            // Plan C: Mise à jour directe du profil
-            const newBalance = (profileData.wallet_balance || 0) + (item.amount || 0);
             const { error: directUpdateError } = await supabase
               .from('profiles')
-              .update({ wallet_balance: newBalance })
+              .update({ wallet_balance: (profileData.wallet_balance || 0) + (item.amount || 0) })
               .eq('id', item.user_id);
               
             if (directUpdateError) {
               console.error("Direct balance update failed:", directUpdateError);
             } else {
-              console.log(`Wallet balance directly updated to ${newBalance}`);
+              console.log(`Wallet balance directly updated to ${(profileData.wallet_balance || 0) + (item.amount || 0)}`);
             }
           } else {
             console.log(`Wallet balance updated by ${item.amount}`);
@@ -244,15 +240,17 @@ export default function BankTransferTableRow({
     try {
       console.log(`Updating transfer ${item.id} with status ${editStatus} and processed date ${processedDate}`);
       
-      const isProcessed = (editStatus === 'received' || editStatus === 'rejected') || processedDate !== undefined;
-      const shouldCreditWallet = editStatus === 'received';
+      const normalizedStatus = editStatus === 'reçu' ? 'received' : editStatus;
+      
+      const isProcessed = (normalizedStatus === 'received' || normalizedStatus === 'rejected') || processedDate !== undefined;
+      const shouldCreditWallet = normalizedStatus === 'received';
       
       const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
         'update-bank-transfer',
         {
           body: {
             transferId: item.id,
-            status: editStatus,
+            status: normalizedStatus,
             isProcessed: isProcessed,
             notes: `Mis à jour manuellement le ${new Date().toLocaleDateString('fr-FR')}`,
             userId: item.user_id,
@@ -267,7 +265,6 @@ export default function BankTransferTableRow({
         toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
         
         if (shouldCreditWallet) {
-          // Plan B: Mettre à jour directement le solde de l'utilisateur
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('wallet_balance')
@@ -285,17 +282,15 @@ export default function BankTransferTableRow({
             if (walletError) {
               console.error("Failed to update wallet balance:", walletError);
               
-              // Plan C: Mise à jour directe du profil
-              const newBalance = (profileData.wallet_balance || 0) + (item.amount || 0);
               const { error: directUpdateError } = await supabase
                 .from('profiles')
-                .update({ wallet_balance: newBalance })
+                .update({ wallet_balance: (profileData.wallet_balance || 0) + (item.amount || 0) })
                 .eq('id', item.user_id);
                 
               if (directUpdateError) {
                 console.error("Direct balance update failed:", directUpdateError);
               } else {
-                console.log(`Wallet balance directly updated to ${newBalance}`);
+                console.log(`Wallet balance directly updated to ${(profileData.wallet_balance || 0) + (item.amount || 0)}`);
               }
             } else {
               console.log(`Wallet balance updated by ${item.amount}`);
@@ -304,7 +299,7 @@ export default function BankTransferTableRow({
         }
         
         const processedDateStr = processedDate ? processedDate.toISOString() : null;
-        const success = await updateTransferStatus(item, editStatus, processedDateStr);
+        const success = await updateTransferStatus(item, normalizedStatus, processedDateStr);
         
         if (success && onStatusUpdate) {
           toast.success(shouldCreditWallet 
@@ -611,3 +606,4 @@ export default function BankTransferTableRow({
     </TableRow>
   );
 }
+

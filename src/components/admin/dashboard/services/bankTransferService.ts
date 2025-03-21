@@ -11,6 +11,9 @@ export const bankTransferService = {
     try {
       console.log(`Mise à jour du virement ${transferId} avec statut ${newStatus}`);
       
+      // Normalize status - convert "reçu" to "received" if needed
+      const normalizedStatus = newStatus === 'reçu' ? 'received' : newStatus;
+      
       // Validate transfer ID
       if (!baseTransferService.validateTransferId(transferId)) {
         return { 
@@ -25,7 +28,7 @@ export const bankTransferService = {
 
       // If not found in bank_transfers, check if it exists in wallet_transactions
       if (!bankTransferData && !bankTransferError) {
-        return await walletTransactionService.updateWalletTransaction(transferId, newStatus);
+        return await walletTransactionService.updateWalletTransaction(transferId, normalizedStatus);
       }
       
       if (bankTransferError) {
@@ -49,7 +52,7 @@ export const bankTransferService = {
       console.log("Données du virement récupérées:", bankTransferData);
       
       // Vérifier si le virement a déjà été traité
-      if (bankTransferData.status === 'completed' && newStatus === 'completed') {
+      if (bankTransferData.status === 'completed' && normalizedStatus === 'completed') {
         console.log("Ce virement a déjà été traité comme complété");
         return {
           success: true,
@@ -70,7 +73,7 @@ export const bankTransferService = {
         .eq('status', 'completed')
         .maybeSingle();
       
-      if (existingWalletTx && (newStatus === 'completed' || newStatus === 'received')) {
+      if (existingWalletTx && (normalizedStatus === 'completed' || normalizedStatus === 'received')) {
         console.log("Une transaction complétée existe déjà pour ce virement:", existingWalletTx);
         return {
           success: true,
@@ -80,22 +83,22 @@ export const bankTransferService = {
       }
       
       // Determine if we should credit wallet based on status
-      const shouldCreditWallet = (newStatus === 'completed' || newStatus === 'received') && 
+      const shouldCreditWallet = (normalizedStatus === 'completed' || normalizedStatus === 'received') && 
                                 !(existingWalletTx && existingWalletTx.status === 'completed');
       
       const { success: edgeFunctionSuccess, data: edgeFunctionData, error: edgeFunctionError } = 
         await edgeFunctionService.invokeUpdateTransferEdgeFunction(
           transferId, 
-          newStatus, 
+          normalizedStatus, 
           bankTransferData?.user_id, 
-          newStatus === 'completed' || newStatus === 'received' || processedDate !== null,
+          normalizedStatus === 'completed' || normalizedStatus === 'received' || processedDate !== null,
           shouldCreditWallet // Pass parameter to control whether to credit wallet
         );
       
       if (edgeFunctionSuccess && edgeFunctionData?.success) {
         return {
           success: true,
-          message: `Virement mis à jour avec succès via edge function: ${newStatus}`,
+          message: `Virement mis à jour avec succès via edge function: ${normalizedStatus}`,
           data: edgeFunctionData.data
         };
       }
@@ -103,7 +106,7 @@ export const bankTransferService = {
       // Fall back to direct update if edge function fails
       return await directBankTransferService.updateBankTransferDirectly(
         transferId, 
-        newStatus, 
+        normalizedStatus, 
         processedDate,
         bankTransferData,
         shouldCreditWallet // Pass parameter to control whether to credit wallet

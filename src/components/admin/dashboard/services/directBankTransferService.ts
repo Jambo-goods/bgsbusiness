@@ -12,8 +12,11 @@ export const directBankTransferService = {
     try {
       console.log(`Mise à jour directe du virement ${transferId} avec statut ${newStatus}, creditWallet=${creditWallet}`);
       
+      // Normalize status - if "reçu" is passed, convert to "received"
+      const normalizedStatus = newStatus === 'reçu' ? 'received' : newStatus;
+      
       // Check if the transfer has already been processed to avoid double processing
-      if (bankTransferData && bankTransferData.status === 'completed' && newStatus === 'completed') {
+      if (bankTransferData && bankTransferData.status === 'completed' && normalizedStatus === 'completed') {
         console.log("Ce virement a déjà été traité comme complété");
         return {
           success: true,
@@ -26,10 +29,10 @@ export const directBankTransferService = {
       const { data: updatedBankTransfer, error: updateError } = await supabase
         .from('bank_transfers')
         .update({
-          status: newStatus,
-          processed: newStatus === 'completed' || newStatus === 'received' || processedDate !== null,
-          processed_at: processedDate || (newStatus === 'completed' || newStatus === 'received' ? new Date().toISOString() : null),
-          notes: `Updated to ${newStatus} via direct method`
+          status: normalizedStatus,
+          processed: normalizedStatus === 'completed' || normalizedStatus === 'received' || processedDate !== null,
+          processed_at: processedDate || (normalizedStatus === 'completed' || normalizedStatus === 'received' ? new Date().toISOString() : null),
+          notes: `Updated to ${normalizedStatus} via direct method`
         })
         .eq('id', transferId)
         .select()
@@ -45,7 +48,7 @@ export const directBankTransferService = {
       }
       
       // If changing status to 'completed' or 'received', update the user's wallet balance
-      if ((newStatus === 'completed' || newStatus === 'received') && bankTransferData?.user_id && bankTransferData?.amount && creditWallet) {
+      if ((normalizedStatus === 'completed' || normalizedStatus === 'received') && bankTransferData?.user_id && bankTransferData?.amount && creditWallet) {
         console.log(`Mise à jour du solde pour l'utilisateur: ${bankTransferData.user_id} avec montant: ${bankTransferData.amount}`);
         
         // First check for existing completed transactions for this transfer
@@ -165,7 +168,7 @@ export const directBankTransferService = {
       
       return {
         success: true,
-        message: `Virement mis à jour: ${newStatus}`,
+        message: `Virement mis à jour: ${normalizedStatus}`,
         data: updatedBankTransfer
       };
     } catch (error: any) {
