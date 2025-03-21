@@ -49,11 +49,11 @@ export const bankTransferService = {
       console.log("Données du virement récupérées:", bankTransferData);
       
       // Vérifier si le virement a déjà été traité
-      if (bankTransferData.status === 'received' && newStatus === 'received') {
-        console.log("Ce virement a déjà été traité comme reçu");
+      if (bankTransferData.status === 'completed' && newStatus === 'completed') {
+        console.log("Ce virement a déjà été traité comme complété");
         return {
           success: true,
-          message: "Ce virement a déjà été traité comme reçu",
+          message: "Ce virement a déjà été traité comme complété",
           data: bankTransferData
         };
       }
@@ -70,7 +70,7 @@ export const bankTransferService = {
         .eq('status', 'completed')
         .maybeSingle();
       
-      if (existingWalletTx && newStatus === 'received') {
+      if (existingWalletTx && (newStatus === 'completed' || newStatus === 'received')) {
         console.log("Une transaction complétée existe déjà pour ce virement:", existingWalletTx);
         return {
           success: true,
@@ -79,17 +79,17 @@ export const bankTransferService = {
         };
       }
       
-      // Try to use the edge function first, but set creditWallet=false if we found a completed wallet transaction
-      // This way, we only update the bank transfer status without double crediting the wallet
-      const shouldCreditWallet = !(existingWalletTx && existingWalletTx.status === 'completed');
+      // Determine if we should credit wallet based on status
+      const shouldCreditWallet = (newStatus === 'completed' || newStatus === 'received') && 
+                                !(existingWalletTx && existingWalletTx.status === 'completed');
       
       const { success: edgeFunctionSuccess, data: edgeFunctionData, error: edgeFunctionError } = 
         await edgeFunctionService.invokeUpdateTransferEdgeFunction(
           transferId, 
           newStatus, 
           bankTransferData?.user_id, 
-          newStatus === 'received' || processedDate !== null,
-          shouldCreditWallet // Add parameter to control whether to credit wallet
+          newStatus === 'completed' || newStatus === 'received' || processedDate !== null,
+          shouldCreditWallet // Pass parameter to control whether to credit wallet
         );
       
       if (edgeFunctionSuccess && edgeFunctionData?.success) {

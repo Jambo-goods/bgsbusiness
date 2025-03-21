@@ -7,12 +7,15 @@ export const edgeFunctionService = {
     status: string,
     userId?: string,
     isProcessed?: boolean,
-    creditWallet: boolean = true // Add new parameter with default value
+    creditWallet: boolean = true // Keep parameter with default value
   ) {
     try {
       console.log("Invoking edge function with params:", {
         transferId, status, userId, isProcessed, creditWallet
       });
+      
+      // Only credit wallet if the status is "completed" or "received"
+      const shouldCreditWallet = creditWallet && (status === 'completed' || status === 'received');
       
       const { data, error } = await supabase.functions.invoke('update-bank-transfer', {
         body: {
@@ -21,8 +24,8 @@ export const edgeFunctionService = {
           isProcessed,
           notes: `Updated to ${status} via edge function`,
           userId,
-          sendNotification: true,
-          creditWallet // Pass the flag to the edge function
+          sendNotification: shouldCreditWallet,
+          creditWallet: shouldCreditWallet // Only credit if status is appropriate
         }
       });
       

@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, createResponse } from "./corsUtils.ts";
@@ -13,7 +12,6 @@ if (!supabaseUrl || !supabaseServiceKey) {
   console.error("Required environment variables SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set");
 }
 
-// Handle HTTP request
 serve(async (req: Request) => {
   console.log(`Bank Transfer Edge Function - Method: ${req.method}, URL: ${req.url}`);
   
@@ -59,6 +57,9 @@ serve(async (req: Request) => {
 
     console.log(`Processing bank transfer update: ID=${transferId}, Status=${status}, Processed=${isProcessed}, CreditWallet=${creditWallet}`);
 
+    // Determine if this status should trigger wallet crediting
+    const shouldCreditWallet = creditWallet && (status === 'completed' || status === 'received');
+    
     // First try to find the transfer in bank_transfers
     const { data: existingTransfer, error: checkError } = await supabase
       .from('bank_transfers')
@@ -78,7 +79,7 @@ serve(async (req: Request) => {
         console.log("Transfer found in wallet_transactions:", walletTransfer);
         
         // Vérifier si cette transaction a déjà été traitée pour éviter un double traitement
-        if (walletTransfer.status === 'completed' && status === 'received') {
+        if (walletTransfer.status === 'completed' && (status === 'completed' || status === 'received')) {
           console.log("Transaction already completed, skipping update");
           return createResponse({ 
             success: true, 
@@ -88,7 +89,7 @@ serve(async (req: Request) => {
         }
         
         // Check if wallet already has a completed transaction for this reference
-        if (creditWallet && status === 'received') {
+        if (shouldCreditWallet) {
           const { data: existingCompletedTx } = await supabase
             .from('wallet_transactions')
             .select('id')
@@ -108,8 +109,8 @@ serve(async (req: Request) => {
         const { data, error } = await supabase
           .from('wallet_transactions')
           .update({
-            status: status === 'received' ? 'completed' : status,
-            receipt_confirmed: status === 'received',
+            status: status === 'completed' || status === 'received' ? 'completed' : status,
+            receipt_confirmed: status === 'completed' || status === 'received',
           })
           .eq('id', transferId)
           .select();
@@ -120,7 +121,7 @@ serve(async (req: Request) => {
         }
         
         // Update user wallet balance if needed and requested
-        if (status === 'received' && walletTransfer.user_id && creditWallet) {
+        if (shouldCreditWallet && walletTransfer.user_id) {
           await updateUserWalletBalance(supabase, walletTransfer.user_id, walletTransfer.amount);
           
           // Send notification if requested
@@ -153,17 +154,17 @@ serve(async (req: Request) => {
     }
     
     // Check if this bank transfer has already been processed
-    if (existingTransfer.status === 'received' && status === 'received') {
-      console.log("Transfer already received, skipping update");
+    if (existingTransfer.status === 'completed' && (status === 'completed' || status === 'received')) {
+      console.log("Transfer already completed, skipping update");
       return createResponse({ 
         success: true, 
-        message: "Transfer already received", 
+        message: "Transfer already completed", 
         data: existingTransfer 
       });
     }
     
     // Before crediting wallet, check if a completed wallet transaction exists for this transfer reference
-    if (creditWallet && status === 'received') {
+    if (shouldCreditWallet) {
       const { data: existingCompletedTx } = await supabase
         .from('wallet_transactions')
         .select('id')
@@ -223,7 +224,7 @@ serve(async (req: Request) => {
         .maybeSingle();
       
       // Mettre à jour la transaction existante ou en créer une nouvelle
-      if (status === 'received' || status === 'reçu') {
+      if (status === 'completed' || status === 'received') {
         if (existingTx) {
           // Mettre à jour la transaction existante
           await supabase
@@ -253,10 +254,10 @@ serve(async (req: Request) => {
       }
       
       // Update user wallet balance if needed and should credit wallet
-      if (userIdToUpdate && (status === 'received' || status === 'reçu') && creditWallet) {
+      if (userIdToUpdate && shouldCreditWallet) {
         await updateUserWalletBalance(supabase, userIdToUpdate, transferAmount);
         
-        // Send notification if requested and status is received
+        // Send notification if requested and status is appropriate
         if (sendNotification) {
           await sendUserNotification(supabase, userIdToUpdate, existingTransfer);
         }
@@ -279,7 +280,7 @@ serve(async (req: Request) => {
       .ilike('description', `%${existingTransfer.reference}%`)
       .maybeSingle();
     
-    if (status === 'received' || status === 'reçu') {
+    if (status === 'completed' || status === 'received') {
       if (existingTx) {
         // Mettre à jour la transaction existante
         await supabase
@@ -308,10 +309,10 @@ serve(async (req: Request) => {
       }
     }
     
-    if (userIdToUpdate && (status === 'received' || status === 'reçu') && creditWallet) {
+    if (userIdToUpdate && shouldCreditWallet) {
       await updateUserWalletBalance(supabase, userIdToUpdate, transferAmount);
       
-      // Send notification if requested and status is received
+      // Send notification if requested and status is appropriate
       if (sendNotification) {
         await sendUserNotification(supabase, userIdToUpdate, existingTransfer);
       }

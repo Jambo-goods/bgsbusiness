@@ -7,17 +7,17 @@ export const directBankTransferService = {
     newStatus: string, 
     processedDate: string | null = null,
     bankTransferData: any = null,
-    creditWallet: boolean = true // Add new parameter with default value
+    creditWallet: boolean = true // Keep parameter with default value
   ) {
     try {
       console.log(`Mise à jour directe du virement ${transferId} avec statut ${newStatus}`);
       
       // Check if the transfer has already been processed to avoid double processing
-      if (bankTransferData && bankTransferData.status === 'received' && newStatus === 'received') {
-        console.log("Ce virement a déjà été traité comme reçu");
+      if (bankTransferData && bankTransferData.status === 'completed' && newStatus === 'completed') {
+        console.log("Ce virement a déjà été traité comme complété");
         return {
           success: true,
-          message: "Ce virement a déjà été traité comme reçu",
+          message: "Ce virement a déjà été traité comme complété",
           data: bankTransferData
         };
       }
@@ -27,8 +27,8 @@ export const directBankTransferService = {
         .from('bank_transfers')
         .update({
           status: newStatus,
-          processed: newStatus === 'received' || processedDate !== null,
-          processed_at: processedDate || (newStatus === 'received' ? new Date().toISOString() : null),
+          processed: newStatus === 'completed' || newStatus === 'received' || processedDate !== null,
+          processed_at: processedDate || (newStatus === 'completed' || newStatus === 'received' ? new Date().toISOString() : null),
           notes: `Updated to ${newStatus} via direct method`
         })
         .eq('id', transferId)
@@ -44,8 +44,8 @@ export const directBankTransferService = {
         };
       }
       
-      // If changing status to 'received', update the user's wallet balance
-      if (newStatus === 'received' && bankTransferData?.user_id && bankTransferData?.amount && creditWallet) {
+      // If changing status to 'completed' or 'received', update the user's wallet balance
+      if ((newStatus === 'completed' || newStatus === 'received') && bankTransferData?.user_id && bankTransferData?.amount && creditWallet) {
         console.log(`Mise à jour du solde pour l'utilisateur: ${bankTransferData.user_id}`);
         
         // First check for existing completed transactions for this transfer
