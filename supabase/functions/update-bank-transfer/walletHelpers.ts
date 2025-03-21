@@ -35,7 +35,7 @@ export async function updateUserWalletBalance(supabase: any, userId: string, amo
       return;
     }
     
-    // Direct increment has higher priority for immediate feedback
+    // Try to use RPC function first (most reliable method)
     const { error: incrementError } = await supabase.rpc('increment_wallet_balance', {
       user_id: userId,
       increment_amount: amount
@@ -57,6 +57,7 @@ export async function updateUserWalletBalance(supabase: any, userId: string, amo
       }
       
       const newBalance = (profileData.wallet_balance || 0) + amount;
+      console.log(`Updating balance directly: ${profileData.wallet_balance} + ${amount} = ${newBalance}`);
       
       const { error: updateError } = await supabase
         .from('profiles')
@@ -73,8 +74,7 @@ export async function updateUserWalletBalance(supabase: any, userId: string, amo
       console.log(`Successfully incremented wallet balance by ${amount}`);
     }
     
-    // Also find and update any pending transaction for this deposit to ensure visibility in transaction history
-    // but don't create a new one to avoid duplicates
+    // Also find and update any pending transaction for this deposit
     const { data: pendingTransaction, error: pendingTxError } = await supabase
       .from('wallet_transactions')
       .select('id')
@@ -93,11 +93,30 @@ export async function updateUserWalletBalance(supabase: any, userId: string, amo
         .from('wallet_transactions')
         .update({
           status: 'completed',
-          receipt_confirmed: true
+          receipt_confirmed: true,
+          updated_at: new Date().toISOString() // Add timestamp to force change detection
         })
         .eq('id', pendingTransaction[0].id);
       
       console.log(`Updated existing wallet transaction with ID ${pendingTransaction[0].id}`);
+    } else {
+      // If no pending transaction found, create a new one to ensure visibility in transaction history
+      const { error: createTxError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: userId,
+          amount: amount,
+          type: 'deposit',
+          description: `Dépôt par virement bancaire`,
+          status: 'completed',
+          receipt_confirmed: true
+        });
+        
+      if (createTxError) {
+        console.error("Error creating new wallet transaction:", createTxError.message);
+      } else {
+        console.log("Created new wallet transaction to record deposit");
+      }
     }
   } catch (error: any) {
     console.error("Error updating wallet balance:", error.message);

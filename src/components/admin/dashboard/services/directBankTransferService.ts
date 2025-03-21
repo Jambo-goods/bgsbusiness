@@ -49,7 +49,7 @@ export const directBankTransferService = {
         console.log(`Mise à jour du solde pour l'utilisateur: ${bankTransferData.user_id} avec montant: ${bankTransferData.amount}`);
         
         // First check for existing completed transactions for this transfer
-        const { data: existingTx } = await supabase
+        const { data: existingCompletedTx } = await supabase
           .from('wallet_transactions')
           .select('id')
           .eq('user_id', bankTransferData.user_id)
@@ -58,8 +58,8 @@ export const directBankTransferService = {
           .ilike('description', `%${bankTransferData.reference || ''}%`)
           .maybeSingle();
         
-        if (existingTx) {
-          console.log(`Une transaction complétée existe déjà: ${existingTx.id}`);
+        if (existingCompletedTx) {
+          console.log(`Une transaction complétée existe déjà: ${existingCompletedTx.id}, pas de mise à jour du solde`);
         } else {
           // Find any pending transaction first
           const { data: pendingTx } = await supabase
@@ -109,9 +109,9 @@ export const directBankTransferService = {
           });
           
           if (walletError) {
-            console.error("Erreur lors de la mise à jour du solde:", walletError);
+            console.error("Erreur lors de la mise à jour du solde via RPC:", walletError);
             
-            // Fallback to direct update if RPC fails
+            // Get current profile data
             const { data: profileData } = await supabase
               .from('profiles')
               .select('wallet_balance')
@@ -119,7 +119,10 @@ export const directBankTransferService = {
               .single();
               
             if (profileData) {
+              // Calculate new balance and update directly
               const newBalance = (profileData.wallet_balance || 0) + bankTransferData.amount;
+              console.log(`Mise à jour directe du solde: ${profileData.wallet_balance} + ${bankTransferData.amount} = ${newBalance}`);
+              
               const { error: directUpdateError } = await supabase
                 .from('profiles')
                 .update({ wallet_balance: newBalance })
@@ -128,11 +131,34 @@ export const directBankTransferService = {
               if (directUpdateError) {
                 console.error("Erreur lors de la mise à jour directe:", directUpdateError);
               } else {
-                console.log(`Solde mis à jour directement: ${newBalance}`);
+                console.log(`Solde mis à jour directement à ${newBalance}€`);
               }
             }
           } else {
-            console.log(`Solde mis à jour avec succès: +${bankTransferData.amount}`);
+            console.log(`Solde mis à jour avec succès via RPC: +${bankTransferData.amount}€`);
+          }
+          
+          // Send notification about the completed transfer
+          const { error: notificationError } = await supabase
+            .from('notifications')
+            .insert({
+              user_id: bankTransferData.user_id,
+              title: 'Virement bancaire reçu',
+              message: `Votre virement bancaire de ${bankTransferData.amount}€ a été confirmé et ajouté à votre portefeuille.`,
+              type: 'deposit',
+              seen: false,
+              data: {
+                amount: bankTransferData.amount,
+                category: 'success',
+                reference: bankTransferData.reference,
+                timestamp: new Date().toISOString()
+              }
+            });
+          
+          if (notificationError) {
+            console.error("Erreur lors de la création de la notification:", notificationError);
+          } else {
+            console.log("Notification de dépôt créée avec succès");
           }
         }
       }

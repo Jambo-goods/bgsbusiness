@@ -14,13 +14,13 @@ export function WalletCard() {
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Initial balance fetch
-    refreshBalance();
+    // Initial balance fetch with force refresh
+    refreshBalance(true);
     
-    // Set up polling as a fallback mechanism
+    // Set up aggressive polling as a fallback mechanism
     const intervalId = setInterval(() => {
       refreshBalance(false); // Silent refresh (no loading indicator)
-    }, 10000); // Check every 10 seconds
+    }, 5000); // Check every 5 seconds for better responsiveness
     
     return () => {
       clearInterval(intervalId);
@@ -28,38 +28,54 @@ export function WalletCard() {
   }, [refreshBalance]);
   
   useEffect(() => {
-    const getSession = async () => {
+    const setupRealtimeListeners = async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) return;
       
+      const userId = data.session.user.id;
+      console.log("Setting up wallet card realtime listeners for user:", userId);
+      
+      // Listen for completed wallet transactions (this should catch admin-processed transfers)
       const walletTransactionsChannel = supabase
-        .channel('wallet_transactions_changes')
+        .channel('wallet_card_transactions')
         .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${data.session.user.id}` }, 
+          { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
           (payload) => {
-            console.log('Wallet transaction change detected:', payload);
+            console.log('Wallet transaction change detected in WalletCard:', payload);
+            
+            // Force a balance refresh for any transaction change
             refreshBalance(false);
             
-            if (payload.eventType === 'INSERT') {
-              const newTransaction = payload.new;
-              if (newTransaction.type === 'deposit' && newTransaction.status === 'completed') {
-                toast.success(`Dépôt de ${newTransaction.amount}€ crédité sur votre compte`);
+            // Only show notification for new completed deposits
+            if (payload.eventType === 'INSERT' || 
+                (payload.eventType === 'UPDATE' && 
+                 payload.old?.status !== 'completed' && 
+                 payload.new?.status === 'completed')) {
+              
+              const transaction = payload.new;
+              if (transaction.type === 'deposit' && transaction.status === 'completed') {
+                toast.success(`Dépôt de ${transaction.amount}€ crédité sur votre compte`);
               }
             }
           }
         )
         .subscribe();
         
+      // Listen specifically for profile balance changes
       const profilesChannel = supabase
-        .channel('profiles_balance_changes')
+        .channel('wallet_card_balance_changes')
         .on('postgres_changes', 
-          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${data.session.user.id}` }, 
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
           (payload) => {
-            console.log('Profile change detected:', payload);
-            refreshBalance(false);
+            console.log('Profile change detected in WalletCard:', payload);
             
-            if (payload.old && payload.new && 
-                payload.old.wallet_balance !== payload.new.wallet_balance) {
+            // Immediately update the displayed balance without waiting for the next fetch
+            if (payload.new && payload.old && 
+                payload.new.wallet_balance !== payload.old.wallet_balance) {
+              
+              refreshBalance(false);
+              
+              // Show a notification if balance increased
               const difference = payload.new.wallet_balance - payload.old.wallet_balance;
               if (difference > 0) {
                 toast.success(`Votre solde a été augmenté de ${difference}€`);
@@ -69,13 +85,42 @@ export function WalletCard() {
         )
         .subscribe();
       
+      // Listen for bank transfers specifically (to catch admin completions)
+      const bankTransfersChannel = supabase
+        .channel('wallet_card_bank_transfers')
+        .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'bank_transfers', filter: `user_id=eq.${userId}` }, 
+          (payload) => {
+            console.log('Bank transfer change detected in WalletCard:', payload);
+            
+            // Force balance refresh when a transfer is completed
+            if (payload.new && 
+                (payload.new.status === 'completed' || payload.new.status === 'received') &&
+                payload.old && 
+                payload.old.status !== 'completed' && 
+                payload.old.status !== 'received') {
+              
+              console.log('Bank transfer completed, refreshing balance immediately');
+              // Force an immediate refresh without waiting for other mechanisms
+              refreshBalance(false);
+              
+              // Show notification about the completed transfer
+              if (payload.new.amount) {
+                toast.success(`Virement de ${payload.new.amount}€ crédité sur votre compte`);
+              }
+            }
+          }
+        )
+        .subscribe();
+      
       return () => {
         supabase.removeChannel(walletTransactionsChannel);
         supabase.removeChannel(profilesChannel);
+        supabase.removeChannel(bankTransfersChannel);
       };
     };
     
-    getSession();
+    setupRealtimeListeners();
   }, [refreshBalance]);
   
   const handleInstructionsClick = () => {
