@@ -8,9 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { toast } from 'sonner';
 import { fr } from 'date-fns/locale';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -43,7 +42,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const [totalInvestment, setTotalInvestment] = useState('');
   const [scheduledAmount, setScheduledAmount] = useState('');
   const [investorsCount, setInvestorsCount] = useState('');
-  const [notes, setNotes] = useState('');
   
   // UI state
   const [projects, setProjects] = useState<Project[]>([]);
@@ -97,7 +95,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     setTotalInvestment('');
     setScheduledAmount('');
     setInvestorsCount('');
-    setNotes('');
     setOpenDateSelect(false);
   };
 
@@ -139,7 +136,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       total_invested_amount: parseInt(totalInvestment) || 0,
       total_scheduled_amount: parseInt(scheduledAmount) || 0,
       investors_count: parseInt(investorsCount) || 0,
-      notes: notes || ''
+      notes: ''
     };
 
     onAddPayment(paymentData);
@@ -300,8 +297,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               className="col-span-3"
             />
           </div>
-
-          {/* Notes Input - This is the div we're removing */}
         </div>
 
         {/* Dialog Footer */}
