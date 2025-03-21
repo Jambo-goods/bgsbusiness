@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export default function RegisterForm() {
@@ -35,33 +34,8 @@ export default function RegisterForm() {
     const codeFromUrl = searchParams.get("ref");
     if (codeFromUrl) {
       setReferralCode(codeFromUrl);
-      validateReferralCode(codeFromUrl);
     }
   }, [searchParams]);
-
-  const validateReferralCode = async (code: string) => {
-    if (!code) return true;
-    
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name')
-        .eq('referral_code', code)
-        .single();
-      
-      if (error || !data) {
-        setReferralError("Code de parrainage invalide");
-        return false;
-      }
-      
-      setReferralError("");
-      return true;
-    } catch (err) {
-      console.error("Error validating referral code:", err);
-      setReferralError("Erreur lors de la vérification du code");
-      return false;
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,12 +61,6 @@ export default function RegisterForm() {
     if (!termsAccepted) {
       setError("Vous devez accepter les conditions d'utilisation");
       return;
-    }
-
-    // Validate referral code if provided
-    if (referralCode) {
-      const isValid = await validateReferralCode(referralCode);
-      if (!isValid) return;
     }
 
     setIsLoading(true);
