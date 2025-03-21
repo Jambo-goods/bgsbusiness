@@ -15,6 +15,26 @@ export async function updateUserWalletBalance(supabase: any, userId: string, amo
       return;
     }
     
+    // First check if the wallet was already credited for this amount recently (last 5 minutes)
+    // to avoid double crediting
+    const fiveMinutesAgo = new Date();
+    fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+    
+    const { data: recentTransactions, error: txError } = await supabase
+      .from('wallet_transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('amount', amount)
+      .eq('type', 'deposit')
+      .eq('status', 'completed')
+      .gte('created_at', fiveMinutesAgo.toISOString())
+      .limit(1);
+      
+    if (!txError && recentTransactions && recentTransactions.length > 0) {
+      console.log(`Found recent completed transaction with same amount. Potential duplicate, skipping wallet update.`);
+      return;
+    }
+    
     // Direct increment has higher priority for immediate feedback
     const { error: incrementError } = await supabase.rpc('increment_wallet_balance', {
       user_id: userId,
@@ -53,19 +73,21 @@ export async function updateUserWalletBalance(supabase: any, userId: string, amo
       console.log(`Successfully incremented wallet balance by ${amount}`);
     }
     
-    // Also create or update a wallet transaction to ensure visibility in transaction history
-    const { data: existingTransaction, error: txCheckError } = await supabase
+    // Also find and update any pending transaction for this deposit to ensure visibility in transaction history
+    // but don't create a new one to avoid duplicates
+    const { data: pendingTransaction, error: pendingTxError } = await supabase
       .from('wallet_transactions')
       .select('id')
       .eq('user_id', userId)
       .eq('amount', amount)
       .eq('type', 'deposit')
-      .eq('description', 'Dépôt de fonds (virement bancaire)')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
       .limit(1);
     
-    if (txCheckError) {
-      console.error("Error checking for existing transaction:", txCheckError.message);
-    } else if (existingTransaction && existingTransaction.length > 0) {
+    if (pendingTxError) {
+      console.error("Error checking for pending transaction:", pendingTxError.message);
+    } else if (pendingTransaction && pendingTransaction.length > 0) {
       // Update existing transaction to completed status
       await supabase
         .from('wallet_transactions')
@@ -73,28 +95,9 @@ export async function updateUserWalletBalance(supabase: any, userId: string, amo
           status: 'completed',
           receipt_confirmed: true
         })
-        .eq('id', existingTransaction[0].id);
+        .eq('id', pendingTransaction[0].id);
       
-      console.log(`Updated existing wallet transaction with ID ${existingTransaction[0].id}`);
-    } else {
-      // Create a new transaction for this deposit
-      const { data: newTx, error: txInsertError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: userId,
-          amount: amount,
-          type: 'deposit',
-          description: 'Dépôt de fonds (virement bancaire)',
-          receipt_confirmed: true,
-          status: 'completed'
-        })
-        .select();
-      
-      if (txInsertError) {
-        console.error("Error creating wallet transaction:", txInsertError.message);
-      } else {
-        console.log(`Created new wallet transaction with ID ${newTx?.[0]?.id}`);
-      }
+      console.log(`Updated existing wallet transaction with ID ${pendingTransaction[0].id}`);
     }
   } catch (error: any) {
     console.error("Error updating wallet balance:", error.message);

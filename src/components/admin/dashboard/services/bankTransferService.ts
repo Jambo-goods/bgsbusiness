@@ -58,13 +58,38 @@ export const bankTransferService = {
         };
       }
       
-      // Try to use the edge function first
+      // Check if there's already a wallet transaction for this transfer
+      // This helps prevent double crediting
+      const { data: existingWalletTx, error: txError } = await supabase
+        .from('wallet_transactions')
+        .select('id, status')
+        .eq('type', 'deposit')
+        .eq('description', `Virement bancaire (${bankTransferData.reference})`)
+        .eq('user_id', bankTransferData.user_id)
+        .eq('amount', bankTransferData.amount)
+        .eq('status', 'completed')
+        .maybeSingle();
+      
+      if (existingWalletTx && newStatus === 'received') {
+        console.log("Une transaction complétée existe déjà pour ce virement:", existingWalletTx);
+        return {
+          success: true,
+          message: "Ce virement a déjà une transaction complétée associée",
+          data: bankTransferData
+        };
+      }
+      
+      // Try to use the edge function first, but set creditWallet=false if we found a completed wallet transaction
+      // This way, we only update the bank transfer status without double crediting the wallet
+      const shouldCreditWallet = !(existingWalletTx && existingWalletTx.status === 'completed');
+      
       const { success: edgeFunctionSuccess, data: edgeFunctionData, error: edgeFunctionError } = 
         await edgeFunctionService.invokeUpdateTransferEdgeFunction(
           transferId, 
           newStatus, 
           bankTransferData?.user_id, 
-          newStatus === 'received' || processedDate !== null
+          newStatus === 'received' || processedDate !== null,
+          shouldCreditWallet // Add parameter to control whether to credit wallet
         );
       
       if (edgeFunctionSuccess && edgeFunctionData?.success) {
@@ -80,7 +105,8 @@ export const bankTransferService = {
         transferId, 
         newStatus, 
         processedDate,
-        bankTransferData
+        bankTransferData,
+        shouldCreditWallet // Pass parameter to control whether to credit wallet
       );
       
     } catch (error: any) {

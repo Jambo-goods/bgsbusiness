@@ -87,6 +87,23 @@ serve(async (req: Request) => {
           });
         }
         
+        // Check if wallet already has a completed transaction for this reference
+        if (creditWallet && status === 'received') {
+          const { data: existingCompletedTx } = await supabase
+            .from('wallet_transactions')
+            .select('id')
+            .eq('user_id', walletTransfer.user_id)
+            .eq('description', walletTransfer.description)
+            .eq('status', 'completed')
+            .maybeSingle();
+            
+          if (existingCompletedTx) {
+            // A completed transaction already exists, don't credit the wallet again
+            console.log("A completed transaction already exists, not crediting wallet again");
+            creditWallet = false;
+          }
+        }
+        
         // Update the wallet transaction
         const { data, error } = await supabase
           .from('wallet_transactions')
@@ -135,7 +152,7 @@ serve(async (req: Request) => {
       }, 404);
     }
     
-    // Vérifier si ce transfert a déjà été traité pour éviter un double traitement
+    // Check if this bank transfer has already been processed
     if (existingTransfer.status === 'received' && status === 'received') {
       console.log("Transfer already received, skipping update");
       return createResponse({ 
@@ -143,6 +160,23 @@ serve(async (req: Request) => {
         message: "Transfer already received", 
         data: existingTransfer 
       });
+    }
+    
+    // Before crediting wallet, check if a completed wallet transaction exists for this transfer reference
+    if (creditWallet && status === 'received') {
+      const { data: existingCompletedTx } = await supabase
+        .from('wallet_transactions')
+        .select('id')
+        .eq('user_id', existingTransfer.user_id)
+        .eq('description', `Virement bancaire (${existingTransfer.reference})`)
+        .eq('status', 'completed')
+        .maybeSingle();
+        
+      if (existingCompletedTx) {
+        // A completed transaction already exists, don't credit the wallet again
+        console.log("A completed transaction already exists, not crediting wallet again");
+        creditWallet = false;
+      }
     }
 
     // Try using the updated RPC function with correct parameter naming
@@ -176,11 +210,15 @@ serve(async (req: Request) => {
 
       console.log("Update successful via direct update");
       
+      // Update existing wallet transaction or create a new one
+      const userIdToUpdate = userId || existingTransfer.user_id;
+      const transferAmount = existingTransfer.amount || 0;
+      
       // Vérifier s'il existe déjà une transaction de portefeuille correspondante
       const { data: existingTx, error: txError } = await supabase
         .from('wallet_transactions')
         .select('id, status')
-        .eq('user_id', bankTransferData?.user_id)
+        .eq('user_id', userIdToUpdate)
         .eq('description', `Virement bancaire (${existingTransfer.reference})`)
         .maybeSingle();
       
@@ -195,6 +233,8 @@ serve(async (req: Request) => {
               receipt_confirmed: true
             })
             .eq('id', existingTx.id);
+          
+          console.log(`Updated existing wallet transaction with ID ${existingTx.id}`);
         } else {
           // Créer une nouvelle transaction complétée
           await supabase
@@ -207,13 +247,12 @@ serve(async (req: Request) => {
               status: 'completed',
               receipt_confirmed: true
             });
+            
+          console.log(`Created new wallet transaction for user ${userIdToUpdate}`);
         }
       }
       
       // Update user wallet balance if needed and should credit wallet
-      const userIdToUpdate = userId || existingTransfer.user_id;
-      const transferAmount = existingTransfer.amount || 0;
-      
       if (userIdToUpdate && (status === 'received' || status === 'reçu') && creditWallet) {
         await updateUserWalletBalance(supabase, userIdToUpdate, transferAmount);
         
@@ -250,6 +289,8 @@ serve(async (req: Request) => {
             receipt_confirmed: true
           })
           .eq('id', existingTx.id);
+          
+        console.log(`Updated existing wallet transaction with ID ${existingTx.id}`);
       } else {
         // Créer une nouvelle transaction complétée
         await supabase
@@ -262,6 +303,8 @@ serve(async (req: Request) => {
             status: 'completed',
             receipt_confirmed: true
           });
+          
+        console.log(`Created new wallet transaction for user ${userIdToUpdate}`);
       }
     }
     

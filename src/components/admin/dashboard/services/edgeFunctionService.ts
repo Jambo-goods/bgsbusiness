@@ -4,42 +4,48 @@ import { supabase } from "@/integrations/supabase/client";
 export const edgeFunctionService = {
   async invokeUpdateTransferEdgeFunction(
     transferId: string, 
-    newStatus: string, 
-    userId: string | undefined,
-    isProcessed: boolean
+    status: string,
+    userId?: string,
+    isProcessed?: boolean,
+    creditWallet: boolean = true // Add new parameter with default value
   ) {
     try {
-      console.log("Appel de la fonction edge pour mise à jour du transfert:", {
-        transferId,
-        newStatus,
-        userId,
-        isProcessed
+      console.log("Invoking edge function with params:", {
+        transferId, status, userId, isProcessed, creditWallet
       });
       
-      const { data, error } = await supabase.functions.invoke(
-        'update-bank-transfer',
-        {
-          body: {
-            transferId: transferId,
-            status: newStatus,
-            isProcessed: isProcessed,
-            notes: `Mise à jour via service le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: userId,
-            sendNotification: newStatus === 'received'
-          }
+      const { data, error } = await supabase.functions.invoke('update-bank-transfer', {
+        body: {
+          transferId,
+          status,
+          isProcessed,
+          notes: `Updated to ${status} via edge function`,
+          userId,
+          sendNotification: true,
+          creditWallet // Pass the flag to the edge function
         }
-      );
+      });
       
       if (error) {
-        console.error("Erreur fonction edge:", error);
-        return { success: false, data: null, error };
+        console.error("Edge function error:", error);
+        return {
+          success: false,
+          message: `Edge Function Error: ${error.message}`,
+          error: error
+        };
       }
       
-      console.log("Résultat fonction edge:", data);
-      return { success: true, data, error: null };
-    } catch (error) {
-      console.error("Erreur lors de l'appel de la fonction edge:", error);
-      return { success: false, data: null, error };
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error: any) {
+      console.error("Error invoking edge function:", error);
+      return {
+        success: false,
+        message: `Error: ${error.message || 'Unknown error'}`,
+        error: error
+      };
     }
   }
 };

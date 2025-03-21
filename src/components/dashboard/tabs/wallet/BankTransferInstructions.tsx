@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -66,7 +67,7 @@ export default function BankTransferInstructions() {
         seen: false
       });
       
-      // Créer l'enregistrement de virement bancaire, mais sans créditer le portefeuille automatiquement
+      // Créer l'enregistrement de virement bancaire
       await supabase.from('bank_transfers').insert({
         user_id: userId,
         reference: bankDetails.reference,
@@ -75,14 +76,19 @@ export default function BankTransferInstructions() {
         notes: 'Confirmation de virement par l\'utilisateur'
       });
       
-      // Créer une transaction en statut "pending" qui sera mise à jour lorsque l'admin confirme
-      await supabase.from('wallet_transactions').insert({
+      // Créer une transaction en statut "pending" - une seule transaction qui sera mise à jour plus tard
+      // Ne pas créer de transaction complétée ici pour éviter le double crédit
+      const { error: txError } = await supabase.from('wallet_transactions').insert({
         user_id: userId,
         amount: parseInt(transferAmount),
         type: "deposit",
-        status: "pending", // Statut en attente
-        description: `Virement bancaire confirmé (réf: ${bankDetails.reference})`
+        status: "pending", // Statut en attente uniquement
+        description: `Virement bancaire (${bankDetails.reference})`
       });
+      
+      if (txError) {
+        console.error("Erreur lors de la création de la transaction:", txError);
+      }
       
       const { data: profileData } = await supabase
         .from('profiles')

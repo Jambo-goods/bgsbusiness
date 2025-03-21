@@ -36,8 +36,52 @@ export function useBankTransfers() {
       // Check if wallet balance should be updated (if status is received/reçu)
       const shouldUpdateWallet = newStatus === 'received' || newStatus === 'reçu';
       
+      // Check if there's already a completed wallet transaction for this transfer
+      let skipWalletUpdate = false;
+      
       if (shouldUpdateWallet && transfer.user_id && transfer.amount) {
+        console.log(`Checking for existing wallet transactions for transfer ${transfer.id}`);
+        
+        // Check if a completed transaction already exists
+        const { data: existingTransactions } = await supabase
+          .from('wallet_transactions')
+          .select('id, status')
+          .eq('user_id', transfer.user_id)
+          .eq('amount', transfer.amount)
+          .eq('status', 'completed')
+          .ilike('description', `%${transfer.reference || ''}%`);
+          
+        if (existingTransactions && existingTransactions.length > 0) {
+          console.log(`Found ${existingTransactions.length} existing transactions for this transfer`);
+          skipWalletUpdate = true;
+        }
+      }
+      
+      if (shouldUpdateWallet && transfer.user_id && transfer.amount && !skipWalletUpdate) {
         console.log(`Will update wallet balance for user ${transfer.user_id} with amount ${transfer.amount}`);
+        
+        // Find and update any pending transaction first
+        const { data: pendingTx } = await supabase
+          .from('wallet_transactions')
+          .select('id')
+          .eq('user_id', transfer.user_id)
+          .eq('amount', transfer.amount)
+          .eq('type', 'deposit')
+          .eq('status', 'pending')
+          .ilike('description', `%${transfer.reference || ''}%`)
+          .maybeSingle();
+          
+        if (pendingTx) {
+          console.log(`Updating pending transaction ${pendingTx.id} to completed`);
+          
+          await supabase
+            .from('wallet_transactions')
+            .update({
+              status: 'completed',
+              receipt_confirmed: true
+            })
+            .eq('id', pendingTx.id);
+        }
         
         // Use increment_wallet_balance RPC to update wallet balance directly
         const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
@@ -50,22 +94,26 @@ export function useBankTransfers() {
         } else {
           console.log("Wallet balance updated successfully");
           
-          // Create a wallet transaction for this deposit if it doesn't exist
-          const { error: txError } = await supabase
-            .from('wallet_transactions')
-            .insert({
-              user_id: transfer.user_id,
-              amount: transfer.amount,
-              type: 'deposit',
-              description: `Virement bancaire${transfer.reference ? ` (${transfer.reference})` : ''}`,
-              receipt_confirmed: true,
-              status: 'completed'
-            });
-            
-          if (txError) {
-            console.error("Failed to create wallet transaction:", txError);
+          // Only create a wallet transaction if none exists (pending or completed)
+          if (!pendingTx) {
+            const { error: txError } = await supabase
+              .from('wallet_transactions')
+              .insert({
+                user_id: transfer.user_id,
+                amount: transfer.amount,
+                type: 'deposit',
+                description: `Virement bancaire${transfer.reference ? ` (${transfer.reference})` : ''}`,
+                receipt_confirmed: true,
+                status: 'completed'
+              });
+              
+            if (txError) {
+              console.error("Failed to create wallet transaction:", txError);
+            }
           }
         }
+      } else if (skipWalletUpdate) {
+        console.log("Skipping wallet balance update as transaction already exists");
       }
       
       // Call the service to update the transfer
@@ -78,7 +126,7 @@ export function useBankTransfers() {
       console.log("Update result:", result);
       
       if (result.success) {
-        const message = shouldUpdateWallet 
+        const message = shouldUpdateWallet && !skipWalletUpdate
           ? `Virement mis à jour: ${newStatus} et solde utilisateur crédité`
           : `Virement mis à jour: ${newStatus}`;
         toast.success(message);
