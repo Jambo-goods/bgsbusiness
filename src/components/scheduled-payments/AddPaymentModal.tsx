@@ -38,9 +38,12 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const [cumulativeAmount, setCumulativeAmount] = useState('');
   const [notes, setNotes] = useState('');
   const [projects, setProjects] = useState<any[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  
+  // Gestion séparée des états d'ouverture pour les sélecteurs
   const [openProjectSelect, setOpenProjectSelect] = useState(false);
   const [openStatusSelect, setOpenStatusSelect] = useState(false);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const [openDateSelect, setOpenDateSelect] = useState(false);
 
   // Fetch projects from the database
   useEffect(() => {
@@ -84,13 +87,19 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     if (selected) {
       setSelectedProject(projectId);
       setProjectName(selected.name || '');
-      setOpenProjectSelect(false);
     }
+    // Attendre avant de fermer le Popover pour éviter les problèmes de state
+    setTimeout(() => {
+      setOpenProjectSelect(false);
+    }, 100);
   };
 
   const handleStatusSelect = (statusValue: string) => {
     setStatus(statusValue);
-    setOpenStatusSelect(false);
+    // Attendre avant de fermer le Popover pour éviter les problèmes de state
+    setTimeout(() => {
+      setOpenStatusSelect(false);
+    }, 100);
   };
 
   const resetForm = () => {
@@ -104,6 +113,9 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     setInvestorsCount('');
     setCumulativeAmount('');
     setNotes('');
+    setOpenProjectSelect(false);
+    setOpenStatusSelect(false);
+    setOpenDateSelect(false);
   };
 
   const handleModalClose = () => {
@@ -157,7 +169,10 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               Projet
             </Label>
             <div className="col-span-3">
-              <Popover open={openProjectSelect} onOpenChange={setOpenProjectSelect}>
+              <Popover 
+                open={openProjectSelect} 
+                onOpenChange={setOpenProjectSelect}
+              >
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -169,28 +184,34 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
-                  <Command>
-                    <CommandInput placeholder="Rechercher un projet..." />
-                    <CommandEmpty>Aucun projet trouvé</CommandEmpty>
-                    <CommandGroup className="max-h-[200px] overflow-y-auto">
-                      {projects.map((project) => (
-                        <CommandItem
-                          key={project.id}
-                          value={project.id}
-                          onSelect={() => handleProjectSelect(project.id)}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              selectedProject === project.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {project.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </Command>
+                <PopoverContent className="w-[300px] p-0" align="start">
+                  {projects.length > 0 ? (
+                    <Command>
+                      <CommandInput placeholder="Rechercher un projet..." />
+                      <CommandEmpty>Aucun projet trouvé</CommandEmpty>
+                      <CommandGroup className="max-h-[200px] overflow-y-auto">
+                        {projects.map((project) => (
+                          <CommandItem
+                            key={project.id}
+                            value={project.id}
+                            onSelect={handleProjectSelect}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                selectedProject === project.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {project.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </Command>
+                  ) : (
+                    <div className="p-2 text-sm text-center">
+                      {isLoadingProjects ? "Chargement..." : "Aucun projet disponible"}
+                    </div>
+                  )}
                 </PopoverContent>
               </Popover>
             </div>
@@ -200,7 +221,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               Date de paiement
             </Label>
             <div className="col-span-3">
-              <Popover>
+              <Popover open={openDateSelect} onOpenChange={setOpenDateSelect}>
                 <PopoverTrigger asChild>
                   <Button
                     variant={'outline'}
@@ -217,7 +238,10 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                   <Calendar
                     mode="single"
                     selected={selectedDate}
-                    onSelect={setSelectedDate}
+                    onSelect={(date) => {
+                      setSelectedDate(date);
+                      setTimeout(() => setOpenDateSelect(false), 100);
+                    }}
                     initialFocus
                     locale={fr}
                   />
@@ -257,14 +281,14 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[200px] p-0">
+                <PopoverContent className="w-[200px] p-0" align="start">
                   <Command>
                     <CommandGroup>
                       {statusOptions.map((statusOption) => (
                         <CommandItem
                           key={statusOption.value}
                           value={statusOption.value}
-                          onSelect={() => handleStatusSelect(statusOption.value)}
+                          onSelect={handleStatusSelect}
                         >
                           <Check
                             className={cn(
