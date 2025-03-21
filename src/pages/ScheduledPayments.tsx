@@ -9,7 +9,7 @@ import AddPaymentModal from "@/components/scheduled-payments/AddPaymentModal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function ScheduledPayments() {
-  const { scheduledPayments, isLoading } = useScheduledPayments();
+  const { scheduledPayments, isLoading, addScheduledPayment } = useScheduledPayments();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
@@ -22,6 +22,14 @@ export default function ScheduledPayments() {
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedPayment(null);
+  };
+
+  const handleAddPayment = async (payment: any) => {
+    try {
+      await addScheduledPayment(payment);
+    } catch (error) {
+      console.error("Error adding payment:", error);
+    }
   };
 
   return (
@@ -118,6 +126,7 @@ export default function ScheduledPayments() {
       <AddPaymentModal 
         isOpen={isAddModalOpen} 
         onClose={() => setIsAddModalOpen(false)} 
+        onAddPayment={handleAddPayment}
       />
       
       <EditPaymentModal 
