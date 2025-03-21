@@ -11,17 +11,23 @@ interface StatusBadgeProps {
 export function StatusBadge({ status, hasMisspelledStatus, isProcessed }: StatusBadgeProps) {
   // Determine status color based on status
   const getStatusBg = (status: string): string => {
-    if (status === 'received' || status === 'reçu') return 'bg-green-100 text-green-800';
+    if (status === 'completed' || status === 'received' || status === 'reçu') return 'bg-green-100 text-green-800';
     if (status === 'rejected') return 'bg-red-100 text-red-800';
     if (status === 'pending') return 'bg-yellow-100 text-yellow-800';
     if (status === 'receveid') return 'bg-orange-100 text-orange-800 border border-orange-300'; // Handle misspelled status
     return 'bg-gray-100 text-gray-800';
   };
 
+  // Convert 'received' or 'reçu' display text to 'completed'
+  const getDisplayStatus = (status: string): string => {
+    if (status === 'received' || status === 'reçu') return 'completed';
+    return status;
+  };
+
   return (
     <div className="flex items-center gap-2">
       <span className={`px-2 py-1 rounded-full text-xs ${getStatusBg(status)}`}>
-        {status}
+        {getDisplayStatus(status)}
       </span>
       
       {hasMisspelledStatus && (
