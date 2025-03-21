@@ -40,7 +40,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const [percentage, setPercentage] = useState<string>('');
   const [status, setStatus] = useState<string>('pending');
   const [totalInvestment, setTotalInvestment] = useState('');
-  const [scheduledAmount, setScheduledAmount] = useState('');
   
   // UI state
   const [projects, setProjects] = useState<Project[]>([]);
@@ -77,14 +76,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     fetchProjects();
   }, [isOpen]);
 
-  // Calculate scheduled amount based on percentage and total investment
-  useEffect(() => {
-    if (totalInvestment && percentage) {
-      const calculatedAmount = (parseFloat(totalInvestment) * parseFloat(percentage)) / 100;
-      setScheduledAmount(calculatedAmount.toString());
-    }
-  }, [totalInvestment, percentage]);
-
   const resetForm = () => {
     setSelectedProject(null);
     setProjectName('');
@@ -92,7 +83,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     setPercentage('');
     setStatus('pending');
     setTotalInvestment('');
-    setScheduledAmount('');
     setOpenDateSelect(false);
   };
 
@@ -126,13 +116,18 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       return;
     }
 
+    // Calculate the scheduled amount based on percentage and total investment
+    const scheduledAmount = totalInvestment && percentage 
+      ? (parseFloat(totalInvestment) * parseFloat(percentage)) / 100
+      : 0;
+
     const paymentData = {
       project_id: selectedProject,
       payment_date: selectedDate?.toISOString() || new Date().toISOString(),
       status: status,
       percentage: parseFloat(percentage) || 0,
       total_invested_amount: parseInt(totalInvestment) || 0,
-      total_scheduled_amount: parseInt(scheduledAmount) || 0,
+      total_scheduled_amount: scheduledAmount || 0,
       investors_count: 0,
       notes: ''
     };
@@ -264,21 +259,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               value={totalInvestment}
               onChange={(e) => setTotalInvestment(e.target.value)}
               className="col-span-3"
-            />
-          </div>
-
-          {/* Scheduled Amount Input */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="scheduledAmount" className="text-right">
-              Montant planifié
-            </Label>
-            <Input
-              type="number"
-              id="scheduledAmount"
-              value={scheduledAmount}
-              onChange={(e) => setScheduledAmount(e.target.value)}
-              className="col-span-3"
-              readOnly={percentage !== '' && totalInvestment !== ''}
             />
           </div>
         </div>
