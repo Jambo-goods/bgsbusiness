@@ -101,9 +101,33 @@ export const useScheduledPayments = () => {
                 });
               }
             }
+            
+            // Update the state directly for immediate reflection of changes
+            if (payload.eventType === 'UPDATE' && 'id' in payload.new) {
+              setScheduledPayments(prevPayments => 
+                prevPayments.map(payment => 
+                  payment.id === payload.new.id 
+                    ? { 
+                        ...payment, 
+                        ...payload.new,
+                        // Preserve the projects data that may not be in the payload
+                        projects: payment.projects 
+                      } 
+                    : payment
+                )
+              );
+            } else if (payload.eventType === 'INSERT' && 'id' in payload.new) {
+              // For new records, fetch the complete data including projects
+              fetchScheduledPayments();
+            } else if (payload.eventType === 'DELETE' && payload.old && 'id' in payload.old) {
+              setScheduledPayments(prevPayments => 
+                prevPayments.filter(payment => payment.id !== payload.old.id)
+              );
+            }
+          } else {
+            // If payload structure is unexpected, just refresh all data
+            fetchScheduledPayments();
           }
-          
-          fetchScheduledPayments();
         }
       )
       .subscribe();
@@ -158,7 +182,15 @@ export const useScheduledPayments = () => {
       }
 
       toast.success('Paiement programmé avec succès');
-      await fetchScheduledPayments();
+      
+      // Instead of fetching all payments again, we can update the state directly
+      if (data && data.length > 0) {
+        setScheduledPayments(prev => [...prev, data[0]]);
+      } else {
+        // Fallback to fetching all if needed
+        await fetchScheduledPayments();
+      }
+      
       return data;
     } catch (err: any) {
       console.error('Error in addScheduledPayment:', err);
@@ -198,10 +230,19 @@ export const useScheduledPayments = () => {
         updateData.percentage = newPercentage;
       }
       
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('scheduled_payments')
         .update(updateData)
-        .eq('id', paymentId);
+        .eq('id', paymentId)
+        .select(`
+          *,
+          projects (
+            name,
+            image,
+            status,
+            company_name
+          )
+        `);
 
       if (error) {
         console.error('Error updating payment status:', error);
@@ -209,7 +250,18 @@ export const useScheduledPayments = () => {
       }
 
       toast.success(`Statut du paiement mis à jour: ${newStatus}`);
-      await fetchScheduledPayments();
+      
+      // Update the state directly for immediate UI reflection
+      if (data && data.length > 0) {
+        setScheduledPayments(prev => 
+          prev.map(payment => 
+            payment.id === paymentId ? data[0] : payment
+          )
+        );
+      } else {
+        // Fallback to fetching all if needed
+        await fetchScheduledPayments();
+      }
     } catch (err: any) {
       console.error('Error in updatePaymentStatus:', err);
       toast.error(`Erreur: ${err.message || 'Une erreur est survenue'}`);
