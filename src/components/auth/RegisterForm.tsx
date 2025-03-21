@@ -72,7 +72,7 @@ export default function RegisterForm() {
         lastName,
         email,
         password,
-        referralCode
+        referralCode: referralCode.trim() || undefined
       });
 
       if (result.success) {
@@ -86,7 +86,11 @@ export default function RegisterForm() {
         navigate("/dashboard");
       } else {
         console.error("Erreur d'inscription:", result.error);
-        setError(result.error || "Une erreur s'est produite lors de l'inscription");
+        if (result.error === "Code parrain invalide") {
+          setReferralError(result.error);
+        } else {
+          setError(result.error || "Une erreur s'est produite lors de l'inscription");
+        }
       }
     } catch (err) {
       console.error("Registration error:", err);

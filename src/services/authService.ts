@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -14,8 +15,31 @@ export type UserRegistrationData = UserCredentials & {
 
 export const registerUser = async (userData: UserRegistrationData) => {
   try {
-    // Sign up the user directly and pass referral code in metadata
-    // Let Supabase triggers handle the profile creation and referral linking
+    console.log("Tentative d'inscription avec:", { 
+      firstName: userData.firstName, 
+      lastName: userData.lastName, 
+      email: userData.email, 
+      referralCode: userData.referralCode 
+    });
+    
+    // First, verify if the referral code exists if one was provided
+    if (userData.referralCode) {
+      const { data: referrerData, error: referrerError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('referral_code', userData.referralCode)
+        .single();
+        
+      if (referrerError) {
+        if (referrerError.message.includes('No rows found')) {
+          return { success: false, error: "Code parrain invalide" };
+        }
+        console.error("Erreur de vérification du code parrain:", referrerError);
+        return { success: false, error: "Erreur lors de la vérification du code parrain" };
+      }
+    }
+    
+    // Now, sign up the user with the validated referral code
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
