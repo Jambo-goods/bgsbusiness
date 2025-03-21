@@ -25,7 +25,8 @@ export const registerUser = async (userData: UserRegistrationData) => {
     // Clean the referral code if provided
     const cleanReferralCode = userData.referralCode ? userData.referralCode.trim() : null;
     
-    // Sign up the user with email/password only, don't try to create profiles yet
+    // Simplified signup - just pass the data to Supabase Auth
+    // Use the exact format expected by the trigger function
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,

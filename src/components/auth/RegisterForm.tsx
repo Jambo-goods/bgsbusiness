@@ -33,6 +33,7 @@ export default function RegisterForm() {
     const codeFromUrl = searchParams.get("ref");
     if (codeFromUrl) {
       setReferralCode(codeFromUrl);
+      console.log("Code parrain trouvé dans l'URL:", codeFromUrl);
     }
   }, [searchParams]);
 
@@ -65,6 +66,8 @@ export default function RegisterForm() {
     
     try {
       console.log("Tentative d'inscription avec:", { firstName, lastName, email, referralCode });
+      
+      // Simplify registration by directly using the referral code
       const result = await registerUser({
         firstName,
         lastName,
