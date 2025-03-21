@@ -54,8 +54,7 @@ export default function ReferralTab() {
           setReferralCode(profile.referral_code);
         }
         
-        // Fetch all referrals (profiles who used this user's referral code)
-        // First, get referrals from the referrals table
+        // Fetch all referrals from the referrals table
         const { data: referralData } = await supabase
           .from('referrals')
           .select('referred_id, status, created_at')
