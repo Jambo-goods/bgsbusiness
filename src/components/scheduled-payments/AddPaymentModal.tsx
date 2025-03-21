@@ -40,11 +40,13 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const [projects, setProjects] = useState<any[]>([]);
   const [openProjectSelect, setOpenProjectSelect] = useState(false);
   const [openStatusSelect, setOpenStatusSelect] = useState(false);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
 
   // Fetch projects from the database
   useEffect(() => {
     const fetchProjects = async () => {
       try {
+        setIsLoadingProjects(true);
         const { data, error } = await supabase
           .from('projects')
           .select('id, name, status')
@@ -59,6 +61,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
         setProjects(data || []);
       } catch (error) {
         console.error('Error in fetchProjects:', error);
+      } finally {
+        setIsLoadingProjects(false);
       }
     };
     
@@ -76,12 +80,12 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   }, [totalInvestment, percentage]);
 
   const handleProjectSelect = (projectId: string) => {
-    setSelectedProject(projectId);
     const selected = projects.find(p => p.id === projectId);
     if (selected) {
+      setSelectedProject(projectId);
       setProjectName(selected.name || '');
+      setOpenProjectSelect(false);
     }
-    setOpenProjectSelect(false);
   };
 
   const handleStatusSelect = (statusValue: string) => {
@@ -161,7 +165,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                     aria-expanded={openProjectSelect}
                     className="w-full justify-between"
                   >
-                    {projectName || "Sélectionner un projet"}
+                    {isLoadingProjects ? "Chargement des projets..." : (projectName || "Sélectionner un projet")}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
