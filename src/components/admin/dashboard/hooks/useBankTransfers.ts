@@ -30,11 +30,13 @@ export function useBankTransfers() {
         id: transfer.id,
         currentStatus: transfer.status,
         newStatus,
-        processedDate
+        processedDate,
+        userId: transfer.user_id,
+        amount: transfer.amount
       });
       
       // Check if wallet balance should be updated (if status is received/reçu)
-      const shouldUpdateWallet = newStatus === 'received' || newStatus === 'reçu';
+      const shouldUpdateWallet = newStatus === 'completed' || newStatus === 'received' || newStatus === 'reçu';
       
       // Check if there's already a completed wallet transaction for this transfer
       let skipWalletUpdate = false;
@@ -55,6 +57,38 @@ export function useBankTransfers() {
           console.log(`Found ${existingTransactions.length} existing transactions for this transfer`);
           skipWalletUpdate = true;
         }
+      }
+      
+      // First try to update via edge function which handles wallet crediting
+      try {
+        console.log("Calling edge function to update transfer");
+        const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
+          'update-bank-transfer',
+          {
+            body: {
+              transferId: transfer.id,
+              status: newStatus,
+              isProcessed: shouldUpdateWallet || processedDate !== null,
+              notes: `Updated to ${newStatus} via admin UI`,
+              userId: transfer.user_id,
+              sendNotification: shouldUpdateWallet,
+              creditWallet: shouldUpdateWallet && !skipWalletUpdate // Only credit if not already credited
+            }
+          }
+        );
+        
+        if (!edgeFunctionError && edgeFunctionData?.success) {
+          console.log("Edge function update successful:", edgeFunctionData);
+          const message = shouldUpdateWallet && !skipWalletUpdate
+            ? `Virement mis à jour: ${newStatus} et solde utilisateur crédité`
+            : `Virement mis à jour: ${newStatus}`;
+          toast.success(message);
+          return true;
+        }
+        
+        console.log("Edge function failed or returned an error, falling back to direct update");
+      } catch (edgeError) {
+        console.error("Edge function invocation failed:", edgeError);
       }
       
       if (shouldUpdateWallet && transfer.user_id && transfer.amount && !skipWalletUpdate) {
@@ -90,9 +124,34 @@ export function useBankTransfers() {
         });
         
         if (walletError) {
-          console.error("Failed to update wallet balance:", walletError);
+          console.error("Failed to update wallet balance with RPC:", walletError);
+          
+          // Fallback to direct update if RPC fails
+          try {
+            const { data: profileData, error: profileError } = await supabase
+              .from('profiles')
+              .select('wallet_balance')
+              .eq('id', transfer.user_id)
+              .single();
+              
+            if (!profileError && profileData) {
+              const newBalance = (profileData.wallet_balance || 0) + transfer.amount;
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ wallet_balance: newBalance })
+                .eq('id', transfer.user_id);
+                
+              if (updateError) {
+                console.error("Direct wallet update failed:", updateError);
+              } else {
+                console.log(`Wallet balance updated directly to ${newBalance}`);
+              }
+            }
+          } catch (directError) {
+            console.error("Direct wallet update failed:", directError);
+          }
         } else {
-          console.log("Wallet balance updated successfully");
+          console.log("Wallet balance updated successfully via RPC");
           
           // Only create a wallet transaction if none exists (pending or completed)
           if (!pendingTx) {

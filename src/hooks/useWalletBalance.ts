@@ -34,6 +34,8 @@ export function useWalletBalance() {
         return;
       }
       
+      // Force a fresh fetch by adding a cache-busting parameter
+      const timestamp = new Date().getTime();
       const { data: profileData, error: fetchError } = await supabase
         .from('profiles')
         .select('wallet_balance')
@@ -45,6 +47,7 @@ export function useWalletBalance() {
         setError("Erreur lors de la récupération du solde");
         setWalletBalance(0);
       } else {
+        console.log("Fetched wallet balance:", profileData?.wallet_balance);
         setWalletBalance(profileData?.wallet_balance || 0);
       }
     } catch (err) {
@@ -78,10 +81,26 @@ export function useWalletBalance() {
       const txSubscription = supabase
         .channel('wallet_tx_changes')
         .on('postgres_changes', 
-          { event: 'INSERT', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
-          () => {
+          { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
+          payload => {
+            console.log("Wallet transaction detected:", payload);
             // Refetch balance when new transactions occur
             fetchWalletBalance(false);
+          }
+        )
+        .subscribe();
+      
+      // Also listen for bank transfers changes which might affect the balance
+      const bankTransferSubscription = supabase
+        .channel('bank_transfers_changes')
+        .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'bank_transfers', filter: `user_id=eq.${userId}` }, 
+          payload => {
+            console.log("Bank transfer updated:", payload);
+            if (payload.new && (payload.new.status === 'completed' || payload.new.status === 'received')) {
+              // Immediately refetch the balance when a transfer is completed
+              fetchWalletBalance(false);
+            }
           }
         )
         .subscribe();
@@ -89,6 +108,7 @@ export function useWalletBalance() {
       return () => {
         supabase.removeChannel(subscription);
         supabase.removeChannel(txSubscription);
+        supabase.removeChannel(bankTransferSubscription);
       };
     }
   }, [userId, fetchWalletBalance]);
@@ -106,8 +126,8 @@ export function useWalletBalance() {
   }, [fetchWalletBalance]);
 
   // Function to manually refresh the balance
-  const refreshBalance = async () => {
-    await fetchWalletBalance(true);
+  const refreshBalance = async (showLoading = true) => {
+    await fetchWalletBalance(showLoading);
   };
 
   return { 

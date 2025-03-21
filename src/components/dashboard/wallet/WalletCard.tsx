@@ -14,6 +14,20 @@ export function WalletCard() {
   const navigate = useNavigate();
   
   useEffect(() => {
+    // Initial balance fetch
+    refreshBalance();
+    
+    // Set up polling as a fallback mechanism
+    const intervalId = setInterval(() => {
+      refreshBalance(false); // Silent refresh (no loading indicator)
+    }, 10000); // Check every 10 seconds
+    
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [refreshBalance]);
+  
+  useEffect(() => {
     const getSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (!data.session) return;
@@ -24,7 +38,7 @@ export function WalletCard() {
           { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${data.session.user.id}` }, 
           (payload) => {
             console.log('Wallet transaction change detected:', payload);
-            refreshBalance();
+            refreshBalance(false);
             
             if (payload.eventType === 'INSERT') {
               const newTransaction = payload.new;
@@ -42,9 +56,10 @@ export function WalletCard() {
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${data.session.user.id}` }, 
           (payload) => {
             console.log('Profile change detected:', payload);
-            refreshBalance();
+            refreshBalance(false);
             
-            if (payload.old.wallet_balance !== payload.new.wallet_balance) {
+            if (payload.old && payload.new && 
+                payload.old.wallet_balance !== payload.new.wallet_balance) {
               const difference = payload.new.wallet_balance - payload.old.wallet_balance;
               if (difference > 0) {
                 toast.success(`Votre solde a été augmenté de ${difference}€`);
@@ -79,7 +94,7 @@ export function WalletCard() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={refreshBalance}
+            onClick={() => refreshBalance(true)}
             disabled={isLoadingBalance}
             className="h-8 w-8 text-white hover:bg-white/10"
           >
