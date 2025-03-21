@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Calendar } from '@/components/ui/calendar';
-import { CalendarIcon, Check, ChevronsUpDown } from 'lucide-react';
+import { CalendarIcon, Check, ChevronsUpDown, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
 import { toast } from 'sonner';
@@ -35,6 +36,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   // Form state
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string>('');
+  const [projectSearchTerm, setProjectSearchTerm] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [percentage, setPercentage] = useState<string>('');
   const [status, setStatus] = useState<string>('pending');
@@ -45,6 +47,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   
   // UI state
   const [projects, setProjects] = useState<Project[]>([]);
+  const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [openProjectSelect, setOpenProjectSelect] = useState(false);
   const [openStatusSelect, setOpenStatusSelect] = useState(false);
@@ -70,6 +73,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
         
         console.log('Projets récupérés:', data);
         setProjects(data || []);
+        setFilteredProjects(data || []);
       } catch (error) {
         console.error('Error in fetchProjects:', error);
       } finally {
@@ -79,6 +83,18 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     
     fetchProjects();
   }, [isOpen]);
+
+  // Filter projects based on search term
+  useEffect(() => {
+    if (projectSearchTerm.trim() === '') {
+      setFilteredProjects(projects);
+    } else {
+      const filtered = projects.filter(project => 
+        project.name.toLowerCase().includes(projectSearchTerm.toLowerCase())
+      );
+      setFilteredProjects(filtered);
+    }
+  }, [projectSearchTerm, projects]);
 
   // Calculate scheduled amount based on percentage and total investment
   useEffect(() => {
@@ -91,6 +107,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const resetForm = () => {
     setSelectedProject(null);
     setProjectName('');
+    setProjectSearchTerm('');
     setSelectedDate(new Date());
     setPercentage('');
     setStatus('pending');
@@ -114,8 +131,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       console.log('Projet sélectionné:', project);
       setSelectedProject(projectId);
       setProjectName(project.name);
+      setProjectSearchTerm(project.name);
     }
-    // Use timeout to close after selection is set
     setTimeout(() => {
       setOpenProjectSelect(false);
     }, 100);
@@ -159,11 +176,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     handleModalClose();
   };
 
-  // Manually handle opening the project popover
-  const toggleProjectPopover = () => {
-    setOpenProjectSelect(!openProjectSelect);
-  };
-
   return (
     <Dialog open={isOpen} onOpenChange={handleModalClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -182,19 +194,17 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
             <div className="col-span-3">
               <Popover open={openProjectSelect} onOpenChange={setOpenProjectSelect}>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openProjectSelect}
-                    className="w-full justify-between"
-                    onClick={toggleProjectPopover}
-                    type="button"
-                  >
-                    {isLoadingProjects 
-                      ? "Chargement des projets..." 
-                      : projectName || "Sélectionner un projet"}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
+                  <div className="relative">
+                    <Input
+                      id="project-search"
+                      className="w-full pr-10"
+                      placeholder="Rechercher un projet..."
+                      value={projectSearchTerm}
+                      onChange={(e) => setProjectSearchTerm(e.target.value)}
+                      onClick={() => setOpenProjectSelect(true)}
+                    />
+                    <ChevronsUpDown className="absolute right-3 top-3 h-4 w-4 shrink-0 opacity-50" />
+                  </div>
                 </PopoverTrigger>
                 <PopoverContent className="w-[300px] p-0" align="start">
                   {isLoadingProjects ? (
@@ -202,12 +212,16 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                       <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent mx-auto"></div>
                       <p className="mt-2 text-sm">Chargement des projets...</p>
                     </div>
-                  ) : projects && projects.length > 0 ? (
+                  ) : filteredProjects && filteredProjects.length > 0 ? (
                     <Command>
-                      <CommandInput placeholder="Rechercher un projet..." />
+                      <CommandInput 
+                        placeholder="Rechercher un projet..." 
+                        value={projectSearchTerm}
+                        onValueChange={setProjectSearchTerm}
+                      />
                       <CommandEmpty>Aucun projet trouvé</CommandEmpty>
                       <CommandGroup className="max-h-[200px] overflow-y-auto">
-                        {projects.map((project) => (
+                        {filteredProjects.map((project) => (
                           <CommandItem
                             key={project.id}
                             value={project.id}
