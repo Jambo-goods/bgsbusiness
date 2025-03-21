@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -160,6 +159,11 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     handleModalClose();
   };
 
+  // Manually handle opening the project popover
+  const toggleProjectPopover = () => {
+    setOpenProjectSelect(!openProjectSelect);
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleModalClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -183,7 +187,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                     role="combobox"
                     aria-expanded={openProjectSelect}
                     className="w-full justify-between"
-                    onClick={() => setOpenProjectSelect(true)}
+                    onClick={toggleProjectPopover}
+                    type="button"
                   >
                     {isLoadingProjects 
                       ? "Chargement des projets..." 
@@ -244,6 +249,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                       !selectedDate && 'text-muted-foreground'
                     )}
                     onClick={() => setOpenDateSelect(true)}
+                    type="button"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: fr }) : <span>Choisir une date</span>}
@@ -296,6 +302,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                     aria-expanded={openStatusSelect}
                     className="w-full justify-between"
                     onClick={() => setOpenStatusSelect(true)}
+                    type="button"
                   >
                     {statusOptions.find(s => s.value === status)?.label || "Sélectionner un statut"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
