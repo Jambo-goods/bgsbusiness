@@ -20,7 +20,7 @@ export function WalletCard() {
     // Set up aggressive polling as a fallback mechanism
     const intervalId = setInterval(() => {
       refreshBalance(false); // Silent refresh (no loading indicator)
-    }, 5000); // Check every 5 seconds for better responsiveness
+    }, 3000); // Check every 3 seconds for better responsiveness
     
     return () => {
       clearInterval(intervalId);
@@ -35,7 +35,7 @@ export function WalletCard() {
       const userId = data.session.user.id;
       console.log("Setting up wallet card realtime listeners for user:", userId);
       
-      // Listen for completed wallet transactions (this should catch admin-processed transfers)
+      // Listen for wallet_transactions table changes
       const walletTransactionsChannel = supabase
         .channel('wallet_card_transactions')
         .on('postgres_changes', 
@@ -46,22 +46,18 @@ export function WalletCard() {
             // Force a balance refresh for any transaction change
             refreshBalance(false);
             
-            // Only show notification for new completed deposits
-            if (payload.eventType === 'INSERT' || 
-                (payload.eventType === 'UPDATE' && 
-                 payload.old?.status !== 'completed' && 
-                 payload.new?.status === 'completed')) {
-              
-              const transaction = payload.new;
-              if (transaction.type === 'deposit' && transaction.status === 'completed') {
-                toast.success(`Dépôt de ${transaction.amount}€ crédité sur votre compte`);
-              }
+            // Show notification for completed deposits
+            if (payload.new && 
+                payload.new.type === 'deposit' && 
+                payload.new.status === 'completed' &&
+                (!payload.old || payload.old.status !== 'completed')) {
+              toast.success(`Dépôt de ${payload.new.amount}€ crédité sur votre compte`);
             }
           }
         )
         .subscribe();
         
-      // Listen specifically for profile balance changes
+      // Listen for direct profile updates
       const profilesChannel = supabase
         .channel('wallet_card_balance_changes')
         .on('postgres_changes', 
@@ -69,10 +65,10 @@ export function WalletCard() {
           (payload) => {
             console.log('Profile change detected in WalletCard:', payload);
             
-            // Immediately update the displayed balance without waiting for the next fetch
             if (payload.new && payload.old && 
                 payload.new.wallet_balance !== payload.old.wallet_balance) {
               
+              // Force an immediate refresh
               refreshBalance(false);
               
               // Show a notification if balance increased
@@ -85,26 +81,24 @@ export function WalletCard() {
         )
         .subscribe();
       
-      // Listen for bank transfers specifically (to catch admin completions)
+      // Listen for bank_transfers table changes
       const bankTransfersChannel = supabase
         .channel('wallet_card_bank_transfers')
         .on('postgres_changes', 
-          { event: 'UPDATE', schema: 'public', table: 'bank_transfers', filter: `user_id=eq.${userId}` }, 
+          { event: '*', schema: 'public', table: 'bank_transfers', filter: `user_id=eq.${userId}` }, 
           (payload) => {
             console.log('Bank transfer change detected in WalletCard:', payload);
             
-            // Force balance refresh when a transfer is completed
+            // Force an immediate refresh regardless of status change
+            refreshBalance(false);
+            
+            // Show notification for completed transfers
             if (payload.new && 
                 (payload.new.status === 'completed' || payload.new.status === 'received') &&
                 payload.old && 
                 payload.old.status !== 'completed' && 
                 payload.old.status !== 'received') {
               
-              console.log('Bank transfer completed, refreshing balance immediately');
-              // Force an immediate refresh without waiting for other mechanisms
-              refreshBalance(false);
-              
-              // Show notification about the completed transfer
               if (payload.new.amount) {
                 toast.success(`Virement de ${payload.new.amount}€ crédité sur votre compte`);
               }
