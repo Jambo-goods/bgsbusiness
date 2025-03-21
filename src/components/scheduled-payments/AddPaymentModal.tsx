@@ -69,6 +69,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
           return;
         }
         
+        console.log('Projets récupérés:', data);
         setProjects(data || []);
       } catch (error) {
         console.error('Error in fetchProjects:', error);
@@ -108,18 +109,24 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     onClose();
   };
 
-  const handleProjectSelect = (value: string) => {
-    const project = projects.find(p => p.id === value);
+  const handleProjectSelect = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
     if (project) {
-      setSelectedProject(value);
+      console.log('Projet sélectionné:', project);
+      setSelectedProject(projectId);
       setProjectName(project.name);
     }
-    setOpenProjectSelect(false);
+    // Use timeout to close after selection is set
+    setTimeout(() => {
+      setOpenProjectSelect(false);
+    }, 100);
   };
 
   const handleStatusSelect = (value: string) => {
     setStatus(value);
-    setOpenStatusSelect(false);
+    setTimeout(() => {
+      setOpenStatusSelect(false);
+    }, 100);
   };
 
   const handleAddPayment = () => {
@@ -185,7 +192,12 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[300px] p-0" align="start">
-                  {projects.length > 0 ? (
+                  {isLoadingProjects ? (
+                    <div className="p-4 text-center">
+                      <div className="animate-spin h-5 w-5 border-2 border-primary rounded-full border-t-transparent mx-auto"></div>
+                      <p className="mt-2 text-sm">Chargement des projets...</p>
+                    </div>
+                  ) : projects && projects.length > 0 ? (
                     <Command>
                       <CommandInput placeholder="Rechercher un projet..." />
                       <CommandEmpty>Aucun projet trouvé</CommandEmpty>
@@ -208,8 +220,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                       </CommandGroup>
                     </Command>
                   ) : (
-                    <div className="p-2 text-sm text-center">
-                      {isLoadingProjects ? "Chargement..." : "Aucun projet disponible"}
+                    <div className="p-4 text-center text-sm">
+                      Aucun projet disponible
                     </div>
                   )}
                 </PopoverContent>
