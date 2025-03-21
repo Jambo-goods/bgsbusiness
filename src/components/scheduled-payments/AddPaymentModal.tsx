@@ -39,7 +39,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [percentage, setPercentage] = useState<string>('');
   const [status, setStatus] = useState<string>('pending');
-  const [totalInvestment, setTotalInvestment] = useState('');
   
   // UI state
   const [projects, setProjects] = useState<Project[]>([]);
@@ -82,7 +81,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     setSelectedDate(new Date());
     setPercentage('');
     setStatus('pending');
-    setTotalInvestment('');
     setOpenDateSelect(false);
   };
 
@@ -116,18 +114,15 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       return;
     }
 
-    // Calculate the scheduled amount based on percentage and total investment
-    const scheduledAmount = totalInvestment && percentage 
-      ? (parseFloat(totalInvestment) * parseFloat(percentage)) / 100
-      : 0;
-
+    // Since we no longer collect total_invested_amount, we'll set it to 0
+    // The scheduled amount will also be 0 since it depends on total investment
     const paymentData = {
       project_id: selectedProject,
       payment_date: selectedDate?.toISOString() || new Date().toISOString(),
       status: status,
       percentage: parseFloat(percentage) || 0,
-      total_invested_amount: parseInt(totalInvestment) || 0,
-      total_scheduled_amount: scheduledAmount || 0,
+      total_invested_amount: 0,
+      total_scheduled_amount: 0,
       investors_count: 0,
       notes: ''
     };
@@ -246,20 +241,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Total Investment Input */}
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="totalInvestment" className="text-right">
-              Investissement total
-            </Label>
-            <Input
-              type="number"
-              id="totalInvestment"
-              value={totalInvestment}
-              onChange={(e) => setTotalInvestment(e.target.value)}
-              className="col-span-3"
-            />
           </div>
         </div>
 
