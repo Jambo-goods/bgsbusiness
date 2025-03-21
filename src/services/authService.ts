@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -21,7 +22,10 @@ export const registerUser = async (userData: UserRegistrationData) => {
       referralCode: userData.referralCode 
     });
     
-    // Sign up the user with the proper data structure to let Supabase triggers handle everything
+    // Clean the referral code if provided
+    const cleanReferralCode = userData.referralCode ? userData.referralCode.trim() : null;
+    
+    // Sign up the user with email/password only, don't try to create profiles yet
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
@@ -29,7 +33,7 @@ export const registerUser = async (userData: UserRegistrationData) => {
         data: {
           first_name: userData.firstName,
           last_name: userData.lastName,
-          referral_code_used: userData.referralCode ? userData.referralCode.trim() : null,
+          referral_code_used: cleanReferralCode,
         },
       },
     });

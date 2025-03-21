@@ -70,7 +70,7 @@ export default function RegisterForm() {
         lastName,
         email,
         password,
-        referralCode: referralCode.trim() || undefined
+        referralCode: referralCode || undefined
       });
 
       if (result.success) {
