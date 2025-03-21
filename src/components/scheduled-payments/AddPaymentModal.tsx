@@ -20,6 +20,12 @@ interface AddPaymentModalProps {
   onAddPayment: (payment: any) => void;
 }
 
+interface Project {
+  id: string;
+  name: string;
+  status: string;
+}
+
 const statusOptions = [
   { value: 'pending', label: 'En attente' },
   { value: 'scheduled', label: 'Programmé' },
@@ -27,6 +33,7 @@ const statusOptions = [
 ];
 
 const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps) => {
+  // Form state
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [projectName, setProjectName] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
@@ -35,18 +42,19 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const [totalInvestment, setTotalInvestment] = useState('');
   const [scheduledAmount, setScheduledAmount] = useState('');
   const [investorsCount, setInvestorsCount] = useState('');
-  const [cumulativeAmount, setCumulativeAmount] = useState('');
   const [notes, setNotes] = useState('');
-  const [projects, setProjects] = useState<any[]>([]);
-  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   
-  // Gestion séparée des états d'ouverture pour les sélecteurs
+  // UI state
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
   const [openProjectSelect, setOpenProjectSelect] = useState(false);
   const [openStatusSelect, setOpenStatusSelect] = useState(false);
   const [openDateSelect, setOpenDateSelect] = useState(false);
 
   // Fetch projects from the database
   useEffect(() => {
+    if (!isOpen) return;
+    
     const fetchProjects = async () => {
       try {
         setIsLoadingProjects(true);
@@ -69,9 +77,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
       }
     };
     
-    if (isOpen) {
-      fetchProjects();
-    }
+    fetchProjects();
   }, [isOpen]);
 
   // Calculate scheduled amount based on percentage and total investment
@@ -82,26 +88,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     }
   }, [totalInvestment, percentage]);
 
-  const handleProjectSelect = (projectId: string) => {
-    const selected = projects.find(p => p.id === projectId);
-    if (selected) {
-      setSelectedProject(projectId);
-      setProjectName(selected.name || '');
-    }
-    // Attendre avant de fermer le Popover pour éviter les problèmes de state
-    setTimeout(() => {
-      setOpenProjectSelect(false);
-    }, 100);
-  };
-
-  const handleStatusSelect = (statusValue: string) => {
-    setStatus(statusValue);
-    // Attendre avant de fermer le Popover pour éviter les problèmes de state
-    setTimeout(() => {
-      setOpenStatusSelect(false);
-    }, 100);
-  };
-
   const resetForm = () => {
     setSelectedProject(null);
     setProjectName('');
@@ -111,7 +97,6 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
     setTotalInvestment('');
     setScheduledAmount('');
     setInvestorsCount('');
-    setCumulativeAmount('');
     setNotes('');
     setOpenProjectSelect(false);
     setOpenStatusSelect(false);
@@ -121,6 +106,20 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
   const handleModalClose = () => {
     resetForm();
     onClose();
+  };
+
+  const handleProjectSelect = (value: string) => {
+    const project = projects.find(p => p.id === value);
+    if (project) {
+      setSelectedProject(value);
+      setProjectName(project.name);
+    }
+    setOpenProjectSelect(false);
+  };
+
+  const handleStatusSelect = (value: string) => {
+    setStatus(value);
+    setOpenStatusSelect(false);
   };
 
   const handleAddPayment = () => {
@@ -164,23 +163,24 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
+          {/* Project Selection */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="project" className="text-right">
               Projet
             </Label>
             <div className="col-span-3">
-              <Popover 
-                open={openProjectSelect} 
-                onOpenChange={setOpenProjectSelect}
-              >
+              <Popover open={openProjectSelect} onOpenChange={setOpenProjectSelect}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     role="combobox"
                     aria-expanded={openProjectSelect}
                     className="w-full justify-between"
+                    onClick={() => setOpenProjectSelect(true)}
                   >
-                    {isLoadingProjects ? "Chargement des projets..." : (projectName || "Sélectionner un projet")}
+                    {isLoadingProjects 
+                      ? "Chargement des projets..." 
+                      : projectName || "Sélectionner un projet"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -194,7 +194,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                           <CommandItem
                             key={project.id}
                             value={project.id}
-                            onSelect={handleProjectSelect}
+                            onSelect={() => handleProjectSelect(project.id)}
                           >
                             <Check
                               className={cn(
@@ -216,6 +216,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               </Popover>
             </div>
           </div>
+
+          {/* Date Selection */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="date" className="text-right">
               Date de paiement
@@ -229,6 +231,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                       'w-full justify-start text-left font-normal',
                       !selectedDate && 'text-muted-foreground'
                     )}
+                    onClick={() => setOpenDateSelect(true)}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {selectedDate ? format(selectedDate, 'dd/MM/yyyy', { locale: fr }) : <span>Choisir une date</span>}
@@ -240,7 +243,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                     selected={selectedDate}
                     onSelect={(date) => {
                       setSelectedDate(date);
-                      setTimeout(() => setOpenDateSelect(false), 100);
+                      setOpenDateSelect(false);
                     }}
                     initialFocus
                     locale={fr}
@@ -249,6 +252,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               </Popover>
             </div>
           </div>
+
+          {/* Percentage Input */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="percentage" className="text-right">
               Pourcentage
@@ -264,6 +269,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               min="0"
             />
           </div>
+
+          {/* Status Selection */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="status" className="text-right">
               Statut
@@ -276,6 +283,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                     role="combobox"
                     aria-expanded={openStatusSelect}
                     className="w-full justify-between"
+                    onClick={() => setOpenStatusSelect(true)}
                   >
                     {statusOptions.find(s => s.value === status)?.label || "Sélectionner un statut"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -288,7 +296,7 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
                         <CommandItem
                           key={statusOption.value}
                           value={statusOption.value}
-                          onSelect={handleStatusSelect}
+                          onSelect={() => handleStatusSelect(statusOption.value)}
                         >
                           <Check
                             className={cn(
@@ -305,6 +313,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               </Popover>
             </div>
           </div>
+
+          {/* Total Investment Input */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="totalInvestment" className="text-right">
               Investissement total
@@ -317,6 +327,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               className="col-span-3"
             />
           </div>
+
+          {/* Scheduled Amount Input */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="scheduledAmount" className="text-right">
               Montant planifié
@@ -330,6 +342,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               readOnly={percentage !== '' && totalInvestment !== ''}
             />
           </div>
+
+          {/* Investors Count Input */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="investorsCount" className="text-right">
               Nombre d'investisseurs
@@ -342,6 +356,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
               className="col-span-3"
             />
           </div>
+
+          {/* Notes Input */}
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="notes" className="text-right">
               Notes
@@ -354,6 +370,8 @@ const AddPaymentModal = ({ isOpen, onClose, onAddPayment }: AddPaymentModalProps
             />
           </div>
         </div>
+
+        {/* Dialog Footer */}
         <DialogFooter>
           <Button type="button" variant="secondary" onClick={handleModalClose}>
             Annuler
