@@ -17,6 +17,7 @@ export default function WalletTab() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [hasMissingDeposit, setHasMissingDeposit] = useState(false);
+  const [missingDepositAmount, setMissingDepositAmount] = useState(1000); // Default amount for DEP-396509
 
   useEffect(() => {
     fetchWalletBalance();
@@ -93,6 +94,9 @@ export default function WalletTab() {
         .maybeSingle();
         
       if (transfer) {
+        // Store the amount for the missing deposit
+        setMissingDepositAmount(transfer.amount || 1000);
+        
         // Check if there's a completed wallet transaction for this transfer
         const { data: transaction } = await supabase
           .from('wallet_transactions')
@@ -191,7 +195,11 @@ export default function WalletTab() {
               <p className="font-medium text-amber-800">Dépôt non crédité détecté</p>
               <p className="text-amber-700 text-sm">Votre virement bancaire (DEP-396509) a été reçu mais n'a pas été crédité sur votre compte. Utilisez le bouton ci-dessous pour résoudre ce problème.</p>
             </div>
-            <FixDepositButton reference="DEP-396509" onSuccess={handleFixSuccess} />
+            <FixDepositButton 
+              reference="DEP-396509" 
+              amount={missingDepositAmount} 
+              onSuccess={handleFixSuccess} 
+            />
           </div>
         </div>
       )}
