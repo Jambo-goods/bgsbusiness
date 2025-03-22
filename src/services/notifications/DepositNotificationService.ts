@@ -1,75 +1,66 @@
 
-import { BaseNotificationService } from './BaseNotificationService';
-import { NotificationData } from './types';
+import { BaseNotificationService } from "./BaseNotificationService";
+import { NotificationCategory } from "./types";
 
 export class DepositNotificationService extends BaseNotificationService {
-  async depositRequested(amount: number, reference?: string): Promise<void> {
-    const metadata: NotificationData = { 
-      amount,
-      reference,
-      category: "info",
-      timestamp: new Date().toISOString()
-    };
-    
+  depositRequested(amount: number, reference?: string): Promise<void> {
     return this.createNotification({
-      title: "Virement bancaire confirmé",
-      description: `Vous avez confirmé avoir effectué un virement bancaire de ${amount}€${reference ? ` avec la référence ${reference}` : ''}`,
+      title: "Dépôt demandé",
+      description: `Votre demande de dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été enregistrée`,
       type: "deposit",
       category: "info",
-      metadata
+      metadata: { 
+        amount,
+        reference,
+        status: "requested",
+        timestamp: new Date().toISOString()
+      }
     });
   }
-
-  async depositSuccess(amount: number, reference?: string): Promise<void> {
-    const metadata: NotificationData = { 
-      amount,
-      reference,
+  
+  depositReceived(amount: number, reference?: string): Promise<void> {
+    return this.createNotification({
+      title: "Dépôt reçu",
+      description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été reçu et est en cours de vérification.`,
+      type: "deposit",
+      category: "info",
+      metadata: { 
+        amount,
+        reference,
+        status: "received",
+        timestamp: new Date().toISOString()
+      }
+    });
+  }
+  
+  depositConfirmed(amount: number, reference?: string): Promise<void> {
+    return this.createNotification({
+      title: "Dépôt confirmé",
+      description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été confirmé et ajouté à votre portefeuille.`,
+      type: "deposit",
       category: "success",
-      timestamp: new Date().toISOString()
-    };
-    
-    return this.createNotification({
-      title: "Dépôt validé",
-      description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été validé et ajouté à votre portefeuille.`,
-      type: "deposit",
-      category: "success",
-      metadata
+      metadata: { 
+        amount,
+        reference,
+        status: "confirmed",
+        timestamp: new Date().toISOString()
+      }
     });
   }
-
-  async depositPending(amount: number, reference?: string): Promise<void> {
-    const metadata: NotificationData = { 
-      amount,
-      reference,
-      category: "info",
-      timestamp: new Date().toISOString()
-    };
-    
+  
+  depositRejected(amount: number, reason?: string, reference?: string): Promise<void> {
     return this.createNotification({
-      title: "Dépôt en traitement",
-      description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} est en cours de traitement.`,
-      type: "deposit",
-      category: "info",
-      metadata
-    });
-  }
-
-  async depositRejected(amount: number, reference?: string): Promise<void> {
-    const metadata: NotificationData = { 
-      amount,
-      reference,
-      category: "error",
-      timestamp: new Date().toISOString()
-    };
-    
-    return this.createNotification({
-      title: "Dépôt rejeté",
-      description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été rejeté.`,
+      title: "Dépôt refusé",
+      description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été refusé${reason ? ` : ${reason}` : '.'}`,
       type: "deposit",
       category: "error",
-      metadata
+      metadata: { 
+        amount,
+        reference,
+        reason,
+        status: "rejected",
+        timestamp: new Date().toISOString()
+      }
     });
   }
 }
-
-export const depositNotificationService = new DepositNotificationService();

@@ -1,13 +1,35 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { HistoryItemType, TransactionItem, NotificationItem } from "./HistoryItem";
-import { NotificationData } from "@/services/notifications/types";
+import { format } from "date-fns";
+import { fr } from "date-fns/locale";
+import { Notification } from "@/services/notifications/types";
+
+export interface Transaction {
+  id: string;
+  type: string;
+  amount: number;
+  description: string;
+  status: string;
+  created_at: string;
+  receipt_confirmed?: boolean;
+}
+
+export interface CombinedHistoryItem {
+  id: string;
+  date: Date;
+  formattedDate: string;
+  amount: number;
+  description: string;
+  status: string;
+  type: string;
+  source: 'transaction' | 'transfer' | 'notification';
+  confirmed?: boolean;
+}
 
 export default function useWalletHistory() {
-  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [combinedItems, setCombinedItems] = useState<HistoryItemType[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [combinedItems, setCombinedItems] = useState<CombinedHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -27,7 +49,6 @@ export default function useWalletHistory() {
         return;
       }
 
-      // Récupération des transactions de l'utilisateur connecté, incluant les transactions d'investissement
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('wallet_transactions')
         .select('*')
@@ -37,7 +58,6 @@ export default function useWalletHistory() {
 
       if (transactionsError) throw transactionsError;
       
-      // Récupération des notifications liées aux dépôts, retraits et investissements
       const { data: notificationsData, error: notificationsError } = await supabase
         .from('notifications')
         .select('*')
@@ -51,16 +71,13 @@ export default function useWalletHistory() {
       console.log("Transactions récupérées:", transactionsData);
       console.log("Notifications récupérées:", notificationsData);
       
-      // Convert database types to our interface types
       const typedTransactions = transactionsData?.map(item => ({
         ...item,
         type: item.type as 'deposit' | 'withdrawal' | 'investment',
         itemType: 'transaction' as const
       })) || [];
       
-      // Convert notifications to match our Notification interface
       const typedNotifications = notificationsData?.map(item => {
-        // Ensure data is treated as NotificationData with proper typing
         const notificationData = item.data as Record<string, any> || {};
         
         return {
@@ -70,9 +87,7 @@ export default function useWalletHistory() {
           created_at: item.created_at,
           type: item.type,
           read: item.seen,
-          // Use the category from data if available, otherwise default to "info"
           category: typeof notificationData === 'object' && notificationData.category ? notificationData.category : 'info',
-          // Ensure metadata is always an object
           metadata: typeof notificationData === 'object' ? notificationData : { data: notificationData },
           itemType: 'notification' as const
         };
@@ -81,7 +96,6 @@ export default function useWalletHistory() {
       setTransactions(typedTransactions);
       setNotifications(typedNotifications);
       
-      // Combiner et trier les transactions et notifications par date
       const combined = [
         ...typedTransactions,
         ...typedNotifications
@@ -101,7 +115,6 @@ export default function useWalletHistory() {
   useEffect(() => {
     fetchData();
     
-    // Setup realtime subscription for new notifications and transactions
     const channel = supabase
       .channel('public:notifications')
       .on('postgres_changes', {
@@ -133,9 +146,8 @@ export default function useWalletHistory() {
       })
       .subscribe();
     
-    // Setup polling for transactions every 60 seconds as a fallback
     const pollingInterval = setInterval(() => {
-      fetchData(false); // silent refresh (don't show loading state)
+      fetchData(false);
     }, 60000);
     
     return () => {

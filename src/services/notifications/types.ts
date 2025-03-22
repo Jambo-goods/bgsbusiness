@@ -53,3 +53,6 @@ export interface Notification {
   category?: string;
   metadata: Record<string, any>;
 }
+
+// Add this to fix the error
+export type NotificationData = Record<string, any>;

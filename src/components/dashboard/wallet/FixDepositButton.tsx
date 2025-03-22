@@ -6,12 +6,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface FixDepositButtonProps {
-  reference: string;
+  reference?: string;
+  withdrawalId?: string;
+  amount: number;
   onSuccess?: () => void;
+  label?: string;
 }
 
-export function FixDepositButton({ reference, onSuccess }: FixDepositButtonProps) {
+export function FixDepositButton({ 
+  reference, 
+  withdrawalId,
+  amount,
+  onSuccess,
+  label
+}: FixDepositButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
+
+  const isWithdrawal = !!withdrawalId;
+  const buttonText = label || (isWithdrawal 
+    ? `Marquer le retrait de ${amount}€ comme payé` 
+    : `Corriger le dépôt ${reference}`);
 
   const handleFix = async () => {
     try {
@@ -29,20 +43,30 @@ export function FixDepositButton({ reference, onSuccess }: FixDepositButtonProps
       
       // Call the fix-deposit function
       const { data, error } = await supabase.functions.invoke('fix-deposit', {
-        body: { userId, reference }
+        body: { 
+          userId, 
+          reference, 
+          withdrawalId 
+        }
       });
       
       if (error) {
-        console.error("Erreur lors de la correction du dépôt:", error);
-        toast.error("Erreur lors de la correction du dépôt");
+        console.error("Erreur lors de la correction:", error);
+        toast.error(isWithdrawal 
+          ? "Erreur lors du marquage du retrait comme payé" 
+          : "Erreur lors de la correction du dépôt");
         return;
       }
       
       if (data.success) {
-        toast.success(data.message || "Dépôt corrigé avec succès");
+        toast.success(data.message || (isWithdrawal 
+          ? "Retrait marqué comme payé avec succès" 
+          : "Dépôt corrigé avec succès"));
         if (onSuccess) onSuccess();
       } else {
-        toast.error(data.error || "Erreur lors de la correction du dépôt");
+        toast.error(data.error || (isWithdrawal
+          ? "Erreur lors du marquage du retrait comme payé" 
+          : "Erreur lors de la correction du dépôt"));
       }
     } catch (error: any) {
       console.error("Erreur:", error.message);
@@ -57,15 +81,17 @@ export function FixDepositButton({ reference, onSuccess }: FixDepositButtonProps
       variant="outline"
       onClick={handleFix}
       disabled={isLoading}
-      className="bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"
+      className={isWithdrawal 
+        ? "bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100" 
+        : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"}
     >
       {isLoading ? (
         <>
           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          Correction en cours...
+          {isWithdrawal ? "Paiement en cours..." : "Correction en cours..."}
         </>
       ) : (
-        "Corriger le dépôt DEP-396509"
+        buttonText
       )}
     </Button>
   );
