@@ -33,6 +33,7 @@ export interface Transaction {
   created_at: string;
   status: 'pending' | 'completed';
   cumulativeAmount?: number;
+  description?: string;
 }
 
 export interface ScheduledPayment {
@@ -40,13 +41,13 @@ export interface ScheduledPayment {
   project_id: string;
   payment_date: string;
   percentage: number;
-  status: string;
-  total_scheduled_amount: number;
-  investors_count: number;
+  status: 'pending' | 'scheduled' | 'paid';
+  total_scheduled_amount: number | null;
+  investors_count: number | null;
   processed_at: string | null;
   created_at: string;
   updated_at: string;
-  total_invested_amount?: number;
+  total_invested_amount?: number | null;
   calculatedCumulativeAmount?: number;
   projects?: {
     name: string;

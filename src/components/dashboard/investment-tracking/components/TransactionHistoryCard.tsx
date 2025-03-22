@@ -25,6 +25,11 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       : transactions;
   }, [transactions, investmentId]);
   
+  // Debugger pour voir les transactions investmentId
+  console.log("Investment ID:", investmentId);
+  console.log("Toutes les transactions:", transactions);
+  console.log("Transactions filtrées par investmentId:", investmentTransactions);
+  
   const totalYieldReceived = useMemo(() => {
     return investmentTransactions
       .filter(tx => tx.type === 'yield' && tx.status === 'completed')
@@ -57,6 +62,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     });
   }, [investmentTransactions]);
   
+  // Debugger pour voir les paiements programmés
+  console.log("Tous les paiements programmés:", scheduledPayments);
+  
   // Filtrer les paiements programmés pour cet investissement spécifique
   const investmentScheduledPayments = useMemo(() => {
     if (!investmentId || !scheduledPayments?.length) return [];
@@ -64,26 +72,44 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     // Récupérer l'ID du projet à partir des transactions
     const projectId = transactions.find(tx => tx.investment_id === investmentId)?.project_id;
     
+    console.log("Project ID trouvé:", projectId);
+    
     // Si on ne trouve pas l'ID du projet, retourner un tableau vide
     if (!projectId) return [];
     
     // Filtrer les paiements programmés pour ce projet
-    return scheduledPayments.filter(payment => payment.project_id === projectId);
+    const filteredPayments = scheduledPayments.filter(payment => payment.project_id === projectId);
+    console.log("Paiements programmés filtrés:", filteredPayments);
+    
+    return filteredPayments;
   }, [scheduledPayments, investmentId, transactions]);
   
   const fixedYieldPercentage = 12;
 
   const formattedScheduledPayments = useMemo(() => {
-    if (!investmentScheduledPayments?.length || !investmentAmount) return [];
+    if (!investmentScheduledPayments?.length || !investmentAmount) {
+      console.log("Pas de paiements programmés ou montant d'investissement nul");
+      return [];
+    }
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
     const monthlyYield = investmentAmount * (fixedYieldPercentage / 100) / 12;
+    console.log("Rendement mensuel calculé:", monthlyYield);
     
     return investmentScheduledPayments.map(payment => {
-      const paymentAmount = payment.total_scheduled_amount 
-        ? (investmentAmount / payment.total_invested_amount) * payment.total_scheduled_amount
-        : monthlyYield;
+      // Calculer le montant du paiement basé sur le pourcentage et le montant investi
+      let paymentAmount;
+      
+      if (payment.total_scheduled_amount && payment.total_invested_amount && payment.total_invested_amount > 0) {
+        // Si nous avons les montants totaux, calculer proportionnellement
+        paymentAmount = (investmentAmount / payment.total_invested_amount) * payment.total_scheduled_amount;
+        console.log(`Calcul proportionnel: ${investmentAmount} / ${payment.total_invested_amount} * ${payment.total_scheduled_amount} = ${paymentAmount}`);
+      } else {
+        // Sinon utiliser le calcul du rendement mensuel fixe
+        paymentAmount = monthlyYield;
+        console.log("Utilisation du rendement mensuel fixe:", paymentAmount);
+      }
       
       if (payment.status !== 'paid') {
         cumulativeScheduledAmount += paymentAmount;
@@ -100,6 +126,8 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       };
     });
   }, [investmentScheduledPayments, investmentAmount, fixedYieldPercentage, totalYieldReceived]);
+
+  console.log("Paiements programmés formatés:", formattedScheduledPayments);
 
   const formatDate = (date: string) => {
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
