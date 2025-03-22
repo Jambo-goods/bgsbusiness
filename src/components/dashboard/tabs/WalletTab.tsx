@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WalletBalance from "./wallet/WalletBalance";
@@ -8,14 +9,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
+import { FixDepositButton } from "../wallet/FixDepositButton";
+import { AlertCircle } from "lucide-react";
 
 export default function WalletTab() {
   const [balance, setBalance] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
+  const [hasMissingDeposit, setHasMissingDeposit] = useState(false);
 
   useEffect(() => {
     fetchWalletBalance();
+    checkForMissingDeposit();
     
     // Create polling for balance updates
     const balanceInterval = setInterval(() => {
@@ -71,6 +76,40 @@ export default function WalletTab() {
       supabase.removeChannel(transfersChannel);
     };
   }, []);
+
+  const checkForMissingDeposit = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) return;
+      
+      // Check for a bank transfer with reference DEP-396509
+      const { data: transfer } = await supabase
+        .from('bank_transfers')
+        .select('*')
+        .eq('user_id', session.session.user.id)
+        .ilike('reference', '%DEP-396509%')
+        .eq('status', 'completed')
+        .maybeSingle();
+        
+      if (transfer) {
+        // Check if there's a completed wallet transaction for this transfer
+        const { data: transaction } = await supabase
+          .from('wallet_transactions')
+          .select('*')
+          .eq('user_id', session.session.user.id)
+          .eq('amount', transfer.amount)
+          .ilike('description', '%DEP-396509%')
+          .eq('status', 'completed')
+          .maybeSingle();
+          
+        // If no completed transaction found, show the fix button
+        setHasMissingDeposit(!transaction);
+      }
+    } catch (error) {
+      console.error("Error checking for missing deposit:", error);
+    }
+  };
 
   const fetchWalletBalance = async (showLoading = true) => {
     try {
@@ -130,6 +169,12 @@ export default function WalletTab() {
     setActiveTab(tab);
   };
 
+  const handleFixSuccess = () => {
+    fetchWalletBalance();
+    setHasMissingDeposit(false);
+    toast.success("Le dépôt a été correctement crédité sur votre compte");
+  };
+
   return (
     <div className="space-y-6">
       <WalletBalance 
@@ -137,6 +182,19 @@ export default function WalletTab() {
         isLoading={isLoading} 
         onTabChange={handleTabChange}
       />
+      
+      {hasMissingDeposit && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 flex gap-3 items-start">
+          <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div className="space-y-2">
+            <div>
+              <p className="font-medium text-amber-800">Dépôt non crédité détecté</p>
+              <p className="text-amber-700 text-sm">Votre virement bancaire (DEP-396509) a été reçu mais n'a pas été crédité sur votre compte. Utilisez le bouton ci-dessous pour résoudre ce problème.</p>
+            </div>
+            <FixDepositButton reference="DEP-396509" onSuccess={handleFixSuccess} />
+          </div>
+        </div>
+      )}
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-6">

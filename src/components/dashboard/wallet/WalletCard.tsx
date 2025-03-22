@@ -39,9 +39,14 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
             console.log('Profile change detected in WalletCard:', payload);
             
             if (payload.new && payload.old && 
+                typeof payload.new === 'object' && typeof payload.old === 'object' &&
+                'wallet_balance' in payload.new && 'wallet_balance' in payload.old &&
                 payload.new.wallet_balance !== payload.old.wallet_balance) {
               // Show a notification if balance increased
-              const difference = payload.new.wallet_balance - payload.old.wallet_balance;
+              const newBalance = Number(payload.new.wallet_balance);
+              const oldBalance = Number(payload.old.wallet_balance);
+              const difference = newBalance - oldBalance;
+              
               if (difference > 0) {
                 toast.success(`Votre solde a été augmenté de ${difference}€`);
               }
@@ -95,10 +100,7 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
               const newData = payload.new as Record<string, any>;
               
               // Force refresh if a transfer is completed
-              if (newData.status === 'completed' || 
-                  newData.status === 'received' || 
-                  newData.status === 'reçu') {
-                
+              if (newData.status === 'completed') {
                 // Force refresh
                 onManualRefresh();
               }

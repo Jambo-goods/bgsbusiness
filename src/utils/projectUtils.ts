@@ -1,3 +1,4 @@
+
 import { Project } from "@/types/project";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
@@ -67,8 +68,12 @@ export const createProjectInDatabase = async (project: Project, toast: any) => {
     // Déclencher la notification pour tous les utilisateurs
     try {
       console.log("Création de la notification pour le nouveau projet");
-      await notificationService.newInvestmentOpportunity(project.name, newProject.id);
-      console.log("Notification créée avec succès");
+      if (notificationService && typeof notificationService.newInvestmentOpportunity === 'function') {
+        await notificationService.newInvestmentOpportunity(project.name, newProject.id);
+        console.log("Notification créée avec succès");
+      } else {
+        console.warn("notificationService.newInvestmentOpportunity is not available");
+      }
     } catch (notifError) {
       console.error("Erreur lors de la création de la notification:", notifError);
       // Continue execution even if notification creation fails
@@ -96,10 +101,11 @@ export async function notifyNewProject(projectId: string) {
     }
     
     // Notify all users about new investment opportunity
-    // Make sure this method exists in notificationService
-    if (project && notificationService.newInvestmentOpportunity) {
-      await notificationService.newInvestmentOpportunity(project.name);
+    if (project && notificationService && typeof notificationService.newInvestmentOpportunity === 'function') {
+      await notificationService.newInvestmentOpportunity(project.name, projectId);
       toast.success("Notifications envoyées aux utilisateurs");
+    } else {
+      console.warn("notificationService.newInvestmentOpportunity is not available");
     }
   } catch (error) {
     console.error("Error notifying users:", error);

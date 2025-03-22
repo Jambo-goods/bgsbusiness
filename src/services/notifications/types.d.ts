@@ -40,5 +40,5 @@ export interface NotificationService {
   yieldPaid: (projectName: string, amount: number) => Promise<void>;
   newMessage: (sender: string, messagePreview: string) => Promise<void>;
   projectUpdated: (projectName: string, updateType: string) => Promise<void>;
-  newInvestmentOpportunity: (projectName: string) => Promise<void>;
+  newInvestmentOpportunity: (projectName: string, projectId?: string) => Promise<void>;
 }
