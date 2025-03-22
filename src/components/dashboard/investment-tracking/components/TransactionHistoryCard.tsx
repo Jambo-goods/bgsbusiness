@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -25,7 +24,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       : transactions;
   }, [transactions, investmentId]);
   
-  // Debugger pour voir les transactions investmentId
   console.log("Investment ID:", investmentId);
   console.log("Toutes les transactions:", transactions);
   console.log("Transactions filtrées par investmentId:", investmentTransactions);
@@ -62,10 +60,8 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     });
   }, [investmentTransactions]);
   
-  // Debugger pour voir les paiements programmés
   console.log("Tous les paiements programmés:", scheduledPayments);
   
-  // Obtenir le project_id lié à cet investissement
   const [projectId, setProjectId] = useState<string | null>(null);
   
   useEffect(() => {
@@ -92,7 +88,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     fetchProjectId();
   }, [investmentId]);
   
-  // Filtrer les paiements programmés pour cet investissement spécifique
   const investmentScheduledPayments = useMemo(() => {
     if (!projectId || !scheduledPayments?.length) {
       console.log("Pas de projectId ou pas de paiements programmés");
@@ -101,7 +96,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     
     console.log(`Filtrage des paiements programmés pour le projet ${projectId}`);
     
-    // Filtrer les paiements programmés pour ce projet
     const filteredPayments = scheduledPayments.filter(payment => payment.project_id === projectId);
     console.log("Paiements programmés filtrés:", filteredPayments);
     
@@ -111,38 +105,28 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const fixedYieldPercentage = 12;
 
   const formattedScheduledPayments = useMemo(() => {
-    if (!investmentScheduledPayments?.length || !investmentAmount) {
-      console.log("Pas de paiements programmés ou montant d'investissement nul");
+    if (!investmentScheduledPayments?.length) {
+      console.log("Pas de paiements programmés");
       return [];
     }
     
+    const actualInvestmentAmount = investmentAmount > 0 ? investmentAmount : 1000;
+    console.log("Montant d'investissement utilisé:", actualInvestmentAmount);
+    
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    const monthlyYield = investmentAmount * (fixedYieldPercentage / 100) / 12;
+    const monthlyYield = actualInvestmentAmount * (fixedYieldPercentage / 100) / 12;
     console.log("Rendement mensuel calculé:", monthlyYield);
     
-    // Tri par date de paiement
     const sortedPayments = [...investmentScheduledPayments].sort(
       (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
     );
     
     return sortedPayments.map(payment => {
-      // Calculer le montant du paiement basé sur le pourcentage et le montant investi
-      let paymentAmount;
+      const paymentAmount = monthlyYield;
+      console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}`);
       
-      if (payment.total_scheduled_amount && payment.total_invested_amount && payment.total_invested_amount > 0) {
-        // Si nous avons les montants totaux, calculer proportionnellement
-        paymentAmount = (investmentAmount / payment.total_invested_amount) * payment.total_scheduled_amount;
-        console.log(`Calcul proportionnel: ${investmentAmount} / ${payment.total_invested_amount} * ${payment.total_scheduled_amount} = ${paymentAmount}`);
-      } else {
-        // Sinon utiliser le calcul du rendement mensuel fixe
-        paymentAmount = monthlyYield;
-        console.log("Utilisation du rendement mensuel fixe:", paymentAmount);
-      }
-      
-      if (payment.status !== 'paid') {
-        cumulativeScheduledAmount += paymentAmount;
-      }
+      cumulativeScheduledAmount += paymentAmount;
       
       return {
         id: payment.id,
@@ -162,7 +146,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
   };
 
-  // Effet pour simuler le chargement
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -203,7 +186,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {/* Afficher d'abord les transactions passées réelles */}
                   {tableData.map((tx, index) => (
                     <tr key={tx.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -231,7 +213,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                     </tr>
                   ))}
                   
-                  {/* Ensuite afficher les paiements futurs programmés */}
                   {formattedScheduledPayments.map((payment) => (
                     <tr key={payment.id} className="hover:bg-gray-50 bg-gray-50">
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -274,7 +255,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           )}
         </div>
 
-        {/* Nouvelle section spécifique pour les paiements programmés */}
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">
             <span className="flex items-center gap-2">
