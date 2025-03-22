@@ -66,6 +66,8 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const [projectId, setProjectId] = useState<string | null>(null);
   const [investmentDate, setInvestmentDate] = useState<Date | null>(null);
   const [firstPaymentDelayMonths, setFirstPaymentDelayMonths] = useState<number>(1);
+  // Calculate the first valid payment date at component level so it can be used in both useMemo and render
+  const [firstValidPaymentDate, setFirstValidPaymentDate] = useState<Date | null>(null);
   
   useEffect(() => {
     const fetchInvestmentDetails = async () => {
@@ -88,11 +90,18 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           setProjectId(data.project_id);
           
           if (data.date) {
-            setInvestmentDate(new Date(data.date));
-          }
-          
-          if (data.projects?.first_payment_delay_months) {
-            setFirstPaymentDelayMonths(data.projects.first_payment_delay_months);
+            const investDate = new Date(data.date);
+            setInvestmentDate(investDate);
+            
+            // Calculate first valid payment date
+            const delayMonths = data.projects?.first_payment_delay_months || 1;
+            setFirstPaymentDelayMonths(delayMonths);
+            
+            const validDate = new Date(investDate);
+            validDate.setMonth(validDate.getMonth() + delayMonths);
+            setFirstValidPaymentDate(validDate);
+            
+            console.log("First valid payment date calculated:", validDate);
           }
         }
       } catch (error) {
@@ -120,18 +129,13 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const fixedYieldPercentage = 12;
 
   const formattedScheduledPayments = useMemo(() => {
-    if (!investmentScheduledPayments?.length || !investmentDate) {
+    if (!investmentScheduledPayments?.length || !investmentDate || !firstValidPaymentDate) {
       console.log("Pas de paiements programmés ou pas de date d'investissement");
       return [];
     }
     
     const actualInvestmentAmount = investmentAmount > 0 ? investmentAmount : 1000;
     console.log("Montant d'investissement utilisé:", actualInvestmentAmount);
-    
-    // Calculer la date du premier paiement valide en fonction du délai
-    const firstValidPaymentDate = new Date(investmentDate);
-    firstValidPaymentDate.setMonth(firstValidPaymentDate.getMonth() + firstPaymentDelayMonths);
-    console.log("Date du premier versement valide:", firstValidPaymentDate);
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
@@ -166,7 +170,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         projectName: payment.projects?.name || 'Projet inconnu'
       };
     });
-  }, [investmentScheduledPayments, investmentAmount, fixedYieldPercentage, totalYieldReceived, investmentDate, firstPaymentDelayMonths]);
+  }, [investmentScheduledPayments, investmentAmount, fixedYieldPercentage, totalYieldReceived, investmentDate, firstValidPaymentDate, firstPaymentDelayMonths]);
 
   console.log("Paiements programmés formatés:", formattedScheduledPayments);
 
@@ -276,7 +280,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-              {investmentDate ? 
+              {investmentDate && firstValidPaymentDate ? 
                 `Aucun paiement prévu avant le ${formatDate(firstValidPaymentDate.toISOString())} (délai initial de ${firstPaymentDelayMonths} mois)` : 
                 "Chargement des informations de l'investissement..."}
             </div>
