@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
+import { Notification } from "@/services/notifications/types";
 
 export interface Transaction {
   id: string;
@@ -22,12 +23,8 @@ export interface CombinedHistoryItem {
   description: string;
   status: string;
   type: string;
-  source: 'transaction' | 'notification';
+  source: 'transaction' | 'transfer' | 'notification';
   confirmed?: boolean;
-  title?: string;
-  metadata?: any;
-  created_at: string;
-  itemType?: 'transaction' | 'notification';
 }
 
 export default function useWalletHistory() {
@@ -102,66 +99,29 @@ export default function useWalletHistory() {
       
       // Create properly formatted combined items
       const combinedHistoryItems: CombinedHistoryItem[] = [
-        ...typedTransactions.map(tx => {
-          // Ensure the created_at is valid before creating a Date
-          let date: Date;
-          try {
-            date = new Date(tx.created_at);
-            // Check if date is valid
-            if (isNaN(date.getTime())) {
-              console.warn("Invalid date for transaction:", tx.id, tx.created_at);
-              date = new Date(); // Fallback to current date
-            }
-          } catch (e) {
-            console.warn("Error parsing date for transaction:", tx.id, tx.created_at, e);
-            date = new Date(); // Fallback to current date
-          }
-          
-          return {
-            id: tx.id,
-            date: date,
-            formattedDate: format(date, 'dd MMMM yyyy', { locale: fr }),
-            amount: tx.amount,
-            description: tx.description,
-            status: tx.status,
-            type: tx.type,
-            source: 'transaction' as const,
-            confirmed: tx.receipt_confirmed,
-            created_at: tx.created_at,
-            itemType: tx.itemType
-          };
-        }),
+        ...typedTransactions.map(tx => ({
+          id: tx.id,
+          date: new Date(tx.created_at),
+          formattedDate: format(new Date(tx.created_at), 'dd MMMM yyyy', { locale: fr }),
+          amount: tx.amount,
+          description: tx.description,
+          status: tx.status,
+          type: tx.type,
+          source: 'transaction' as const,
+          confirmed: tx.receipt_confirmed
+        })),
         ...typedNotifications.map(notification => {
           // Extract amount from notification metadata if available
           const amount = notification.metadata?.amount || 0;
-          
-          // Ensure the created_at is valid before creating a Date
-          let date: Date;
-          try {
-            date = new Date(notification.created_at);
-            // Check if date is valid
-            if (isNaN(date.getTime())) {
-              console.warn("Invalid date for notification:", notification.id, notification.created_at);
-              date = new Date(); // Fallback to current date
-            }
-          } catch (e) {
-            console.warn("Error parsing date for notification:", notification.id, notification.created_at, e);
-            date = new Date(); // Fallback to current date
-          }
-          
           return {
             id: notification.id,
-            date: date,
-            formattedDate: format(date, 'dd MMMM yyyy', { locale: fr }),
+            date: new Date(notification.created_at),
+            formattedDate: format(new Date(notification.created_at), 'dd MMMM yyyy', { locale: fr }),
             amount: amount,
             description: notification.description,
             status: notification.metadata?.status || '',
             type: notification.type,
-            source: 'notification' as const,
-            created_at: notification.created_at,
-            title: notification.title,
-            metadata: notification.metadata,
-            itemType: notification.itemType
+            source: 'notification' as const
           };
         })
       ].sort((a, b) => b.date.getTime() - a.date.getTime());
