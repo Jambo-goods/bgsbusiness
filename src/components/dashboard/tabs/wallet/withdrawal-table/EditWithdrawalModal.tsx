@@ -72,7 +72,6 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
       // Handle wallet balance updates and notifications based on status changes
       if (status === 'paid' && previousStatus !== 'paid') {
         // Note: The balance update will be handled by database trigger automatically
-        // We still need to create a transaction entry and send notification
         
         // Notify user that withdrawal has been paid
         await notificationService.withdrawalPaid(withdrawal.amount);
@@ -82,8 +81,9 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
           user_id: userId,
           amount: withdrawal.amount,
           type: 'withdrawal',
-          description: `Retrait de ${withdrawal.amount}€ payé`,
-          status: 'completed'
+          description: `Retrait de ${withdrawal.amount}€ payé et transféré sur votre compte bancaire`,
+          status: 'completed',
+          receipt_confirmed: true
         });
       } else if (status === 'rejected' && previousStatus !== 'rejected') {
         // If rejecting a pending withdrawal, refund amount to the user's wallet

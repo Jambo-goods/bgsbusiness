@@ -217,7 +217,11 @@ class NotificationService {
       description: `Votre retrait de ${amount}€ a été payé. Le montant a été transféré sur votre compte bancaire.`,
       type: "withdrawal",
       category: "success",
-      metadata: { amount }
+      metadata: { 
+        amount, 
+        status: 'paid',
+        timestamp: new Date().toISOString()
+      }
     });
   }
 

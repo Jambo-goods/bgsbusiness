@@ -477,10 +477,31 @@ export default function WithdrawalManagement() {
             message: `Votre retrait de ${withdrawal.amount}€ a été payé et le montant a été transféré sur votre compte bancaire.`,
             type: 'withdrawal',
             seen: false,
-            data: { amount: withdrawal.amount, status: 'paid', category: 'success' }
+            data: { 
+              amount: withdrawal.amount, 
+              status: 'paid', 
+              category: 'success',
+              timestamp: new Date().toISOString()
+            }
           });
       } catch (notifError) {
         console.error("Error creating notification:", notifError);
+      }
+      
+      // Create a wallet transaction record for the history
+      try {
+        await supabase
+          .from('wallet_transactions')
+          .insert({
+            user_id: withdrawal.user_id,
+            amount: withdrawal.amount,
+            type: 'withdrawal',
+            description: `Retrait de ${withdrawal.amount}€ payé sur votre compte bancaire`,
+            status: 'completed',
+            receipt_confirmed: true
+          });
+      } catch (txError) {
+        console.error("Error creating transaction record:", txError);
       }
       
       toast.success(`Retrait de ${withdrawal.amount}€ marqué comme payé`);

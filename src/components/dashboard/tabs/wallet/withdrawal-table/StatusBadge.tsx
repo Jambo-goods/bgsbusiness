@@ -1,86 +1,92 @@
 
 import React from "react";
-import { CheckCircle, Clock, AlertTriangle, ArrowLeftRight, XCircle, CheckCheck, RefreshCcw, Circle } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cva } from "class-variance-authority";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, XCircle, Clock, AlertCircle, ArrowDownCircle, CalendarClock } from "lucide-react";
+
+const statusVariants = cva("font-medium flex items-center text-xs gap-1", {
+  variants: {
+    variant: {
+      pending: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
+      received: "bg-blue-100 text-blue-800 hover:bg-blue-200",
+      scheduled: "bg-indigo-100 text-indigo-800 hover:bg-indigo-200",
+      sheduled: "bg-indigo-100 text-indigo-800 hover:bg-indigo-200", // handle typo in status
+      confirmed: "bg-purple-100 text-purple-800 hover:bg-purple-200",
+      approved: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200",
+      completed: "bg-green-100 text-green-800 hover:bg-green-200",
+      paid: "bg-green-500 text-white hover:bg-green-600",
+      rejected: "bg-red-100 text-red-800 hover:bg-red-200",
+    },
+  },
+  defaultVariants: {
+    variant: "pending",
+  },
+});
 
 interface StatusBadgeProps {
   status: string;
+  className?: string;
 }
 
-export default function StatusBadge({ status }: StatusBadgeProps) {
-  const getStatusConfig = (status: string) => {
-    const statusLower = status.toLowerCase();
-    
-    switch (statusLower) {
-      case "pending":
-        return {
-          label: "En attente",
-          className: "bg-yellow-50 text-yellow-600 border-yellow-200",
-          icon: <Clock className="h-3.5 w-3.5 mr-1" />
-        };
-      case "received":
-      case "reçu":
-        return {
-          label: "Reçu",
-          className: "bg-blue-50 text-blue-600 border-blue-200",
-          icon: <Circle className="h-3.5 w-3.5 mr-1" />
-        };
-      case "confirmed":
-        return {
-          label: "Confirmé",
-          className: "bg-indigo-50 text-indigo-600 border-indigo-200",
-          icon: <CheckCircle className="h-3.5 w-3.5 mr-1" />
-        };
-      case "scheduled":
-      case "sheduled": // Handle misspelling in database
-        return {
-          label: "Programmé",
-          className: "bg-purple-50 text-purple-600 border-purple-200",
-          icon: <ArrowLeftRight className="h-3.5 w-3.5 mr-1" />
-        };
-      case "approved":
-        return {
-          label: "Approuvé",
-          className: "bg-green-50 text-green-600 border-green-200",
-          icon: <CheckCircle className="h-3.5 w-3.5 mr-1" />
-        };
-      case "completed":
-      case "processed":
-        return {
-          label: "Traité",
-          className: "bg-green-100 text-green-700 border-green-300",
-          icon: <CheckCircle className="h-3.5 w-3.5 mr-1" />
-        };
-      case "paid":
-        return {
-          label: "Payé",
-          className: "bg-green-500 text-white border-green-600",
-          icon: <CheckCheck className="h-3.5 w-3.5 mr-1" />
-        };
-      case "rejected":
-        return {
-          label: "Rejeté",
-          className: "bg-red-50 text-red-600 border-red-200",
-          icon: <XCircle className="h-3.5 w-3.5 mr-1" />
-        };
-      default:
-        return {
-          label: status,
-          className: "bg-gray-50 text-gray-600 border-gray-200",
-          icon: <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-        };
-    }
-  };
-  
-  const { label, className, icon } = getStatusConfig(status);
-  
+export default function StatusBadge({ status, className }: StatusBadgeProps) {
+  let variant = status.toLowerCase() as
+    | "pending"
+    | "scheduled"
+    | "sheduled"
+    | "approved"
+    | "paid"
+    | "rejected"
+    | "received"
+    | "confirmed"
+    | "completed";
+
+  let statusText: string;
+  let StatusIcon: React.ElementType;
+
+  switch (variant) {
+    case "pending":
+      statusText = "En attente";
+      StatusIcon = Clock;
+      break;
+    case "scheduled":
+    case "sheduled":
+      statusText = "Programmé";
+      StatusIcon = CalendarClock;
+      break;
+    case "approved":
+      statusText = "Approuvé";
+      StatusIcon = CheckCircle;
+      break;
+    case "paid":
+      statusText = "Payé";
+      StatusIcon = ArrowDownCircle;
+      break;
+    case "rejected":
+      statusText = "Rejeté";
+      StatusIcon = XCircle;
+      break;
+    case "received":
+      statusText = "Reçu";
+      StatusIcon = AlertCircle;
+      break;
+    case "confirmed":
+      statusText = "Confirmé";
+      StatusIcon = CheckCircle;
+      break;
+    case "completed":
+      statusText = "Terminé";
+      StatusIcon = CheckCircle;
+      break;
+    default:
+      statusText = status;
+      StatusIcon = Clock;
+      variant = "pending";
+  }
+
   return (
-    <span className={cn(
-      "inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border",
-      className
-    )}>
-      {icon}
-      {label}
-    </span>
+    <Badge variant="outline" className={statusVariants({ variant, className })}>
+      <StatusIcon className="h-3 w-3" />
+      <span>{statusText}</span>
+    </Badge>
   );
 }
