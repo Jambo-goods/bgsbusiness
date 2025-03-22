@@ -1,69 +1,71 @@
 
 import React from "react";
-import { Building2, CreditCard, HandCoins } from "lucide-react";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { LogOut, User, Settings, Bell } from "lucide-react";
+import SidebarNavItem from "../SidebarNavItem";
 
-export default function AccountSection() {
+interface AccountSectionProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  expanded: boolean;
+  handleLogout: () => void;
+}
+
+export default function AccountSection({
+  activeTab,
+  setActiveTab,
+  expanded,
+  handleLogout
+}: AccountSectionProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">Projets</CardTitle>
-            {/* Correctly render the icon component */}
-            <Building2 className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <CardDescription>Vos projets actifs</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">3</div>
-        </CardContent>
-        <CardFooter>
-          <Button variant="ghost" size="sm">Voir vos projets</Button>
-        </CardFooter>
-      </Card>
+    <>
+      <li>
+        <SidebarNavItem
+          icon={User}
+          label="Profil"
+          value="profile"
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          expanded={expanded}
+        />
+      </li>
       
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">Capital investi</CardTitle>
-            {/* Correctly render the icon component */}
-            <CreditCard className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <CardDescription>Total de vos investissements</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">3 400€</div>
-        </CardContent>
-        <CardFooter>
-          <Button variant="ghost" size="sm">Découvrir les projets</Button>
-        </CardFooter>
-      </Card>
+      <li>
+        <SidebarNavItem
+          icon={Settings}
+          label="Paramètres"
+          value="settings"
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          expanded={expanded}
+        />
+      </li>
       
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">Rendements</CardTitle>
-            {/* Correctly render the icon component */}
-            <HandCoins className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <CardDescription>Rendements cumulés</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">172€</div>
-        </CardContent>
-        <CardFooter>
-          <Button variant="ghost" size="sm">Voir les détails</Button>
-        </CardFooter>
-      </Card>
-    </div>
+      <li>
+        <SidebarNavItem
+          icon={Bell}
+          label="Notifications"
+          value="notifications"
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          expanded={expanded}
+        />
+      </li>
+      
+      <li>
+        <button
+          onClick={handleLogout}
+          className="flex items-center w-full py-2 px-3 my-1 rounded-lg text-left transition-colors duration-200 text-sm font-medium hover:bg-gray-100 text-red-500"
+          title={expanded ? undefined : "Déconnexion"}
+        >
+          <LogOut className="h-5 w-5 flex-shrink-0 text-red-500" />
+          
+          {expanded && (
+            <span className="ml-3">
+              Déconnexion
+            </span>
+          )}
+        </button>
+      </li>
+    </>
   );
 }

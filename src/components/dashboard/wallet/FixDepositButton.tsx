@@ -8,7 +8,7 @@ import { toast } from "sonner";
 interface FixDepositButtonProps {
   reference?: string;
   withdrawalId?: string;
-  amount?: number; // Make amount optional
+  amount: number;
   onSuccess?: () => void;
   label?: string;
 }
@@ -16,7 +16,7 @@ interface FixDepositButtonProps {
 export function FixDepositButton({ 
   reference, 
   withdrawalId,
-  amount = 0, // Default to 0 if not provided
+  amount,
   onSuccess,
   label
 }: FixDepositButtonProps) {
@@ -24,7 +24,7 @@ export function FixDepositButton({
 
   const isWithdrawal = !!withdrawalId;
   const buttonText = label || (isWithdrawal 
-    ? `Marquer le retrait${amount ? ` de ${amount}€` : ''} comme payé` 
+    ? `Marquer le retrait de ${amount}€ comme payé` 
     : `Corriger le dépôt ${reference}`);
 
   const handleFix = async () => {

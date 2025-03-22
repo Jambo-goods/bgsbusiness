@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -29,7 +28,7 @@ export interface CombinedHistoryItem {
 
 export default function useWalletHistory() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [combinedItems, setCombinedItems] = useState<CombinedHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -97,36 +96,12 @@ export default function useWalletHistory() {
       setTransactions(typedTransactions);
       setNotifications(typedNotifications);
       
-      // Create properly formatted combined items
-      const combinedHistoryItems: CombinedHistoryItem[] = [
-        ...typedTransactions.map(tx => ({
-          id: tx.id,
-          date: new Date(tx.created_at),
-          formattedDate: format(new Date(tx.created_at), 'dd MMMM yyyy', { locale: fr }),
-          amount: tx.amount,
-          description: tx.description,
-          status: tx.status,
-          type: tx.type,
-          source: 'transaction' as const,
-          confirmed: tx.receipt_confirmed
-        })),
-        ...typedNotifications.map(notification => {
-          // Extract amount from notification metadata if available
-          const amount = notification.metadata?.amount || 0;
-          return {
-            id: notification.id,
-            date: new Date(notification.created_at),
-            formattedDate: format(new Date(notification.created_at), 'dd MMMM yyyy', { locale: fr }),
-            amount: amount,
-            description: notification.description,
-            status: notification.metadata?.status || '',
-            type: notification.type,
-            source: 'notification' as const
-          };
-        })
-      ].sort((a, b) => b.date.getTime() - a.date.getTime());
+      const combined = [
+        ...typedTransactions,
+        ...typedNotifications
+      ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       
-      setCombinedItems(combinedHistoryItems);
+      setCombinedItems(combined);
       setError(null);
     } catch (err) {
       console.error("Erreur lors de la récupération des données:", err);
