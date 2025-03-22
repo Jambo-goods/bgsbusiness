@@ -10,10 +10,21 @@ interface InvestmentSummaryCardsProps {
 }
 
 export default function InvestmentSummaryCards({ investment, transactions }: InvestmentSummaryCardsProps) {
-  // Filter only yield transactions with completed status to avoid counting deposits
+  // Filtrer seulement les transactions de type 'yield' avec statut 'completed'
+  // et s'assurer qu'elles sont liées au projet actuel
   const totalEarnings = transactions
-    .filter(t => t.type === 'yield' && t.status === 'completed')
+    .filter(t => 
+      t.type === 'yield' && 
+      t.status === 'completed' && 
+      (t.project_id === investment.project_id || t.investment_id === investment.id)
+    )
     .reduce((sum, t) => sum + t.amount, 0);
+    
+  console.log('Transactions disponibles:', transactions);
+  console.log('Transactions filtrées (rendements):', 
+    transactions.filter(t => t.type === 'yield' && t.status === 'completed')
+  );
+  console.log('Total des bénéfices calculés:', totalEarnings);
     
   return (
     <div className="grid md:grid-cols-3 gap-4">
