@@ -64,29 +64,43 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   console.log("Tous les paiements programmés:", scheduledPayments);
   
   const [projectId, setProjectId] = useState<string | null>(null);
+  const [investmentDate, setInvestmentDate] = useState<Date | null>(null);
+  const [firstPaymentDelayMonths, setFirstPaymentDelayMonths] = useState<number>(1);
   
   useEffect(() => {
-    const fetchProjectId = async () => {
+    const fetchInvestmentDetails = async () => {
       if (!investmentId) return;
       
       try {
         const { data, error } = await supabase
           .from('investments')
-          .select('project_id')
+          .select(`
+            project_id,
+            date,
+            projects(first_payment_delay_months)
+          `)
           .eq('id', investmentId)
           .single();
           
         if (error) throw error;
         if (data) {
-          console.log("Project ID trouvé depuis l'investissement:", data.project_id);
+          console.log("Investment details found:", data);
           setProjectId(data.project_id);
+          
+          if (data.date) {
+            setInvestmentDate(new Date(data.date));
+          }
+          
+          if (data.projects?.first_payment_delay_months) {
+            setFirstPaymentDelayMonths(data.projects.first_payment_delay_months);
+          }
         }
       } catch (error) {
-        console.error("Erreur lors de la récupération du project_id:", error);
+        console.error("Erreur lors de la récupération des détails de l'investissement:", error);
       }
     };
     
-    fetchProjectId();
+    fetchInvestmentDetails();
   }, [investmentId]);
   
   const investmentScheduledPayments = useMemo(() => {
@@ -106,13 +120,18 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const fixedYieldPercentage = 12;
 
   const formattedScheduledPayments = useMemo(() => {
-    if (!investmentScheduledPayments?.length) {
-      console.log("Pas de paiements programmés");
+    if (!investmentScheduledPayments?.length || !investmentDate) {
+      console.log("Pas de paiements programmés ou pas de date d'investissement");
       return [];
     }
     
     const actualInvestmentAmount = investmentAmount > 0 ? investmentAmount : 1000;
     console.log("Montant d'investissement utilisé:", actualInvestmentAmount);
+    
+    // Calculer la date du premier paiement valide en fonction du délai
+    const firstValidPaymentDate = new Date(investmentDate);
+    firstValidPaymentDate.setMonth(firstValidPaymentDate.getMonth() + firstPaymentDelayMonths);
+    console.log("Date du premier versement valide:", firstValidPaymentDate);
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
@@ -123,9 +142,17 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
     );
     
-    return sortedPayments.map(payment => {
+    // Filtrer les paiements qui sont après la date du premier paiement valide
+    const validPayments = sortedPayments.filter(payment => {
+      const paymentDate = new Date(payment.payment_date);
+      return paymentDate >= firstValidPaymentDate;
+    });
+    
+    console.log("Paiements valides après le délai du premier versement:", validPayments.length);
+    
+    return validPayments.map(payment => {
       const paymentAmount = monthlyYield;
-      console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}`);
+      console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}, date: ${payment.payment_date}`);
       
       cumulativeScheduledAmount += paymentAmount;
       
@@ -139,7 +166,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         projectName: payment.projects?.name || 'Projet inconnu'
       };
     });
-  }, [investmentScheduledPayments, investmentAmount, fixedYieldPercentage, totalYieldReceived]);
+  }, [investmentScheduledPayments, investmentAmount, fixedYieldPercentage, totalYieldReceived, investmentDate, firstPaymentDelayMonths]);
 
   console.log("Paiements programmés formatés:", formattedScheduledPayments);
 
@@ -249,9 +276,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-              {scheduledPayments?.length > 0 ? 
-                "Aucun paiement programmé trouvé pour cet investissement" : 
-                "Chargement des paiements programmés..."}
+              {investmentDate ? 
+                `Aucun paiement prévu avant le ${formatDate(firstValidPaymentDate.toISOString())} (délai initial de ${firstPaymentDelayMonths} mois)` : 
+                "Chargement des informations de l'investissement..."}
             </div>
           )}
         </div>
