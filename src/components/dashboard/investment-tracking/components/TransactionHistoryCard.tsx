@@ -238,7 +238,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-              Aucune transaction de rendement trouvée pour cet investissement
+              {scheduledPayments?.length > 0 ? 
+                "Aucun paiement programmé trouvé pour cet investissement" : 
+                "Chargement des paiements programmés..."}
             </div>
           )}
         </div>
