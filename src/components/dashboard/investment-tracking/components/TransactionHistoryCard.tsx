@@ -65,24 +65,48 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   // Debugger pour voir les paiements programmés
   console.log("Tous les paiements programmés:", scheduledPayments);
   
+  // Obtenir le project_id lié à cet investissement
+  const [projectId, setProjectId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    const fetchProjectId = async () => {
+      if (!investmentId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('investments')
+          .select('project_id')
+          .eq('id', investmentId)
+          .single();
+          
+        if (error) throw error;
+        if (data) {
+          console.log("Project ID trouvé depuis l'investissement:", data.project_id);
+          setProjectId(data.project_id);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération du project_id:", error);
+      }
+    };
+    
+    fetchProjectId();
+  }, [investmentId]);
+  
   // Filtrer les paiements programmés pour cet investissement spécifique
   const investmentScheduledPayments = useMemo(() => {
-    if (!investmentId || !scheduledPayments?.length) return [];
+    if (!projectId || !scheduledPayments?.length) {
+      console.log("Pas de projectId ou pas de paiements programmés");
+      return [];
+    }
     
-    // Récupérer l'ID du projet à partir des transactions
-    const projectId = transactions.find(tx => tx.investment_id === investmentId)?.project_id;
-    
-    console.log("Project ID trouvé:", projectId);
-    
-    // Si on ne trouve pas l'ID du projet, retourner un tableau vide
-    if (!projectId) return [];
+    console.log(`Filtrage des paiements programmés pour le projet ${projectId}`);
     
     // Filtrer les paiements programmés pour ce projet
     const filteredPayments = scheduledPayments.filter(payment => payment.project_id === projectId);
     console.log("Paiements programmés filtrés:", filteredPayments);
     
     return filteredPayments;
-  }, [scheduledPayments, investmentId, transactions]);
+  }, [scheduledPayments, projectId]);
   
   const fixedYieldPercentage = 12;
 
@@ -97,7 +121,12 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     const monthlyYield = investmentAmount * (fixedYieldPercentage / 100) / 12;
     console.log("Rendement mensuel calculé:", monthlyYield);
     
-    return investmentScheduledPayments.map(payment => {
+    // Tri par date de paiement
+    const sortedPayments = [...investmentScheduledPayments].sort(
+      (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
+    );
+    
+    return sortedPayments.map(payment => {
       // Calculer le montant du paiement basé sur le pourcentage et le montant investi
       let paymentAmount;
       
@@ -307,9 +336,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-              {investmentScheduledPayments?.length > 0 ? 
-                "Aucun paiement programmé trouvé pour cet investissement" : 
-                "Aucun paiement programmé n'est prévu pour cet investissement actuellement"}
+              {projectId ? 
+                "Aucun paiement programmé n'est prévu pour cet investissement actuellement" : 
+                "Chargement des informations de l'investissement..."}
             </div>
           )}
         </div>
