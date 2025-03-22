@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -66,7 +65,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const [projectId, setProjectId] = useState<string | null>(null);
   const [investmentDate, setInvestmentDate] = useState<Date | null>(null);
   const [firstPaymentDelayMonths, setFirstPaymentDelayMonths] = useState<number>(1);
-  // Calculate the first valid payment date at component level so it can be used in both useMemo and render
   const [firstValidPaymentDate, setFirstValidPaymentDate] = useState<Date | null>(null);
   
   useEffect(() => {
@@ -93,7 +91,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             const investDate = new Date(data.date);
             setInvestmentDate(investDate);
             
-            // Calculate first valid payment date
             const delayMonths = data.projects?.first_payment_delay_months || 1;
             setFirstPaymentDelayMonths(delayMonths);
             
@@ -139,14 +136,13 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    const monthlyYield = actualInvestmentAmount * (fixedYieldPercentage / 100) / 12;
+    const monthlyYield = (actualInvestmentAmount * (fixedYieldPercentage / 100)) / 12;
     console.log("Rendement mensuel calculé:", monthlyYield);
     
     const sortedPayments = [...investmentScheduledPayments].sort(
       (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
     );
     
-    // Filtrer les paiements qui sont après la date du premier paiement valide
     const validPayments = sortedPayments.filter(payment => {
       const paymentDate = new Date(payment.payment_date);
       return paymentDate >= firstValidPaymentDate;
