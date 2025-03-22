@@ -61,18 +61,22 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
           (payload) => {
             console.log('Wallet transaction change detected in WalletCard:', payload);
             
-            const transaction = payload.new || {};
-            
-            if (transaction.type === 'deposit' && 
-                transaction.status === 'completed') {
+            // Type safety check for payload.new
+            if (payload.new && typeof payload.new === 'object') {
+              const transaction = payload.new as Record<string, any>;
               
-              // Check for status change from pending to completed
-              if (payload.old && payload.old.status !== 'completed') {
-                toast.success(`Dépôt de ${transaction.amount}€ crédité sur votre compte`);
+              if (transaction.type === 'deposit' && 
+                  transaction.status === 'completed') {
+                
+                // Check for status change from pending to completed
+                if (payload.old && typeof payload.old === 'object' && 
+                    (payload.old as Record<string, any>).status !== 'completed') {
+                  toast.success(`Dépôt de ${transaction.amount}€ crédité sur votre compte`);
+                }
+                
+                // Force refresh
+                onManualRefresh();
               }
-              
-              // Force refresh
-              onManualRefresh();
             }
           }
         )
@@ -86,14 +90,18 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
           (payload) => {
             console.log('Bank transfer change detected in WalletCard:', payload);
             
-            // Force refresh if a transfer is completed
-            if (payload.new && 
-                (payload.new.status === 'completed' || 
-                 payload.new.status === 'received' || 
-                 payload.new.status === 'reçu')) {
+            // Type safety check for payload.new
+            if (payload.new && typeof payload.new === 'object') {
+              const newData = payload.new as Record<string, any>;
               
-              // Force refresh
-              onManualRefresh();
+              // Force refresh if a transfer is completed
+              if (newData.status === 'completed' || 
+                  newData.status === 'received' || 
+                  newData.status === 'reçu') {
+                
+                // Force refresh
+                onManualRefresh();
+              }
             }
           }
         )

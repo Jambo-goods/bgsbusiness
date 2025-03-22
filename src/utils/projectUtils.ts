@@ -1,4 +1,3 @@
-
 import { Project } from "@/types/project";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
@@ -81,6 +80,31 @@ export const createProjectInDatabase = async (project: Project, toast: any) => {
     throw error;
   }
 };
+
+export async function notifyNewProject(projectId: string) {
+  try {
+    // Get project details
+    const { data: project, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', projectId)
+      .single();
+      
+    if (error) {
+      console.error("Error fetching project:", error);
+      return;
+    }
+    
+    // Notify all users about new investment opportunity
+    // Make sure this method exists in notificationService
+    if (project && notificationService.newInvestmentOpportunity) {
+      await notificationService.newInvestmentOpportunity(project.name);
+      toast.success("Notifications envoyées aux utilisateurs");
+    }
+  } catch (error) {
+    console.error("Error notifying users:", error);
+  }
+}
 
 // Fonction pour récupérer tous les projets de la base de données
 export const fetchProjectsFromDatabase = async () => {
