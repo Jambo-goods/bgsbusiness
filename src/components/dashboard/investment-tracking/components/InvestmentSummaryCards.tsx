@@ -16,7 +16,7 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
     .filter(t => 
       t.type === 'yield' && 
       t.status === 'completed' && 
-      (t.project_id === investment.project_id || t.investment_id === investment.id)
+      (t.investment_id === investment.id)
     )
     .reduce((sum, t) => sum + t.amount, 0);
     

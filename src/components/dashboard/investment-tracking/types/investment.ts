@@ -27,6 +27,7 @@ export interface Transaction {
   id: string;
   user_id: string;
   investment_id?: string;
+  project_id?: string;
   amount: number;
   type: 'investment' | 'yield';
   created_at: string;
