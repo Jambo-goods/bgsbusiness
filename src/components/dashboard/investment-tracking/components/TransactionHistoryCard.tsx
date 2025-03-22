@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -255,74 +256,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           )}
         </div>
 
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold mb-4 text-gray-800">
-            <span className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              Calendrier des paiements programmés
-            </span>
-          </h3>
-          
-          {isLoading || isLoadingScheduledPayments ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-bgs-blue"></div>
-            </div>
-          ) : formattedScheduledPayments.length > 0 ? (
-            <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
-              <div className="grid grid-cols-1 divide-y divide-gray-100">
-                {formattedScheduledPayments.map((payment) => (
-                  <div key={payment.id} className="p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                          payment.status === 'paid' ? 'bg-green-100' : 
-                          payment.status === 'pending' ? 'bg-yellow-100' : 'bg-blue-100'
-                        }`}>
-                          {payment.status === 'paid' ? (
-                            <CheckCircle className="h-6 w-6 text-green-600" />
-                          ) : payment.status === 'pending' ? (
-                            <Clock className="h-6 w-6 text-yellow-600" />
-                          ) : (
-                            <Calendar className="h-6 w-6 text-blue-600" />
-                          )}
-                        </div>
-                        <div>
-                          <p className="font-medium text-gray-900">{formatDate(payment.date)}</p>
-                          <p className="text-sm text-gray-500">{payment.projectName}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium text-green-600">{payment.amount.toFixed(2)} €</p>
-                        <p className="text-sm text-blue-600">{payment.percentage.toFixed(2)}% de rendement</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        payment.status === 'paid' ? 'bg-green-100 text-green-800' : 
-                        payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {payment.status === 'paid' ? '✓ Payé' : 
-                         payment.status === 'pending' ? '⏳ En attente' : 
-                         '📅 Programmé'}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        Cumul: {payment.cumulativeAmount.toFixed(2)} €
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-              {projectId ? 
-                "Aucun paiement programmé n'est prévu pour cet investissement actuellement" : 
-                "Chargement des informations de l'investissement..."}
-            </div>
-          )}
-        </div>
-        
         {investmentAmount > 0 && (
           <div className="mt-6 pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-500">
