@@ -88,76 +88,69 @@ export default function BankTransferTableRow({
     try {
       console.log(`Confirming receipt for transfer ${item.id}`);
       
-      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
-        'update-bank-transfer',
-        {
-          body: {
-            transferId: item.id,
-            status: 'received',
-            isProcessed: true,
-            notes: `Réception confirmée le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: item.user_id,
-            sendNotification: true,
-            creditWallet: true
-          }
-        }
+      const { success, data, message, error } = await edgeFunctionService.invokeUpdateTransferEdgeFunction(
+        item.id,
+        'completed', // Always use 'completed' instead of 'received'
+        item.user_id,
+        true,
+        true // Credit wallet
       );
       
-      if (edgeFunctionError) {
-        console.error("Erreur fonction edge:", edgeFunctionError);
-        toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
-        
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('wallet_balance')
-          .eq('id', item.user_id)
-          .single();
-          
-        if (!profileError && profileData) {
-          console.log("Current wallet balance:", profileData.wallet_balance);
-          
-          const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
-            user_id: item.user_id,
-            increment_amount: item.amount || 0
-          });
-          
-          if (walletError) {
-            console.error("Failed to update wallet balance:", walletError);
-            
-            const { error: directUpdateError } = await supabase
-              .from('profiles')
-              .update({ wallet_balance: (profileData.wallet_balance || 0) + (item.amount || 0) })
-              .eq('id', item.user_id);
-              
-            if (directUpdateError) {
-              console.error("Direct balance update failed:", directUpdateError);
-            } else {
-              console.log(`Wallet balance directly updated to ${(profileData.wallet_balance || 0) + (item.amount || 0)}`);
-            }
-          } else {
-            console.log(`Wallet balance updated by ${item.amount}`);
-          }
-        }
-        
-        const success = await updateTransferStatus(item, 'received');
-        if (success && onStatusUpdate) {
-          toast.success("Virement marqué comme reçu et solde mis à jour");
-          onStatusUpdate();
-        } else {
-          toast.error("Échec de la mise à jour - veuillez réessayer");
+      if (success) {
+        toast.success("Virement marqué comme complété et solde mis à jour");
+        if (onStatusUpdate) {
+          setTimeout(() => {
+            onStatusUpdate();
+          }, 1000);
         }
       } else {
-        console.log("Résultat fonction edge:", edgeFunctionData);
+        console.error("Error confirming receipt:", message || "Unknown error");
+        toast.error(`Échec de la mise à jour: ${message || 'Erreur inconnue'}`);
         
-        if (edgeFunctionData.success) {
-          toast.success("Virement marqué comme reçu et solde mis à jour");
-          if (onStatusUpdate) {
-            setTimeout(() => {
-              onStatusUpdate();
-            }, 1000);
+        // Fallback to direct update
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('wallet_balance')
+            .eq('id', item.user_id)
+            .single();
+            
+          if (!profileError && profileData) {
+            console.log("Current wallet balance:", profileData.wallet_balance);
+            
+            const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
+              user_id: item.user_id,
+              increment_amount: item.amount || 0
+            });
+            
+            if (walletError) {
+              console.error("Failed to update wallet balance:", walletError);
+              
+              const { error: directUpdateError } = await supabase
+                .from('profiles')
+                .update({ wallet_balance: (profileData.wallet_balance || 0) + (item.amount || 0) })
+                .eq('id', item.user_id);
+                
+              if (directUpdateError) {
+                console.error("Direct balance update failed:", directUpdateError);
+              } else {
+                console.log(`Wallet balance directly updated to ${(profileData.wallet_balance || 0) + (item.amount || 0)}`);
+              }
+            } else {
+              console.log(`Wallet balance updated by ${item.amount}`);
+            }
           }
-        } else {
-          toast.error(`Échec de la mise à jour: ${edgeFunctionData.error || 'Erreur inconnue'}`);
+          
+          const success = await updateTransferStatus(item, 'completed');
+          if (success && onStatusUpdate) {
+            toast.success("Virement marqué comme complété et solde mis à jour");
+            onStatusUpdate();
+          } else {
+            toast.error("Échec de la mise à jour - veuillez réessayer");
+          }
+        } catch (backupError) {
+          console.error("Failed to use fallback:", backupError);
+          toast.error("Erreur lors de la mise à jour de secours");
         }
       }
     } catch (error) {
@@ -177,22 +170,24 @@ export default function BankTransferTableRow({
     try {
       console.log(`Rejecting transfer ${item.id}`);
       
-      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
-        'update-bank-transfer',
-        {
-          body: {
-            transferId: item.id,
-            status: 'rejected',
-            isProcessed: true,
-            notes: `Virement rejeté le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: item.user_id
-          }
-        }
+      const { success, data, message, error } = await edgeFunctionService.invokeUpdateTransferEdgeFunction(
+        item.id,
+        'rejected',
+        item.user_id,
+        true,
+        false // Don't credit wallet for rejected transfers
       );
       
-      if (edgeFunctionError) {
-        console.error("Erreur fonction edge:", edgeFunctionError);
-        toast.error(`Erreur de rejet: ${edgeFunctionError.message}`);
+      if (success) {
+        toast.success("Virement rejeté avec succès");
+        if (onStatusUpdate) {
+          setTimeout(() => {
+            onStatusUpdate();
+          }, 1000);
+        }
+      } else {
+        console.error("Error rejecting transfer:", message || "Unknown error");
+        toast.error(`Échec du rejet: ${message || 'Erreur inconnue'}`);
         
         const success = await updateTransferStatus(item, 'rejected');
         if (success && onStatusUpdate) {
@@ -200,19 +195,6 @@ export default function BankTransferTableRow({
           onStatusUpdate();
         } else {
           toast.error("Échec du rejet - veuillez réessayer");
-        }
-      } else {
-        console.log("Résultat fonction edge:", edgeFunctionData);
-        
-        if (edgeFunctionData.success) {
-          toast.success("Virement rejeté avec succès");
-          if (onStatusUpdate) {
-            setTimeout(() => {
-              onStatusUpdate();
-            }, 1000);
-          }
-        } else {
-          toast.error(`Échec du rejet: ${edgeFunctionData.error || 'Erreur inconnue'}`);
         }
       }
     } catch (error) {
@@ -240,29 +222,34 @@ export default function BankTransferTableRow({
     try {
       console.log(`Updating transfer ${item.id} with status ${editStatus} and processed date ${processedDate}`);
       
-      const normalizedStatus = editStatus === 'reçu' ? 'received' : editStatus;
+      // Convert 'received' to 'completed'
+      const normalizedStatus = editStatus === 'reçu' ? 'completed' : editStatus === 'received' ? 'completed' : editStatus;
       
-      const isProcessed = (normalizedStatus === 'received' || normalizedStatus === 'rejected') || processedDate !== undefined;
-      const shouldCreditWallet = normalizedStatus === 'received';
+      const isProcessed = (normalizedStatus === 'completed' || normalizedStatus === 'rejected') || processedDate !== undefined;
+      const shouldCreditWallet = normalizedStatus === 'completed';
       
-      const { data: edgeFunctionData, error: edgeFunctionError } = await supabase.functions.invoke(
-        'update-bank-transfer',
-        {
-          body: {
-            transferId: item.id,
-            status: normalizedStatus,
-            isProcessed: isProcessed,
-            notes: `Mis à jour manuellement le ${new Date().toLocaleDateString('fr-FR')}`,
-            userId: item.user_id,
-            sendNotification: shouldCreditWallet,
-            creditWallet: shouldCreditWallet
-          }
-        }
+      const { success, data, message, error } = await edgeFunctionService.invokeUpdateTransferEdgeFunction(
+        item.id,
+        normalizedStatus,
+        item.user_id,
+        isProcessed,
+        shouldCreditWallet
       );
       
-      if (edgeFunctionError) {
-        console.error("Erreur fonction edge:", edgeFunctionError);
-        toast.error(`Erreur de mise à jour: ${edgeFunctionError.message}`);
+      if (success) {
+        toast.success(shouldCreditWallet 
+          ? "Virement mis à jour et solde utilisateur crédité"
+          : "Virement mis à jour avec succès");
+        setIsEditModalOpen(false);
+        
+        if (onStatusUpdate) {
+          setTimeout(() => {
+            onStatusUpdate();
+          }, 1000);
+        }
+      } else {
+        console.error("Error updating transfer:", message || "Unknown error");
+        toast.error(`Échec de la mise à jour: ${message || 'Erreur inconnue'}`);
         
         if (shouldCreditWallet) {
           const { data: profileData, error: profileError } = await supabase
@@ -309,23 +296,6 @@ export default function BankTransferTableRow({
           onStatusUpdate();
         } else {
           toast.error("Échec de la mise à jour - veuillez réessayer");
-        }
-      } else {
-        console.log("Résultat fonction edge:", edgeFunctionData);
-        
-        if (edgeFunctionData.success) {
-          toast.success(shouldCreditWallet 
-            ? "Virement mis à jour et solde utilisateur crédité"
-            : "Virement mis à jour avec succès");
-          setIsEditModalOpen(false);
-          
-          if (onStatusUpdate) {
-            setTimeout(() => {
-              onStatusUpdate();
-            }, 1000);
-          }
-        } else {
-          toast.error(`Échec de la mise à jour: ${edgeFunctionData.error || 'Erreur inconnue'}`);
         }
       }
     } catch (error) {
@@ -606,4 +576,3 @@ export default function BankTransferTableRow({
     </TableRow>
   );
 }
-

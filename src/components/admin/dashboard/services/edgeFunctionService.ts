@@ -10,15 +10,15 @@ export const edgeFunctionService = {
     creditWallet: boolean = true // Keep parameter with default value
   ) {
     try {
-      // Normalize status - convert "reçu" to "received" if needed
-      const normalizedStatus = status === 'reçu' ? 'received' : status;
+      // Convert "received" to "completed" if needed
+      const normalizedStatus = status === 'reçu' ? 'completed' : status === 'received' ? 'completed' : status;
       
       console.log("Invoking edge function with params:", {
         transferId, status: normalizedStatus, userId, isProcessed, creditWallet
       });
       
       // Only credit wallet if the status is "completed" or "received"
-      const shouldCreditWallet = creditWallet && (normalizedStatus === 'completed' || normalizedStatus === 'received');
+      const shouldCreditWallet = creditWallet && (normalizedStatus === 'completed');
       
       const { data, error } = await supabase.functions.invoke('update-bank-transfer', {
         body: {
@@ -41,9 +41,17 @@ export const edgeFunctionService = {
         };
       }
       
+      if (!data || !data.success) {
+        return {
+          success: false,
+          message: data?.error || "Unknown error from edge function",
+          error: new Error(data?.error || "Unknown error")
+        };
+      }
+      
       return {
         success: true,
-        data: data
+        data: data.data
       };
     } catch (error: any) {
       console.error("Error invoking edge function:", error);

@@ -28,6 +28,38 @@ export async function updateUserWalletBalance(supabase: any, userId: string, amo
       console.log(`Current wallet balance: ${profileData?.wallet_balance || 0}`);
     }
     
+    // Check if there's already a completed transaction for this user with this amount
+    // This helps prevent double crediting
+    const { data: existingCompletedTx, error: txCheckError } = await supabase
+      .from('wallet_transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('amount', amount)
+      .eq('type', 'deposit')
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
+    if (txCheckError) {
+      console.error("Error checking for existing transactions:", txCheckError.message);
+    } else if (existingCompletedTx && existingCompletedTx.length > 0) {
+      // Only proceed if the transaction was created in the last 5 minutes
+      // This prevents accidental double-crediting from retries
+      const recentTxTime = new Date();
+      recentTxTime.setMinutes(recentTxTime.getMinutes() - 5);
+      
+      const { data: recentTx } = await supabase
+        .from('wallet_transactions')
+        .select('created_at')
+        .eq('id', existingCompletedTx[0].id)
+        .single();
+        
+      if (recentTx && new Date(recentTx.created_at) > recentTxTime) {
+        console.log("Wallet already credited in the last 5 minutes. Skipping to prevent double credit.");
+        return;
+      }
+    }
+    
     // Try to use RPC function first (most reliable method)
     const { error: incrementError } = await supabase.rpc('increment_wallet_balance', {
       user_id: userId,
