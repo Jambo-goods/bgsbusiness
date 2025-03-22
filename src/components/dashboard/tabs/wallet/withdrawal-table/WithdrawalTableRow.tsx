@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Edit } from "lucide-react";
 import StatusBadge from "./StatusBadge";
 import { formatDate, maskAccountNumber } from "./formatUtils";
+import { FixDepositButton } from "@/components/dashboard/wallet/FixDepositButton";
 
 interface WithdrawalRequest {
   id: string;
@@ -25,6 +26,9 @@ interface WithdrawalTableRowProps {
 }
 
 export default function WithdrawalTableRow({ request, onEdit }: WithdrawalTableRowProps) {
+  // Check if the withdrawal is pending and needs editing or cancellation
+  const isPending = request.status === 'pending';
+  
   return (
     <TableRow key={request.id}>
       <TableCell>{formatDate(request.requested_at)}</TableCell>
@@ -34,15 +38,27 @@ export default function WithdrawalTableRow({ request, onEdit }: WithdrawalTableR
       <TableCell><StatusBadge status={request.status} /></TableCell>
       <TableCell>{request.processed_at ? formatDate(request.processed_at) : "-"}</TableCell>
       <TableCell>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={onEdit}
-          className="h-8 w-8 p-0"
-        >
-          <Edit className="h-4 w-4" />
-          <span className="sr-only">Modifier</span>
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={onEdit}
+            className="h-8 w-8 p-0"
+            title="Modifier la demande"
+          >
+            <Edit className="h-4 w-4" />
+            <span className="sr-only">Modifier</span>
+          </Button>
+          
+          {isPending && (
+            <FixDepositButton 
+              withdrawalId={request.id} 
+              amount={request.amount}
+              label="Annuler"
+              onSuccess={onEdit}
+            />
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );

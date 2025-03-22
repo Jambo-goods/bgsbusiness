@@ -36,14 +36,31 @@ interface EditWithdrawalModalProps {
 }
 
 export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpdate }: EditWithdrawalModalProps) {
-  const [status, setStatus] = useState<string>("");
-  const [processedDate, setProcessedDate] = useState<Date | undefined>(undefined);
+  const [bankName, setBankName] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCustomerUser, setIsCustomerUser] = useState(true);
 
   useEffect(() => {
-    if (withdrawal) {
-      setStatus(withdrawal.status || "");
-      setProcessedDate(withdrawal.processed_at ? new Date(withdrawal.processed_at) : undefined);
+    // Check if user has admin role
+    const checkAdminRole = async () => {
+      const { data } = await supabase.auth.getSession();
+      const user = data.session?.user;
+      if (user) {
+        const isAdmin = user.app_metadata?.role === 'admin';
+        setIsCustomerUser(!isAdmin);
+      }
+    };
+
+    checkAdminRole();
+  }, []);
+
+  useEffect(() => {
+    if (withdrawal && withdrawal.bank_info) {
+      setBankName(withdrawal.bank_info.bankName || "");
+      setAccountName(withdrawal.bank_info.accountName || "");
+      setAccountNumber(withdrawal.bank_info.accountNumber || "");
     }
   }, [withdrawal]);
 
@@ -55,105 +72,79 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
     setIsSubmitting(true);
     
     try {
-      // Store the previous status to check if we're changing from pending to paid/rejected
-      const previousStatus = withdrawal.status;
-      const userId = withdrawal.bank_info?.user_id || (await supabase.auth.getUser()).data.user?.id;
-      
-      // Update the withdrawal request status
+      // Update the bank information for the withdrawal request
       const { error } = await supabase
         .from('withdrawal_requests')
         .update({
-          status: status,
-          processed_at: processedDate ? processedDate.toISOString() : null
+          bank_info: {
+            ...withdrawal.bank_info,
+            bankName: bankName,
+            accountName: accountName,
+            accountNumber: accountNumber
+          }
         })
         .eq('id', withdrawal.id);
       
       if (error) throw error;
       
-      // Handle wallet balance updates and notifications based on status changes
-      if (status === 'paid' && previousStatus !== 'paid') {
-        // Notify user that withdrawal has been paid
-        await notificationService.withdrawalPaid(withdrawal.amount);
-        
-        // Create a transaction entry in the wallet_transactions table
-        await supabase.from('wallet_transactions').insert({
-          user_id: userId,
-          amount: withdrawal.amount,
-          type: 'withdrawal',
-          description: `Retrait de ${withdrawal.amount}€ payé et transféré sur votre compte bancaire`,
-          status: 'completed',
-          receipt_confirmed: true
-        });
-        
-        // Show a success toast
-        toast.success(`Le retrait de ${withdrawal.amount}€ a été marqué comme payé et une notification a été envoyée à l'utilisateur`);
-      } else if (status === 'rejected' && previousStatus !== 'rejected') {
-        // If rejecting a pending withdrawal, refund amount to the user's wallet
-        if (previousStatus === 'pending') {
-          // Increment the user's wallet balance with the withdrawal amount
-          const { error: balanceError } = await supabase.rpc('increment_wallet_balance', { 
-            user_id: userId,
-            increment_amount: withdrawal.amount 
-          });
-            
-          if (balanceError) {
-            console.error("Error updating wallet balance:", balanceError);
-            
-            // Fallback direct update if RPC fails
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('wallet_balance')
-              .eq('id', userId)
-              .single();
-              
-            if (!profileError && profileData) {
-              const newBalance = (profileData.wallet_balance || 0) + withdrawal.amount;
-              
-              await supabase
-                .from('profiles')
-                .update({ wallet_balance: newBalance })
-                .eq('id', userId);
-            }
-          }
-        }
-        
-        // Notify user that withdrawal has been rejected
-        await notificationService.withdrawalRejected(withdrawal.amount);
-        
-        // Create a transaction entry showing the rejection
-        await supabase.from('wallet_transactions').insert({
-          user_id: userId,
-          amount: withdrawal.amount,
-          type: 'withdrawal',
-          description: `Retrait de ${withdrawal.amount}€ rejeté`,
-          status: 'rejected'
-        });
-        
-        // Show a success toast
-        toast.success(`Le retrait de ${withdrawal.amount}€ a été rejeté et une notification a été envoyée à l'utilisateur`);
-      }
-      
+      toast.success("Les informations bancaires ont été mises à jour");
       onUpdate();
       onClose();
     } catch (error) {
-      console.error("Erreur lors de la mise à jour de la demande de retrait:", error);
+      console.error("Erreur lors de la mise à jour des informations:", error);
       toast.error("Une erreur est survenue lors de la mise à jour");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const statusOptions = [
-    { value: "pending", label: "En attente" },
-    { value: "paid", label: "Payé" },
-    { value: "rejected", label: "Rejeté" }
-  ];
+  const handleCancel = async () => {
+    if (!withdrawal) return;
+    
+    if (withdrawal.status !== 'pending') {
+      toast.error("Seules les demandes en attente peuvent être annulées");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Update the withdrawal request status to 'cancelled'
+      const { error } = await supabase
+        .from('withdrawal_requests')
+        .update({ status: 'cancelled' })
+        .eq('id', withdrawal.id);
+      
+      if (error) throw error;
+      
+      // Refund the amount to the user's wallet
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (session.session) {
+        const { error: balanceError } = await supabase.rpc('increment_wallet_balance', { 
+          user_id: session.session.user.id,
+          increment_amount: withdrawal.amount 
+        });
+        
+        if (balanceError) throw balanceError;
+      }
+      
+      toast.success(`La demande de retrait de ${withdrawal.amount}€ a été annulée`);
+      onUpdate();
+      onClose();
+    } catch (error) {
+      console.error("Erreur lors de l'annulation de la demande:", error);
+      toast.error("Une erreur est survenue lors de l'annulation");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Modifier la demande de retrait</DialogTitle>
+          <DialogTitle>Modifier les informations bancaires</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -167,56 +158,63 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="status">Statut</Label>
-            <select
-              id="status"
-              className="w-full rounded-md border border-input bg-background px-3 py-2"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
+            <Label htmlFor="bankName">Nom de la banque</Label>
+            <Input 
+              id="bankName"
+              value={bankName}
+              onChange={(e) => setBankName(e.target.value)}
               required
-            >
-              <option value="" disabled>Sélectionner un statut</option>
-              {statusOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="processedDate">Date de traitement</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  id="processedDate"
-                  variant={"outline"}
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !processedDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {processedDate ? format(processedDate, "P", { locale: fr }) : "Sélectionner une date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={processedDate}
-                  onSelect={setProcessedDate}
-                  initialFocus
-                  locale={fr}
-                />
-              </PopoverContent>
-            </Popover>
+            <Label htmlFor="accountName">Titulaire du compte</Label>
+            <Input 
+              id="accountName"
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              required
+            />
           </div>
           
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Annuler
+          <div className="space-y-2">
+            <Label htmlFor="accountNumber">Numéro de compte (IBAN)</Label>
+            <Input 
+              id="accountNumber"
+              value={accountNumber}
+              onChange={(e) => setAccountNumber(e.target.value)}
+              required
+              pattern="^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$"
+              title="Format IBAN valide requis (ex: FR7612345678901234567890123)"
+            />
+          </div>
+          
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            {withdrawal?.status === 'pending' && (
+              <Button 
+                type="button" 
+                variant="destructive" 
+                onClick={handleCancel}
+                className="w-full sm:w-auto"
+                disabled={isSubmitting}
+              >
+                Annuler la demande
+              </Button>
+            )}
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onClose}
+              className="w-full sm:w-auto"
+              disabled={isSubmitting}
+            >
+              Fermer
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
               {isSubmitting ? "Mise à jour..." : "Mettre à jour"}
             </Button>
           </DialogFooter>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -144,6 +145,7 @@ export default function WithdrawalRequestsTable() {
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedWithdrawal(null);
+    fetchWithdrawalRequests();
   };
 
   if (isLoading) {
@@ -157,7 +159,7 @@ export default function WithdrawalRequestsTable() {
   return (
     <div className="mt-6">
       <h3 className="font-medium text-lg mb-4">Historique des demandes de retrait</h3>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
