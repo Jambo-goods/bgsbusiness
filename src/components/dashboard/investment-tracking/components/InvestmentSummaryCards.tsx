@@ -10,6 +10,7 @@ interface InvestmentSummaryCardsProps {
 }
 
 export default function InvestmentSummaryCards({ investment, transactions }: InvestmentSummaryCardsProps) {
+  // Filter only yield transactions with completed status to avoid counting deposits
   const totalEarnings = transactions
     .filter(t => t.type === 'yield' && t.status === 'completed')
     .reduce((sum, t) => sum + t.amount, 0);

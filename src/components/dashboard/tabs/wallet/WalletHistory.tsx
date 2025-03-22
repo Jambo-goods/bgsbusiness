@@ -9,9 +9,10 @@ import { useWalletHistory } from "./history/useWalletHistory";
 
 interface WalletHistoryProps {
   className?: string;
+  refreshBalance?: (showLoading?: boolean) => Promise<void>;
 }
 
-export default function WalletHistory({ className }: WalletHistoryProps) {
+export default function WalletHistory({ className, refreshBalance }: WalletHistoryProps) {
   const { 
     combinedHistory, 
     isLoading, 
@@ -19,15 +20,22 @@ export default function WalletHistory({ className }: WalletHistoryProps) {
     refreshHistory 
   } = useWalletHistory();
 
+  const handleRefresh = () => {
+    refreshHistory();
+    if (refreshBalance) {
+      refreshBalance();
+    }
+  };
+
   return (
     <div className={className}>
-      <HistoryHeader onRefresh={refreshHistory} />
+      <HistoryHeader onRefresh={handleRefresh} isRefreshing={isLoading} />
       
       <div className="mt-4">
         {isLoading ? (
           <LoadingState />
         ) : error ? (
-          <ErrorState error={error} onRetry={refreshHistory} />
+          <ErrorState message={error} onRetry={handleRefresh} />
         ) : combinedHistory.length === 0 ? (
           <EmptyState />
         ) : (

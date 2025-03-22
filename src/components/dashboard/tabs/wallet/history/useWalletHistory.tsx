@@ -7,7 +7,8 @@ export interface Notification {
   id: string;
   title: string;
   description: string;
-  date: Date; // This is a Date object, not a string
+  date: Date; 
+  created_at: string;
   type: string;
   read: boolean;
   category: string;
@@ -22,7 +23,7 @@ export interface Transaction {
   description: string;
   receipt_confirmed: boolean;
   status: string;
-  type: 'deposit' | 'withdrawal' | 'investment';
+  type: 'deposit' | 'withdrawal' | 'investment' | 'yield' | string;
   user_id: string;
   itemType: 'transaction';
 }
@@ -87,31 +88,58 @@ export function useWalletHistory() {
       }
 
       // Transform notifications
-      const processedNotifications = notifData.map(notif => ({
-        id: notif.id,
-        title: notif.title,
-        description: notif.message,
-        date: new Date(notif.created_at), // Create Date object
-        created_at: notif.created_at, // Keep the original string for compatibility
-        type: notif.type,
-        read: notif.seen,
-        category: notif.data?.category || 'info',
-        metadata: notif.data || {},
-        itemType: 'notification' as const
-      }));
+      const processedNotifications: Notification[] = notifData.map(notif => {
+        // Extract category from data if it exists, or default to 'info'
+        const category = typeof notif.data === 'object' && notif.data 
+          ? (notif.data.category as string || 'info')
+          : 'info';
+          
+        // Extract metadata safely
+        const metadata: Record<string, any> = typeof notif.data === 'object' && notif.data 
+          ? notif.data as Record<string, any>
+          : {};
+          
+        return {
+          id: notif.id,
+          title: notif.title || '',
+          description: notif.message || '',
+          date: new Date(notif.created_at),
+          created_at: notif.created_at,
+          type: notif.type || '',
+          read: notif.seen || false,
+          category,
+          metadata,
+          itemType: 'notification' as const
+        };
+      });
 
       // Transform transactions
-      const processedTransactions = txData.map(tx => ({
-        ...tx,
-        itemType: 'transaction' as const
-      }));
+      const processedTransactions: Transaction[] = txData.map(tx => {
+        // Ensure type is one of the allowed values or default to 'deposit'
+        const txType = tx.type === 'deposit' || tx.type === 'withdrawal' || 
+                       tx.type === 'investment' || tx.type === 'yield'
+          ? tx.type as 'deposit' | 'withdrawal' | 'investment' | 'yield'
+          : 'deposit';
+          
+        return {
+          id: tx.id,
+          amount: tx.amount,
+          created_at: tx.created_at,
+          description: tx.description || '',
+          receipt_confirmed: tx.receipt_confirmed || false,
+          status: tx.status || '',
+          type: txType,
+          user_id: tx.user_id,
+          itemType: 'transaction' as const
+        };
+      });
 
       // Update state
       setNotifications(processedNotifications);
       setTransactions(processedTransactions);
 
       // Combine the history items
-      const combined = [
+      const combined: CombinedHistoryItem[] = [
         ...processedNotifications.map(notif => ({
           id: notif.id,
           date: notif.date,

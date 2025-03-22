@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WalletBalance from "./wallet/WalletBalance";
@@ -22,12 +21,10 @@ export default function WalletTab() {
     fetchWalletBalance();
     checkForMissingDeposit();
     
-    // Create polling for balance updates
     const balanceInterval = setInterval(() => {
-      fetchWalletBalance(false); // Silent refresh (no loading indicator)
-    }, 15000); // Check every 15 seconds (reduced from 30s)
+      fetchWalletBalance(false);
+    }, 15000);
     
-    // Set up realtime listener for wallet balance
     const profilesChannel = supabase
       .channel('wallet-balance-changes')
       .on('postgres_changes', 
@@ -35,7 +32,6 @@ export default function WalletTab() {
         async (payload) => {
           const { data: session } = await supabase.auth.getSession();
           
-          // Only update if this is the current user's profile
           if (session.session?.user.id === payload.new.id && 
               payload.new.wallet_balance !== payload.old.wallet_balance) {
             console.log('Wallet balance updated via realtime:', payload.new.wallet_balance);
@@ -45,26 +41,24 @@ export default function WalletTab() {
       )
       .subscribe();
     
-    // Set up realtime listener for wallet transactions
     const transactionsChannel = supabase
       .channel('wallet-transactions-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'wallet_transactions' },
         (payload) => {
           console.log('Wallet transaction change detected:', payload);
-          fetchWalletBalance(false); // Refresh balance without loading state
+          fetchWalletBalance(false);
         }
       )
       .subscribe();
     
-    // Set up realtime listener for bank transfers
     const transfersChannel = supabase
       .channel('bank-transfers-changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'bank_transfers' },
         (payload) => {
           console.log('Bank transfer change detected:', payload);
-          fetchWalletBalance(false); // Refresh balance without loading state
+          fetchWalletBalance(false);
         }
       )
       .subscribe();
@@ -83,7 +77,6 @@ export default function WalletTab() {
       
       if (!session.session) return;
       
-      // Check for a bank transfer with reference DEP-396509
       const { data: transfer } = await supabase
         .from('bank_transfers')
         .select('*')
@@ -93,7 +86,6 @@ export default function WalletTab() {
         .maybeSingle();
         
       if (transfer) {
-        // Check if there's a completed wallet transaction for this transfer
         const { data: transaction } = await supabase
           .from('wallet_transactions')
           .select('*')
@@ -103,7 +95,6 @@ export default function WalletTab() {
           .eq('status', 'completed')
           .maybeSingle();
           
-        // If no completed transaction found, show the fix button
         setHasMissingDeposit(!transaction);
       }
     } catch (error) {
@@ -127,7 +118,6 @@ export default function WalletTab() {
       
       console.log('Récupération du solde pour l\'utilisateur:', session.session.user.id);
       
-      // Fetch wallet balance from profiles table
       const { data, error } = await supabase
         .from('profiles')
         .select('wallet_balance')
@@ -155,7 +145,6 @@ export default function WalletTab() {
   };
 
   const handleDeposit = () => {
-    // Switch to deposit tab to show bank transfer instructions
     setActiveTab("deposit");
   };
 
@@ -191,7 +180,7 @@ export default function WalletTab() {
               <p className="font-medium text-amber-800">Dépôt non crédité détecté</p>
               <p className="text-amber-700 text-sm">Votre virement bancaire (DEP-396509) a été reçu mais n'a pas été crédité sur votre compte. Utilisez le bouton ci-dessous pour résoudre ce problème.</p>
             </div>
-            <FixDepositButton reference="DEP-396509" onSuccess={handleFixSuccess} />
+            <FixDepositButton reference="DEP-396509" amount={1000} onSuccess={handleFixSuccess} />
           </div>
         </div>
       )}
@@ -209,7 +198,7 @@ export default function WalletTab() {
             onWithdraw={handleWithdraw} 
             refreshBalance={fetchWalletBalance} 
           />
-          <WalletHistory refreshBalance={fetchWalletBalance} />
+          <WalletHistory className="mt-6" refreshBalance={fetchWalletBalance} />
         </TabsContent>
         
         <TabsContent value="deposit">
