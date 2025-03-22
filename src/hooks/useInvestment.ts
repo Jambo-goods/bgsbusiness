@@ -4,6 +4,7 @@ import { Project } from '@/types/project';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/services/notifications';
+import { useWalletBalance } from '@/hooks/useWalletBalance';
 
 interface UseInvestmentReturn {
   investmentAmount: number;
@@ -32,6 +33,9 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
   const [selectedDuration, setSelectedDuration] = useState<number>(12); // Default to 12 months
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  
+  // Get wallet balance
+  const { walletBalance, refreshBalance } = useWalletBalance();
   
   // Fetch related state
   const [investmentData, setInvestmentData] = useState<any | null>(null);
@@ -98,6 +102,14 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
       return;
     }
     
+    // Check if user has sufficient balance
+    if (walletBalance < investmentAmount) {
+      toast.error("Solde insuffisant", {
+        description: `Votre solde disponible est de ${walletBalance}€, vous ne pouvez pas investir ${investmentAmount}€`
+      });
+      return;
+    }
+    
     // Show confirmation
     setShowConfirmation(true);
   };
@@ -116,6 +128,18 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
       if (!user) {
         toast.error("Utilisateur non connecté", {
           description: "Veuillez vous connecter pour investir."
+        });
+        setIsProcessing(false);
+        return;
+      }
+      
+      // Get latest wallet balance to make sure user still has enough funds
+      await refreshBalance(false);
+      
+      // Verify again that user has sufficient balance
+      if (walletBalance < investmentAmount) {
+        toast.error("Solde insuffisant", {
+          description: `Votre solde actuel est de ${walletBalance}€, vous ne pouvez pas investir ${investmentAmount}€`
         });
         setIsProcessing(false);
         return;
@@ -196,6 +220,9 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         date: new Date().toISOString()
       };
       localStorage.setItem("recentInvestment", JSON.stringify(recentInvestment));
+      
+      // Refresh wallet balance
+      refreshBalance(false);
       
       // Show success message
       toast.success("Investissement effectué", {

@@ -1,29 +1,39 @@
 
 import React from "react";
-import HistoryHeader from "./history/HistoryHeader";
 import HistoryList from "./history/HistoryList";
-import LoadingState from "./history/LoadingState";
+import EmptyState from "./history/EmptyState";
 import ErrorState from "./history/ErrorState";
-import useWalletHistory from "./history/useWalletHistory";
+import LoadingState from "./history/LoadingState";
+import HistoryHeader from "./history/HistoryHeader";
+import { useWalletHistory } from "./history/useWalletHistory";
 
 interface WalletHistoryProps {
-  refreshBalance?: () => Promise<void>;
+  className?: string;
 }
 
-export default function WalletHistory({ refreshBalance }: WalletHistoryProps) {
-  const { combinedItems, isLoading, isRefreshing, error, handleRefresh } = useWalletHistory();
+export default function WalletHistory({ className }: WalletHistoryProps) {
+  const { 
+    combinedHistory, 
+    isLoading, 
+    error, 
+    refreshHistory 
+  } = useWalletHistory();
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm mt-6">
-      <HistoryHeader onRefresh={handleRefresh} isRefreshing={isRefreshing} />
+    <div className={className}>
+      <HistoryHeader onRefresh={refreshHistory} />
       
-      {isLoading ? (
-        <LoadingState />
-      ) : error ? (
-        <ErrorState message={error} />
-      ) : (
-        <HistoryList items={combinedItems} />
-      )}
+      <div className="mt-4">
+        {isLoading ? (
+          <LoadingState />
+        ) : error ? (
+          <ErrorState error={error} onRetry={refreshHistory} />
+        ) : combinedHistory.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <HistoryList items={combinedHistory} />
+        )}
+      </div>
     </div>
   );
 }
