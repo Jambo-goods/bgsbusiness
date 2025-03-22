@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -71,8 +72,6 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
       
       // Handle wallet balance updates and notifications based on status changes
       if (status === 'paid' && previousStatus !== 'paid') {
-        // Note: The balance update will be handled by database trigger automatically
-        
         // Notify user that withdrawal has been paid
         await notificationService.withdrawalPaid(withdrawal.amount);
         
@@ -85,6 +84,9 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
           status: 'completed',
           receipt_confirmed: true
         });
+        
+        // Show a success toast
+        toast.success(`Le retrait de ${withdrawal.amount}€ a été marqué comme payé et une notification a été envoyée à l'utilisateur`);
       } else if (status === 'rejected' && previousStatus !== 'rejected') {
         // If rejecting a pending withdrawal, refund amount to the user's wallet
         if (previousStatus === 'pending') {
@@ -126,9 +128,11 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
           description: `Retrait de ${withdrawal.amount}€ rejeté`,
           status: 'rejected'
         });
+        
+        // Show a success toast
+        toast.success(`Le retrait de ${withdrawal.amount}€ a été rejeté et une notification a été envoyée à l'utilisateur`);
       }
       
-      toast.success("Demande de retrait mise à jour avec succès");
       onUpdate();
       onClose();
     } catch (error) {

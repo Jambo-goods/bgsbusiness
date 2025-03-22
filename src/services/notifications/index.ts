@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
@@ -64,7 +65,7 @@ class NotificationService {
 
     if (error || !data) return [];
 
-    return data.map(this.mapDatabaseToNotification);
+    return data.map(item => this.mapDatabaseToNotification(item as DatabaseNotification));
   }
 
   async getUnreadCount(): Promise<number> {
@@ -225,7 +226,7 @@ class NotificationService {
     });
   }
 
-  // Other notifications
+  // Investment notifications
   async investmentConfirmed(amount: number, projectName: string): Promise<void> {
     return this.createNotification({
       title: "Investissement confirmé",
@@ -233,6 +234,17 @@ class NotificationService {
       type: "investment",
       category: "success",
       metadata: { amount, projectName }
+    });
+  }
+
+  // Add the new investment opportunity notification
+  async newInvestmentOpportunity(projectName: string, projectId?: string): Promise<void> {
+    return this.createNotification({
+      title: "Nouvelle opportunité d'investissement",
+      description: `Un nouveau projet d'investissement est disponible : ${projectName}`,
+      type: "investment",
+      category: "info",
+      metadata: { projectName, projectId }
     });
   }
 
@@ -247,6 +259,7 @@ class NotificationService {
   }
 
   protected mapDatabaseToNotification(dbNotification: DatabaseNotification): Notification {
+    const data = dbNotification.data || {};
     return {
       id: dbNotification.id,
       title: dbNotification.title,
@@ -254,8 +267,8 @@ class NotificationService {
       date: new Date(dbNotification.created_at),
       read: dbNotification.seen,
       type: dbNotification.type,
-      category: dbNotification.data?.category,
-      metadata: dbNotification.data || {}
+      category: typeof data === 'object' ? data.category : 'info',
+      metadata: typeof data === 'object' ? data : {}
     };
   }
 }

@@ -1,23 +1,46 @@
 
-// Basic notification type definitions
-export interface NotificationData {
-  category?: string;
-  amount?: number;
-  reference?: string;
-  status?: string;
-  withdrawalId?: string;
-  [key: string]: any;
+import { Json } from "@/integrations/supabase/types";
+
+export type NotificationType = 
+  | 'deposit'
+  | 'withdrawal'
+  | 'investment'
+  | 'security'
+  | 'marketing'
+  | 'info';
+
+export type NotificationCategory = 
+  | 'info' 
+  | 'success' 
+  | 'error' 
+  | 'warning' 
+  | 'transaction';
+
+export const NotificationCategories: Record<NotificationCategory, NotificationCategory> = {
+  info: 'info',
+  success: 'success',
+  error: 'error',
+  warning: 'warning',
+  transaction: 'transaction'
+};
+
+export interface NotificationCreateParams {
+  title: string;
+  description: string;
+  type: string;
+  category?: NotificationCategory;
+  metadata?: Record<string, any>;
 }
 
 export interface DatabaseNotification {
   id: string;
+  user_id: string;
   title: string;
   message: string;
   type: string;
-  user_id: string;
-  created_at: string;
   seen: boolean;
-  data?: NotificationData;
+  created_at: string;
+  data: Record<string, any> | null;
 }
 
 export interface Notification {
@@ -29,27 +52,4 @@ export interface Notification {
   type: string;
   category?: string;
   metadata: Record<string, any>;
-}
-
-export type NotificationType = 'deposit' | 'withdrawal' | 'investment' | 'security' | 'marketing' | 'info' | 'success' | 'error' | 'warning';
-export type NotificationCategory = 'system' | 'transaction' | 'investment' | 'security' | 'marketing' | 'info' | 'success' | 'error' | 'warning';
-
-export const NotificationCategories = {
-  SYSTEM: 'system' as NotificationCategory,
-  TRANSACTION: 'transaction' as NotificationCategory,
-  INVESTMENT: 'investment' as NotificationCategory,
-  SECURITY: 'security' as NotificationCategory,
-  MARKETING: 'marketing' as NotificationCategory,
-  INFO: 'info' as NotificationCategory,
-  SUCCESS: 'success' as NotificationCategory,
-  ERROR: 'error' as NotificationCategory,
-  WARNING: 'warning' as NotificationCategory,
-};
-
-export interface NotificationCreateParams {
-  title: string;
-  description: string;
-  type: string;
-  category?: string;
-  metadata?: Record<string, any>;
 }

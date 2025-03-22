@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { notificationService } from "@/services/notifications";
-import type { Notification } from "@/services/notifications/types";
+import type { Notification } from "@/services/notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import NotificationHeader from "./notifications/NotificationHeader";
@@ -32,35 +32,10 @@ export default function NotificationsTab() {
         return;
       }
       
-      // Get notifications directly from supabase
-      const { data, error: notifError } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', session.session.user.id)
-        .order('created_at', { ascending: false });
-      
-      if (notifError) throw notifError;
-      
-      if (!data) {
-        console.log("No notifications data returned");
-        setNotifications([]);
-        return;
-      }
-      
-      // Transform database notifications to UI notifications
-      const transformedNotifications: Notification[] = data.map(dbNotif => ({
-        id: dbNotif.id,
-        title: dbNotif.title,
-        description: dbNotif.message,
-        date: new Date(dbNotif.created_at),
-        read: dbNotif.seen,
-        type: dbNotif.type,
-        category: dbNotif.data?.category || 'info',
-        metadata: dbNotif.data || {}
-      }));
-      
-      console.log("Notifications fetched:", transformedNotifications.length);
-      setNotifications(transformedNotifications);
+      // Get notifications using the service
+      const notificationsData = await notificationService.getNotifications();
+      console.log("Notifications fetched:", notificationsData.length);
+      setNotifications(notificationsData);
     } catch (err) {
       console.error("Error fetching notifications:", err);
       setError("Impossible de charger les notifications. Veuillez réessayer plus tard.");
@@ -99,18 +74,7 @@ export default function NotificationsTab() {
 
   const handleMarkAllAsRead = async () => {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        toast.error("Veuillez vous connecter pour marquer les notifications comme lues");
-        return;
-      }
-      
-      // Update notifications in the database
-      await supabase
-        .from('notifications')
-        .update({ seen: true })
-        .eq('user_id', session.session.user.id);
+      await notificationService.markAllAsRead();
       
       // Update local state
       setNotifications(prev => 
@@ -126,11 +90,7 @@ export default function NotificationsTab() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      // Update notification in the database
-      await supabase
-        .from('notifications')
-        .update({ seen: true })
-        .eq('id', id);
+      await notificationService.markAsRead(id);
       
       // Update local state
       setNotifications(prev => 
@@ -146,11 +106,7 @@ export default function NotificationsTab() {
 
   const handleDeleteNotification = async (id: string) => {
     try {
-      // Delete notification from the database
-      await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id);
+      await notificationService.deleteNotification(id);
       
       // Update local state
       setNotifications(prev => 

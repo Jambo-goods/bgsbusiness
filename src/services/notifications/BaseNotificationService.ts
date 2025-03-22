@@ -49,7 +49,7 @@ export class BaseNotificationService {
 
     if (error || !data) return [];
 
-    return data.map(this.mapDatabaseToNotification);
+    return data.map(item => this.mapDatabaseToNotification(item as DatabaseNotification));
   }
 
   async getUnreadCount(): Promise<number> {
@@ -98,15 +98,16 @@ export class BaseNotificationService {
   }
 
   protected mapDatabaseToNotification(dbNotification: DatabaseNotification): Notification {
+    const data = dbNotification.data || {};
     return {
       id: dbNotification.id,
       title: dbNotification.title,
       description: dbNotification.message,
       date: new Date(dbNotification.created_at),
       read: dbNotification.seen,
-      type: dbNotification.type as any,
-      category: dbNotification.data?.category,
-      metadata: dbNotification.data || {}
+      type: dbNotification.type,
+      category: typeof data === 'object' ? data.category : 'info',
+      metadata: typeof data === 'object' ? data : {}
     };
   }
 }

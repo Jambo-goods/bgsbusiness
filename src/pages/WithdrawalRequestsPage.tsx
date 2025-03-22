@@ -136,6 +136,10 @@ export default function WithdrawalRequestsPage() {
     setIsSubmitting(true);
     
     try {
+      // Store previous status
+      const previousStatus = selectedWithdrawal.status;
+      
+      // Update the withdrawal request
       const { error } = await supabase
         .from('withdrawal_requests')
         .update({
@@ -146,24 +150,50 @@ export default function WithdrawalRequestsPage() {
       
       if (error) throw error;
       
-      // Send notifications based on the status update
-      if (editStatus === 'paid') {
-        // Notify user that withdrawal has been paid
+      // Handle notifications and balance updates based on status change
+      if (editStatus === 'paid' && previousStatus !== 'paid') {
+        // Create a notification
         await notificationService.withdrawalPaid(selectedWithdrawal.amount);
         
-        // Create a transaction entry in the wallet_transactions table
+        // Create a transaction entry
         await supabase.from('wallet_transactions').insert({
           user_id: selectedWithdrawal.user_id,
           amount: selectedWithdrawal.amount,
           type: 'withdrawal',
           description: `Retrait de ${selectedWithdrawal.amount}€ payé`,
-          status: 'completed'
+          status: 'completed',
+          receipt_confirmed: true
         });
-      } else if (editStatus === 'rejected') {
-        // Notify user that withdrawal has been rejected
+        
+        // Show success toast to admin
+        toast.success(`Le retrait de ${selectedWithdrawal.amount}€ a été marqué comme payé`, {
+          description: "Une notification a été envoyée à l'utilisateur"
+        });
+      } else if (editStatus === 'rejected' && previousStatus !== 'rejected') {
+        // Refund the user's wallet if we're rejecting a pending withdrawal
+        if (previousStatus === 'pending') {
+          // Get current balance
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('wallet_balance')
+            .eq('id', selectedWithdrawal.user_id)
+            .single();
+          
+          if (!profileError && profileData) {
+            // Update balance
+            await supabase
+              .from('profiles')
+              .update({ 
+                wallet_balance: (profileData.wallet_balance || 0) + selectedWithdrawal.amount 
+              })
+              .eq('id', selectedWithdrawal.user_id);
+          }
+        }
+        
+        // Create a notification
         await notificationService.withdrawalRejected(selectedWithdrawal.amount);
         
-        // Create a transaction entry showing the rejection
+        // Create a transaction record
         await supabase.from('wallet_transactions').insert({
           user_id: selectedWithdrawal.user_id,
           amount: selectedWithdrawal.amount,
@@ -171,9 +201,13 @@ export default function WithdrawalRequestsPage() {
           description: `Retrait de ${selectedWithdrawal.amount}€ rejeté`,
           status: 'rejected'
         });
+        
+        // Show success toast to admin
+        toast.success(`Le retrait de ${selectedWithdrawal.amount}€ a été rejeté`, {
+          description: "Une notification a été envoyée à l'utilisateur"
+        });
       }
       
-      toast.success("Demande de retrait mise à jour avec succès");
       fetchWithdrawalRequests();
       closeEditModal();
     } catch (error) {
