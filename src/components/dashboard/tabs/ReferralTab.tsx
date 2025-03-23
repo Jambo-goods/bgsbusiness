@@ -13,6 +13,12 @@ import ReferralStatsCard from "../referral/ReferralStatsCard";
 import EmptyReferralState from "../referral/EmptyReferralState";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
+interface ReferredUser {
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+}
+
 interface Referral {
   id: string;
   referred_id: string;
@@ -20,11 +26,7 @@ interface Referral {
   status: string;
   total_commission: number;
   created_at: string;
-  referred_user?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
+  referred_user?: ReferredUser;
 }
 
 interface Commission {
@@ -34,11 +36,7 @@ interface Commission {
   created_at: string;
   source: string;
   referred_id: string;
-  referred_user?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  };
+  referred_user?: ReferredUser;
 }
 
 export default function ReferralTab() {
@@ -67,8 +65,13 @@ export default function ReferralTab() {
         const { data, error } = await supabase
           .from('referrals')
           .select(`
-            *,
-            referred_user:referred_id(
+            id,
+            referred_id,
+            referrer_id,
+            status,
+            total_commission,
+            created_at,
+            referred_user:profiles!referred_id(
               first_name,
               last_name,
               email
@@ -82,7 +85,7 @@ export default function ReferralTab() {
         }
         
         console.log("Referrals data:", data);
-        setReferrals(data || []);
+        setReferrals(data as Referral[] || []);
         
         // Calculate statistics
         if (data) {
@@ -118,8 +121,13 @@ export default function ReferralTab() {
         const { data, error } = await supabase
           .from('referral_commissions')
           .select(`
-            *,
-            referred_user:referred_id(
+            id,
+            amount,
+            status,
+            created_at,
+            source,
+            referred_id,
+            referred_user:profiles!referred_id(
               first_name,
               last_name,
               email
@@ -134,7 +142,7 @@ export default function ReferralTab() {
         }
         
         console.log("Commissions data:", data);
-        setCommissions(data || []);
+        setCommissions(data as Commission[] || []);
       } catch (error) {
         console.error("Error in fetchCommissions:", error);
         toast({
@@ -350,9 +358,7 @@ export default function ReferralTab() {
                 <Skeleton className="h-12 w-full" />
               </div>
             ) : referrals.length === 0 ? (
-              <div className="text-center py-10 bg-gray-50 rounded-lg">
-                <EmptyReferralState />
-              </div>
+              <EmptyReferralState />
             ) : (
               <div className="overflow-x-auto">
                 <Table>

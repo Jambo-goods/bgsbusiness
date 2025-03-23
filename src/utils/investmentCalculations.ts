@@ -207,7 +207,7 @@ export const processReferralCommission = async (userId: string, yieldAmount: num
     // First check if this user has a referrer
     const { data: referralData, error: referralError } = await supabase
       .from('referrals')
-      .select('id, referrer_id')
+      .select('id, referrer_id, total_commission')
       .eq('referred_id', userId)
       .single();
       
@@ -257,11 +257,11 @@ export const processReferralCommission = async (userId: string, yieldAmount: num
     }
     
     // Update total commission in referral record
-    const { data, error: updateError } = await supabase
+    const totalCommission = (referralData.total_commission || 0) + commissionAmount;
+    const { error: updateError } = await supabase
       .from('referrals')
-      .update({ total_commission: referralData.total_commission + commissionAmount })
-      .eq('id', referralData.id)
-      .select();
+      .update({ total_commission: totalCommission })
+      .eq('id', referralData.id);
       
     if (updateError) {
       console.error("Failed to update referral record:", updateError);

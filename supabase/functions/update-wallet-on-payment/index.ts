@@ -204,10 +204,11 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
     }
     
     // Update total commission in referral record
+    const totalCommission = (referralData.total_commission || 0) + commissionAmount;
     const { error: updateError } = await supabase
       .from('referrals')
       .update({ 
-        total_commission: referralData.total_commission + commissionAmount 
+        total_commission: totalCommission 
       })
       .eq('id', referralData.id);
     
