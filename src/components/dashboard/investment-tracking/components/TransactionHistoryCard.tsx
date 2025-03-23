@@ -20,22 +20,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Copy, RefreshCw, FileCheck, FileClock, Calendar } from 'lucide-react';
+import { MoreHorizontal, Copy, RefreshCw, FileCheck, FileClock, Calendar, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/currencyUtils';
-import { Payment, ScheduledPayment } from '../types/investment';
+import { ScheduledPayment } from '../types/investment';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TransactionHistoryCardProps {
   investmentId: string;
   userId: string;
+  projectId: string;
 }
 
-const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investmentId, userId }) => {
+const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investmentId, userId, projectId }) => {
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [firstPaymentDelay, setFirstPaymentDelay] = useState<number>(1);
 
   const fetchScheduledPayments = useCallback(async () => {
     setIsLoading(true);
@@ -43,23 +46,24 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     setIsRefreshing(true);
     
     try {
-      console.log('Récupération des paiements programmés pour l\'investissement:', investmentId);
+      console.log('Récupération des détails du projet pour l\'investissement:', investmentId);
       
-      // Récupérer les détails de l'investissement pour obtenir project_id
-      const { data: investmentData, error: investmentError } = await supabase
-        .from("investments")
-        .select("project_id")
-        .eq("id", investmentId)
+      // Récupérer les détails du projet pour obtenir le délai du premier paiement
+      const { data: projectData, error: projectError } = await supabase
+        .from("projects")
+        .select("first_payment_delay_months")
+        .eq("id", projectId)
         .single();
         
-      if (investmentError) {
-        console.error("Erreur lors de la récupération des détails de l'investissement:", investmentError);
-        throw new Error(investmentError.message);
+      if (projectError) {
+        console.error("Erreur lors de la récupération des détails du projet:", projectError);
+        throw new Error(projectError.message);
       }
       
-      if (!investmentData?.project_id) {
-        throw new Error("ID du projet non trouvé pour cet investissement");
-      }
+      // Stocker le délai du premier paiement
+      const firstPaymentDelayMonths = projectData?.first_payment_delay_months || 1;
+      setFirstPaymentDelay(firstPaymentDelayMonths);
+      console.log("Délai du premier paiement:", firstPaymentDelayMonths, "mois");
       
       // Récupérer les paiements programmés pour ce projet
       const { data: paymentsData, error: paymentsError } = await supabase
@@ -70,10 +74,11 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
             name,
             image,
             company_name,
-            status
+            status,
+            first_payment_delay_months
           )
         `)
-        .eq("project_id", investmentData.project_id)
+        .eq("project_id", projectId)
         .order("payment_date", { ascending: true });
 
       if (paymentsError) {
@@ -83,7 +88,14 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
 
       console.log('Données de paiements programmés récupérées:', paymentsData);
       
-      setScheduledPayments(paymentsData || []);
+      // Convertir les status string en status typed
+      const typedPayments = paymentsData?.map(payment => ({
+        ...payment,
+        status: (payment.status === 'paid' ? 'paid' : 
+                payment.status === 'pending' ? 'pending' : 'scheduled') as 'scheduled' | 'pending' | 'paid'
+      })) || [];
+      
+      setScheduledPayments(typedPayments);
     } catch (err: any) {
       setError(err.message);
       console.error("Erreur lors de la récupération des paiements:", err);
@@ -91,10 +103,10 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [investmentId]);
+  }, [investmentId, projectId]);
 
   useEffect(() => {
-    if (investmentId) {
+    if (projectId) {
       fetchScheduledPayments();
     }
     
@@ -113,7 +125,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     return () => {
       supabase.removeChannel(scheduledPaymentsChannel);
     };
-  }, [investmentId, fetchScheduledPayments]);
+  }, [projectId, fetchScheduledPayments]);
 
   // Calculate payment statistics
   const paidPayments = scheduledPayments.filter(p => p.status === 'paid');
@@ -141,7 +153,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-green-50 border border-green-100 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-1">
             <FileCheck className="h-5 w-5 text-green-500" />
@@ -164,6 +176,31 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
             <span className="text-2xl font-bold text-amber-600">{formatCurrency(totalPending)}</span>
             <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
               {pendingPayments.length} versement{pendingPayments.length !== 1 ? 's' : ''}
+            </Badge>
+          </div>
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Calendar className="h-5 w-5 text-blue-500" />
+            <span className="text-sm font-medium text-blue-700">Premier paiement</span>
+          </div>
+          <div className="flex justify-between items-end">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center">
+                    <span className="text-xl font-bold text-blue-600">{firstPaymentDelay} mois</span>
+                    <Info className="h-4 w-4 ml-1 text-blue-500" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Délai avant le premier versement après investissement</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
+              Délai initial
             </Badge>
           </div>
         </div>

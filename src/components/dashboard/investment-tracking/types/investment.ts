@@ -19,6 +19,7 @@ export interface Investment {
     funding_progress?: number;
   };
   payments?: Payment[];
+  remainingDuration?: number;
 }
 
 export interface Payment {
@@ -51,10 +52,15 @@ export interface ScheduledPayment {
   percentage: number;
   total_scheduled_amount: number;
   processed_at?: string;
+  created_at?: string;
+  updated_at?: string;
+  investors_count?: number;
+  total_invested_amount?: number;
   projects?: {
     name: string;
     image?: string;
     company_name?: string;
     status?: string;
+    first_payment_delay_months?: number;
   };
 }
