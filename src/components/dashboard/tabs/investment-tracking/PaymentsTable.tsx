@@ -12,6 +12,7 @@ import {
 import { Calendar, SortAsc, SortDesc, Check, Clock, AlertCircle, Calendar as CalendarIcon } from "lucide-react";
 import { Project } from "@/types/project";
 import { PaymentRecord, ScheduledPayment } from "./types";
+import { calculateMonthlyYield } from "./utils";
 
 interface PaymentsTableProps {
   filteredAndSortedPayments: PaymentRecord[];
@@ -86,8 +87,11 @@ export default function PaymentsTable({
       // Only add the payment if it's on or after the first valid payment date
       if (paymentDate >= firstValidPaymentDate) {
         const percentage = sp.percentage || 0;
-        // Make sure to calculate the amount properly for ALL payments
-        const calculatedAmount = (percentage / 100) * totalInvestedAmount;
+        
+        // Calculate the amount based on the project's invested amount and the percentage
+        const projectInvestment = project.investedAmount || 0;
+        const calculatedAmount = projectInvestment * (percentage / 100);
+        
         console.log(`Scheduled payment: Date=${paymentDate.toISOString()}, Project=${sp.projects?.name}, Percentage=${percentage}%, Amount=${calculatedAmount}`);
         
         uniquePaymentMap.set(key, {
@@ -210,12 +214,12 @@ export default function PaymentsTable({
                 </TableCell>
                 <TableCell>
                   <span className={`font-medium ${isProjectedPayment ? 'text-purple-600' : 'text-green-600'}`}>
-                    {typeof payment.amount === 'number' ? Math.round(payment.amount) : 0} €
+                    {typeof payment.amount === 'number' ? payment.amount.toFixed(2) : 0} €
                   </span>
                 </TableCell>
                 <TableCell>
                   {payment.percentage ? (
-                    <span className="text-blue-600 font-medium">{payment.percentage}%</span>
+                    <span className="text-blue-600 font-medium">{payment.percentage.toFixed(2)}%</span>
                   ) : (
                     "—"
                   )}
@@ -223,7 +227,7 @@ export default function PaymentsTable({
                 <TableCell>
                   {payment.status === 'paid' && cumulativeValue ? (
                     <span className="font-medium text-bgs-blue">
-                      {cumulativeValue} €
+                      {typeof cumulativeValue === 'number' ? cumulativeValue.toFixed(2) : cumulativeValue} €
                     </span>
                   ) : (
                     "—"
