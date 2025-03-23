@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Investment } from "../types/investment";
 import { Transaction } from "../types/investment";
 import { supabase } from "@/integrations/supabase/client";
+import { calculateMonthlyYield } from "@/utils/investmentCalculations";
 
 interface InvestmentSummaryCardsProps {
   investment: Investment;
@@ -23,6 +24,8 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
       )
       .reduce((sum, t) => sum + t.amount, 0);
     
+    console.log('Earnings from transactions:', earningsFromTransactions);
+    
     // Function to get scheduled payments for this investment's project
     const fetchScheduledPayments = async () => {
       try {
@@ -36,25 +39,50 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
           
         if (error) throw error;
         
+        console.log('Paid scheduled payments found:', payments?.length || 0);
+        
         if (payments && payments.length > 0) {
-          // Calculate the portion of each payment that belongs to this investment
-          const projectPayments = payments.map(payment => {
-            // Use the fixed monthly yield of 12%
+          // Instead of calculating for each payment, just count the actual number 
+          // of paid scheduled payments
+          const paidPaymentsCount = payments.length;
+          console.log('Number of paid scheduled payments:', paidPaymentsCount);
+          
+          // For each paid payment, calculate only ONCE based on the investment amount
+          // Only count each payment once - don't add multiple calculations
+          let totalFromScheduledPayments = 0;
+          
+          // Track which payments we've already counted to avoid duplicates
+          const processedPaymentIds = new Set();
+          
+          for (const payment of payments) {
+            // Skip if we've already processed this payment
+            if (processedPaymentIds.has(payment.id)) continue;
+            
+            // Mark this payment as processed
+            processedPaymentIds.add(payment.id);
+            
+            // Get the monthly yield percentage from the payment or use default
             const monthlyYieldPercentage = payment.percentage || 12;
-            // Calculate amount: investmentAmount * (percentage / 100)
+            
+            // Calculate the exact amount for this payment
             const paymentAmount = (investment.amount * monthlyYieldPercentage) / 100;
-            return paymentAmount;
-          });
+            totalFromScheduledPayments += paymentAmount;
+            
+            console.log(`Payment ${payment.id}: ${paymentAmount} (${monthlyYieldPercentage}% of ${investment.amount})`);
+          }
           
-          const totalFromScheduledPayments = projectPayments.reduce((sum, amount) => sum + amount, 0);
+          // If there are transaction earnings as well, we need to avoid double counting
+          // If the transactions already account for scheduled payments, don't add them again
           
-          // Update total earnings with both transaction earnings and scheduled payments
-          setTotalEarnings(earningsFromTransactions + totalFromScheduledPayments);
-          console.log('Total earnings updated:', earningsFromTransactions + totalFromScheduledPayments);
-          console.log('- From transactions:', earningsFromTransactions);
-          console.log('- From scheduled payments:', totalFromScheduledPayments);
+          // In this case, based on your feedback, it seems the total should only count 
+          // the actual scheduled payments that have been paid
+          setTotalEarnings(totalFromScheduledPayments);
+          
+          console.log('Total earnings from scheduled payments only:', totalFromScheduledPayments);
         } else {
+          // No scheduled payments found, just use transaction earnings
           setTotalEarnings(earningsFromTransactions);
+          console.log('No scheduled payments found, using transaction earnings only:', earningsFromTransactions);
         }
       } catch (error) {
         console.error("Error fetching scheduled payments:", error);
