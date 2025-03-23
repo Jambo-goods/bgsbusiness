@@ -1,236 +1,227 @@
 
-// Follow this setup guide to integrate the Deno runtime into your application:
-// https://deno.land/manual/examples/deploy_deno_apps
+import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.1.0";
 
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.22.0";
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
-console.log("Hello from update-wallet-on-payment!");
+interface PaymentData {
+  userId: string;
+  amount: number;
+  paymentId: string;
+  projectName?: string;
+}
 
 serve(async (req) => {
-  // Handle CORS
+  // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
+    return new Response(null, {
+      headers: corsHeaders,
+    });
   }
 
   try {
-    // Get request body
-    const { paymentId, projectId, percentage } = await req.json();
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!paymentId || !projectId) {
+    const { userId, amount, paymentId, projectName }: PaymentData = await req.json();
+
+    if (!userId || !amount || !paymentId) {
       return new Response(
-        JSON.stringify({ error: "Missing required parameters: paymentId, projectId" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
+        JSON.stringify({ error: "Missing required data for payment processing" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Processing wallet updates for payment ${paymentId} on project ${projectId} with percentage ${percentage}%`);
+    console.log(`Processing payment for user ${userId}, amount: ${amount}, paymentId: ${paymentId}`);
 
-    // Create a Supabase client with the project service key
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL") || "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "",
-      { auth: { persistSession: false } }
-    );
-
-    // Get the payment details
-    const { data: payment, error: paymentError } = await supabaseAdmin
-      .from("scheduled_payments")
-      .select("*")
-      .eq("id", paymentId)
-      .single();
-
-    if (paymentError || !payment) {
-      console.error("Error fetching payment:", paymentError);
+    // First check if this payment was already processed
+    const { data: existingTransaction, error: checkError } = await supabase
+      .from('wallet_transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('payment_id', paymentId)
+      .eq('status', 'completed')
+      .maybeSingle();
+      
+    if (checkError) {
+      console.error("Error checking existing transaction:", checkError);
+      throw new Error("Error checking transaction status");
+    }
+      
+    if (existingTransaction) {
+      console.log(`Payment ${paymentId} was already processed, skipping`);
       return new Response(
-        JSON.stringify({ error: "Error fetching payment", details: paymentError }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        }
+        JSON.stringify({ success: true, message: "Payment already processed" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get all investments for this project
-    const { data: investments, error: investmentsError } = await supabaseAdmin
-      .from("investments")
-      .select("user_id, amount, id")
-      .eq("project_id", projectId)
-      .eq("status", "active");
-
-    if (investmentsError) {
-      console.error("Error fetching investments:", investmentsError);
-      return new Response(
-        JSON.stringify({ error: "Error fetching investments", details: investmentsError }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        }
-      );
-    }
-
-    console.log(`Found ${investments.length} investments for project ${projectId}`);
-    const paymentPercentage = percentage || payment.percentage || 1;
+    // Create a wallet transaction for the payment
+    const { error: txError } = await supabase.from('wallet_transactions').insert({
+      user_id: userId,
+      amount: amount,
+      type: 'yield',
+      description: `Rendement automatique: ${projectName || 'Investissement'}`,
+      status: 'completed',
+      receipt_confirmed: true,
+      payment_id: paymentId
+    });
     
-    // Process each investor
-    let successCount = 0;
-    let errorCount = 0;
-    let referralProcessed = 0;
-
-    for (const investment of investments) {
-      try {
-        const userId = investment.user_id;
-        const investmentAmount = investment.amount;
-        const investmentId = investment.id;
-        
-        // Calculate payment amount for this investor based on their investment amount
-        const paymentAmount = Math.round((investmentAmount * paymentPercentage) / 100);
-        
-        console.log(`Processing user ${userId}: investment ${investmentAmount}€ × ${paymentPercentage}% = ${paymentAmount}€ payment`);
-        
-        // 1. Update wallet balance
-        const { data: walletUpdate, error: walletError } = await supabaseAdmin.rpc(
-          "increment_wallet_balance",
-          { user_id: userId, increment_amount: paymentAmount }
-        );
-
-        if (walletError) {
-          console.error(`Error updating wallet balance for user ${userId}:`, walletError);
-          errorCount++;
-          continue;
-        }
-
-        // 2. Create wallet transaction
-        const { data: transaction, error: transactionError } = await supabaseAdmin
-          .from("wallet_transactions")
-          .insert({
-            user_id: userId,
-            investment_id: investmentId,
-            project_id: projectId,
-            amount: paymentAmount,
-            type: "yield",
-            status: "completed",
-            description: `Rendement mensuel (${paymentPercentage}%)`
-          })
-          .select()
-          .single();
-
-        if (transactionError) {
-          console.error(`Error creating transaction for user ${userId}:`, transactionError);
-          errorCount++;
-          continue;
-        }
-
-        // 3. Check if this user was referred by someone and process commission
-        try {
-          // Find if this user has a referrer
-          const { data: referralData, error: referralError } = await supabaseAdmin
-            .from('referrals')
-            .select('referrer_id')
-            .eq('referred_id', userId)
-            .single();
-            
-          if (referralError) {
-            // This is not critical, just log and continue
-            console.log(`No referral found for user ${userId}, skipping commission`);
-          } else if (referralData && referralData.referrer_id) {
-            const referrerId = referralData.referrer_id;
-            // Calculate 10% commission
-            const commissionAmount = Math.round(paymentAmount * 0.1);
-            
-            if (commissionAmount > 0) {
-              console.log(`Processing referral commission: ${userId} was referred by ${referrerId}, adding ${commissionAmount}€ commission`);
-              
-              // Add commission to referrer's wallet
-              const { error: referrerWalletError } = await supabaseAdmin.rpc(
-                "increment_wallet_balance",
-                { user_id: referrerId, increment_amount: commissionAmount }
-              );
-              
-              if (referrerWalletError) {
-                console.error(`Error updating referrer ${referrerId} wallet for commission:`, referrerWalletError);
-              } else {
-                // Create commission transaction record
-                const { error: commissionTxError } = await supabaseAdmin
-                  .from("wallet_transactions")
-                  .insert({
-                    user_id: referrerId,
-                    amount: commissionAmount,
-                    type: "commission",
-                    status: "completed",
-                    description: `Commission de parrainage (10% du rendement de votre filleul)`
-                  });
-                  
-                if (commissionTxError) {
-                  console.error(`Error creating commission transaction for referrer ${referrerId}:`, commissionTxError);
-                } else {
-                  referralProcessed++;
-                  
-                  // Create notification for the referrer
-                  const { data: referredProfile } = await supabaseAdmin
-                    .from('profiles')
-                    .select('first_name, last_name')
-                    .eq('id', userId)
-                    .single();
-                    
-                  const referredName = referredProfile 
-                    ? `${referredProfile.first_name} ${referredProfile.last_name}`
-                    : 'Un filleul';
-                    
-                  await supabaseAdmin
-                    .from('notifications')
-                    .insert({
-                      user_id: referrerId,
-                      type: 'commission_received',
-                      title: 'Commission de parrainage reçue',
-                      message: `Vous avez reçu ${commissionAmount}€ de commission sur le rendement de ${referredName}.`,
-                      seen: false,
-                      data: {
-                        amount: commissionAmount,
-                        referred_id: userId,
-                        category: 'success'
-                      }
-                    });
-                }
-              }
-            }
-          }
-        } catch (referralError) {
-          console.error(`Error processing referral commission:`, referralError);
-          // Continue with other operations, this is not critical
-        }
-
-        console.log(`Successfully processed payment for user ${userId}. Transaction ID: ${transaction.id}`);
-        successCount++;
-      } catch (e) {
-        console.error(`Error processing investment:`, e);
-        errorCount++;
-      }
+    if (txError) {
+      console.error("Failed to create wallet transaction:", txError);
+      throw new Error("Failed to create transaction record");
+    }
+    
+    // Update wallet balance directly using RPC function
+    const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
+      user_id: userId,
+      increment_amount: amount
+    });
+    
+    if (balanceError) {
+      console.error("Failed to update wallet balance:", balanceError);
+      throw new Error("Failed to update wallet balance");
     }
 
+    // Send notification to the user
+    await sendYieldNotification(supabase, userId, amount, projectName || 'Investissement');
+
+    // Process referral commission (10% to the referrer)
+    await processReferralCommission(supabase, userId, amount, projectName || 'Investissement');
+    
     return new Response(
-      JSON.stringify({
-        success: true,
-        message: `Processed ${successCount} payments successfully, ${errorCount} errors, ${referralProcessed} referral commissions`,
-        payment_id: paymentId
+      JSON.stringify({ 
+        success: true, 
+        message: `Successfully processed payment of ${amount}€ for user ${userId}` 
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+    
   } catch (error) {
-    console.error("Error processing request:", error);
+    console.error("Error in update-wallet-on-payment function:", error);
+    
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
+
+// Helper function to send yield notification
+async function sendYieldNotification(supabase, userId, amount, projectName) {
+  try {
+    // Get user data for notification
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('email, first_name')
+      .eq('id', userId)
+      .single();
+      
+    if (userError || !userData) {
+      console.error('Error fetching user data for notification:', userError);
+      return;
+    }
+    
+    // Create a notification in the database
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      title: "Rendement reçu",
+      message: `Vous avez reçu ${amount}€ de rendement pour votre investissement dans ${projectName}.`,
+      type: "yield",
+      data: {
+        category: "transaction",
+        amount: amount,
+        projectName: projectName,
+        status: "completed"
+      },
+      seen: false
+    });
+    
+    console.log(`Notification created for user ${userId} for yield of ${amount}€`);
+  } catch (error) {
+    console.error("Error sending yield notification:", error);
+  }
+}
+
+// Helper function to process referral commission
+async function processReferralCommission(supabase, userId, yieldAmount, projectName) {
+  try {
+    // First check if this user has a referrer
+    const { data: referralData, error: referralError } = await supabase
+      .from('referrals')
+      .select('id, referrer_id')
+      .eq('referred_id', userId)
+      .single();
+      
+    if (referralError) {
+      if (referralError.code !== 'PGRST116') { // Not found
+        console.error("Error checking referral:", referralError);
+      }
+      return; // No referrer or error
+    }
+    
+    if (!referralData || !referralData.referrer_id) {
+      return; // No referrer found
+    }
+    
+    // Calculate 10% commission
+    const commissionAmount = Math.round(yieldAmount * 0.1);
+    console.log(`Processing ${commissionAmount}€ commission for referrer ${referralData.referrer_id}`);
+    
+    if (commissionAmount <= 0) {
+      return; // No commission to pay
+    }
+    
+    // Create a wallet transaction for the commission
+    const { error: txError } = await supabase.from('wallet_transactions').insert({
+      user_id: referralData.referrer_id,
+      amount: commissionAmount,
+      type: 'commission',
+      description: `Commission de parrainage (10%)`,
+      status: 'completed',
+      receipt_confirmed: true
+    });
+    
+    if (txError) {
+      console.error("Failed to create commission transaction:", txError);
+      return;
+    }
+    
+    // Update referrer's wallet balance
+    const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
+      user_id: referralData.referrer_id,
+      increment_amount: commissionAmount
+    });
+    
+    if (balanceError) {
+      console.error("Failed to update referrer wallet balance:", balanceError);
+      return;
+    }
+    
+    // Create a notification for the referrer
+    const { error: notificationError } = await supabase.from('notifications').insert({
+      user_id: referralData.referrer_id,
+      title: "Commission de parrainage reçue",
+      message: `Vous avez reçu ${commissionAmount}€ de commission sur le rendement de votre filleul.`,
+      type: "commission",
+      data: {
+        category: "transaction",
+        amount: commissionAmount,
+        status: "completed"
+      },
+      seen: false
+    });
+    
+    if (notificationError) {
+      console.error("Failed to create commission notification:", notificationError);
+    }
+    
+    console.log(`Successfully processed ${commissionAmount}€ commission for referrer ${referralData.referrer_id}`);
+  } catch (error) {
+    console.error("Error processing referral commission:", error);
+  }
+}

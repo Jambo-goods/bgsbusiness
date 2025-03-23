@@ -187,3 +187,105 @@ export const processPaymentToWallet = async (userId: string, amount: number, pay
     return false;
   }
 };
+
+/**
+ * Process referral commission when a user receives a yield payment
+ * This function checks if the user has a referrer and gives 10% commission
+ */
+export const processReferralCommission = async (userId: string, yieldAmount: number, projectName: string) => {
+  if (!userId || !yieldAmount) {
+    console.error("Missing required data for processing referral commission", { userId, yieldAmount });
+    return false;
+  }
+  
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    // First check if this user has a referrer
+    const { data: referralData, error: referralError } = await supabase
+      .from('referrals')
+      .select('id, referrer_id')
+      .eq('referred_id', userId)
+      .single();
+      
+    if (referralError) {
+      if (referralError.code !== 'PGRST116') { // Not found
+        console.error("Error checking referral:", referralError);
+      }
+      return false; // No referrer or error
+    }
+    
+    if (!referralData || !referralData.referrer_id) {
+      return false; // No referrer found
+    }
+    
+    // Calculate 10% commission
+    const commissionAmount = Math.round(yieldAmount * 0.1);
+    console.log(`Processing ${commissionAmount}€ commission for referrer ${referralData.referrer_id}`);
+    
+    if (commissionAmount <= 0) {
+      return false; // No commission to pay
+    }
+    
+    // Create a wallet transaction for the commission
+    const { error: txError } = await supabase.from('wallet_transactions').insert({
+      user_id: referralData.referrer_id,
+      amount: commissionAmount,
+      type: 'commission',
+      description: `Commission de parrainage (10%)`,
+      status: 'completed',
+      receipt_confirmed: true
+    });
+    
+    if (txError) {
+      console.error("Failed to create commission transaction:", txError);
+      return false;
+    }
+    
+    // Update referrer's wallet balance
+    const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
+      user_id: referralData.referrer_id,
+      increment_amount: commissionAmount
+    });
+    
+    if (balanceError) {
+      console.error("Failed to update referrer wallet balance:", balanceError);
+      return false;
+    }
+    
+    // Update total commission in referral record
+    const { error: updateError } = await supabase
+      .from('referrals')
+      .update({ total_commission: supabase.rpc('increment', { value: commissionAmount }) })
+      .eq('id', referralData.id);
+      
+    if (updateError) {
+      console.error("Failed to update referral record:", updateError);
+    }
+    
+    // Create a notification for the referrer
+    const { error: notificationError } = await supabase.from('notifications').insert({
+      user_id: referralData.referrer_id,
+      title: "Commission de parrainage reçue",
+      message: `Vous avez reçu ${commissionAmount}€ de commission sur le rendement de votre filleul.`,
+      type: "commission",
+      data: {
+        category: "transaction",
+        amount: commissionAmount,
+        status: "completed"
+      },
+      seen: false
+    });
+    
+    if (notificationError) {
+      console.error("Failed to create commission notification:", notificationError);
+    }
+    
+    console.log(`Successfully processed ${commissionAmount}€ commission for referrer ${referralData.referrer_id}`);
+    return true;
+    
+  } catch (error) {
+    console.error("Error processing referral commission:", error);
+    return false;
+  }
+};
