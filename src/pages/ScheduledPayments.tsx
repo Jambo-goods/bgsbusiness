@@ -8,6 +8,7 @@ import EditPaymentModal from "@/components/scheduled-payments/EditPaymentModal";
 import AddPaymentModal from "@/components/scheduled-payments/AddPaymentModal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ScheduledPayments() {
   const { scheduledPayments, isLoading, updatePaymentStatus, addScheduledPayment, refetch } = useScheduledPayments();
@@ -15,10 +16,15 @@ export default function ScheduledPayments() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  // On component mount or when route is navigated to, refresh data
+  // On component mount or when route is navigated to, refresh data once
   useEffect(() => {
-    refetch();
+    const loadData = async () => {
+      await refetch();
+      setInitialLoadComplete(true);
+    };
+    loadData();
   }, [refetch]);
 
   const handleEditPayment = (payment: any) => {
@@ -29,14 +35,15 @@ export default function ScheduledPayments() {
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedPayment(null);
-    // Refresh data after modal closes
+    // Refresh data after modal closes without showing loading state
     refetch();
   };
 
   const handleAddPayment = async (payment: any) => {
     try {
       await addScheduledPayment(payment);
-      await refetch(); // Refresh data after adding
+      // Refresh data without showing loading state
+      refetch();
     } catch (error) {
       console.error("Error adding payment:", error);
     }
@@ -55,6 +62,9 @@ export default function ScheduledPayments() {
     }
   };
 
+  // Show loading state only on initial load
+  const showLoading = isLoading && !initialLoadComplete;
+
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-6">
@@ -64,10 +74,10 @@ export default function ScheduledPayments() {
             variant="outline"
             size="sm"
             onClick={handleRefresh}
-            disabled={isRefreshing || isLoading}
+            disabled={isRefreshing || showLoading}
             className="flex items-center gap-1"
           >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing || isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>Actualiser</span>
           </Button>
           <Button 
@@ -87,9 +97,21 @@ export default function ScheduledPayments() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
+          {showLoading ? (
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
+                <Skeleton className="h-12 w-12 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[250px]" />
+                  <Skeleton className="h-4 w-[200px]" />
+                </div>
+              </div>
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-5/6" />
+                </div>
+              ))}
             </div>
           ) : scheduledPayments.length === 0 ? (
             <div className="text-center py-12">

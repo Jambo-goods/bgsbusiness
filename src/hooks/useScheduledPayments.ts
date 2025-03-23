@@ -7,11 +7,16 @@ export const useScheduledPayments = () => {
   const [scheduledPayments, setScheduledPayments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
 
   // Get all scheduled payments for all projects
-  const fetchScheduledPayments = useCallback(async () => {
+  const fetchScheduledPayments = useCallback(async (showLoading = true) => {
     try {
-      setIsLoading(true);
+      // Only show loading state on initial load
+      if (showLoading) {
+        setIsLoading(true);
+      }
+      setIsFetching(true);
       setError(null);
 
       const { data, error } = await supabase
@@ -41,7 +46,10 @@ export const useScheduledPayments = () => {
       setError('Une erreur est survenue');
       return [];
     } finally {
-      setIsLoading(false);
+      if (showLoading) {
+        setIsLoading(false);
+      }
+      setIsFetching(false);
     }
   }, []);
 
@@ -58,8 +66,8 @@ export const useScheduledPayments = () => {
         throw new Error(error.message);
       }
 
-      // Refresh the payments list
-      await fetchScheduledPayments();
+      // Refresh the payments list without showing loading
+      await fetchScheduledPayments(false);
       return data;
     } catch (error: any) {
       console.error('Error in addScheduledPayment:', error);
@@ -77,8 +85,8 @@ export const useScheduledPayments = () => {
     try {
       console.log(`Updating payment ${paymentId} to status: ${newStatus}`);
       
-      // First refresh to ensure we have the latest data
-      await fetchScheduledPayments();
+      // First refresh to ensure we have the latest data, without showing loading
+      await fetchScheduledPayments(false);
       
       // Find the payment to update
       let paymentToUpdate = scheduledPayments.find(p => p.id === paymentId);
@@ -145,8 +153,8 @@ export const useScheduledPayments = () => {
         }
       }
 
-      // Success! Refresh the payments list
-      await fetchScheduledPayments();
+      // Success! Refresh the payments list without showing loading
+      await fetchScheduledPayments(false);
       
       return true;
     } catch (error: any) {
@@ -157,12 +165,13 @@ export const useScheduledPayments = () => {
 
   // Refetch data function exposed to components
   const refetch = async () => {
-    return fetchScheduledPayments();
+    // Don't show loading indicator on manual refetch
+    return fetchScheduledPayments(false);
   };
 
   // Initial fetch
   useEffect(() => {
-    fetchScheduledPayments();
+    fetchScheduledPayments(true);
     
     // Set up real-time listener for scheduled payments table
     const scheduledPaymentsChannel = supabase
@@ -171,7 +180,8 @@ export const useScheduledPayments = () => {
         { event: '*', schema: 'public', table: 'scheduled_payments' },
         (payload) => {
           console.log('Real-time update on scheduled payments:', payload);
-          fetchScheduledPayments();
+          // Refresh without showing loading indicator
+          fetchScheduledPayments(false);
         }
       )
       .subscribe();
@@ -183,7 +193,7 @@ export const useScheduledPayments = () => {
 
   return {
     scheduledPayments,
-    isLoading,
+    isLoading: isLoading || isFetching,
     error,
     updatePaymentStatus,
     addScheduledPayment,
