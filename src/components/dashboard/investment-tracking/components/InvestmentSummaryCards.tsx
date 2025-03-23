@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Investment } from "../types/investment";
 import { Transaction } from "../types/investment";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateMonthlyYield } from "@/utils/investmentCalculations";
+import { calculateMonthlyYield } from "@/components/dashboard/tabs/investment-tracking/utils";
 
 interface InvestmentSummaryCardsProps {
   investment: Investment;
@@ -42,13 +42,7 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
         console.log('Paid scheduled payments found:', payments?.length || 0);
         
         if (payments && payments.length > 0) {
-          // Instead of calculating for each payment, just count the actual number 
-          // of paid scheduled payments
-          const paidPaymentsCount = payments.length;
-          console.log('Number of paid scheduled payments:', paidPaymentsCount);
-          
-          // For each paid payment, calculate only ONCE based on the investment amount
-          // Only count each payment once - don't add multiple calculations
+          // We should only count each payment once for this investment
           let totalFromScheduledPayments = 0;
           
           // Track which payments we've already counted to avoid duplicates
@@ -71,14 +65,11 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
             console.log(`Payment ${payment.id}: ${paymentAmount} (${monthlyYieldPercentage}% of ${investment.amount})`);
           }
           
-          // If there are transaction earnings as well, we need to avoid double counting
-          // If the transactions already account for scheduled payments, don't add them again
-          
-          // In this case, based on your feedback, it seems the total should only count 
-          // the actual scheduled payments that have been paid
-          setTotalEarnings(totalFromScheduledPayments);
-          
+          // For debugging, log all the calculated values
           console.log('Total earnings from scheduled payments only:', totalFromScheduledPayments);
+          
+          // Set only the scheduled payments amount as the total earnings
+          setTotalEarnings(totalFromScheduledPayments);
         } else {
           // No scheduled payments found, just use transaction earnings
           setTotalEarnings(earningsFromTransactions);
