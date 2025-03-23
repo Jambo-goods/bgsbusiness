@@ -1,128 +1,68 @@
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DollarSign, AlertTriangle, CheckCircle } from 'lucide-react';
+import { formatCurrency } from '@/utils/currencyUtils';
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Investment } from "../types/investment";
-import { Transaction } from "../types/investment";
-import { toast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { getFixedTotalPaymentsReceived } from "@/utils/investmentCalculations";
 interface InvestmentSummaryCardsProps {
-  investment: Investment;
-  transactions: Transaction[];
+  investmentData: any;
 }
-export default function InvestmentSummaryCards({
-  investment,
-  transactions
-}: InvestmentSummaryCardsProps) {
-  const [totalEarnings, setTotalEarnings] = useState(0);
-  useEffect(() => {
-    const fetchAndCalculateEarnings = async () => {
-      try {
-        if (investment && investment.project_id) {
-          // First, check if we have any transactions of type "yield"
-          const yieldTransactions = transactions.filter(t => t.type === 'yield' && t.status === 'completed');
-          if (yieldTransactions.length > 0) {
-            // If we have yield transactions, use their sum
-            const totalFromTransactions = yieldTransactions.reduce((sum, tx) => sum + tx.amount, 0);
-            setTotalEarnings(totalFromTransactions);
-            console.log('Setting earnings from transactions:', totalFromTransactions);
-          } else {
-            // If no transactions, check paid scheduled payments for this project
-            const {
-              data: paidPayments,
-              error
-            } = await supabase.from('scheduled_payments').select('*').eq('project_id', investment.project_id).eq('status', 'paid');
-            if (error) throw error;
-            if (paidPayments && paidPayments.length > 0) {
-              // Calculate total from paid scheduled payments
-              // For each payment, we need to calculate the investor's portion based on percentage
-              const investmentAmount = investment.amount || 0;
-              let totalFromScheduledPayments = 0;
-              paidPayments.forEach(payment => {
-                const percentage = payment.percentage || 0;
-                const paymentAmount = investmentAmount * percentage / 100;
-                totalFromScheduledPayments += paymentAmount;
-              });
-              setTotalEarnings(totalFromScheduledPayments);
-              console.log('Setting earnings from scheduled payments:', totalFromScheduledPayments);
-            } else {
-              // Fall back to fixed amount if no data is available
-              const userId = investment.user_id;
-              // Ensure we're not passing the promise but resolving it first
-              const fixedValue = await getFixedTotalPaymentsReceived(userId);
-              setTotalEarnings(fixedValue);
-              console.log('Setting fixed earnings value:', fixedValue);
-            }
-          }
-        } else {
-          // No investment data, use fixed value with auth.user id
-          const {
-            data
-          } = await supabase.auth.getSession();
-          const userId = data.session?.user.id;
-          // Resolve the promise before setting state
-          const fixedValue = await getFixedTotalPaymentsReceived(userId);
-          setTotalEarnings(fixedValue);
-          console.log('No investment data, using fixed value');
-        }
-      } catch (error) {
-        console.error('Error calculating total earnings:', error);
-        toast({
-          title: "Erreur",
-          description: "Impossible de calculer le total des versements reçus",
-          variant: "destructive"
-        });
 
-        // Get the user ID and resolve the promise for the fixed value
-        const {
-          data
-        } = await supabase.auth.getSession();
-        const userId = data.session?.user.id;
-        const fixedValue = await getFixedTotalPaymentsReceived(userId);
-        setTotalEarnings(fixedValue);
-      }
-    };
-    fetchAndCalculateEarnings();
+const InvestmentSummaryCards: React.FC<InvestmentSummaryCardsProps> = ({ investmentData }) => {
+  const totalInvested = investmentData?.amount || 0;
+  const yieldRate = investmentData?.yield_rate || 0;
+  const investmentDuration = investmentData?.duration || 0;
+  const totalReceived = investmentData?.payments?.reduce((total, payment) => 
+    payment.status === 'completed' ? total + payment.amount : total, 0) || 0;
+  const expectedYield = investmentData?.payments?.reduce((total, payment) => 
+    payment.status === 'completed' ? total + payment.amount : total, 0) || 0;
+  const pendingPayments = investmentData?.payments?.reduce((total, payment) => 
+    payment.status === 'pending' ? total + payment.amount : total, 0) || 0;
 
-    // Set up realtime listener for scheduled payments to update when they change
-    const scheduledPaymentsChannel = supabase.channel('investment-summary-payments').on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'scheduled_payments'
-    }, () => {
-      console.log('Scheduled payment changed, refreshing earnings...');
-      fetchAndCalculateEarnings();
-    }).subscribe();
-    return () => {
-      supabase.removeChannel(scheduledPaymentsChannel);
-    };
-  }, [investment, transactions]);
-  return <div className="grid md:grid-cols-3 gap-4">
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Total Invested Card */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Montant investi</p>
-            <p className="text-3xl font-bold text-bgs-blue">{investment.amount}€</p>
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-gray-500" />
+            Total Investi
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{formatCurrency(totalInvested)}</div>
+          <p className="text-sm text-gray-500">Montant total investi dans ce projet</p>
         </CardContent>
       </Card>
-      
+
+      {/* Expected Yield Card */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Durée restante</p>
-            <p className="text-3xl font-bold text-bgs-blue">{investment.remainingDuration} mois</p>
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CheckCircle className="h-4 w-4 text-green-500" />
+            Rendement Attendu
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{formatCurrency(expectedYield)}</div>
+          <p className="text-sm text-gray-500">Rendement total attendu de cet investissement</p>
         </CardContent>
       </Card>
-      
+
+      {/* Pending Payments Card */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Versements reçus</p>
-            <p className="text-3xl font-bold text-bgs-blue">{totalEarnings}€</p>
-          </div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            Paiements en Attente
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">{formatCurrency(pendingPayments)}</div>
+          <p className="text-sm text-gray-500">Montant total des paiements en attente</p>
         </CardContent>
       </Card>
-    </div>;
-}
+    </div>
+  );
+};
+
+export default InvestmentSummaryCards;
