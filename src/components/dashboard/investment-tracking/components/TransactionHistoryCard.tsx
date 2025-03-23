@@ -40,6 +40,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [firstPaymentDelay, setFirstPaymentDelay] = useState<number>(1);
   const [investmentDate, setInvestmentDate] = useState<string | null>(null);
+  const [investmentAmount, setInvestmentAmount] = useState<number>(0);
 
   const fetchScheduledPayments = useCallback(async () => {
     setIsLoading(true);
@@ -49,10 +50,10 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     try {
       console.log('Récupération des détails du projet et investissement:', projectId, investmentId);
       
-      // Get investment date first
+      // Get investment date and amount first
       const { data: investmentData, error: investmentError } = await supabase
         .from("investments")
-        .select("date")
+        .select("date, amount")
         .eq("id", investmentId)
         .single();
         
@@ -62,8 +63,11 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
       }
       
       const investDate = investmentData?.date || null;
+      const investAmount = investmentData?.amount || 0;
       setInvestmentDate(investDate);
+      setInvestmentAmount(investAmount);
       console.log("Date d'investissement:", investDate);
+      console.log("Montant d'investissement:", investAmount);
       
       // Get project details for first payment delay
       const { data: projectData, error: projectError } = await supabase
@@ -124,12 +128,19 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
         console.log(`Filtrés: ${filteredPayments.length} paiements sur ${paymentsData?.length || 0} après application du délai de premier paiement`);
       }
       
-      // Convert to typed payments
-      const typedPayments = filteredPayments.map(payment => ({
-        ...payment,
-        status: (payment.status === 'paid' ? 'paid' : 
-                payment.status === 'pending' ? 'pending' : 'scheduled') as 'scheduled' | 'pending' | 'paid'
-      })) || [];
+      // Convert to typed payments and calculate the correct amount based on percentage and investment amount
+      const typedPayments = filteredPayments.map(payment => {
+        // Calculate the payment amount based on percentage of the investment amount
+        const calculatedAmount = (investAmount * (payment.percentage / 100));
+        
+        return {
+          ...payment,
+          // Override the total_scheduled_amount with our calculated amount based on percentage
+          total_scheduled_amount: calculatedAmount,
+          status: (payment.status === 'paid' ? 'paid' : 
+                  payment.status === 'pending' ? 'pending' : 'scheduled') as 'scheduled' | 'pending' | 'paid'
+        };
+      }) || [];
       
       setScheduledPayments(typedPayments);
     } catch (err: any) {
