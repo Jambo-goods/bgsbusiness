@@ -130,6 +130,43 @@ export const useScheduledPayments = () => {
         console.log('Payment marked as paid, processing wallet updates');
         
         try {
+          // Get current user information to create notification
+          const { data: sessionData } = await supabase.auth.getSession();
+          const currentUserId = sessionData?.session?.user?.id;
+          
+          if (currentUserId) {
+            // Create a notification for the payment update
+            const { data: projectData } = await supabase
+              .from('projects')
+              .select('name')
+              .eq('id', paymentToUpdate.project_id)
+              .single();
+              
+            if (projectData) {
+              // Create notification in database for the user
+              const { error: notifError } = await supabase.from('notifications').insert({
+                user_id: currentUserId,
+                title: "Paiement programmé payé",
+                message: `Le paiement programmé pour le projet ${projectData.name} a été marqué comme payé.`,
+                type: "payment_update",
+                seen: false,
+                data: {
+                  payment_id: paymentId,
+                  project_id: paymentToUpdate.project_id,
+                  status: "paid",
+                  amount: paymentToUpdate.total_scheduled_amount,
+                  category: "success"
+                }
+              });
+              
+              if (notifError) {
+                console.error("Error creating payment notification:", notifError);
+              } else {
+                console.log("Created payment status notification successfully");
+              }
+            }
+          }
+          
           const { error: functionError } = await supabase.functions.invoke(
             'update-wallet-on-payment',
             {

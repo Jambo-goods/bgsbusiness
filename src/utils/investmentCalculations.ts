@@ -179,7 +179,7 @@ export const processPaymentToWallet = async (userId: string, amount: number, pay
     console.log(`Successfully credited ${amount}€ to wallet of user ${userId} from payment ${paymentId}`);
     
     // Send notification about the yield payment
-    sendYieldNotification(userId, amount, projectName);
+    await sendYieldNotification(userId, amount, projectName);
     
     return true;
   } catch (error) {
