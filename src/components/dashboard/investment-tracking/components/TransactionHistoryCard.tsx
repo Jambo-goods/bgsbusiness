@@ -182,6 +182,20 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
 
   console.log("Paiements programmés formatés:", formattedScheduledPayments);
 
+  // Calculate the total cumulative amount from all transactions (paid) and scheduled payments
+  const totalCumulativeAmount = useMemo(() => {
+    const paidTransactionsTotal = tableData.length > 0 
+      ? tableData[tableData.length - 1].cumulativeAmount 
+      : 0;
+      
+    const scheduledPaymentsTotal = formattedScheduledPayments.length > 0 
+      ? formattedScheduledPayments[formattedScheduledPayments.length - 1].cumulativeAmount 
+      : 0;
+      
+    // Return the largest of the two (they should be the same if there is overlap)
+    return Math.max(paidTransactionsTotal, scheduledPaymentsTotal);
+  }, [tableData, formattedScheduledPayments]);
+
   const formatDate = (date: string) => {
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
   };
@@ -207,6 +221,19 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
               Historique des versements
             </span>
           </h3>
+          
+          {/* Cumulative Summary Box */}
+          <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
+            <div className="flex justify-between items-center">
+              <div>
+                <h4 className="text-blue-800 font-semibold">Cumul total des versements</h4>
+                <p className="text-sm text-blue-600">Montant total reçu et programmé</p>
+              </div>
+              <div className="text-2xl font-bold text-blue-700">
+                {totalCumulativeAmount.toFixed(2)} €
+              </div>
+            </div>
+          </div>
           
           {isLoading || isLoadingScheduledPayments ? (
             <div className="flex items-center justify-center py-8">
