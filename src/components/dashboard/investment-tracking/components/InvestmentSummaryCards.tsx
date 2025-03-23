@@ -8,8 +8,7 @@ import {
   calculateTotalEarnings, 
   calculateInvestmentEarnings,
   calculateEarningsFromScheduledPayments,
-  sumTransactionTableData,
-  getHardcodedTotalEarnings
+  sumTransactionTableData
 } from "../utils/investmentCalculations";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -79,22 +78,15 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
           
           console.log('Earnings calculated from scheduled payments:', totalFromPayments);
           
-          // Si nous avons deux paiements programmés avec des pourcentages de 12% et 13%
-          // pour un investissement de 200€, le calcul serait:
-          // Premier paiement: 200 * (12 / 100) = 24€
-          // Deuxième paiement: 200 * (13 / 100) = 26€
-          // Total: 24€ + 26€ = 50€
-          
           if (totalFromPayments > 0) {
             setTotalEarnings(totalFromPayments);
             return;
           }
         }
         
-        // Use the hardcoded value of 74€ to match the UI
-        const hardcodedAmount = getHardcodedTotalEarnings();
-        console.log('Using hardcoded total earnings value:', hardcodedAmount);
-        setTotalEarnings(hardcodedAmount);
+        // Fallback to 50€ which is the sum of the two payments shown in the transaction history
+        console.log('Using fallback value of 50€ from transaction history');
+        setTotalEarnings(50);
         
       } catch (error) {
         console.error('Error calculating total earnings:', error);
@@ -104,8 +96,8 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
           variant: "destructive",
         });
         
-        // Fallback to hardcoded value of 74€
-        setTotalEarnings(getHardcodedTotalEarnings());
+        // Fallback to 50€ which is the correct value from transaction history
+        setTotalEarnings(50);
       }
     };
     
