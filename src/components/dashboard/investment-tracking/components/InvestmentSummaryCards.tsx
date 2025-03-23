@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Investment } from "../types/investment";
 import { Transaction } from "../types/investment";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateMonthlyYield } from "@/components/dashboard/tabs/investment-tracking/utils";
+import { calculateMonthlyYield } from "../utils/investmentCalculations";
 
 interface InvestmentSummaryCardsProps {
   investment: Investment;
@@ -42,10 +42,11 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
         console.log('Paid scheduled payments found:', payments?.length || 0);
         
         if (payments && payments.length > 0) {
-          // Calculate earnings for ALL paid scheduled payments
+          // Calculate the total earnings from all paid scheduled payments
+          // This should represent the actual sum of all money received
           let totalFromScheduledPayments = 0;
           
-          // Process each payment
+          // Process each payment and add it to the total
           for (const payment of payments) {
             const paymentAmount = calculateMonthlyYield(investment.amount, payment.percentage || 12);
             totalFromScheduledPayments += paymentAmount;
@@ -54,7 +55,7 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
           
           console.log(`Total from all scheduled payments: ${totalFromScheduledPayments}`);
           
-          // Set the earnings to the sum of all payments
+          // Set the total earnings to be the sum of all payments
           setTotalEarnings(totalFromScheduledPayments);
         } else {
           // No scheduled payments found, just use transaction earnings
