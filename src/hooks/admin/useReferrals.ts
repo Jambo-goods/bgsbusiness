@@ -35,7 +35,8 @@ export function useReferrals() {
       
       console.log("Fetching referrals...");
       
-      // Fix the query by using specific foreign key identifiers
+      // With the updated RLS policies, this query should return all referrals for admins
+      // and only the user's own referrals for regular users
       const { data, error } = await supabase
         .from('referrals')
         .select(`
@@ -55,6 +56,10 @@ export function useReferrals() {
       
       console.log("Referrals data:", data);
       setReferrals(data as Referral[]);
+      
+      if (data && data.length === 0) {
+        console.log("No referrals found");
+      }
     } catch (err) {
       console.error("Error fetching referrals:", err);
       setError(err instanceof Error ? err.message : "Une erreur est survenue");

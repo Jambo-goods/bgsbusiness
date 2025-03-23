@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import ReferralsTable from '@/components/admin/referrals/ReferralsTable';
 import ReferralsHeader from '@/components/admin/referrals/ReferralsHeader';
 import { useReferrals } from '@/hooks/admin/useReferrals';
+import { AlertTriangle } from 'lucide-react';
 
 export default function ReferralsManagement() {
   const { 
@@ -23,8 +24,18 @@ export default function ReferralsManagement() {
         <ReferralsHeader refreshData={refreshReferrals} />
         
         {error ? (
-          <div className="bg-red-50 p-4 rounded-lg text-red-600">
-            Erreur lors du chargement des parrainages: {error}
+          <div className="bg-red-50 p-6 rounded-lg border border-red-200">
+            <div className="flex items-center gap-3 mb-2">
+              <AlertTriangle className="text-red-500 h-5 w-5" />
+              <h3 className="font-medium text-red-800">Erreur lors du chargement des parrainages</h3>
+            </div>
+            <p className="text-red-600 ml-8">{error}</p>
+            <div className="mt-4 ml-8">
+              <p className="text-sm text-gray-600">
+                Si vous êtes administrateur, assurez-vous que vous êtes correctement connecté avec un compte admin.
+                Les politiques de sécurité permettent désormais aux administrateurs de voir tous les parrainages.
+              </p>
+            </div>
           </div>
         ) : (
           <ReferralsTable 

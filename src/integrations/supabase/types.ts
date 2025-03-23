@@ -597,6 +597,10 @@ export type Database = {
             }
             Returns: boolean
           }
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       recalculate_wallet_balance: {
         Args: {
           user_uuid: string

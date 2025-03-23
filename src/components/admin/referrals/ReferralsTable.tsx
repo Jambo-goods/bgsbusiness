@@ -9,6 +9,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { formatDate } from '@/utils/formatUtils';
+import { formatCurrency } from '@/utils/currencyUtils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -118,7 +119,7 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading })
               <TableCell>{formatName(referral.referred)}</TableCell>
               <TableCell>{getStatusBadge(referral.status)}</TableCell>
               <TableCell>{referral.commission_rate}%</TableCell>
-              <TableCell>{referral.total_commission.toFixed(2)} €</TableCell>
+              <TableCell>{formatCurrency(referral.total_commission)}</TableCell>
               <TableCell>{formatDate(referral.created_at)}</TableCell>
             </TableRow>
           ))}
