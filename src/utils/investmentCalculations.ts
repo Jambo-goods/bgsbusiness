@@ -77,20 +77,21 @@ export const processPaymentToWallet = async (userId: string, amount: number, pay
   }
   
   try {
+    // Import supabase client directly to avoid circular dependencies
     const { supabase } = await import('@/integrations/supabase/client');
     
     console.log(`Processing payment to wallet: user=${userId}, amount=${amount}, paymentId=${paymentId}`);
     
-    // First check if this payment was already processed
+    // First check if this payment was already processed - use a direct query to avoid any recursion issues
     const { data: existingTransaction, error: checkError } = await supabase
       .from('wallet_transactions')
       .select('id')
       .eq('user_id', userId)
       .eq('payment_id', paymentId)
       .eq('status', 'completed')
-      .maybeSingle();
+      .single();
       
-    if (checkError) {
+    if (checkError && !checkError.message.includes('No rows found')) {
       console.error("Error checking existing transaction:", checkError);
       return false;
     }
