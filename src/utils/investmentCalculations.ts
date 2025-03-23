@@ -67,6 +67,55 @@ export const calculatePaymentAmount = (investmentAmount: number, percentage: num
 };
 
 /**
+ * Send a notification to the user about a yield payment
+ */
+export const sendYieldNotification = async (userId: string, amount: number, projectName: string) => {
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    // Get user email information
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('email, first_name')
+      .eq('id', userId)
+      .single();
+      
+    if (userError || !userData) {
+      console.error('Error fetching user data for notification:', userError);
+      return false;
+    }
+    
+    console.log(`Sending yield notification to ${userData.email} for ${amount}€ from ${projectName}`);
+    
+    // Call the Supabase Edge Function to send email notification
+    const { error } = await supabase.functions.invoke('send-user-notification', {
+      body: {
+        userEmail: userData.email,
+        userName: userData.first_name || 'Investisseur',
+        subject: `Rendement reçu: ${amount}€ pour ${projectName}`,
+        eventType: 'yield',
+        data: {
+          amount: amount,
+          projectName: projectName,
+          status: 'completed'
+        }
+      }
+    });
+    
+    if (error) {
+      console.error('Error sending yield notification:', error);
+      return false;
+    }
+    
+    console.log(`Successfully sent yield notification to ${userData.email}`);
+    return true;
+  } catch (error) {
+    console.error("Error in sendYieldNotification:", error);
+    return false;
+  }
+};
+
+/**
  * Process payment by updating wallet balance
  * This function creates a wallet transaction and updates the user's wallet balance
  */
@@ -128,6 +177,10 @@ export const processPaymentToWallet = async (userId: string, amount: number, pay
     }
     
     console.log(`Successfully credited ${amount}€ to wallet of user ${userId} from payment ${paymentId}`);
+    
+    // Send notification about the yield payment
+    sendYieldNotification(userId, amount, projectName);
+    
     return true;
   } catch (error) {
     console.error("Error processing payment to wallet:", error);

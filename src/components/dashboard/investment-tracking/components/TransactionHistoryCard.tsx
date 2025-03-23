@@ -262,6 +262,32 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             
             if (success) {
               toast.success(`${changedPayment.amount.toFixed(2)}€ ont été crédités sur votre solde disponible`);
+              
+              // Create notification in the database
+              try {
+                const { error: notificationError } = await supabase
+                  .from('notifications')
+                  .insert({
+                    user_id: userId,
+                    title: "Rendement reçu",
+                    message: `Vous avez reçu un rendement de ${changedPayment.amount.toFixed(2)}€ pour le projet ${changedPayment.projectName}.`,
+                    type: "yield",
+                    seen: false,
+                    data: {
+                      amount: changedPayment.amount,
+                      projectName: changedPayment.projectName,
+                      category: "success"
+                    }
+                  });
+                  
+                if (notificationError) {
+                  console.error("Failed to create notification:", notificationError);
+                } else {
+                  console.log("Successfully created payment notification");
+                }
+              } catch (notifError) {
+                console.error("Error creating notification:", notifError);
+              }
             } else {
               console.error("Failed to process payment to wallet");
             }
