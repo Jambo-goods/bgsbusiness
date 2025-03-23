@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -90,14 +89,17 @@ export function useWalletHistory() {
       // Transform notifications
       const processedNotifications: Notification[] = notifData.map(notif => {
         // Extract category from data if it exists, or default to 'info'
-        const category = typeof notif.data === 'object' && notif.data 
-          ? (notif.data.category as string || 'info')
-          : 'info';
-          
-        // Extract metadata safely
-        const metadata: Record<string, any> = typeof notif.data === 'object' && notif.data 
-          ? notif.data as Record<string, any>
-          : {};
+        let category = 'info';
+        let metadata: Record<string, any> = {};
+        
+        // Safely extract category and metadata from data
+        if (notif.data && typeof notif.data === 'object' && notif.data !== null) {
+          // Check if data is an object (not an array)
+          if (!Array.isArray(notif.data)) {
+            category = notif.data.category || 'info';
+            metadata = notif.data as Record<string, any>;
+          }
+        }
           
         return {
           id: notif.id,

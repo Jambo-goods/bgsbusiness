@@ -8,6 +8,7 @@ import { useWalletBalance } from "@/hooks/useWalletBalance";
 export function WalletDisplay() {
   const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Force refresh every 3 seconds to ensure balance is up-to-date
   useEffect(() => {
@@ -19,9 +20,14 @@ export function WalletDisplay() {
     return () => clearInterval(refreshInterval);
   }, [refreshBalance]);
 
-  const handleManualRefresh = () => {
-    refreshBalance(true); // Show loading state for manual refresh
-    setLastRefreshed(new Date());
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshBalance(true); // Show loading state for manual refresh
+      setLastRefreshed(new Date());
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   return (
@@ -33,9 +39,9 @@ export function WalletDisplay() {
           size="sm"
           onClick={handleManualRefresh}
           className="flex items-center gap-1"
-          disabled={isLoadingBalance}
+          disabled={isLoadingBalance || isRefreshing}
         >
-          <RefreshCw className={`h-3 w-3 ${isLoadingBalance ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3 w-3 ${isLoadingBalance || isRefreshing ? 'animate-spin' : ''}`} />
           <span>Actualiser</span>
         </Button>
       </div>

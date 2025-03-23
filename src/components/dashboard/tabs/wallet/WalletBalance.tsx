@@ -1,6 +1,6 @@
 
 import React, { useEffect } from "react";
-import { WalletCards, Euro, TrendingUp } from "lucide-react";
+import { WalletCards } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -26,7 +26,9 @@ export default function WalletBalance({
       if (!data.session) return;
       
       const userId = data.session.user.id;
+      console.log('Setting up wallet balance change listener for user:', userId);
       
+      // Listen to wallet transactions
       const walletTxChannel = supabase
         .channel('wallet-balance-changes-display')
         .on('postgres_changes', 
@@ -49,8 +51,27 @@ export default function WalletBalance({
         )
         .subscribe();
         
+      // Also listen to profile updates (wallet_balance field)
+      const profileChannel = supabase
+        .channel('profile-balance-changes')
+        .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
+          async (payload) => {
+            console.log('Profile update detected:', payload);
+            if ((payload.new as any).wallet_balance !== (payload.old as any).wallet_balance) {
+              console.log('Wallet balance changed from:', (payload.old as any).wallet_balance, 
+                          'to:', (payload.new as any).wallet_balance);
+              if (refreshBalance) {
+                await refreshBalance();
+              }
+            }
+          }
+        )
+        .subscribe();
+      
       return () => {
         supabase.removeChannel(walletTxChannel);
+        supabase.removeChannel(profileChannel);
       };
     };
     

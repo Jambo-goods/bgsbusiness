@@ -109,15 +109,37 @@ export const useScheduledPayments = () => {
                   )
                 );
                 
-                // Show notification if payment status changed to paid
+                // Call edge function to update wallet balance if payment status changed to paid
                 if (fullUpdatedPayment.status === 'paid' && 
                     payload.old && 
                     (payload.old as any).status !== 'paid') {
-                  const projectName = fullUpdatedPayment.projects?.name || 'votre projet';
-                  toast.success(`Rendement reçu !`, {
-                    description: `Vous avez reçu un rendement pour ${projectName}.`,
-                    duration: 5000
-                  });
+                  console.log('Payment status changed to paid, calling wallet update function');
+                  try {
+                    const { data: updateResult, error: edgeFunctionError } = await supabase.functions.invoke(
+                      'update-wallet-on-payment',
+                      {
+                        body: {
+                          record: fullUpdatedPayment,
+                          old_record: payload.old
+                        }
+                      }
+                    );
+                    
+                    if (edgeFunctionError) {
+                      console.error('Error invoking wallet update function:', edgeFunctionError);
+                    } else {
+                      console.log('Wallet update function result:', updateResult);
+                      if (updateResult && updateResult.success) {
+                        const projectName = fullUpdatedPayment.projects?.name || 'votre projet';
+                        toast.success(`Rendement reçu !`, {
+                          description: `Vous avez reçu un rendement pour ${projectName}.`,
+                          duration: 5000
+                        });
+                      }
+                    }
+                  } catch (edgeError) {
+                    console.error('Exception calling wallet update function:', edgeError);
+                  }
                 }
               }
             } else if (payload.eventType === 'INSERT') {
@@ -288,35 +310,6 @@ export const useScheduledPayments = () => {
           return payment;
         })
       );
-      
-      // If the status is changing to 'paid', call our edge function to update the wallet balance
-      if (newStatus === 'paid' && currentPayment.status !== 'paid') {
-        try {
-          // Call the edge function to handle wallet updates
-          const { data: updateResult, error: edgeFunctionError } = await supabase.functions.invoke(
-            'update-wallet-on-payment',
-            {
-              body: {
-                record: {
-                  ...currentPayment,
-                  ...updateData,
-                  id: paymentId
-                },
-                old_record: currentPayment
-              }
-            }
-          );
-          
-          if (edgeFunctionError) {
-            console.error('Error invoking edge function:', edgeFunctionError);
-          } else {
-            console.log('Edge function result:', updateResult);
-          }
-        } catch (edgeFuncError) {
-          console.error('Error calling edge function:', edgeFuncError);
-          // Continue with the database update anyway
-        }
-      }
       
       // Then make the actual API call
       const { data, error } = await supabase

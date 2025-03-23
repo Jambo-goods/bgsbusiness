@@ -21,15 +21,37 @@ export const calculateReturns = (
 };
 
 /**
- * Get the correct fixed value for total payments received
- * Based on console logs, we have two payments: 24€ and 26€, totaling 50€
+ * Get total payments received based on wallet transaction data
+ * This replaces the fixed approach with a dynamic calculation
  */
-export const getFixedTotalPaymentsReceived = () => {
-  // For an investment of 200€ with two payments at 12% and 13%
-  // First payment: 200 * 0.12 = 24€
-  // Second payment: 200 * 0.13 = 26€
-  // Total: 50€
-  return 50;
+export const getFixedTotalPaymentsReceived = async (userId?: string) => {
+  if (!userId) return 0;
+  
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    // Query wallet transactions of type 'yield' with status 'completed'
+    const { data, error } = await supabase
+      .from('wallet_transactions')
+      .select('amount')
+      .eq('user_id', userId)
+      .eq('type', 'yield')
+      .eq('status', 'completed');
+      
+    if (error) {
+      console.error('Error fetching yield transactions:', error);
+      return 0;
+    }
+    
+    // Sum all yield transaction amounts
+    const total = data.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    console.log(`Total payments received for user ${userId}: ${total}€`);
+    
+    return total;
+  } catch (err) {
+    console.error('Error calculating total payments received:', err);
+    return 0;
+  }
 };
 
 /**
