@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -288,6 +289,35 @@ export const useScheduledPayments = () => {
           return payment;
         })
       );
+      
+      // If the status is changing to 'paid', call our edge function to update the wallet balance
+      if (newStatus === 'paid' && currentPayment.status !== 'paid') {
+        try {
+          // Call the edge function to handle wallet updates
+          const { data: updateResult, error: edgeFunctionError } = await supabase.functions.invoke(
+            'update-wallet-on-payment',
+            {
+              body: {
+                record: {
+                  ...currentPayment,
+                  ...updateData,
+                  id: paymentId
+                },
+                old_record: currentPayment
+              }
+            }
+          );
+          
+          if (edgeFunctionError) {
+            console.error('Error invoking edge function:', edgeFunctionError);
+          } else {
+            console.log('Edge function result:', updateResult);
+          }
+        } catch (edgeFuncError) {
+          console.error('Error calling edge function:', edgeFuncError);
+          // Continue with the database update anyway
+        }
+      }
       
       // Then make the actual API call
       const { data, error } = await supabase
