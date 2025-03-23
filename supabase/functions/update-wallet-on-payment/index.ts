@@ -79,6 +79,7 @@ serve(async (req) => {
     // Process each investor
     let successCount = 0;
     let errorCount = 0;
+    let referralProcessed = 0;
 
     for (const investment of investments) {
       try {
@@ -124,6 +125,85 @@ serve(async (req) => {
           continue;
         }
 
+        // 3. Check if this user was referred by someone and process commission
+        try {
+          // Find if this user has a referrer
+          const { data: referralData, error: referralError } = await supabaseAdmin
+            .from('referrals')
+            .select('referrer_id')
+            .eq('referred_id', userId)
+            .single();
+            
+          if (referralError) {
+            // This is not critical, just log and continue
+            console.log(`No referral found for user ${userId}, skipping commission`);
+          } else if (referralData && referralData.referrer_id) {
+            const referrerId = referralData.referrer_id;
+            // Calculate 10% commission
+            const commissionAmount = Math.round(paymentAmount * 0.1);
+            
+            if (commissionAmount > 0) {
+              console.log(`Processing referral commission: ${userId} was referred by ${referrerId}, adding ${commissionAmount}€ commission`);
+              
+              // Add commission to referrer's wallet
+              const { error: referrerWalletError } = await supabaseAdmin.rpc(
+                "increment_wallet_balance",
+                { user_id: referrerId, increment_amount: commissionAmount }
+              );
+              
+              if (referrerWalletError) {
+                console.error(`Error updating referrer ${referrerId} wallet for commission:`, referrerWalletError);
+              } else {
+                // Create commission transaction record
+                const { error: commissionTxError } = await supabaseAdmin
+                  .from("wallet_transactions")
+                  .insert({
+                    user_id: referrerId,
+                    amount: commissionAmount,
+                    type: "commission",
+                    status: "completed",
+                    description: `Commission de parrainage (10% du rendement de votre filleul)`
+                  });
+                  
+                if (commissionTxError) {
+                  console.error(`Error creating commission transaction for referrer ${referrerId}:`, commissionTxError);
+                } else {
+                  referralProcessed++;
+                  
+                  // Create notification for the referrer
+                  const { data: referredProfile } = await supabaseAdmin
+                    .from('profiles')
+                    .select('first_name, last_name')
+                    .eq('id', userId)
+                    .single();
+                    
+                  const referredName = referredProfile 
+                    ? `${referredProfile.first_name} ${referredProfile.last_name}`
+                    : 'Un filleul';
+                    
+                  await supabaseAdmin
+                    .from('notifications')
+                    .insert({
+                      user_id: referrerId,
+                      type: 'commission_received',
+                      title: 'Commission de parrainage reçue',
+                      message: `Vous avez reçu ${commissionAmount}€ de commission sur le rendement de ${referredName}.`,
+                      seen: false,
+                      data: {
+                        amount: commissionAmount,
+                        referred_id: userId,
+                        category: 'success'
+                      }
+                    });
+                }
+              }
+            }
+          }
+        } catch (referralError) {
+          console.error(`Error processing referral commission:`, referralError);
+          // Continue with other operations, this is not critical
+        }
+
         console.log(`Successfully processed payment for user ${userId}. Transaction ID: ${transaction.id}`);
         successCount++;
       } catch (e) {
@@ -135,7 +215,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Processed ${successCount} payments successfully, ${errorCount} errors`,
+        message: `Processed ${successCount} payments successfully, ${errorCount} errors, ${referralProcessed} referral commissions`,
         payment_id: paymentId
       }),
       {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -356,7 +355,7 @@ export default function ReferralTab() {
             <div className="text-center py-10 bg-gray-50 rounded-lg">
               <CreditCard className="h-10 w-10 text-gray-400 mx-auto mb-3" />
               <h3 className="text-lg font-medium text-gray-800">Aucune commission pour le moment</h3>
-              <p className="text-gray-500 mt-1">Vos commissions apparaîtront ici</p>
+              <p className="text-gray-500 mt-1">Les commissions de 10% sur les rendements de vos filleuls apparaîtront ici</p>
             </div>
           )}
         </TabsContent>
