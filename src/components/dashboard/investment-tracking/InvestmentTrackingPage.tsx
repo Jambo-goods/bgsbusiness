@@ -13,7 +13,7 @@ import ContactActionsCard from "./components/ContactActionsCard";
 
 export default function InvestmentTrackingPage() {
   const { investmentId } = useParams();
-  const { investment, transactions, loading, isRefreshing, refreshData } = useInvestmentTracking(investmentId);
+  const { investment, loading, isRefreshing, refreshData } = useInvestmentTracking(investmentId);
   
   // Loading state
   if (loading) {
@@ -59,10 +59,13 @@ export default function InvestmentTrackingPage() {
         <GeneralInformationCard investment={investment} />
         
         {/* Section 2: Investment Summary Cards */}
-        <InvestmentSummaryCards investment={investment} transactions={transactions} />
+        <InvestmentSummaryCards investment={investment} />
         
         {/* Section 3: Transaction History */}
-        <TransactionHistoryCard transactions={transactions} investmentId={investmentId} />
+        <TransactionHistoryCard 
+          investmentId={investmentId || ''} 
+          userId={investment.user_id || ''}
+        />
         
         {/* Section 4: Project Updates */}
         <ProjectUpdatesCard />
