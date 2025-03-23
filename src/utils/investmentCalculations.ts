@@ -65,3 +65,50 @@ export const getFixedTotalPaymentsReceived = async (userId?: string) => {
 export const calculatePaymentAmount = (investmentAmount: number, percentage: number) => {
   return (investmentAmount * percentage) / 100;
 };
+
+/**
+ * Process payment by updating wallet balance
+ */
+export const processPaymentToWallet = async (userId: string, amount: number, paymentId: string, projectName: string) => {
+  if (!userId || !amount) {
+    console.error("Missing required data for processing payment", { userId, amount });
+    return false;
+  }
+  
+  try {
+    const { supabase } = await import('@/integrations/supabase/client');
+    
+    // Create a wallet transaction for the payment
+    const { error: txError } = await supabase.from('wallet_transactions').insert({
+      user_id: userId,
+      amount: amount,
+      type: 'yield',
+      description: `Rendement automatique: ${projectName || 'Investissement'}`,
+      status: 'completed',
+      receipt_confirmed: true,
+      payment_id: paymentId
+    });
+    
+    if (txError) {
+      console.error("Failed to create wallet transaction:", txError);
+      return false;
+    }
+    
+    // Update wallet balance
+    const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
+      user_id: userId,
+      increment_amount: amount
+    });
+    
+    if (balanceError) {
+      console.error("Failed to update wallet balance:", balanceError);
+      return false;
+    }
+    
+    console.log(`Successfully credited ${amount}€ to wallet of user ${userId} from payment ${paymentId}`);
+    return true;
+  } catch (error) {
+    console.error("Error processing payment to wallet:", error);
+    return false;
+  }
+};

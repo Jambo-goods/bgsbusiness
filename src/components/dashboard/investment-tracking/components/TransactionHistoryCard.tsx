@@ -131,6 +131,50 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   // Le rendement mensuel est de 12%
   const fixedYieldPercentage = 12;
 
+  // Function to credit wallet balance when payment is marked as paid
+  const creditWalletFromPayment = async (paymentId: string, amount: number) => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.error("No active session found");
+        return;
+      }
+      
+      const userId = session.session.user.id;
+      
+      // Create a wallet transaction for the payment
+      const { error: txError } = await supabase.from('wallet_transactions').insert({
+        user_id: userId,
+        amount: amount,
+        type: 'yield',
+        description: 'Versement automatique de rendement',
+        status: 'completed',
+        receipt_confirmed: true
+      });
+      
+      if (txError) {
+        console.error("Failed to create wallet transaction:", txError);
+        return;
+      }
+      
+      // Update wallet balance
+      const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
+        user_id: userId,
+        increment_amount: amount
+      });
+      
+      if (balanceError) {
+        console.error("Failed to update wallet balance:", balanceError);
+        return;
+      }
+      
+      toast.success(`${amount}€ crédités sur votre solde disponible`);
+      
+    } catch (error) {
+      console.error("Error crediting wallet:", error);
+    }
+  };
+
   const formattedScheduledPayments = useMemo(() => {
     if (!investmentScheduledPayments?.length || !investmentDate || !firstValidPaymentDate) {
       console.log("Pas de paiements programmés ou pas de date d'investissement");
@@ -207,6 +251,41 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     
     return () => clearTimeout(timer);
   }, []);
+
+  // Set up a real-time listener for scheduled payments status changes
+  useEffect(() => {
+    if (!projectId) return;
+
+    // Listen for scheduled payment status changes
+    const channel = supabase.channel('scheduled-payments-status')
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'scheduled_payments',
+        filter: `project_id=eq.${projectId} AND status=eq.paid`
+      }, (payload) => {
+        console.log('Scheduled payment status changed:', payload);
+        
+        // When a payment is changed to 'paid', add its amount to the wallet balance
+        if (payload.new && payload.old && 
+            payload.old.status !== 'paid' && 
+            payload.new.status === 'paid') {
+              
+          const changedPayment = formattedScheduledPayments.find(
+            p => p.id === payload.new.id
+          );
+          
+          if (changedPayment) {
+            creditWalletFromPayment(changedPayment.id, changedPayment.amount);
+          }
+        }
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [projectId, formattedScheduledPayments]);
 
   return (
     <Card>
