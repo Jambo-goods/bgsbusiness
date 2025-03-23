@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -55,6 +54,12 @@ export default function AdminDashboard() {
       icon: <Users className="h-8 w-8 text-indigo-600" />,
       description: "Consulter les profils des utilisateurs",
       link: "/admin/profiles"
+    },
+    {
+      title: "Parrainages",
+      icon: <Users className="h-8 w-8 text-pink-600" />,
+      description: "Gérer les relations de parrainage",
+      link: "/admin/referrals"
     },
     {
       title: "Paramètres",

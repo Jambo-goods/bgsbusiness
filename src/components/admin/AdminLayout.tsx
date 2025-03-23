@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -52,6 +51,11 @@ export default function AdminLayout() {
       label: 'Profils', 
       icon: <Users className="w-5 h-5" />, 
       path: '/admin/profiles' 
+    },
+    { 
+      label: 'Parrainages', 
+      icon: <Users className="w-5 h-5" />, 
+      path: '/admin/referrals' 
     },
     { 
       label: 'Paiements programmés', 
