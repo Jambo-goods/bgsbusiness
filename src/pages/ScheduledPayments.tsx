@@ -29,11 +29,14 @@ export default function ScheduledPayments() {
   const handleCloseEditModal = () => {
     setIsEditModalOpen(false);
     setSelectedPayment(null);
+    // Refresh data after modal closes
+    refetch();
   };
 
   const handleAddPayment = async (payment: any) => {
     try {
       await addScheduledPayment(payment);
+      await refetch(); // Refresh data after adding
     } catch (error) {
       console.error("Error adding payment:", error);
     }
@@ -92,6 +95,13 @@ export default function ScheduledPayments() {
             ) : scheduledPayments.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500">Aucun paiement programmé pour le moment</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={handleRefresh}
+                >
+                  Actualiser les données
+                </Button>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -157,7 +167,10 @@ export default function ScheduledPayments() {
       {/* Modals for adding and editing payments */}
       <AddPaymentModal 
         isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
+        onClose={() => {
+          setIsAddModalOpen(false);
+          refetch(); // Refresh data when closing modal
+        }} 
         onAddPayment={handleAddPayment}
       />
       

@@ -38,8 +38,8 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
   
   const { updatePaymentStatus, scheduledPayments, refetch } = useScheduledPayments();
 
+  // When the modal opens or payment changes, reset form state
   useEffect(() => {
-    // When the modal opens or payment changes, reset form state
     if (payment) {
       setPercentage(payment.percentage || 0);
       setDate(payment.payment_date ? new Date(payment.payment_date) : undefined);
@@ -49,11 +49,11 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
 
   // Check if payment exists in current list to avoid "payment not found" error
   useEffect(() => {
-    if (isOpen && payment && !scheduledPayments.some(p => p.id === payment.id)) {
-      // If we're trying to edit a payment that's not in the current list
-      refetch(); // Refresh the payments list
+    if (isOpen && payment) {
+      // Always refresh payments list when modal opens to ensure we have the latest data
+      refetch();
     }
-  }, [isOpen, payment, scheduledPayments, refetch]);
+  }, [isOpen, payment, refetch]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,20 +63,8 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
     setIsSubmitting(true);
     
     try {
-      // Verify that the payment exists in our local state
-      const paymentExists = scheduledPayments.some(p => p.id === payment.id);
-      
-      if (!paymentExists) {
-        await refetch(); // Try refreshing data first
-        
-        // Check again after refresh
-        const paymentExistsAfterRefresh = scheduledPayments.some(p => p.id === payment.id);
-        if (!paymentExistsAfterRefresh) {
-          toast.error("Ce paiement n'existe pas dans la liste actuelle. Veuillez rafraîchir la page.");
-          onClose();
-          return;
-        }
-      }
+      // Always refresh data first to make sure we have the latest data
+      await refetch();
       
       await updatePaymentStatus(
         payment.id, 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -96,7 +97,8 @@ export function useWalletHistory() {
         if (notif.data && typeof notif.data === 'object' && notif.data !== null) {
           // Check if data is an object (not an array)
           if (!Array.isArray(notif.data)) {
-            category = notif.data.category || 'info';
+            // Ensure category is a string
+            category = typeof notif.data.category === 'string' ? notif.data.category : 'info';
             metadata = notif.data as Record<string, any>;
           }
         }

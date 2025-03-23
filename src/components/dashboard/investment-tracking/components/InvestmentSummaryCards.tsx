@@ -53,13 +53,15 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
               console.log('Setting earnings from scheduled payments:', totalFromScheduledPayments);
             } else {
               // Fall back to fixed amount if no data is available
-              setTotalEarnings(getFixedTotalPaymentsReceived());
-              console.log('Setting fixed earnings value:', getFixedTotalPaymentsReceived());
+              const fixedValue = getFixedTotalPaymentsReceived();
+              setTotalEarnings(fixedValue);
+              console.log('Setting fixed earnings value:', fixedValue);
             }
           }
         } else {
           // No investment data, use fixed value
-          setTotalEarnings(getFixedTotalPaymentsReceived());
+          const fixedValue = getFixedTotalPaymentsReceived();
+          setTotalEarnings(fixedValue);
           console.log('No investment data, using fixed value');
         }
       } catch (error) {
@@ -71,7 +73,8 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
         });
         
         // Set the correct value even in case of error
-        setTotalEarnings(getFixedTotalPaymentsReceived());
+        const fixedValue = getFixedTotalPaymentsReceived();
+        setTotalEarnings(fixedValue);
       }
     };
     
