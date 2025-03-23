@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -12,6 +12,7 @@ import { formatDate } from '@/utils/formatUtils';
 import { formatCurrency } from '@/utils/currencyUtils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import ReferralStatusSelect from './ReferralStatusSelect';
 
 interface Referral {
   id: string;
@@ -38,7 +39,13 @@ interface ReferralsTableProps {
   isLoading: boolean;
 }
 
-const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading }) => {
+const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialReferrals, isLoading }) => {
+  const [referrals, setReferrals] = useState<Referral[]>(initialReferrals);
+  
+  React.useEffect(() => {
+    setReferrals(initialReferrals);
+  }, [initialReferrals]);
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -47,6 +54,8 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading })
         return <Badge className="bg-amber-500">En attente</Badge>;
       case 'completed':
         return <Badge className="bg-blue-500">Complété</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-red-500">Annulé</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -58,6 +67,14 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading })
       return `${user.first_name} ${user.last_name}`;
     }
     return user.email || 'Inconnu';
+  };
+  
+  const handleStatusChange = (id: string, newStatus: string) => {
+    setReferrals(current => 
+      current.map(referral => 
+        referral.id === id ? { ...referral, status: newStatus } : referral
+      )
+    );
   };
 
   if (isLoading) {
@@ -72,6 +89,7 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading })
               <TableHead>Commission</TableHead>
               <TableHead>Total perçu</TableHead>
               <TableHead>Date de création</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -82,6 +100,7 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading })
                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
               </TableRow>
             ))}
@@ -110,6 +129,7 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading })
             <TableHead>Commission</TableHead>
             <TableHead>Total perçu</TableHead>
             <TableHead>Date de création</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -121,6 +141,13 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading })
               <TableCell>{referral.commission_rate}%</TableCell>
               <TableCell>{formatCurrency(referral.total_commission)}</TableCell>
               <TableCell>{formatDate(referral.created_at)}</TableCell>
+              <TableCell>
+                <ReferralStatusSelect 
+                  referralId={referral.id}
+                  currentStatus={referral.status}
+                  onStatusChange={(newStatus) => handleStatusChange(referral.id, newStatus)}
+                />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>

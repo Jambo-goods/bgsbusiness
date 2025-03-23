@@ -69,6 +69,30 @@ export function useReferrals() {
     }
   }, []);
 
+  const updateReferralStatus = async (referralId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('referrals')
+        .update({ status: newStatus })
+        .eq('id', referralId);
+      
+      if (error) throw error;
+      
+      // Update the local state
+      setReferrals(current => 
+        current.map(referral => 
+          referral.id === referralId ? { ...referral, status: newStatus } : referral
+        )
+      );
+      
+      return { success: true };
+    } catch (err) {
+      console.error("Error updating referral status:", err);
+      toast.error("Erreur lors de la mise à jour du statut");
+      return { success: false, error: err instanceof Error ? err.message : "Une erreur est survenue" };
+    }
+  };
+
   useEffect(() => {
     fetchReferrals();
   }, [fetchReferrals]);
@@ -77,6 +101,7 @@ export function useReferrals() {
     referrals,
     isLoading,
     error,
-    refreshReferrals: fetchReferrals
+    refreshReferrals: fetchReferrals,
+    updateReferralStatus
   };
 }
