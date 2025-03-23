@@ -23,7 +23,29 @@ export const calculateTotalEarnings = (
 ): number => {
   if (!transactions || transactions.length === 0) return 0;
   
-  return transactions
+  // Calculate the total amount from all completed yield transactions
+  const total = transactions
     .filter(tx => tx.type === 'yield' && tx.status === 'completed')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+    
+  return total;
+};
+
+/**
+ * Calculate total earnings for a specific investment
+ */
+export const calculateInvestmentEarnings = (
+  transactions: any[],
+  investmentId: string
+): number => {
+  if (!transactions || transactions.length === 0 || !investmentId) return 0;
+  
+  // Filter transactions to only include those related to the specific investment
+  return transactions
+    .filter(tx => 
+      tx.investment_id === investmentId && 
+      tx.type === 'yield' && 
+      tx.status === 'completed'
+    )
     .reduce((sum, tx) => sum + tx.amount, 0);
 };
