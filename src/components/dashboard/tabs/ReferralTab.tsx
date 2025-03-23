@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Copy, User, ArrowUpRight, CheckCircle, Users } from "lucide-react";
+import { Copy, User, ArrowUpRight, CheckCircle, Users, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -269,17 +269,21 @@ export default function ReferralTab() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <h2 className="text-2xl font-bold tracking-tight">Programme de Parrainage</h2>
-        <p className="text-muted-foreground">
+    <div className="space-y-8">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100 shadow-sm">
+        <h2 className="text-2xl font-bold tracking-tight text-blue-800 mb-2">Programme de Parrainage</h2>
+        <p className="text-blue-600">
           Parrainez vos amis et recevez une commission de 10% sur leurs rendements.
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Votre lien de parrainage</CardTitle>
+      <Card className="overflow-hidden border-blue-200 shadow-md">
+        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2"></div>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <Share2 className="h-5 w-5 text-blue-500" />
+            Votre lien de parrainage
+          </CardTitle>
           <CardDescription>
             Partagez ce lien avec vos amis et gagnez des commissions sur leurs rendements.
           </CardDescription>
@@ -289,7 +293,7 @@ export default function ReferralTab() {
             <Skeleton className="h-10 w-full" />
           ) : (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1 bg-muted p-3 rounded-md text-xs sm:text-sm break-all">
+              <div className="flex-1 bg-gray-50 p-3 rounded-md text-xs sm:text-sm break-all border border-gray-200">
                 {profile?.referral_code ? (
                   `${window.location.origin}/register?ref=${profile.referral_code}`
                 ) : (
@@ -298,7 +302,7 @@ export default function ReferralTab() {
               </div>
               <Button 
                 onClick={copyReferralLink} 
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 transition-all"
                 disabled={!profile?.referral_code}
               >
                 {copied ? <CheckCircle className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
@@ -307,17 +311,21 @@ export default function ReferralTab() {
             </div>
           )}
           
-          <div className="mt-4">
-            <p className="text-sm text-muted-foreground">
-              <strong>Votre code:</strong> {profileLoading ? "Chargement..." : profile?.referral_code || "Non disponible"}
+          <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-100">
+            <p className="text-sm text-blue-800 font-medium flex items-center gap-2">
+              <span className="inline-block bg-blue-100 p-1 rounded-md">
+                <Users className="h-4 w-4 text-blue-600" />
+              </span>
+              <span>Votre code: </span>
+              <span className="font-bold">{profileLoading ? "Chargement..." : profile?.referral_code || "Non disponible"}</span>
             </p>
           </div>
         </CardContent>
       </Card>
       
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-3">
         <ReferralStatsCard 
-          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+          icon={<Users className="h-5 w-5 text-blue-500" />}
           title="Filleuls"
           value={isReferralLoading ? "-" : stats.referralCount.toString()}
           description="Personnes parrainées"
@@ -325,7 +333,7 @@ export default function ReferralTab() {
         />
         
         <ReferralStatsCard 
-          icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />}
+          icon={<CheckCircle className="h-5 w-5 text-green-500" />}
           title="Actifs"
           value={isReferralLoading ? "-" : stats.activeReferrals.toString()}
           description="Filleuls actifs"
@@ -333,7 +341,7 @@ export default function ReferralTab() {
         />
         
         <ReferralStatsCard 
-          icon={<ArrowUpRight className="h-4 w-4 text-muted-foreground" />}
+          icon={<ArrowUpRight className="h-5 w-5 text-orange-500" />}
           title="Total des commissions"
           value={isReferralLoading ? "-" : `${stats.totalCommission.toFixed(2)} €`}
           description="Commissions gagnées"
@@ -343,9 +351,13 @@ export default function ReferralTab() {
       </div>
       
       <div className="space-y-6">
-        <Card>
+        <Card className="overflow-hidden border-blue-200 shadow-md">
+          <div className="bg-gradient-to-r from-indigo-500 to-blue-600 h-2"></div>
           <CardHeader>
-            <CardTitle>Vos filleuls</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-500" />
+              Vos filleuls
+            </CardTitle>
             <CardDescription>
               Liste des personnes que vous avez parrainées.
             </CardDescription>
@@ -360,9 +372,9 @@ export default function ReferralTab() {
             ) : referrals.length === 0 ? (
               <EmptyReferralState />
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-md border">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-gray-50">
                     <TableRow>
                       <TableHead className="w-[250px]">Filleul</TableHead>
                       <TableHead>Status</TableHead>
@@ -372,10 +384,10 @@ export default function ReferralTab() {
                   </TableHeader>
                   <TableBody>
                     {referrals.map((referral) => (
-                      <TableRow key={referral.id}>
+                      <TableRow key={referral.id} className="hover:bg-blue-50/50">
                         <TableCell className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-primary/10 text-primary">
+                          <Avatar className="h-8 w-8 border border-blue-100">
+                            <AvatarFallback className="bg-blue-100 text-blue-600">
                               {referral.referred_user?.first_name?.[0] || 'U'}
                             </AvatarFallback>
                           </Avatar>
@@ -389,13 +401,13 @@ export default function ReferralTab() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={referral.status === 'active' ? 'default' : 'outline'}>
+                          <Badge variant={referral.status === 'active' ? 'success' : 'outline'} className="font-normal">
                             {referral.status === 'active' ? 'Actif' : 
                              referral.status === 'pending' ? 'En attente' : 
                              referral.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-medium">
+                        <TableCell className="text-right font-medium text-blue-700">
                           {referral.total_commission.toFixed(2)} €
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
@@ -410,9 +422,13 @@ export default function ReferralTab() {
           </CardContent>
         </Card>
         
-        <Card>
+        <Card className="overflow-hidden border-blue-200 shadow-md">
+          <div className="bg-gradient-to-r from-orange-400 to-amber-500 h-2"></div>
           <CardHeader>
-            <CardTitle>Historique des commissions</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <ArrowUpRight className="h-5 w-5 text-orange-500" />
+              Historique des commissions
+            </CardTitle>
             <CardDescription>
               Détail des commissions reçues sur les rendements de vos filleuls.
             </CardDescription>
@@ -425,17 +441,17 @@ export default function ReferralTab() {
                 <Skeleton className="h-12 w-full" />
               </div>
             ) : commissions.length === 0 ? (
-              <div className="text-center py-10 bg-gray-50 rounded-lg">
+              <div className="text-center py-10 bg-gray-50 rounded-lg border border-gray-100">
                 <User className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground max-w-md mx-auto">
                   Vous n'avez pas encore reçu de commissions. Lorsque vos filleuls recevront des rendements, 
                   vous recevrez automatiquement une commission de 10%.
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-md border">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-gray-50">
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>Filleul</TableHead>
@@ -446,7 +462,7 @@ export default function ReferralTab() {
                   </TableHeader>
                   <TableBody>
                     {commissions.map((commission) => (
-                      <TableRow key={commission.id}>
+                      <TableRow key={commission.id} className="hover:bg-orange-50/50">
                         <TableCell className="text-sm">
                           {new Date(commission.created_at).toLocaleDateString('fr-FR')}
                         </TableCell>
@@ -454,15 +470,17 @@ export default function ReferralTab() {
                           {commission.referred_user?.first_name || 'Utilisateur'} {commission.referred_user?.last_name || ''}
                         </TableCell>
                         <TableCell>
-                          {commission.source === 'investment_yield' ? 'Rendement' : 
-                           commission.source === 'signup' ? 'Inscription' : 
-                           commission.source}
+                          <Badge variant="outline" className="bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-200">
+                            {commission.source === 'investment_yield' ? 'Rendement' : 
+                             commission.source === 'signup' ? 'Inscription' : 
+                             commission.source}
+                          </Badge>
                         </TableCell>
-                        <TableCell className="text-right font-medium">
+                        <TableCell className="text-right font-medium text-orange-600">
                           {commission.amount.toFixed(2)} €
                         </TableCell>
                         <TableCell>
-                          <Badge variant={commission.status === 'completed' ? 'default' : 'outline'}>
+                          <Badge variant={commission.status === 'completed' ? 'success' : 'outline'}>
                             {commission.status === 'completed' ? 'Payé' : 
                              commission.status === 'pending' ? 'En attente' : 
                              commission.status}

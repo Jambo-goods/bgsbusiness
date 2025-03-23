@@ -98,8 +98,8 @@ const InvestmentTrackingPage: React.FC = () => {
     }
 
     return (
-      <div className="p-6 space-y-6">
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100">
+      <div className="p-6 space-y-8">
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100 shadow-sm">
           <h1 className="text-2xl font-bold text-blue-800 mb-2">
             Investissement dans {investment.projects?.name || 'Projet'}
           </h1>
