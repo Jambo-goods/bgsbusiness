@@ -155,9 +155,11 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     console.log("Paiements valides après le délai du premier versement:", validPayments.length);
     
     return validPayments.map(payment => {
-      // Calculer le montant automatiquement en fonction du pourcentage et du montant investi
-      // Nous utilisons le montant d'investissement réel multiplié par le pourcentage mensuel
-      const paymentAmount = actualInvestmentAmount * (payment.percentage / 100);
+      // Correctly calculate the monthly payment amount based on the investment amount and percentage
+      // Monthly yield = investment amount * (percentage / 100) / 12
+      const paymentPercentage = payment.percentage || fixedYieldPercentage;
+      const paymentAmount = (actualInvestmentAmount * paymentPercentage) / 100 / 12;
+      
       console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}, date: ${payment.payment_date}`);
       
       cumulativeScheduledAmount += paymentAmount;

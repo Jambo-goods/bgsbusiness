@@ -94,6 +94,7 @@ export const filterAndSortPayments = (
 // Helper function for calculating monthly yield consistently across the app
 export const calculateMonthlyYield = (investmentAmount: number, annualYieldPercentage: number): number => {
   // Calculate monthly yield: (investment amount * annual percentage) / 1200
+  // Division by 1200 = (12 months * 100 for percentage conversion)
   return (investmentAmount * annualYieldPercentage) / 1200;
 };
 
