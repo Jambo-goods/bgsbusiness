@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -128,7 +127,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     return filteredPayments;
   }, [scheduledPayments, projectId]);
   
-  // Le rendement mensuel est de 12%
   const fixedYieldPercentage = 12;
 
   const formattedScheduledPayments = useMemo(() => {
@@ -137,13 +135,11 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       return [];
     }
     
-    // Utiliser le montant d'investissement réel de la base de données
     const actualAmount = actualInvestmentAmount > 0 ? actualInvestmentAmount : 200;
     console.log("Montant d'investissement réel utilisé:", actualAmount);
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    // Calculer le rendement mensuel: 12% du montant d'investissement
     const monthlyYield = (actualAmount * fixedYieldPercentage) / 100;
     
     console.log("Rendement mensuel calculé:", monthlyYield, "pour un investissement de", actualAmount);
@@ -160,7 +156,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     console.log("Paiements valides après le délai du premier versement:", validPayments.length);
     
     return validPayments.map(payment => {
-      // Calculer le montant basé sur le pourcentage mensuel direct (12%)
       const paymentPercentage = payment.percentage || fixedYieldPercentage;
       const paymentAmount = (actualAmount * paymentPercentage) / 100;
       
@@ -182,7 +177,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
 
   console.log("Paiements programmés formatés:", formattedScheduledPayments);
 
-  // Calculate the total cumulative amount from all transactions (paid) and scheduled payments
   const totalCumulativeAmount = useMemo(() => {
     const paidTransactionsTotal = tableData.length > 0 
       ? tableData[tableData.length - 1].cumulativeAmount 
@@ -192,7 +186,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       ? formattedScheduledPayments[formattedScheduledPayments.length - 1].cumulativeAmount 
       : 0;
       
-    // Return the largest of the two (they should be the same if there is overlap)
     return Math.max(paidTransactionsTotal, scheduledPaymentsTotal);
   }, [tableData, formattedScheduledPayments]);
 
@@ -221,19 +214,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
               Historique des versements
             </span>
           </h3>
-          
-          {/* Cumulative Summary Box */}
-          <div className="bg-blue-50 p-4 rounded-lg mb-6 border border-blue-100">
-            <div className="flex justify-between items-center">
-              <div>
-                <h4 className="text-blue-800 font-semibold">Cumul total des versements</h4>
-                <p className="text-sm text-blue-600">Montant total reçu et programmé</p>
-              </div>
-              <div className="text-2xl font-bold text-blue-700">
-                {totalCumulativeAmount.toFixed(2)} €
-              </div>
-            </div>
-          </div>
           
           {isLoading || isLoadingScheduledPayments ? (
             <div className="flex items-center justify-center py-8">
