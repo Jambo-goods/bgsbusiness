@@ -92,7 +92,7 @@ export const filterAndSortPayments = (
 };
 
 // Helper function for calculating monthly yield consistently across the app
-// Le pourcentage fourni est déjà mensuel, pas annuel
+// Le pourcentage fourni est déjà un pourcentage mensuel (ex: 12%)
 export const calculateMonthlyYield = (investmentAmount: number, monthlyYieldPercentage: number): number => {
   // Calcul direct: montant d'investissement * (pourcentage mensuel / 100)
   return (investmentAmount * monthlyYieldPercentage) / 100;

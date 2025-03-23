@@ -66,6 +66,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const [investmentDate, setInvestmentDate] = useState<Date | null>(null);
   const [firstPaymentDelayMonths, setFirstPaymentDelayMonths] = useState<number>(1);
   const [firstValidPaymentDate, setFirstValidPaymentDate] = useState<Date | null>(null);
+  const [actualInvestmentAmount, setActualInvestmentAmount] = useState<number>(0);
   
   useEffect(() => {
     const fetchInvestmentDetails = async () => {
@@ -87,6 +88,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         if (data) {
           console.log("Investment details found:", data);
           setProjectId(data.project_id);
+          
+          // Store the actual investment amount
+          setActualInvestmentAmount(data.amount || 0);
           
           if (data.date) {
             const investDate = new Date(data.date);
@@ -124,7 +128,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     return filteredPayments;
   }, [scheduledPayments, projectId]);
   
-  // Le rendement est déjà en pourcentage mensuel à 12% (pas annuel)
+  // Le rendement mensuel est de 12%
   const fixedYieldPercentage = 12;
 
   const formattedScheduledPayments = useMemo(() => {
@@ -133,16 +137,16 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       return [];
     }
     
-    const actualInvestmentAmount = investmentAmount > 0 ? investmentAmount : 1000;
-    console.log("Montant d'investissement utilisé:", actualInvestmentAmount);
+    // Utiliser le montant d'investissement réel de la base de données
+    const actualAmount = actualInvestmentAmount > 0 ? actualInvestmentAmount : 200;
+    console.log("Montant d'investissement réel utilisé:", actualAmount);
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    // Calculer correctement le rendement mensuel: investmentAmount * (percentage / 100)
-    // Le pourcentage est déjà mensuel, donc c'est directement le montant d'investissement multiplié par le pourcentage
-    const monthlyYield = (actualInvestmentAmount * fixedYieldPercentage) / 100;
+    // Calculer le rendement mensuel: 12% du montant d'investissement
+    const monthlyYield = (actualAmount * fixedYieldPercentage) / 100;
     
-    console.log("Rendement mensuel calculé:", monthlyYield);
+    console.log("Rendement mensuel calculé:", monthlyYield, "pour un investissement de", actualAmount);
     
     const sortedPayments = [...investmentScheduledPayments].sort(
       (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
@@ -156,12 +160,11 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     console.log("Paiements valides après le délai du premier versement:", validPayments.length);
     
     return validPayments.map(payment => {
-      // Calculer le montant mensuel basé sur le montant d'investissement et le pourcentage mensuel
+      // Calculer le montant basé sur le pourcentage mensuel direct (12%)
       const paymentPercentage = payment.percentage || fixedYieldPercentage;
-      // Calculer le montant: montant d'investissement * (pourcentage / 100)
-      const paymentAmount = (actualInvestmentAmount * paymentPercentage) / 100;
+      const paymentAmount = (actualAmount * paymentPercentage) / 100;
       
-      console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}, date: ${payment.payment_date}`);
+      console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}, date: ${payment.payment_date}, pourcentage: ${paymentPercentage}%`);
       
       cumulativeScheduledAmount += paymentAmount;
       
@@ -175,7 +178,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         projectName: payment.projects?.name || 'Projet inconnu'
       };
     });
-  }, [investmentScheduledPayments, investmentAmount, fixedYieldPercentage, totalYieldReceived, investmentDate, firstValidPaymentDate, firstPaymentDelayMonths]);
+  }, [investmentScheduledPayments, actualInvestmentAmount, fixedYieldPercentage, totalYieldReceived, investmentDate, firstValidPaymentDate]);
 
   console.log("Paiements programmés formatés:", formattedScheduledPayments);
 
@@ -292,12 +295,12 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           )}
         </div>
 
-        {investmentAmount > 0 && (
+        {actualInvestmentAmount > 0 && (
           <div className="mt-6 pt-4 border-t border-gray-100">
             <p className="text-xs text-gray-500">
-              <strong>Note:</strong> Ces projections sont basées sur les taux de rendement actuels et peuvent varier. 
-              Le premier versement est généralement effectué après la période de délai initiale spécifiée dans chaque projet. 
-              Les versements suivants sont effectués le 5 de chaque mois.
+              <strong>Note:</strong> Ces projections sont basées sur un taux de rendement mensuel de {fixedYieldPercentage}%. 
+              Le premier versement est généralement effectué après la période de délai initiale spécifiée dans chaque projet.
+              Pour un investissement de {actualInvestmentAmount}€, le rendement mensuel est de {((actualInvestmentAmount * fixedYieldPercentage) / 100).toFixed(2)}€.
             </p>
           </div>
         )}

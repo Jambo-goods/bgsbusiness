@@ -93,7 +93,7 @@ export default function PaymentsTable({
         const projectInvestment = project.investedAmount || 0;
         const calculatedAmount = (projectInvestment * percentage) / 100;
         
-        console.log(`Scheduled payment: Date=${paymentDate.toISOString()}, Project=${sp.projects?.name}, Percentage=${percentage}%, Amount=${calculatedAmount}`);
+        console.log(`Scheduled payment: Date=${paymentDate.toISOString()}, Project=${sp.projects?.name}, Percentage=${percentage}%, Amount=${calculatedAmount}, Investment=${projectInvestment}`);
         
         uniquePaymentMap.set(key, {
           id: `${sp.id}-scheduled`,
@@ -213,7 +213,7 @@ export default function PaymentsTable({
                     {format(new Date(payment.date), "dd/MM/yyyy")}
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                   <span className={`font-medium ${isProjectedPayment ? 'text-purple-600' : 'text-green-600'}`}>
                     {typeof payment.amount === 'number' ? payment.amount.toFixed(2) : 0} €
                   </span>
