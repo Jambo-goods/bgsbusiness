@@ -1,78 +1,105 @@
 
-import React from "react";
-import { useParams, Link } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
-import DashboardLayout from "@/layouts/DashboardLayout";
-import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import { useInvestmentTracking } from "./hooks/useInvestmentTracking";
-import GeneralInformationCard from "./components/GeneralInformationCard";
-import InvestmentSummaryCards from "./components/InvestmentSummaryCards";
-import TransactionHistoryCard from "./components/TransactionHistoryCard";
-import ProjectUpdatesCard from "./components/ProjectUpdatesCard";
-import ContactActionsCard from "./components/ContactActionsCard";
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { 
+  fetchInvestmentDetails, 
+  fetchTransactionHistory 
+} from './utils/fetchInvestmentData';
+import GeneralInformationCard from './components/GeneralInformationCard';
+import TransactionHistoryCard from './components/TransactionHistoryCard';
+import ContactActionsCard from './components/ContactActionsCard';
+import InvestmentSummaryCards from './components/InvestmentSummaryCards';
+import ProjectUpdatesCard from './components/ProjectUpdatesCard';
+import { Investment } from './types/investment';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export default function InvestmentTrackingPage() {
-  const { investmentId } = useParams();
-  const { investment, loading, isRefreshing, refreshData } = useInvestmentTracking(investmentId);
-  
-  // Loading state
-  if (loading) {
+const InvestmentTrackingPage: React.FC = () => {
+  const { investmentId } = useParams<{ investmentId: string }>();
+  const [investment, setInvestment] = useState<Investment | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadInvestmentData = async () => {
+      if (!investmentId) {
+        setError('No investment ID provided');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        const investmentData = await fetchInvestmentDetails(investmentId);
+        
+        if (investmentData) {
+          console.log('Fetched investment details:', investmentData);
+          setInvestment(investmentData);
+        } else {
+          setError('Investment not found');
+        }
+      } catch (err: any) {
+        console.error('Error fetching investment data:', err);
+        setError(err.message || 'An error occurred');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInvestmentData();
+  }, [investmentId]);
+
+  if (isLoading) {
     return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
+      <div className="p-6 space-y-6">
+        <Skeleton className="h-8 w-1/3 mb-4" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Skeleton className="h-40 col-span-2" />
+          <Skeleton className="h-40" />
         </div>
-      </DashboardLayout>
+        <Skeleton className="h-60" />
+      </div>
     );
   }
-  
-  // No investment found state
-  if (!investment) {
+
+  if (error || !investment) {
     return (
-      <DashboardLayout>
-        <div className="text-center py-8">Investissement non trouvé</div>
-      </DashboardLayout>
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
+          <p className="font-medium">Error: {error || 'Investment not found'}</p>
+          <p className="text-sm mt-1">Please try again later or contact support.</p>
+        </div>
+      </div>
     );
   }
-  
-  // User data for header
-  const userData = {
-    firstName: investment.user_first_name || "Investisseur",
-    lastName: investment.user_last_name || "",
-  };
 
   return (
-    <DashboardLayout>
-      <DashboardHeader 
-        userData={userData}
-        refreshData={refreshData}
-        isRefreshing={isRefreshing}
-      />
-      
-      <div className="space-y-8">
-        <Link to="/dashboard" className="flex items-center text-bgs-blue hover:text-bgs-blue-light mb-6">
-          <ChevronLeft className="h-4 w-4 mr-1" />
-          Retour au tableau de bord
-        </Link>
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold">
+        Investment in {investment.projects?.name || 'Project'}
+      </h1>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 space-y-6">
+          <GeneralInformationCard investment={investment} />
+          <TransactionHistoryCard 
+            investmentId={investment.id} 
+            userId={investment.user_id}
+          />
+          <ProjectUpdatesCard projectId={investment.project_id} />
+        </div>
         
-        {/* Section 1: General Information */}
-        <GeneralInformationCard investment={investment} />
-        
-        {/* Section 2: Investment Summary Cards */}
-        <InvestmentSummaryCards investment={investment} />
-        
-        {/* Section 3: Transaction History */}
-        <TransactionHistoryCard 
-          investmentId={investment.project_id || ''} 
-          userId={investment.user_id || ''}
-        />
-        
-        {/* Section 4: Project Updates */}
-        <ProjectUpdatesCard />
-        
-        {/* Section 5: Contact Actions */}
-        <ContactActionsCard />
+        <div className="space-y-6">
+          <InvestmentSummaryCards 
+            totalInvested={investment.amount}
+            monthlyYield={investment.projects?.yield || 0}
+            remainingDuration={investment.remainingDuration || 0}
+            startDate={investment.date}
+          />
+          <ContactActionsCard investmentId={investment.id} />
+        </div>
       </div>
-    </DashboardLayout>
+    </div>
   );
-}
+};
+
+export default InvestmentTrackingPage;

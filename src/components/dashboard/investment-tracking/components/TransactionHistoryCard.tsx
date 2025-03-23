@@ -61,6 +61,27 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     try {
       console.log('Fetching scheduled payments for project_id:', investmentId);
       
+      // First fetch the investment details to get the investment date and first payment delay
+      const { data: investmentData, error: investmentError } = await supabase
+        .from("investments")
+        .select(`
+          date,
+          projects (first_payment_delay_months)
+        `)
+        .eq("id", investmentId)
+        .single();
+        
+      if (investmentError) {
+        console.error("Error fetching investment details:", investmentError);
+        throw new Error(investmentError.message);
+      }
+      
+      console.log('Investment data:', investmentData);
+      
+      const investmentDate = investmentData?.date ? new Date(investmentData.date) : null;
+      const firstPaymentDelayMonths = investmentData?.projects?.first_payment_delay_months || 1;
+      
+      // Now fetch scheduled payments
       const { data, error } = await supabase
         .from('scheduled_payments')
         .select(`
@@ -95,21 +116,37 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
         setPayments(formattedPayments);
         console.log('Formatted payments:', formattedPayments);
       } else {
-        console.log('No scheduled payments found, adding fallback mock data');
-        // Add a fallback mock payment only if we're in development and no data is available
-        if (process.env.NODE_ENV === 'development') {
-          const mockPayments: Payment[] = [
-            {
-              id: '1',
-              amount: 500,
-              date: new Date().toISOString(),
+        console.log('No scheduled payments found for this investment');
+        
+        // If no scheduled payments are found, we can generate expected payments
+        // based on the investment date and first payment delay
+        if (investmentDate) {
+          const firstPaymentDate = new Date(investmentDate);
+          firstPaymentDate.setMonth(investmentDate.getMonth() + firstPaymentDelayMonths);
+          
+          console.log(`Investment date: ${investmentDate.toISOString()}`);
+          console.log(`First payment delay: ${firstPaymentDelayMonths} months`);
+          console.log(`First payment date: ${firstPaymentDate.toISOString()}`);
+          
+          // Generate 6 months of payments starting from the first payment date
+          const mockPayments: Payment[] = [];
+          for (let i = 0; i < 6; i++) {
+            const paymentDate = new Date(firstPaymentDate);
+            paymentDate.setMonth(firstPaymentDate.getMonth() + i);
+            
+            mockPayments.push({
+              id: `mock-${i}`,
+              amount: 0, // We don't know the amount yet
+              date: paymentDate.toISOString(),
               status: 'pending',
-              description: 'Paiement mensuel (exemple)',
+              description: `Paiement prévu pour ${formatDate(paymentDate)}`,
               userId,
               investmentId
-            }
-          ];
+            });
+          }
+          
           setPayments(mockPayments);
+          console.log('Generated mock payments based on investment date:', mockPayments);
         } else {
           setPayments([]);
         }
