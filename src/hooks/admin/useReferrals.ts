@@ -33,17 +33,20 @@ export function useReferrals() {
       setIsLoading(true);
       setError(null);
       
+      console.log("Fetching referrals...");
+      
       const { data, error } = await supabase
         .from('referrals')
         .select(`
           *,
-          referrer:referrer_id(first_name, last_name, email),
-          referred:referred_id(first_name, last_name, email)
+          referrer:profiles!referrals_referrer_id_fkey(first_name, last_name, email),
+          referred:profiles!referrals_referred_id_fkey(first_name, last_name, email)
         `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       
+      console.log("Referrals data:", data);
       setReferrals(data as Referral[]);
     } catch (err) {
       console.error("Error fetching referrals:", err);

@@ -93,7 +93,7 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading })
   if (referrals.length === 0) {
     return (
       <div className="text-center py-10 border rounded-md">
-        <p className="text-muted-foreground">Aucun parrainage trouvé</p>
+        <p className="text-muted-foreground">Aucun parrainage trouvé dans la base de données</p>
       </div>
     );
   }
