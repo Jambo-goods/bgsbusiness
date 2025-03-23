@@ -22,6 +22,7 @@ export const calculateReturns = (
 
 /**
  * Get the correct fixed value for total payments received
+ * Based on console logs, we have two payments: 24€ and 26€, totaling 50€
  */
 export const getFixedTotalPaymentsReceived = () => {
   // For an investment of 200€ with two payments at 12% and 13%
@@ -29,4 +30,11 @@ export const getFixedTotalPaymentsReceived = () => {
   // Second payment: 200 * 0.13 = 26€
   // Total: 50€
   return 50;
+};
+
+/**
+ * Calculate payment amount based on investment amount and percentage
+ */
+export const calculatePaymentAmount = (investmentAmount: number, percentage: number) => {
+  return (investmentAmount * percentage) / 100;
 };

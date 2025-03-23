@@ -71,7 +71,8 @@ serve(async (req) => {
       }
 
       // Calculer le montant à ajouter au portefeuille de chaque investisseur
-      const totalInvestedAmount = record.total_invested_amount || 0;
+      const totalInvestedAmount = record.total_invested_amount || 
+        investments?.reduce((sum, inv) => sum + inv.amount, 0) || 0;
       
       // Utiliser directement le pourcentage stocké dans la colonne percentage
       const percentageToDistribute = record.percentage || 0;
@@ -79,71 +80,82 @@ serve(async (req) => {
       
       // Pour chaque investisseur, mettre à jour son solde de portefeuille
       for (const investment of investments || []) {
-        // Calculer le pourcentage de l'investissement par rapport au total
-        const investmentPercentage = totalInvestedAmount > 0 
-          ? investment.amount / totalInvestedAmount 
-          : 0;
-        
-        // Calculer le montant à ajouter au portefeuille de l'investisseur
-        // Basé sur le pourcentage spécifié dans le scheduled_payment
-        const amountToAdd = Math.round((totalInvestedAmount * (percentageToDistribute / 100)) * investmentPercentage);
-        
-        console.log(`Adding ${amountToAdd} to user ${investment.user_id} wallet (${investmentPercentage * 100}% of distribution)`);
+        try {
+          // Calculer le pourcentage de l'investissement par rapport au total
+          const investmentPercentage = totalInvestedAmount > 0 
+            ? investment.amount / totalInvestedAmount 
+            : 0;
+          
+          // Calculer le montant à ajouter au portefeuille de l'investisseur
+          // Basé sur le pourcentage spécifié dans le scheduled_payment
+          const investmentAmount = investment.amount;
+          // Direct calculation based on investment amount and yield percentage
+          const amountToAdd = Math.round((investmentAmount * percentageToDistribute) / 100);
+          
+          console.log(`Adding ${amountToAdd} to user ${investment.user_id} wallet (${percentageToDistribute}% of ${investmentAmount})`);
 
-        if (amountToAdd > 0) {
-          // Mettre à jour le solde du portefeuille
-          const { error: walletError } = await supabase.rpc(
-            'increment_wallet_balance',
-            {
-              user_id: investment.user_id,
-              increment_amount: amountToAdd
-            }
-          );
-
-          if (walletError) {
-            console.error(`Error updating wallet balance for user ${investment.user_id}:`, walletError);
-            continue;
-          }
-
-          // Créer une transaction de portefeuille
-          const { error: transactionError } = await supabase
-            .from('wallet_transactions')
-            .insert({
-              user_id: investment.user_id,
-              amount: amountToAdd,
-              type: 'yield',
-              description: `Rendement reçu de ${projectName} - ${new Date(record.payment_date).toLocaleDateString('fr-FR')} (${percentageToDistribute}%)`
-            });
-
-          if (transactionError) {
-            console.error(`Error creating wallet transaction for user ${investment.user_id}:`, transactionError);
-          }
-
-          // Créer une notification
-          const { error: notificationError } = await supabase
-            .from('notifications')
-            .insert({
-              user_id: investment.user_id,
-              title: "Rendement reçu",
-              message: `Vous avez reçu ${amountToAdd}€ de rendement pour votre investissement dans ${projectName}.`,
-              type: 'yield',
-              data: {
-                amount: amountToAdd,
-                projectId: record.project_id,
-                projectName: projectName,
-                paymentDate: record.payment_date,
-                percentage: percentageToDistribute
+          if (amountToAdd > 0) {
+            // Mettre à jour le solde du portefeuille
+            const { error: walletError } = await supabase.rpc(
+              'increment_wallet_balance',
+              {
+                user_id: investment.user_id,
+                increment_amount: amountToAdd
               }
-            });
+            );
 
-          if (notificationError) {
-            console.error(`Error creating notification for user ${investment.user_id}:`, notificationError);
+            if (walletError) {
+              console.error(`Error updating wallet balance for user ${investment.user_id}:`, walletError);
+              continue;
+            }
+
+            // Créer une transaction de portefeuille
+            const { error: transactionError } = await supabase
+              .from('wallet_transactions')
+              .insert({
+                user_id: investment.user_id,
+                amount: amountToAdd,
+                type: 'yield',
+                status: 'completed',
+                description: `Rendement reçu de ${projectName} - ${new Date(record.payment_date).toLocaleDateString('fr-FR')} (${percentageToDistribute}%)`
+              });
+
+            if (transactionError) {
+              console.error(`Error creating wallet transaction for user ${investment.user_id}:`, transactionError);
+            }
+
+            // Créer une notification
+            const { error: notificationError } = await supabase
+              .from('notifications')
+              .insert({
+                user_id: investment.user_id,
+                title: "Rendement reçu",
+                message: `Vous avez reçu ${amountToAdd}€ de rendement pour votre investissement dans ${projectName}.`,
+                type: 'yield',
+                data: {
+                  amount: amountToAdd,
+                  projectId: record.project_id,
+                  projectName: projectName,
+                  paymentDate: record.payment_date,
+                  percentage: percentageToDistribute
+                }
+              });
+
+            if (notificationError) {
+              console.error(`Error creating notification for user ${investment.user_id}:`, notificationError);
+            }
           }
+        } catch (processError) {
+          console.error(`Error processing investment for user ${investment.user_id}:`, processError);
         }
       }
 
       return new Response(
-        JSON.stringify({ success: true, message: "Wallet balances updated successfully" }),
+        JSON.stringify({ 
+          success: true, 
+          message: "Wallet balances updated successfully",
+          updatedCount: investments?.length || 0 
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }

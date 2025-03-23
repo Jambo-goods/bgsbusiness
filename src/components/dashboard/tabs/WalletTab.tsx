@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WalletBalance from "./wallet/WalletBalance";
@@ -62,12 +63,29 @@ export default function WalletTab() {
         }
       )
       .subscribe();
+      
+    // Listen to scheduled payments changes to update wallet balance
+    const scheduledPaymentsChannel = supabase
+      .channel('scheduled-payments-for-wallet')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'scheduled_payments' },
+        (payload) => {
+          // If status changed to paid, refresh wallet balance
+          if (payload.new && payload.old && 
+              payload.new.status === 'paid' && payload.old.status !== 'paid') {
+            console.log('Scheduled payment marked as paid, refreshing wallet balance');
+            fetchWalletBalance(false);
+          }
+        }
+      )
+      .subscribe();
     
     return () => {
       clearInterval(balanceInterval);
       supabase.removeChannel(profilesChannel);
       supabase.removeChannel(transactionsChannel);
       supabase.removeChannel(transfersChannel);
+      supabase.removeChannel(scheduledPaymentsChannel);
     };
   }, []);
 
@@ -170,6 +188,7 @@ export default function WalletTab() {
         balance={balance} 
         isLoading={isLoading} 
         onTabChange={handleTabChange}
+        refreshBalance={fetchWalletBalance}
       />
       
       {hasMissingDeposit && (
