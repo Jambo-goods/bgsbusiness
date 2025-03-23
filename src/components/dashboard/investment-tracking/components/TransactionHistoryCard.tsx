@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -10,9 +10,8 @@ import {
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate } from '@/utils/formatUtils';
-import { processPaymentToWallet } from '@/utils/investmentCalculations';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useToast } from "@/components/ui/use-toast"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,26 +20,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { MoreHorizontal, Copy, Send, RefreshCw, FileClock, FileCheck } from 'lucide-react';
+import { MoreHorizontal, Copy, RefreshCw, FileClock, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { supabase } from '@/integrations/supabase/client';
-import { useUser } from '@/hooks/useUser';
-import StatusBadge from '@/components/dashboard/tabs/wallet/withdrawal-table/StatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/utils/currencyUtils';
-
-interface Payment {
-  id: string;
-  amount: number;
-  date: string;
-  status: 'pending' | 'completed' | 'failed' | 'paid';
-  description: string;
-  userId: string;
-  investmentId: string;
-}
+import { Payment } from '../types/investment';
 
 interface TransactionHistoryCardProps {
   investmentId: string;
@@ -51,14 +35,9 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentDescription, setPaymentDescription] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { toast } = useToast()
-  const { user } = useUser();
 
-  const fetchPayments = async () => {
+  const fetchPayments = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     setIsRefreshing(true);
@@ -91,7 +70,10 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
       const yieldRate = investmentData?.yield_rate || 0;
       const projectName = investmentData?.projects?.name || 'Projet';
       
-      // Récupération des paiements depuis la table wallet_transactions
+      // Collect payments from multiple sources
+      let allPayments: Payment[] = [];
+      
+      // 1. Get transactions related to this investment from wallet_transactions
       const { data: transactionsData, error: transactionsError } = await supabase
         .from('wallet_transactions')
         .select('*')
@@ -105,32 +87,32 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
 
       console.log('Données de transactions récupérées:', transactionsData);
       
-      // Filtrer les transactions liées à cet investissement
+      // Filter transactions related to this investment
+      // Note: checking both direct investment_id match and description containing investmentId
       const relevantTransactions = transactionsData?.filter(tx => 
-        tx.investment_id === investmentId || 
         tx.description?.includes(investmentId)
       ) || [];
       
       console.log('Transactions pertinentes pour cet investissement:', relevantTransactions);
 
-      // Si nous avons des transactions, les utiliser pour créer notre liste de paiements
-      let formattedPayments: Payment[] = [];
-      
+      // Convert transactions to Payment format
       if (relevantTransactions.length > 0) {
-        formattedPayments = relevantTransactions.map(tx => ({
+        const transactionPayments = relevantTransactions.map(tx => ({
           id: tx.id,
           amount: tx.amount || 0,
           date: tx.created_at,
-          status: tx.status === 'completed' ? 'completed' : 
-                 tx.status === 'paid' ? 'paid' : 
-                 tx.status === 'failed' ? 'failed' : 'pending',
+          status: tx.status === 'completed' ? 'completed' as const : 
+                 tx.status === 'paid' ? 'paid' as const : 
+                 tx.status === 'failed' ? 'failed' as const : 'pending' as const,
           description: tx.description || `Paiement pour ${projectName}`,
           userId: userId,
           investmentId: investmentId
         }));
+        
+        allPayments = [...allPayments, ...transactionPayments];
       }
       
-      // Récupérer aussi les paiements programmés
+      // 2. Get scheduled payments for this project
       const { data: scheduledData, error: scheduledError } = await supabase
         .from('scheduled_payments')
         .select(`
@@ -145,23 +127,23 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
       } else if (scheduledData && scheduledData.length > 0) {
         console.log('Paiements programmés récupérés:', scheduledData);
         
-        // Ajouter les paiements programmés à notre liste
+        // Convert scheduled payments to Payment format
         const scheduledPayments = scheduledData.map(payment => ({
           id: payment.id,
           amount: (investmentAmount * (payment.percentage / 100)) || 0,
           date: payment.payment_date,
-          status: payment.status === 'paid' ? 'paid' : 'pending',
+          status: payment.status === 'paid' ? 'paid' as const : 'pending' as const,
           description: `Rendement mensuel (${payment.percentage}%) - ${payment.projects?.name || projectName}`,
           userId: userId,
-          investmentId: investmentId
+          investmentId: investmentId,
+          percentage: payment.percentage
         }));
         
-        // Ajouter ces paiements programmés à notre liste
-        formattedPayments = [...formattedPayments, ...scheduledPayments];
+        allPayments = [...allPayments, ...scheduledPayments];
       }
       
-      // Si nous n'avons toujours pas de paiements, générer des paiements basés sur les dates d'investissement
-      if (formattedPayments.length === 0 && investmentDate) {
+      // 3. If we still have no payments, generate projected payments based on investment data
+      if (allPayments.length === 0 && investmentDate) {
         console.log('Génération de paiements prévisionnels basés sur la date d\'investissement');
         
         const firstPaymentDate = new Date(investmentDate);
@@ -171,53 +153,50 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
         console.log(`Délai du premier paiement: ${firstPaymentDelayMonths} mois`);
         console.log(`Date du premier paiement: ${firstPaymentDate.toISOString()}`);
         
-        // Calculer le rendement mensuel
-        const monthlyYield = (investmentAmount * yieldRate) / 1200; // Convertir le taux annuel en mensuel
-        console.log(`Rendement mensuel calculé: ${monthlyYield}`);
+        // Calculate monthly yield
+        const monthlyYieldPercentage = yieldRate / 12;
+        const monthlyYield = (investmentAmount * monthlyYieldPercentage) / 100;
+        console.log(`Rendement mensuel calculé: ${monthlyYield} (${monthlyYieldPercentage}%)`);
         
-        // Générer 6 mois de paiements à partir de la date du premier paiement
+        // Generate 6 months of payments
         const now = new Date();
-        const mockPayments: Payment[] = [];
+        const projectedPayments: Payment[] = [];
         
         for (let i = 0; i < 6; i++) {
           const paymentDate = new Date(firstPaymentDate);
           paymentDate.setMonth(firstPaymentDate.getMonth() + i);
           
-          // Déterminer le statut du paiement en fonction de la date actuelle
-          let paymentStatus: 'paid' | 'pending' | 'completed' | 'failed';
+          // Determine payment status based on current date
+          let paymentStatus: 'paid' | 'pending' | 'completed';
           
           if (paymentDate < now) {
-            // Pour les paiements passés, considérer comme payés
             paymentStatus = 'paid';
-          } else if (i === 0) {
-            // Le prochain paiement est en attente
-            paymentStatus = 'pending';
           } else {
-            // Les paiements futurs sont en attente
             paymentStatus = 'pending';
           }
           
-          mockPayments.push({
-            id: `mock-${i}`,
+          projectedPayments.push({
+            id: `projected-${i}`,
             amount: monthlyYield,
             date: paymentDate.toISOString(),
             status: paymentStatus,
-            description: `Rendement mensuel (${(yieldRate/12).toFixed(2)}%) - ${projectName}`,
+            description: `Rendement mensuel (${monthlyYieldPercentage.toFixed(2)}%) - ${projectName}`,
             userId,
-            investmentId
+            investmentId,
+            percentage: monthlyYieldPercentage
           });
         }
         
-        formattedPayments = mockPayments;
-        console.log('Paiements prévisionnels générés:', mockPayments);
+        allPayments = projectedPayments;
+        console.log('Paiements prévisionnels générés:', projectedPayments);
       }
       
-      // Trier les paiements par date
-      formattedPayments.sort((a, b) => {
+      // Sort all payments by date (newest first)
+      allPayments.sort((a, b) => {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
       });
       
-      setPayments(formattedPayments);
+      setPayments(allPayments);
     } catch (err: any) {
       setError(err.message);
       console.error("Erreur lors de la récupération des paiements:", err);
@@ -225,66 +204,15 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [investmentId, userId]);
 
   useEffect(() => {
     if (investmentId) {
       fetchPayments();
     }
-  }, [investmentId]);
+  }, [investmentId, fetchPayments]);
 
-  const handleOpenPaymentModal = () => {
-    setIsPaymentModalOpen(true);
-  };
-
-  const handleClosePaymentModal = () => {
-    setIsPaymentModalOpen(false);
-    setPaymentAmount('');
-    setPaymentDescription('');
-  };
-
-  const handlePaymentSubmit = async () => {
-    if (!paymentAmount || isNaN(Number(paymentAmount))) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez entrer un montant valide.",
-        variant: "destructive",
-      })
-      return;
-    }
-
-    const amount = parseFloat(paymentAmount);
-
-    try {
-      setIsLoading(true);
-      const success = await processPaymentToWallet(userId, amount, paymentDescription);
-
-      if (success) {
-        toast({
-          description: "Paiement programmé avec succès!",
-        })
-        handleClosePaymentModal();
-        fetchPayments();
-      } else {
-        toast({
-          title: "Erreur",
-          description: "Erreur lors de la programmation du paiement.",
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      console.error("Erreur de traitement du paiement:", error);
-      toast({
-        title: "Erreur",
-        description: "Erreur inattendue lors de la programmation du paiement.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Calcul des statistiques de paiement
+  // Calculate payment statistics
   const paidPayments = payments.filter(p => p.status === 'paid' || p.status === 'completed');
   const pendingPayments = payments.filter(p => p.status === 'pending');
   const totalPaid = paidPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -298,24 +226,16 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
           <p className="text-sm text-gray-500">Suivez tous vos versements reçus et à venir</p>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            onClick={fetchPayments}
-            disabled={isRefreshing}
-            className="flex items-center gap-1"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            {isRefreshing ? 'Actualisation...' : 'Actualiser'}
-          </Button>
-          
-          {user?.isAdmin && (
-            <Button size="sm" onClick={handleOpenPaymentModal}>
-              Programmer un Paiement
-            </Button>
-          )}
-        </div>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={fetchPayments}
+          disabled={isRefreshing}
+          className="flex items-center gap-1"
+        >
+          <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Actualisation...' : 'Actualiser'}
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -375,6 +295,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
               <TableRow className="bg-gray-50">
                 <TableHead className="text-gray-700">Date</TableHead>
                 <TableHead className="text-gray-700">Description</TableHead>
+                <TableHead className="text-gray-700">Pourcentage</TableHead>
                 <TableHead className="text-gray-700">Montant</TableHead>
                 <TableHead className="text-gray-700">Statut</TableHead>
                 <TableHead className="text-right"></TableHead>
@@ -385,6 +306,11 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
                 <TableRow key={payment.id} className="hover:bg-gray-50">
                   <TableCell className="font-medium">{formatDate(payment.date)}</TableCell>
                   <TableCell>{payment.description}</TableCell>
+                  <TableCell>
+                    {payment.percentage ? (
+                      <span className="text-blue-600 font-medium">{payment.percentage.toFixed(2)}%</span>
+                    ) : "-"}
+                  </TableCell>
                   <TableCell className="font-medium text-green-600">{formatCurrency(payment.amount)}</TableCell>
                   <TableCell>
                     <div className="flex items-center">
@@ -416,10 +342,6 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
                         <DropdownMenuItem onClick={() => navigator.clipboard.writeText(payment.id)}>
                           <Copy className="mr-2 h-4 w-4" /> Copier l'ID
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>
-                          <Send className="mr-2 h-4 w-4" /> Envoyer un message
-                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -427,52 +349,6 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
               ))}
             </TableBody>
           </Table>
-        </div>
-      )}
-
-      {/* Payment Modal */}
-      {isPaymentModalOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3 text-center">
-              <h3 className="text-lg leading-6 font-medium text-gray-900">
-                Programmer un Paiement
-              </h3>
-              <div className="mt-2">
-                <Label htmlFor="amount" className="block text-gray-700 text-sm font-bold mb-2">
-                  Montant:
-                </Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  placeholder="Entrez le montant"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                />
-              </div>
-              <div className="mt-2">
-                <Label htmlFor="description" className="block text-gray-700 text-sm font-bold mb-2">
-                  Description:
-                </Label>
-                <Textarea
-                  id="description"
-                  placeholder="Description du paiement"
-                  value={paymentDescription}
-                  onChange={(e) => setPaymentDescription(e.target.value)}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                />
-              </div>
-              <div className="items-center px-4 py-3 mt-4 flex justify-end gap-2">
-                <Button variant="outline" onClick={handleClosePaymentModal}>
-                  Annuler
-                </Button>
-                <Button onClick={handlePaymentSubmit}>
-                  Confirmer
-                </Button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
     </div>

@@ -1,58 +1,41 @@
 
 export interface Investment {
   id: string;
-  user_id: string;
   project_id: string;
+  user_id: string;
   amount: number;
-  date: string;
   yield_rate: number;
   duration: number;
-  end_date: string;
-  status: string;
-  user_first_name?: string;
-  user_last_name?: string;
-  remainingDuration?: number;
-  projects: {
+  date: string;
+  status: 'active' | 'completed' | 'cancelled';
+  projects?: {
     name: string;
-    description: string;
-    category: string;
-    status: string;
     image: string;
-    funding_progress: number;
-    yield: number;
-  }
+    company_name: string;
+    status: string;
+    first_payment_delay_months?: number;
+  };
+  payments?: Payment[];
+}
+
+export interface Payment {
+  id: string;
+  amount: number;
+  date: string;
+  status: 'pending' | 'completed' | 'failed' | 'paid';
+  description: string;
+  userId: string;
+  investmentId: string;
+  percentage?: number;
 }
 
 export interface Transaction {
   id: string;
   user_id: string;
-  investment_id?: string;
-  project_id?: string;
   amount: number;
-  type: 'investment' | 'yield';
+  type: 'yield' | 'investment';
+  description: string;
   created_at: string;
-  status: 'pending' | 'completed';
-  cumulativeAmount?: number;
-  description?: string;
-}
-
-export interface ScheduledPayment {
-  id: string;
-  project_id: string;
-  payment_date: string;
-  percentage: number;
-  status: 'pending' | 'scheduled' | 'paid';
-  total_scheduled_amount: number | null;
-  investors_count: number | null;
-  processed_at: string | null;
-  created_at: string;
-  updated_at: string;
-  total_invested_amount?: number | null;
-  calculatedCumulativeAmount?: number;
-  projects?: {
-    name: string;
-    image: string;
-    status: string;
-    company_name: string;
-  };
+  status: string;
+  investment_id?: string;
 }

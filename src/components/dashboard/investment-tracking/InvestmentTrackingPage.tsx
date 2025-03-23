@@ -10,7 +10,7 @@ import TransactionHistoryCard from './components/TransactionHistoryCard';
 import ContactActionsCard from './components/ContactActionsCard';
 import InvestmentSummaryCards from './components/InvestmentSummaryCards';
 import ProjectUpdatesCard from './components/ProjectUpdatesCard';
-import { Investment } from './types/investment';
+import { Investment, Payment } from './types/investment';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { toast } from 'sonner';
@@ -40,14 +40,22 @@ const InvestmentTrackingPage: React.FC = () => {
           const paymentsData = await fetchTransactionHistory(investmentData.user_id);
           
           // Filter payments related to this investment
-          const investmentPayments = paymentsData.filter(payment => 
-            payment.investment_id === investmentId
-          );
+          const investmentPayments = paymentsData
+            .filter(payment => payment.investment_id === investmentId)
+            .map(payment => ({
+              id: payment.id,
+              amount: payment.amount,
+              date: payment.created_at,
+              status: payment.status as 'pending' | 'completed' | 'failed' | 'paid',
+              description: payment.description || 'Paiement',
+              userId: payment.user_id,
+              investmentId: investmentId
+            }));
           
           // Add payments to the investment data
           setInvestment({
             ...investmentData,
-            payments: investmentPayments
+            payments: investmentPayments as Payment[]
           });
         } else {
           setError('Investissement non trouvé');
@@ -110,11 +118,15 @@ const InvestmentTrackingPage: React.FC = () => {
               investmentId={investment.id} 
               userId={investment.user_id}
             />
-            <ProjectUpdatesCard projectId={investment.project_id} />
+            <ProjectUpdatesCard 
+              projectId={investment.project_id}
+            />
           </div>
           
           <div className="space-y-6">
-            <ContactActionsCard investmentId={investment.id} />
+            <ContactActionsCard 
+              investmentId={investment.id}
+            />
           </div>
         </div>
       </div>
