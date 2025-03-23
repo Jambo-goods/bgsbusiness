@@ -22,13 +22,18 @@ export const calculateReturns = (
 
 /**
  * Get total payments received based on wallet transaction data
- * This replaces the fixed approach with a dynamic calculation
  */
 export const getFixedTotalPaymentsReceived = async (userId?: string) => {
-  if (!userId) return 0;
+  if (!userId) {
+    console.log("No user ID provided for getFixedTotalPaymentsReceived");
+    return 0;
+  }
   
   try {
     const { supabase } = await import('@/integrations/supabase/client');
+    
+    // Log for debugging
+    console.log(`Getting total payments received for user: ${userId}`);
     
     // Query wallet transactions of type 'yield' with status 'completed'
     const { data, error } = await supabase

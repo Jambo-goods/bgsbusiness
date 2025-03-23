@@ -53,14 +53,19 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
               console.log('Setting earnings from scheduled payments:', totalFromScheduledPayments);
             } else {
               // Fall back to fixed amount if no data is available
-              const fixedValue = getFixedTotalPaymentsReceived();
+              const userId = investment.user_id;
+              // Ensure we're not passing the promise but resolving it first
+              const fixedValue = await getFixedTotalPaymentsReceived(userId);
               setTotalEarnings(fixedValue);
               console.log('Setting fixed earnings value:', fixedValue);
             }
           }
         } else {
-          // No investment data, use fixed value
-          const fixedValue = getFixedTotalPaymentsReceived();
+          // No investment data, use fixed value with auth.user id
+          const { data } = await supabase.auth.getSession();
+          const userId = data.session?.user.id;
+          // Resolve the promise before setting state
+          const fixedValue = await getFixedTotalPaymentsReceived(userId);
           setTotalEarnings(fixedValue);
           console.log('No investment data, using fixed value');
         }
@@ -72,8 +77,10 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
           variant: "destructive",
         });
         
-        // Set the correct value even in case of error
-        const fixedValue = getFixedTotalPaymentsReceived();
+        // Get the user ID and resolve the promise for the fixed value
+        const { data } = await supabase.auth.getSession();
+        const userId = data.session?.user.id;
+        const fixedValue = await getFixedTotalPaymentsReceived(userId);
         setTotalEarnings(fixedValue);
       }
     };
