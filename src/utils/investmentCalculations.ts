@@ -82,13 +82,18 @@ export const processPaymentToWallet = async (userId: string, amount: number, pay
     console.log(`Processing payment to wallet: user=${userId}, amount=${amount}, paymentId=${paymentId}`);
     
     // First check if this payment was already processed
-    const { data: existingTransaction } = await supabase
+    const { data: existingTransaction, error: checkError } = await supabase
       .from('wallet_transactions')
       .select('id')
       .eq('user_id', userId)
       .eq('payment_id', paymentId)
       .eq('status', 'completed')
       .maybeSingle();
+      
+    if (checkError) {
+      console.error("Error checking existing transaction:", checkError);
+      return false;
+    }
       
     if (existingTransaction) {
       console.log(`Payment ${paymentId} was already processed, skipping`);
@@ -111,7 +116,7 @@ export const processPaymentToWallet = async (userId: string, amount: number, pay
       return false;
     }
     
-    // Update wallet balance
+    // Update wallet balance directly using RPC function
     const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
       user_id: userId,
       increment_amount: amount

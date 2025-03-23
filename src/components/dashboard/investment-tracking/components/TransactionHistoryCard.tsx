@@ -76,6 +76,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       const { data } = await supabase.auth.getSession();
       if (data.session?.user) {
         setUserId(data.session.user.id);
+        console.log("Got user ID for payment processing:", data.session.user.id);
       }
     };
     
@@ -224,17 +225,19 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
 
   // Set up a real-time listener for scheduled payments status changes
   useEffect(() => {
-    if (!projectId || !userId) return;
+    if (!userId) {
+      console.log("Waiting for user ID before setting up real-time listener");
+      return;
+    }
 
-    console.log(`Setting up real-time listener for scheduled payments on project ${projectId}`);
+    console.log(`Setting up real-time listener for scheduled payments changes for user ${userId}`);
 
     // Listen for scheduled payment status changes
-    const channel = supabase.channel('scheduled-payments-status')
+    const channel = supabase.channel('scheduled-payments-status-updates')
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',
-        table: 'scheduled_payments',
-        filter: `project_id=eq.${projectId}`
+        table: 'scheduled_payments'
       }, async (payload) => {
         console.log('Scheduled payment status changed:', payload);
         
@@ -248,7 +251,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           );
           
           if (changedPayment) {
-            console.log(`Processing payment ${changedPayment.id} for ${changedPayment.amount}€`);
+            console.log(`Processing payment ${changedPayment.id} for ${changedPayment.amount}€ to user ${userId}`);
             
             const success = await processPaymentToWallet(
               userId, 
@@ -259,6 +262,8 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             
             if (success) {
               toast.success(`${changedPayment.amount.toFixed(2)}€ ont été crédités sur votre solde disponible`);
+            } else {
+              console.error("Failed to process payment to wallet");
             }
           }
         }
@@ -271,7 +276,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       console.log("Cleaning up scheduled payments listener");
       supabase.removeChannel(channel);
     };
-  }, [projectId, userId, formattedScheduledPayments]);
+  }, [userId, formattedScheduledPayments]);
 
   return (
     <Card>
