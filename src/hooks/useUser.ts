@@ -26,14 +26,21 @@ export function useUser() {
         // Get user profile to check if admin
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_admin')
+          .select('*')
           .eq('id', authUser.id)
           .single();
+        
+        // Check if user has admin role
+        const { data: adminData } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('id', authUser.id)
+          .maybeSingle();
         
         setUser({
           id: authUser.id,
           email: authUser.email || '',
-          isAdmin: profile?.is_admin || false
+          isAdmin: adminData ? true : false
         });
       } catch (error) {
         console.error('Error fetching user:', error);

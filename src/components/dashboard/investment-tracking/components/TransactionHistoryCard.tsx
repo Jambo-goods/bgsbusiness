@@ -69,22 +69,22 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
         const { data, error } = await supabase
           .from('scheduled_payments')
           .select('*')
-          .eq('investment_id', investmentId)
-          .order('date', { ascending: false });
+          .eq('project_id', investmentId)
+          .order('payment_date', { ascending: false });
 
-        if (error) {
-          throw new Error(error.message);
-        }
+        if (error) throw new Error(error.message);
 
         // Map the data to match our Payment interface
-        const formattedPayments = data.map(payment => ({
+        const formattedPayments: Payment[] = data.map(payment => ({
           id: payment.id,
-          amount: payment.amount,
-          date: payment.date,
-          status: payment.status,
-          description: payment.description || '',
-          userId: payment.user_id,
-          investmentId: payment.investment_id
+          amount: payment.total_scheduled_amount || 0,
+          date: payment.payment_date,
+          status: (payment.status === 'pending' || payment.status === 'completed' || payment.status === 'failed') 
+            ? payment.status as 'pending' | 'completed' | 'failed'
+            : 'pending',
+          description: `Paiement programmé pour ${formatDate(payment.payment_date)}`,
+          userId: userId,
+          investmentId: investmentId
         }));
 
         setPayments(formattedPayments);
