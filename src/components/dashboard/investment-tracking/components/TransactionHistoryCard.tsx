@@ -1,4 +1,3 @@
-
 import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -126,6 +125,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   }, [scheduledPayments, projectId]);
   
   const fixedYieldPercentage = 12;
+  const monthlyYieldPercentage = 1;
 
   const formattedScheduledPayments = useMemo(() => {
     if (!investmentScheduledPayments?.length || !investmentDate || !firstValidPaymentDate) {
@@ -137,11 +137,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     console.log("Montant d'investissement utilisé:", actualInvestmentAmount);
     
     let cumulativeScheduledAmount = totalYieldReceived;
-    
-    // Use the consistent monthly yield calculation from utils
-    const monthlyYield = calculateMonthlyYield(actualInvestmentAmount, fixedYieldPercentage);
-    
-    console.log("Rendement mensuel calculé:", monthlyYield);
     
     const sortedPayments = [...investmentScheduledPayments].sort(
       (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
@@ -155,10 +150,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     console.log("Paiements valides après le délai du premier versement:", validPayments.length);
     
     return validPayments.map(payment => {
-      // Correctly calculate the monthly payment amount based on the investment amount and percentage
-      // Monthly yield = investment amount * (percentage / 100) / 12
-      const paymentPercentage = payment.percentage || fixedYieldPercentage;
-      const paymentAmount = (actualInvestmentAmount * paymentPercentage) / 100 / 12;
+      const paymentAmount = actualInvestmentAmount * monthlyYieldPercentage / 100;
       
       console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}, date: ${payment.payment_date}`);
       
@@ -169,14 +161,12 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         date: payment.payment_date,
         amount: paymentAmount,
         cumulativeAmount: cumulativeScheduledAmount,
-        percentage: payment.percentage || (fixedYieldPercentage / 12),
+        percentage: monthlyYieldPercentage,
         status: payment.status,
         projectName: payment.projects?.name || 'Projet inconnu'
       };
     });
-  }, [investmentScheduledPayments, investmentAmount, fixedYieldPercentage, totalYieldReceived, investmentDate, firstValidPaymentDate, firstPaymentDelayMonths]);
-
-  console.log("Paiements programmés formatés:", formattedScheduledPayments);
+  }, [investmentScheduledPayments, investmentAmount, totalYieldReceived, investmentDate, firstValidPaymentDate, firstPaymentDelayMonths]);
 
   const formatDate = (date: string) => {
     return format(new Date(date), 'dd/MM/yyyy', { locale: fr });
@@ -231,7 +221,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                         {investmentId ? "Investissement actuel" : `Projet #${index + 1}`}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {fixedYieldPercentage / 12}%
+                        {monthlyYieldPercentage}%
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {tx.amount.toFixed(2)} €
@@ -258,7 +248,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                         {payment.projectName}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {payment.percentage.toFixed(2)}%
+                        {monthlyYieldPercentage}%
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {payment.amount.toFixed(2)} €
