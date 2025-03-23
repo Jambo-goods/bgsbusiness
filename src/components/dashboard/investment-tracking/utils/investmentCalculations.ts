@@ -14,3 +14,16 @@ export const calculateMonthlyYield = (
   
   return monthlyReturn;
 };
+
+/**
+ * Calculate total earnings from completed transactions
+ */
+export const calculateTotalEarnings = (
+  transactions: any[]
+): number => {
+  if (!transactions || transactions.length === 0) return 0;
+  
+  return transactions
+    .filter(tx => tx.type === 'yield' && tx.status === 'completed')
+    .reduce((sum, tx) => sum + tx.amount, 0);
+};

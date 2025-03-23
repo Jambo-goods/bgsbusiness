@@ -15,48 +15,17 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
   const [totalEarnings, setTotalEarnings] = useState(0);
   
   useEffect(() => {
-    // Calculate total earnings from transactions that are already completed
+    // Calculate total earnings from all yield transactions that are completed
     const earningsFromTransactions = transactions
-      .filter(t => 
-        t.type === 'yield' && 
-        t.status === 'completed' && 
-        (t.investment_id === investment.id)
-      )
+      .filter(t => t.type === 'yield' && t.status === 'completed')
       .reduce((sum, t) => sum + t.amount, 0);
     
     console.log('Earnings from completed transactions:', earningsFromTransactions);
+    console.log('All transactions:', transactions);
     
-    // Function to get all scheduled payments for this investment's project
-    const fetchScheduledPayments = async () => {
-      try {
-        if (!investment.project_id) return;
-        
-        const { data: payments, error } = await supabase
-          .from('scheduled_payments')
-          .select('*')
-          .eq('project_id', investment.project_id)
-          .eq('status', 'paid');
-          
-        if (error) throw error;
-        
-        console.log('Paid scheduled payments found for project:', payments?.length || 0);
-        
-        if (payments && payments.length > 0) {
-          // Set the total earnings to match the transaction earnings
-          // This ensures we only count confirmed/paid payments
-          setTotalEarnings(earningsFromTransactions);
-        } else {
-          // No scheduled payments found, just use transaction earnings
-          setTotalEarnings(earningsFromTransactions);
-          console.log('No scheduled payments found, using transaction earnings only:', earningsFromTransactions);
-        }
-      } catch (error) {
-        console.error("Error fetching scheduled payments:", error);
-        setTotalEarnings(earningsFromTransactions);
-      }
-    };
+    // Directly set the total earnings from completed transactions
+    setTotalEarnings(earningsFromTransactions);
     
-    fetchScheduledPayments();
   }, [investment, transactions]);
     
   console.log('Transactions available:', transactions);
