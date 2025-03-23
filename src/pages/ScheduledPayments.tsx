@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "sonner";
 
 export default function ScheduledPayments() {
-  const { scheduledPayments, isLoading, addScheduledPayment, refetch } = useScheduledPayments();
+  const { scheduledPayments, isLoading, updatePaymentStatus, addScheduledPayment, refetch } = useScheduledPayments();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);

@@ -45,6 +45,28 @@ export const useScheduledPayments = () => {
     }
   }, []);
 
+  // Add a new scheduled payment
+  const addScheduledPayment = async (paymentData: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('scheduled_payments')
+        .insert([paymentData])
+        .select();
+
+      if (error) {
+        console.error('Error adding scheduled payment:', error);
+        throw new Error(error.message);
+      }
+
+      // Refresh the payments list
+      await fetchScheduledPayments();
+      return data;
+    } catch (error: any) {
+      console.error('Error in addScheduledPayment:', error);
+      throw error;
+    }
+  };
+
   // Update a payment's status, date, percentage
   const updatePaymentStatus = async (
     paymentId: string,
@@ -59,7 +81,7 @@ export const useScheduledPayments = () => {
       await fetchScheduledPayments();
       
       // Find the payment to update
-      const paymentToUpdate = scheduledPayments.find(p => p.id === paymentId);
+      let paymentToUpdate = scheduledPayments.find(p => p.id === paymentId);
       
       if (!paymentToUpdate) {
         console.log(`Payment ${paymentId} not found in local state, fetching directly`);
@@ -164,6 +186,7 @@ export const useScheduledPayments = () => {
     isLoading,
     error,
     updatePaymentStatus,
+    addScheduledPayment,
     refetch
   };
 };
