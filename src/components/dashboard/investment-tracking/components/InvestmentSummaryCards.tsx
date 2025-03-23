@@ -26,7 +26,7 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
     
     console.log('Earnings from transactions:', earningsFromTransactions);
     
-    // Function to get scheduled payments for this investment's project
+    // Function to get all scheduled payments for this investment's project
     const fetchScheduledPayments = async () => {
       try {
         if (!investment.project_id) return;
@@ -39,7 +39,7 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
           
         if (error) throw error;
         
-        console.log('Paid scheduled payments found:', payments?.length || 0);
+        console.log('Paid scheduled payments found for project:', payments?.length || 0);
         
         if (payments && payments.length > 0) {
           // Sort payments by date to ensure proper cumulative calculation
@@ -47,19 +47,16 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
             (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
           );
           
-          let cumulativeTotal = 0;
-          
-          // Calculate the cumulative total - this should match the transaction history table
-          for (const payment of sortedPayments) {
+          // Calculate the total amount of all payments for this project
+          const totalProjectPayments = sortedPayments.reduce((total, payment) => {
             const paymentAmount = calculateMonthlyYield(investment.amount, payment.percentage || 12);
-            cumulativeTotal += paymentAmount;
-            console.log(`Payment calculated for investment ${investment.id} with percentage ${payment.percentage}: ${paymentAmount}, cumulative: ${cumulativeTotal}`);
-          }
+            return total + paymentAmount;
+          }, 0);
           
-          console.log(`Final cumulative total: ${cumulativeTotal}`);
+          console.log(`Total of all payments for this project: ${totalProjectPayments}`);
           
-          // Set the total earnings to be the cumulative amount of the last payment
-          setTotalEarnings(cumulativeTotal);
+          // Set the total earnings to be the sum of all payments for this project
+          setTotalEarnings(totalProjectPayments);
         } else {
           // No scheduled payments found, just use transaction earnings
           setTotalEarnings(earningsFromTransactions);
@@ -103,7 +100,7 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
       <Card>
         <CardContent className="pt-6">
           <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">Total des bénéfices reçus</p>
+            <p className="text-sm text-gray-600 mb-1">Total des versements reçus</p>
             <p className="text-3xl font-bold text-green-600">{totalEarnings.toFixed(2)}€</p>
           </div>
         </CardContent>
