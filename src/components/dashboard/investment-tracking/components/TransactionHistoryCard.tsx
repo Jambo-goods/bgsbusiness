@@ -137,8 +137,12 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    // Correctly calculate monthly yield: annual percentage / 12 * investment amount
-    const monthlyYield = (actualInvestmentAmount * fixedYieldPercentage / 100) / 12;
+    // Calcul correct du rendement mensuel: (montant d'investissement * pourcentage annuel) / 12
+    // Par exemple pour 200€ avec 12% par an: (200 * 0.12) / 12 = 2€ par mois
+    const annualYieldAmount = actualInvestmentAmount * (fixedYieldPercentage / 100);
+    const monthlyYield = annualYieldAmount / 12;
+    
+    console.log("Rendement annuel calculé:", annualYieldAmount);
     console.log("Rendement mensuel calculé:", monthlyYield);
     
     const sortedPayments = [...investmentScheduledPayments].sort(
@@ -153,7 +157,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     console.log("Paiements valides après le délai du premier versement:", validPayments.length);
     
     return validPayments.map(payment => {
-      // Use the correctly calculated monthly yield
+      // Utiliser le rendement mensuel correctement calculé
       const paymentAmount = monthlyYield;
       console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}, date: ${payment.payment_date}`);
       

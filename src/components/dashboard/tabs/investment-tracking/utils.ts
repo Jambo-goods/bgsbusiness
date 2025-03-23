@@ -1,3 +1,4 @@
+
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -113,10 +114,11 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     // Utiliser un pourcentage fixe de 12% pour tous les investissements
     const fixedYieldRate = 12;
     
-    // Calculer le rendement mensuel basé sur le pourcentage fixe (sans diviser par 12)
-    const monthlyReturn = (fixedYieldRate / 100) * amount;
+    // Calculer correctement le rendement mensuel: (montant * taux annuel) / 12
+    const annualReturn = (fixedYieldRate / 100) * amount;
+    const monthlyReturn = annualReturn / 12;
     
-    console.log(`Investment ${index}: amount=${amount}, yield=${fixedYieldRate}%, monthly=${monthlyReturn}, monthly percentage=${fixedYieldRate}%`);
+    console.log(`Investment ${index}: amount=${amount}, annual yield=${fixedYieldRate}%, annual return=${annualReturn}, monthly return=${monthlyReturn}`);
     
     const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
     console.log(`Investment ${index}: First payment delay: ${firstPaymentDelayMonths} months`);
