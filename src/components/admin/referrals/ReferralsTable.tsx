@@ -48,12 +48,10 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialRefer
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active':
-        return <Badge className="bg-green-500">Actif</Badge>;
       case 'pending':
         return <Badge className="bg-amber-500">En attente</Badge>;
-      case 'completed':
-        return <Badge className="bg-blue-500">Complété</Badge>;
+      case 'valid':
+        return <Badge className="bg-blue-500">Valide</Badge>;
       case 'cancelled':
         return <Badge className="bg-red-500">Annulé</Badge>;
       default:

@@ -26,8 +26,7 @@ const ReferralStatusSelect: React.FC<ReferralStatusSelectProps> = ({
 
   const statusOptions = [
     { value: 'pending', label: 'En attente' },
-    { value: 'active', label: 'Actif' },
-    { value: 'completed', label: 'Complété' },
+    { value: 'valid', label: 'Valide' },
     { value: 'cancelled', label: 'Annulé' }
   ];
 
