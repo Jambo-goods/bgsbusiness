@@ -35,7 +35,7 @@ export function useReferrals() {
       
       console.log("Fetching referrals...");
       
-      // Modified query to explicitly use the correct foreign key relationships
+      // Fix the query by using specific foreign key identifiers
       const { data, error } = await supabase
         .from('referrals')
         .select(`
@@ -46,8 +46,8 @@ export function useReferrals() {
           commission_rate,
           total_commission,
           created_at,
-          referrer:profiles(first_name, last_name, email),
-          referred:profiles(first_name, last_name, email)
+          referrer:profiles!referrals_referrer_id_fkey(first_name, last_name, email),
+          referred:profiles!referrals_referred_id_fkey(first_name, last_name, email)
         `)
         .order('created_at', { ascending: false });
       
