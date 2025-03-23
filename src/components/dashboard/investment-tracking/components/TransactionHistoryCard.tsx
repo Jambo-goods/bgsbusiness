@@ -69,7 +69,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const [firstValidPaymentDate, setFirstValidPaymentDate] = useState<Date | null>(null);
   const [actualInvestmentAmount, setActualInvestmentAmount] = useState<number>(0);
   const [userId, setUserId] = useState<string | null>(null);
-  const [isProcessingPayments, setIsProcessingPayments] = useState(false);
   
   useEffect(() => {
     // Get the user's ID for payment processing
@@ -224,61 +223,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     return () => clearTimeout(timer);
   }, []);
 
-  // Process all paid payments at once
-  useEffect(() => {
-    const processAllPayments = async () => {
-      if (!userId || isProcessingPayments || formattedScheduledPayments.length === 0) {
-        return;
-      }
-
-      setIsProcessingPayments(true);
-      console.log("Processing all paid payments for user", userId);
-
-      try {
-        // Get all paid payments that need to be processed
-        const paidPayments = formattedScheduledPayments.filter(payment => payment.status === 'paid');
-        console.log(`Found ${paidPayments.length} paid payments to process`, paidPayments);
-
-        if (paidPayments.length === 0) {
-          console.log("No paid payments to process");
-          return;
-        }
-
-        let successCount = 0;
-        
-        // Process each payment one by one
-        for (const payment of paidPayments) {
-          console.log(`Processing payment ${payment.id} with amount ${payment.amount}€`);
-          
-          const success = await processPaymentToWallet(
-            userId, 
-            payment.amount, 
-            payment.id, 
-            payment.projectName
-          );
-          
-          if (success) {
-            successCount++;
-            console.log(`Successfully processed payment ${payment.id}`);
-          } else {
-            console.error(`Failed to process payment ${payment.id}`);
-          }
-        }
-        
-        if (successCount > 0) {
-          toast.success(`${successCount} paiements ont été crédités sur votre solde disponible`);
-          console.log(`Successfully processed ${successCount}/${paidPayments.length} payments`);
-        }
-      } catch (error) {
-        console.error("Error processing payments:", error);
-      } finally {
-        setIsProcessingPayments(false);
-      }
-    };
-
-    processAllPayments();
-  }, [userId, formattedScheduledPayments, isProcessingPayments]);
-
   // Set up a real-time listener for scheduled payments status changes
   useEffect(() => {
     if (!userId) {
@@ -307,7 +251,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           );
           
           if (changedPayment) {
-            console.log(`Processing new paid payment ${changedPayment.id} for ${changedPayment.amount}€ to user ${userId}`);
+            console.log(`Processing payment ${changedPayment.id} for ${changedPayment.amount}€ to user ${userId}`);
             
             const success = await processPaymentToWallet(
               userId, 
@@ -333,49 +277,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
       supabase.removeChannel(channel);
     };
   }, [userId, formattedScheduledPayments]);
-
-  // Add a manual button to refresh and process all payments
-  const handleProcessAllPayments = async () => {
-    if (!userId || isProcessingPayments) return;
-    
-    setIsProcessingPayments(true);
-    try {
-      // Get all paid payments that need to be processed
-      const paidPayments = formattedScheduledPayments.filter(payment => payment.status === 'paid');
-      console.log(`Manual processing of ${paidPayments.length} paid payments`);
-
-      let successCount = 0;
-      
-      // Process each payment one by one
-      for (const payment of paidPayments) {
-        console.log(`Processing payment ${payment.id} with amount ${payment.amount}€`);
-        
-        const success = await processPaymentToWallet(
-          userId, 
-          payment.amount, 
-          payment.id, 
-          payment.projectName
-        );
-        
-        if (success) {
-          successCount++;
-        }
-      }
-      
-      if (successCount > 0) {
-        toast.success(`${successCount} paiements ont été crédités sur votre solde disponible`);
-      } else if (paidPayments.length > 0) {
-        toast.info("Tous les paiements ont déjà été traités");
-      } else {
-        toast.info("Aucun paiement à traiter");
-      }
-    } catch (error) {
-      console.error("Error processing payments:", error);
-      toast.error("Erreur lors du traitement des paiements");
-    } finally {
-      setIsProcessingPayments(false);
-    }
-  };
 
   return (
     <Card>
@@ -403,17 +304,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
               </div>
             </div>
           </div>
-          
-          {/* Manual process button */}
-          {formattedScheduledPayments.filter(p => p.status === 'paid').length > 0 && (
-            <button 
-              onClick={handleProcessAllPayments}
-              disabled={isProcessingPayments}
-              className="mb-4 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              {isProcessingPayments ? 'Traitement...' : 'Traiter tous les paiements'}
-            </button>
-          )}
           
           {isLoading || isLoadingScheduledPayments ? (
             <div className="flex items-center justify-center py-8">
