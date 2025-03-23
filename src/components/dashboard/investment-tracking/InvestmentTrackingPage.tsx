@@ -63,7 +63,7 @@ export default function InvestmentTrackingPage() {
         
         {/* Section 3: Transaction History */}
         <TransactionHistoryCard 
-          investmentId={investmentId || ''} 
+          investmentId={investment.project_id || ''} 
           userId={investment.user_id || ''}
         />
         

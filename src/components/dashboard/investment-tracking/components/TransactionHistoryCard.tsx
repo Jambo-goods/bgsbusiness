@@ -57,24 +57,28 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
 
   const fetchPayments = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      // Check if the table exists first
-      const { data: tableExists } = await supabase
-        .from('scheduled_payments')
-        .select('*')
-        .limit(1);
+      console.log('Fetching scheduled payments for project_id:', investmentId);
       
-      if (tableExists) {
-        // Use scheduled_payments table if it exists
-        const { data, error } = await supabase
-          .from('scheduled_payments')
-          .select('*')
-          .eq('project_id', investmentId)
-          .order('payment_date', { ascending: false });
+      const { data, error } = await supabase
+        .from('scheduled_payments')
+        .select(`
+          *,
+          projects(name)
+        `)
+        .eq('project_id', investmentId)
+        .order('payment_date', { ascending: false });
 
-        if (error) throw new Error(error.message);
+      if (error) {
+        console.error("Supabase query error:", error);
+        throw new Error(error.message);
+      }
 
-        // Map the data to match our Payment interface
+      console.log('Fetched scheduled payments data:', data);
+
+      // Map the data to match our Payment interface
+      if (data && data.length > 0) {
         const formattedPayments: Payment[] = data.map(payment => ({
           id: payment.id,
           amount: payment.total_scheduled_amount || 0,
@@ -82,26 +86,32 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
           status: (payment.status === 'pending' || payment.status === 'completed' || payment.status === 'failed') 
             ? payment.status as 'pending' | 'completed' | 'failed'
             : 'pending',
-          description: `Paiement programmé pour ${formatDate(payment.payment_date)}`,
+          description: `Paiement programmé pour ${formatDate(payment.payment_date)} (${payment.percentage}%)`,
           userId: userId,
           investmentId: investmentId
         }));
 
         setPayments(formattedPayments);
+        console.log('Formatted payments:', formattedPayments);
       } else {
-        // Fallback to mock data if table doesn't exist
-        const mockPayments: Payment[] = [
-          {
-            id: '1',
-            amount: 500,
-            date: new Date().toISOString(),
-            status: 'completed',
-            description: 'Monthly dividend payment',
-            userId,
-            investmentId
-          }
-        ];
-        setPayments(mockPayments);
+        console.log('No scheduled payments found, adding fallback mock data');
+        // Add a fallback mock payment only if we're in development and no data is available
+        if (process.env.NODE_ENV === 'development') {
+          const mockPayments: Payment[] = [
+            {
+              id: '1',
+              amount: 500,
+              date: new Date().toISOString(),
+              status: 'pending',
+              description: 'Paiement mensuel (exemple)',
+              userId,
+              investmentId
+            }
+          ];
+          setPayments(mockPayments);
+        } else {
+          setPayments([]);
+        }
       }
     } catch (err: any) {
       setError(err.message);
@@ -112,7 +122,9 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
   };
 
   useEffect(() => {
-    fetchPayments();
+    if (investmentId) {
+      fetchPayments();
+    }
   }, [investmentId]);
 
   const handleOpenPaymentModal = () => {
@@ -203,9 +215,15 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
           ))}
         </div>
       ) : error ? (
-        <p className="text-red-500">Error: {error}</p>
+        <div className="text-center py-10">
+          <p className="text-red-500 mb-2">Erreur: {error}</p>
+          <Button variant="outline" onClick={fetchPayments}>Réessayer</Button>
+        </div>
       ) : payments.length === 0 ? (
-        <p className="text-gray-500">Aucune transaction disponible.</p>
+        <div className="text-center py-10">
+          <p className="text-gray-500 mb-4">Aucune transaction disponible pour cet investissement.</p>
+          <Button variant="outline" onClick={fetchPayments}>Rafraîchir</Button>
+        </div>
       ) : (
         <div className="rounded-md border">
           <Table>
