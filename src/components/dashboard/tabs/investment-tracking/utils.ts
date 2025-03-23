@@ -1,4 +1,3 @@
-
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -93,9 +92,10 @@ export const filterAndSortPayments = (
 
 // Helper function for calculating monthly yield consistently across the app
 export const calculateMonthlyYield = (investmentAmount: number, annualYieldPercentage: number): number => {
-  // Calculate monthly yield: (investment amount * annual percentage) / 1200
-  // Division by 1200 = (12 months * 100 for percentage conversion)
-  return (investmentAmount * annualYieldPercentage) / 1200;
+  // Pour un rendement mensuel de 12%, on utilise directement la formule:
+  // investmentAmount * (annualYieldPercentage / 100)
+  // Pas de division par 12 car le pourcentage est déjà mensuel
+  return (investmentAmount * annualYieldPercentage) / 100;
 };
 
 export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[] => {
@@ -118,13 +118,13 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     const investmentDate = investment.date ? new Date(investment.date) : new Date();
     const amount = investment.amount || 0;
     
-    // Pourcentage fixe de 12% pour tous les investissements
+    // Pourcentage fixe de 12% mensuel pour tous les investissements
     const fixedYieldRate = 12;
     
     // Use the helper function for consistent calculation
     const monthlyReturn = calculateMonthlyYield(amount, fixedYieldRate);
     
-    console.log(`Investment ${index}: amount=${amount}, annual yield=${fixedYieldRate}%, monthly return=${monthlyReturn} (${fixedYieldRate/12}% monthly)`);
+    console.log(`Investment ${index}: amount=${amount}, monthly yield=${fixedYieldRate}%, monthly return=${monthlyReturn}`);
     
     const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
     console.log(`Investment ${index}: First payment delay: ${firstPaymentDelayMonths} months`);

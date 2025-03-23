@@ -5,7 +5,6 @@ import { fr } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, CheckCircle, Clock, Calendar } from "lucide-react";
 import { Transaction, ScheduledPayment } from "../types/investment";
-import { calculateMonthlyYield } from "@/components/dashboard/tabs/investment-tracking/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import useScheduledPayments from "@/hooks/useScheduledPayments";
@@ -125,6 +124,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     return filteredPayments;
   }, [scheduledPayments, projectId]);
   
+  // Utiliser 12 pour le rendement mensuel (pas annuel)
   const fixedYieldPercentage = 12;
 
   const formattedScheduledPayments = useMemo(() => {
@@ -138,8 +138,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    // Use the consistent monthly yield calculation from utils
-    const monthlyYield = calculateMonthlyYield(actualInvestmentAmount, fixedYieldPercentage);
+    // Calculer correctement le rendement mensuel: investmentAmount * (percentage / 100)
+    // Pas de division par 12 car le pourcentage est déjà mensuel
+    const monthlyYield = (actualInvestmentAmount * fixedYieldPercentage) / 100;
     
     console.log("Rendement mensuel calculé:", monthlyYield);
     
@@ -155,10 +156,11 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     console.log("Paiements valides après le délai du premier versement:", validPayments.length);
     
     return validPayments.map(payment => {
-      // Correctly calculate the monthly payment amount based on the investment amount and percentage
-      // Monthly yield = investment amount * (percentage / 100) / 12
+      // Calculer le montant mensuel basé sur le montant d'investissement et le pourcentage
+      // Montant mensuel = montant d'investissement * (pourcentage / 100)
+      // Pas de division par 12 car le pourcentage est déjà mensuel
       const paymentPercentage = payment.percentage || fixedYieldPercentage;
-      const paymentAmount = (actualInvestmentAmount * paymentPercentage) / 100 / 12;
+      const paymentAmount = (actualInvestmentAmount * paymentPercentage) / 100;
       
       console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}, date: ${payment.payment_date}`);
       
@@ -169,7 +171,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         date: payment.payment_date,
         amount: paymentAmount,
         cumulativeAmount: cumulativeScheduledAmount,
-        percentage: payment.percentage || (fixedYieldPercentage / 12),
+        percentage: payment.percentage || fixedYieldPercentage,
         status: payment.status,
         projectName: payment.projects?.name || 'Projet inconnu'
       };
@@ -231,7 +233,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                         {investmentId ? "Investissement actuel" : `Projet #${index + 1}`}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {fixedYieldPercentage / 12}%
+                        {fixedYieldPercentage}%
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {tx.amount.toFixed(2)} €
