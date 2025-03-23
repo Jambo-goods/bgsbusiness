@@ -1,4 +1,3 @@
-
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -111,14 +110,13 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     const investmentDate = investment.date ? new Date(investment.date) : new Date();
     const amount = investment.amount || 0;
     
-    // Utiliser un pourcentage fixe de 12% pour tous les investissements
+    // Pourcentage fixe de 12% pour tous les investissements
     const fixedYieldRate = 12;
     
-    // Calculer correctement le rendement mensuel: (montant * taux annuel) / 12
-    const annualReturn = (fixedYieldRate / 100) * amount;
-    const monthlyReturn = annualReturn / 12;
+    // Calcul correct du rendement mensuel: (montant * taux annuel) / (12 * 100)
+    const monthlyReturn = (amount * fixedYieldRate) / 1200;
     
-    console.log(`Investment ${index}: amount=${amount}, annual yield=${fixedYieldRate}%, annual return=${annualReturn}, monthly return=${monthlyReturn}`);
+    console.log(`Investment ${index}: amount=${amount}, annual yield=${fixedYieldRate}%, monthly return=${monthlyReturn} (${fixedYieldRate/12}% monthly)`);
     
     const firstPaymentDelayMonths = investment.projects.first_payment_delay_months || 1;
     console.log(`Investment ${index}: First payment delay: ${firstPaymentDelayMonths} months`);
@@ -126,7 +124,6 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     // Create first payment date based on investment date plus delay, keeping the original day
     const firstPaymentDate = new Date(investmentDate);
     firstPaymentDate.setMonth(investmentDate.getMonth() + firstPaymentDelayMonths);
-    // Keep the original day of the month instead of setting to 5th
     
     console.log(`Investment ${index}: Investment date=${investmentDate.toISOString()}, First payment date=${firstPaymentDate.toISOString()}`);
     
@@ -145,7 +142,6 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       for (let i = 0; i <= monthsSinceFirstPayment; i++) {
         const paymentDate = new Date(firstPaymentDate);
         paymentDate.setMonth(firstPaymentDate.getMonth() + i);
-        // Keep the original day of the month
         
         if (paymentDate < now) {
           payments.push({
@@ -164,7 +160,6 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       
       let nextPaymentDate = new Date(firstPaymentDate);
       nextPaymentDate.setMonth(firstPaymentDate.getMonth() + monthsSinceFirstPayment);
-      // Keep the original day
       
       if (nextPaymentDate <= now) {
         nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
@@ -186,7 +181,6 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
       for (let i = 1; i <= 2; i++) {
         const futureDate = new Date(nextPaymentDate);
         futureDate.setMonth(nextPaymentDate.getMonth() + i);
-        // Keep the original day
         
         payments.push({
           id: `payment-${investment.id}-future-${i}`,

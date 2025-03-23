@@ -137,12 +137,10 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    // Calcul correct du rendement mensuel: (montant d'investissement * pourcentage annuel) / 12
-    // Par exemple pour 200€ avec 12% par an: (200 * 0.12) / 12 = 2€ par mois
-    const annualYieldAmount = actualInvestmentAmount * (fixedYieldPercentage / 100);
-    const monthlyYield = annualYieldAmount / 12;
+    // Calcul correct du rendement mensuel: (montant d'investissement * pourcentage annuel) / (12 * 100)
+    // Pour 200€ avec 12% par an: (200 * 12) / 1200 = 2€ par mois
+    const monthlyYield = (actualInvestmentAmount * fixedYieldPercentage) / 1200;
     
-    console.log("Rendement annuel calculé:", annualYieldAmount);
     console.log("Rendement mensuel calculé:", monthlyYield);
     
     const sortedPayments = [...investmentScheduledPayments].sort(
@@ -257,7 +255,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
                         {payment.projectName}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                        {payment.percentage.toFixed(2)}%
+                        {(payment.percentage).toFixed(2)}%
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {payment.amount.toFixed(2)} €
