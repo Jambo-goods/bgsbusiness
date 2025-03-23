@@ -88,8 +88,8 @@ export default function PaymentsTable({
       if (paymentDate >= firstValidPaymentDate) {
         const percentage = sp.percentage || 0;
         
-        // Calculate the amount based on the project's invested amount and the percentage
-        // Le pourcentage est déjà mensuel, pas besoin de diviser par 12
+        // Calcul correct du montant mensuel:
+        // Le pourcentage est mensuel, donc directement: montant * (pourcentage / 100)
         const projectInvestment = project.investedAmount || 0;
         const calculatedAmount = (projectInvestment * percentage) / 100;
         

@@ -1,3 +1,4 @@
+
 import { PaymentRecord } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -91,11 +92,10 @@ export const filterAndSortPayments = (
 };
 
 // Helper function for calculating monthly yield consistently across the app
-export const calculateMonthlyYield = (investmentAmount: number, annualYieldPercentage: number): number => {
-  // Pour un rendement mensuel de 12%, on utilise directement la formule:
-  // investmentAmount * (annualYieldPercentage / 100)
-  // Pas de division par 12 car le pourcentage est déjà mensuel
-  return (investmentAmount * annualYieldPercentage) / 100;
+// Le pourcentage fourni est déjà mensuel, pas annuel
+export const calculateMonthlyYield = (investmentAmount: number, monthlyYieldPercentage: number): number => {
+  // Calcul direct: montant d'investissement * (pourcentage mensuel / 100)
+  return (investmentAmount * monthlyYieldPercentage) / 100;
 };
 
 export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[] => {
@@ -121,7 +121,7 @@ export const generatePaymentsFromRealData = (investments: any[]): PaymentRecord[
     // Pourcentage fixe de 12% mensuel pour tous les investissements
     const fixedYieldRate = 12;
     
-    // Use the helper function for consistent calculation
+    // Use the helper function for consistent calculation - this is monthly yield
     const monthlyReturn = calculateMonthlyYield(amount, fixedYieldRate);
     
     console.log(`Investment ${index}: amount=${amount}, monthly yield=${fixedYieldRate}%, monthly return=${monthlyReturn}`);
