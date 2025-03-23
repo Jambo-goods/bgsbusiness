@@ -42,21 +42,24 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
         console.log('Paid scheduled payments found:', payments?.length || 0);
         
         if (payments && payments.length > 0) {
-          // Calculate the total earnings from all paid scheduled payments
-          // This should represent the actual sum of all money received
-          let totalFromScheduledPayments = 0;
+          // Sort payments by date to ensure proper cumulative calculation
+          const sortedPayments = [...payments].sort(
+            (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
+          );
           
-          // Process each payment and add it to the total
-          for (const payment of payments) {
+          let cumulativeTotal = 0;
+          
+          // Calculate the cumulative total - this should match the transaction history table
+          for (const payment of sortedPayments) {
             const paymentAmount = calculateMonthlyYield(investment.amount, payment.percentage || 12);
-            totalFromScheduledPayments += paymentAmount;
-            console.log(`Payment calculated for investment ${investment.id} with percentage ${payment.percentage}: ${paymentAmount}`);
+            cumulativeTotal += paymentAmount;
+            console.log(`Payment calculated for investment ${investment.id} with percentage ${payment.percentage}: ${paymentAmount}, cumulative: ${cumulativeTotal}`);
           }
           
-          console.log(`Total from all scheduled payments: ${totalFromScheduledPayments}`);
+          console.log(`Final cumulative total: ${cumulativeTotal}`);
           
-          // Set the total earnings to be the sum of all payments
-          setTotalEarnings(totalFromScheduledPayments);
+          // Set the total earnings to be the cumulative amount of the last payment
+          setTotalEarnings(cumulativeTotal);
         } else {
           // No scheduled payments found, just use transaction earnings
           setTotalEarnings(earningsFromTransactions);
