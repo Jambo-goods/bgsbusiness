@@ -8,7 +8,6 @@ import {
 import GeneralInformationCard from './components/GeneralInformationCard';
 import TransactionHistoryCard from './components/TransactionHistoryCard';
 import ContactActionsCard from './components/ContactActionsCard';
-import InvestmentSummaryCards from './components/InvestmentSummaryCards';
 import ProjectUpdatesCard from './components/ProjectUpdatesCard';
 import { Investment, Payment } from './types/investment';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -108,8 +107,6 @@ const InvestmentTrackingPage: React.FC = () => {
             Suivez les performances et les paiements de votre investissement
           </p>
         </div>
-
-        <InvestmentSummaryCards investmentData={investment} />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
