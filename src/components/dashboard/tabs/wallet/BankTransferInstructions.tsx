@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { InfoIcon, AlertCircle, CopyIcon, CheckIcon } from "lucide-react";
+import { InfoIcon, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function BankTransferInstructions() {
-  const [copied, setCopied] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
 
@@ -20,13 +19,6 @@ export default function BankTransferInstructions() {
     bic: "BGSFRINVXXX",
     bank: "Banque Générale Française",
     reference: "DEP-" + Math.floor(100000 + Math.random() * 900000)
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
   };
 
   const handleTransferAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,48 +142,18 @@ export default function BankTransferInstructions() {
               </div>
               <div>
                 <p className="text-sm font-medium text-gray-500 mb-1">BIC/SWIFT</p>
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold">{bankDetails.bic}</p>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="h-8 w-8 p-0" 
-                    onClick={() => copyToClipboard(bankDetails.bic)}
-                  >
-                    {copied ? <CheckIcon className="h-4 w-4 text-green-500" /> : <CopyIcon className="h-4 w-4" />}
-                  </Button>
-                </div>
+                <p className="font-semibold">{bankDetails.bic}</p>
               </div>
             </div>
             
             <div className="border-t border-gray-200 pt-4">
               <p className="text-sm font-medium text-gray-500 mb-1">IBAN</p>
-              <div className="flex items-center gap-2">
-                <p className="font-mono font-semibold tracking-wider">{bankDetails.iban}</p>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 w-8 p-0" 
-                  onClick={() => copyToClipboard(bankDetails.iban)}
-                >
-                  {copied ? <CheckIcon className="h-4 w-4 text-green-500" /> : <CopyIcon className="h-4 w-4" />}
-                </Button>
-              </div>
+              <p className="font-mono font-semibold tracking-wider">{bankDetails.iban}</p>
             </div>
             
             <div className="border-t border-gray-200 pt-4">
               <p className="text-sm font-medium text-gray-500 mb-1">Référence à indiquer</p>
-              <div className="flex items-center gap-2">
-                <p className="font-mono font-semibold tracking-wider text-bgs-blue">{bankDetails.reference}</p>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-8 w-8 p-0" 
-                  onClick={() => copyToClipboard(bankDetails.reference)}
-                >
-                  {copied ? <CheckIcon className="h-4 w-4 text-green-500" /> : <CopyIcon className="h-4 w-4" />}
-                </Button>
-              </div>
+              <p className="font-mono font-semibold tracking-wider text-bgs-blue">{bankDetails.reference}</p>
             </div>
           </div>
         </CardContent>
