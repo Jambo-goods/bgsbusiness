@@ -8,6 +8,7 @@ import { Transaction, ScheduledPayment } from "../types/investment";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import useScheduledPayments from "@/hooks/useScheduledPayments";
+import { processPaymentToWallet } from "@/utils/investmentCalculations";
 
 interface TransactionHistoryCardProps {
   transactions: Transaction[];
@@ -67,6 +68,19 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   const [firstPaymentDelayMonths, setFirstPaymentDelayMonths] = useState<number>(1);
   const [firstValidPaymentDate, setFirstValidPaymentDate] = useState<Date | null>(null);
   const [actualInvestmentAmount, setActualInvestmentAmount] = useState<number>(0);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Get the user's ID for payment processing
+    const getUserId = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        setUserId(data.session.user.id);
+      }
+    };
+    
+    getUserId();
+  }, []);
   
   useEffect(() => {
     const fetchInvestmentDetails = async () => {
@@ -79,7 +93,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
             project_id,
             date,
             amount,
-            projects(first_payment_delay_months)
+            projects(first_payment_delay_months, name)
           `)
           .eq('id', investmentId)
           .single();
@@ -130,50 +144,6 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
   
   // Le rendement mensuel est de 12%
   const fixedYieldPercentage = 12;
-
-  // Function to credit wallet balance when payment is marked as paid
-  const creditWalletFromPayment = async (paymentId: string, amount: number) => {
-    try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) {
-        console.error("No active session found");
-        return;
-      }
-      
-      const userId = session.session.user.id;
-      
-      // Create a wallet transaction for the payment
-      const { error: txError } = await supabase.from('wallet_transactions').insert({
-        user_id: userId,
-        amount: amount,
-        type: 'yield',
-        description: 'Versement automatique de rendement',
-        status: 'completed',
-        receipt_confirmed: true
-      });
-      
-      if (txError) {
-        console.error("Failed to create wallet transaction:", txError);
-        return;
-      }
-      
-      // Update wallet balance
-      const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
-        user_id: userId,
-        increment_amount: amount
-      });
-      
-      if (balanceError) {
-        console.error("Failed to update wallet balance:", balanceError);
-        return;
-      }
-      
-      toast.success(`${amount}€ crédités sur votre solde disponible`);
-      
-    } catch (error) {
-      console.error("Error crediting wallet:", error);
-    }
-  };
 
   const formattedScheduledPayments = useMemo(() => {
     if (!investmentScheduledPayments?.length || !investmentDate || !firstValidPaymentDate) {
@@ -254,7 +224,9 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
 
   // Set up a real-time listener for scheduled payments status changes
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !userId) return;
+
+    console.log(`Setting up real-time listener for scheduled payments on project ${projectId}`);
 
     // Listen for scheduled payment status changes
     const channel = supabase.channel('scheduled-payments-status')
@@ -262,8 +234,8 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
         event: 'UPDATE',
         schema: 'public',
         table: 'scheduled_payments',
-        filter: `project_id=eq.${projectId} AND status=eq.paid`
-      }, (payload) => {
+        filter: `project_id=eq.${projectId}`
+      }, async (payload) => {
         console.log('Scheduled payment status changed:', payload);
         
         // When a payment is changed to 'paid', add its amount to the wallet balance
@@ -276,16 +248,30 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
           );
           
           if (changedPayment) {
-            creditWalletFromPayment(changedPayment.id, changedPayment.amount);
+            console.log(`Processing payment ${changedPayment.id} for ${changedPayment.amount}€`);
+            
+            const success = await processPaymentToWallet(
+              userId, 
+              changedPayment.amount, 
+              changedPayment.id, 
+              changedPayment.projectName
+            );
+            
+            if (success) {
+              toast.success(`${changedPayment.amount.toFixed(2)}€ ont été crédités sur votre solde disponible`);
+            }
           }
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`Subscription status for scheduled payments: ${status}`);
+      });
       
     return () => {
+      console.log("Cleaning up scheduled payments listener");
       supabase.removeChannel(channel);
     };
-  }, [projectId, formattedScheduledPayments]);
+  }, [projectId, userId, formattedScheduledPayments]);
 
   return (
     <Card>

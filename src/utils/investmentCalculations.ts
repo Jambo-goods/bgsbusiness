@@ -68,6 +68,7 @@ export const calculatePaymentAmount = (investmentAmount: number, percentage: num
 
 /**
  * Process payment by updating wallet balance
+ * This function creates a wallet transaction and updates the user's wallet balance
  */
 export const processPaymentToWallet = async (userId: string, amount: number, paymentId: string, projectName: string) => {
   if (!userId || !amount) {
@@ -77,6 +78,22 @@ export const processPaymentToWallet = async (userId: string, amount: number, pay
   
   try {
     const { supabase } = await import('@/integrations/supabase/client');
+    
+    console.log(`Processing payment to wallet: user=${userId}, amount=${amount}, paymentId=${paymentId}`);
+    
+    // First check if this payment was already processed
+    const { data: existingTransaction } = await supabase
+      .from('wallet_transactions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('payment_id', paymentId)
+      .eq('status', 'completed')
+      .maybeSingle();
+      
+    if (existingTransaction) {
+      console.log(`Payment ${paymentId} was already processed, skipping`);
+      return true; // Already processed successfully
+    }
     
     // Create a wallet transaction for the payment
     const { error: txError } = await supabase.from('wallet_transactions').insert({
