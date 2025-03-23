@@ -22,19 +22,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { MoreHorizontal, Copy, Send } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from '@/integrations/supabase/client';
 import { useUser } from '@/hooks/useUser';
+import StatusBadge from '@/components/dashboard/tabs/wallet/withdrawal-table/StatusBadge';
 
 interface Payment {
   id: string;
   amount: number;
   date: string;
-  status: 'pending' | 'completed' | 'failed';
+  status: 'pending' | 'completed' | 'failed' | 'paid';
   description: string;
   userId: string;
   investmentId: string;
@@ -83,9 +83,10 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
           id: payment.id,
           amount: payment.total_scheduled_amount || 0,
           date: payment.payment_date,
-          status: (payment.status === 'pending' || payment.status === 'completed' || payment.status === 'failed') 
-            ? payment.status as 'pending' | 'completed' | 'failed'
-            : 'pending',
+          // Map the database status to our Payment interface status
+          status: payment.status === 'paid' ? 'paid' : 
+                 payment.status === 'completed' ? 'completed' : 
+                 payment.status === 'failed' ? 'failed' : 'pending',
           description: `Paiement programmé pour ${formatDate(payment.payment_date)} (${payment.percentage}%)`,
           userId: userId,
           investmentId: investmentId
@@ -178,19 +179,6 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <Badge className="bg-green-500">Complété</Badge>;
-      case 'pending':
-        return <Badge className="bg-amber-500">En attente</Badge>;
-      case 'failed':
-        return <Badge className="bg-red-500">Échoué</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-4">
@@ -242,7 +230,9 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
                   <TableCell>{formatDate(payment.date)}</TableCell>
                   <TableCell>{payment.description}</TableCell>
                   <TableCell>{payment.amount} €</TableCell>
-                  <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                  <TableCell>
+                    <StatusBadge status={payment.status} />
+                  </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
