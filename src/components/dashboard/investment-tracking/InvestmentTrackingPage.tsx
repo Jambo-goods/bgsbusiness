@@ -85,17 +85,17 @@ const InvestmentTrackingPage: React.FC = () => {
             investmentId={investment.id} 
             userId={investment.user_id}
           />
-          <ProjectUpdatesCard projectId={investment.project_id} />
+          <ProjectUpdatesCard project_id={investment.project_id} />
         </div>
         
         <div className="space-y-6">
           <InvestmentSummaryCards 
-            totalInvested={investment.amount}
-            monthlyYield={investment.projects?.yield || 0}
+            amount={investment.amount}
+            yieldRate={investment.projects?.yield || 0}
             remainingDuration={investment.remainingDuration || 0}
             startDate={investment.date}
           />
-          <ContactActionsCard investmentId={investment.id} />
+          <ContactActionsCard investment_id={investment.id} />
         </div>
       </div>
     </div>

@@ -139,7 +139,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
               amount: 0, // We don't know the amount yet
               date: paymentDate.toISOString(),
               status: 'pending',
-              description: `Paiement prévu pour ${formatDate(paymentDate)}`,
+              description: `Paiement prévu pour ${formatDate(paymentDate.toISOString())}`,
               userId,
               investmentId
             });

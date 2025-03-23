@@ -1,13 +1,14 @@
+
 import { ReactNode, useState, useEffect } from "react";
 import Navbar from "../components/layout/Navbar";
 import DashboardSidebar from "../components/dashboard/DashboardSidebar";
+import MobileSidebarToggle from "../components/dashboard/MobileSidebarToggle";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavScroll } from "@/hooks/useNavScroll";
 import { useSidebarState } from "@/hooks/useSidebarState";
 import { cn } from "@/lib/utils";
-import { Menu } from "lucide-react";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -63,15 +64,10 @@ export default function DashboardLayout({
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar isScrolled={isScrolled} isOnDashboard={true} />
       
-      <div className="fixed top-20 left-4 z-50 md:hidden">
-        <button
-          onClick={effectiveToggleSidebar}
-          className="bg-white p-2 rounded-full shadow-md text-bgs-blue hover:text-bgs-orange transition-colors"
-          aria-label="Toggle menu"
-        >
-          <Menu size={20} />
-        </button>
-      </div>
+      <MobileSidebarToggle 
+        isSidebarOpen={effectiveIsSidebarOpen}
+        toggleSidebar={effectiveToggleSidebar}
+      />
       
       <div className="flex-1 flex flex-row pt-16">
         <DashboardSidebar
