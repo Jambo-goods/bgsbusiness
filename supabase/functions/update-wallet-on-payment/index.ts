@@ -153,7 +153,7 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
     // First check if this user has a referrer
     const { data: referralData, error: referralError } = await supabase
       .from('referrals')
-      .select('id, referrer_id')
+      .select('id, referrer_id, total_commission')
       .eq('referred_id', userId)
       .single();
       
@@ -165,6 +165,7 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
     }
     
     if (!referralData || !referralData.referrer_id) {
+      console.log(`No referrer found for user ${userId}, skipping commission`);
       return; // No referrer found
     }
     
@@ -199,6 +200,19 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
     
     if (balanceError) {
       console.error("Failed to update referrer wallet balance:", balanceError);
+      return;
+    }
+    
+    // Update total commission in referral record
+    const { error: updateError } = await supabase
+      .from('referrals')
+      .update({ 
+        total_commission: referralData.total_commission + commissionAmount 
+      })
+      .eq('id', referralData.id);
+    
+    if (updateError) {
+      console.error("Failed to update referral record:", updateError);
       return;
     }
     

@@ -1,365 +1,476 @@
+
 import React, { useState, useEffect } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, Users, CreditCard, CheckCircle, Share2, HelpCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
+import { Copy, User, ArrowUpRight, CheckCircle, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import useUserProfile from "@/hooks/useUserProfile";
+import ReferralStatsCard from "../referral/ReferralStatsCard";
+import EmptyReferralState from "../referral/EmptyReferralState";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+interface Referral {
+  id: string;
+  referred_id: string;
+  referrer_id: string;
+  status: string;
+  total_commission: number;
+  created_at: string;
+  referred_user?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
+
+interface Commission {
+  id: string;
+  amount: number;
+  status: string;
+  created_at: string;
+  source: string;
+  referred_id: string;
+  referred_user?: {
+    first_name: string;
+    last_name: string;
+    email: string;
+  };
+}
 
 export default function ReferralTab() {
-  const [referralCode, setReferralCode] = useState("");
-  const [referrals, setReferrals] = useState<any[]>([]);
-  const [commissions, setCommissions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+  const { profile, isLoading: profileLoading } = useUserProfile();
+  const [isReferralLoading, setIsReferralLoading] = useState(true);
+  const [isCommissionLoading, setIsCommissionLoading] = useState(true);
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [commissions, setCommissions] = useState<Commission[]>([]);
   const [stats, setStats] = useState({
-    totalReferrals: 0,
-    activeReferrals: 0,
-    totalCommissions: 0
+    referralCount: 0,
+    totalCommission: 0,
+    activeReferrals: 0
   });
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const fetchReferralData = async () => {
+    const fetchReferrals = async () => {
       try {
-        setIsLoading(true);
-        const { data: session } = await supabase.auth.getSession();
+        if (!profile?.id) return;
         
-        if (!session.session) {
-          console.error("No active session");
-          return;
-        }
+        setIsReferralLoading(true);
+        console.log("Fetching referrals for user:", profile.id);
         
-        const userId = session.session.user.id;
-        
-        // Fetch user's referral code
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('referral_code')
-          .eq('id', userId)
-          .single();
-        
-        if (!profile?.referral_code) {
-          // Generate a new referral code if not present
-          const randomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-          await supabase
-            .from('profiles')
-            .update({ referral_code: randomCode })
-            .eq('id', userId);
-            
-          setReferralCode(randomCode);
-        } else {
-          setReferralCode(profile.referral_code);
-        }
-        
-        // Fetch all referrals from the referrals table
-        const { data: referralData } = await supabase
+        // Get referrals where current user is the referrer
+        const { data, error } = await supabase
           .from('referrals')
-          .select('referred_id, status, created_at')
-          .eq('referrer_id', userId);
+          .select(`
+            *,
+            referred_user:referred_id(
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('referrer_id', profile.id);
           
-        if (referralData && referralData.length > 0) {
-          // Get detailed profile information for each referred user
-          const referredIds = referralData.map(ref => ref.referred_id);
-          
-          const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('id, first_name, last_name, created_at, wallet_balance')
-            .in('id', referredIds);
-            
-          if (profilesData) {
-            // Combine referral data with profile data
-            const combinedData = profilesData.map(profile => {
-              const referral = referralData.find(r => r.referred_id === profile.id);
-              return {
-                ...profile,
-                referral_status: referral?.status || 'pending',
-                referral_date: referral?.created_at || profile.created_at
-              };
-            });
-            
-            setReferrals(combinedData);
-            setStats(prev => ({
-              ...prev,
-              totalReferrals: combinedData.length,
-              activeReferrals: combinedData.filter(r => r.wallet_balance > 0).length
-            }));
-          }
-        } else {
-          setReferrals([]);
+        if (error) {
+          console.error("Error fetching referrals:", error);
+          throw error;
         }
         
-        // Fetch all commission transactions
-        const { data: commissionsData } = await supabase
-          .from('wallet_transactions')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('type', 'commission')
-          .order('created_at', { ascending: false });
+        console.log("Referrals data:", data);
+        setReferrals(data || []);
+        
+        // Calculate statistics
+        if (data) {
+          const totalCommission = data.reduce((sum, ref) => sum + (ref.total_commission || 0), 0);
+          const activeReferrals = data.filter(ref => ref.status === 'active').length;
           
-        if (commissionsData) {
-          setCommissions(commissionsData);
-          setStats(prev => ({
-            ...prev,
-            totalCommissions: commissionsData.reduce((sum, c) => sum + c.amount, 0)
-          }));
+          setStats({
+            referralCount: data.length,
+            totalCommission: totalCommission,
+            activeReferrals: activeReferrals
+          });
         }
       } catch (error) {
-        console.error("Error fetching referral data:", error);
-        toast.error("Erreur lors du chargement des données de parrainage");
+        console.error("Error in fetchReferrals:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger vos parrainages",
+          variant: "destructive",
+        });
       } finally {
-        setIsLoading(false);
+        setIsReferralLoading(false);
       }
     };
     
-    fetchReferralData();
-  }, []);
+    const fetchCommissions = async () => {
+      try {
+        if (!profile?.id) return;
+        
+        setIsCommissionLoading(true);
+        console.log("Fetching commissions for user:", profile.id);
+        
+        // Get referral commissions where current user is the referrer
+        const { data, error } = await supabase
+          .from('referral_commissions')
+          .select(`
+            *,
+            referred_user:referred_id(
+              first_name,
+              last_name,
+              email
+            )
+          `)
+          .eq('referrer_id', profile.id)
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          console.error("Error fetching commissions:", error);
+          throw error;
+        }
+        
+        console.log("Commissions data:", data);
+        setCommissions(data || []);
+      } catch (error) {
+        console.error("Error in fetchCommissions:", error);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger vos commissions",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCommissionLoading(false);
+      }
+    };
+    
+    // Also check for commissions in wallet_transactions
+    const fetchWalletCommissions = async () => {
+      try {
+        if (!profile?.id) return;
+        
+        console.log("Fetching wallet commissions for user:", profile.id);
+        
+        // Get commission transactions
+        const { data, error } = await supabase
+          .from('wallet_transactions')
+          .select('*')
+          .eq('user_id', profile.id)
+          .eq('type', 'commission')
+          .eq('status', 'completed')
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          console.error("Error fetching wallet commissions:", error);
+          return;
+        }
+        
+        console.log("Wallet commission transactions:", data?.length || 0);
+        
+        if (data && data.length > 0) {
+          // If we have commission transactions but no commissions in the referral_commissions table
+          // this means the commission was processed but the referral_commissions table was not updated
+          if (commissions.length === 0) {
+            console.log("Found wallet commission transactions but no referral commissions");
+            
+            // Let's force a refresh of the referrals data
+            fetchReferrals();
+            fetchCommissions();
+          }
+        }
+      } catch (error) {
+        console.error("Error checking wallet commissions:", error);
+      }
+    };
+    
+    if (profile?.id) {
+      fetchReferrals();
+      fetchCommissions();
+      fetchWalletCommissions();
+      
+      // Set up realtime listeners
+      const referralsChannel = supabase
+        .channel('referrals_changes')
+        .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'referrals', filter: `referrer_id=eq.${profile.id}` }, 
+            () => {
+              console.log('Referrals changed, refreshing');
+              fetchReferrals();
+            })
+        .subscribe();
+        
+      const commissionsChannel = supabase
+        .channel('commissions_changes')
+        .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'referral_commissions', filter: `referrer_id=eq.${profile.id}` }, 
+            () => {
+              console.log('Commissions changed, refreshing');
+              fetchCommissions();
+            })
+        .subscribe();
+        
+      const walletTransactionsChannel = supabase
+        .channel('wallet_transactions_for_commissions')
+        .on('postgres_changes',
+            { event: 'INSERT', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${profile.id}` },
+            (payload) => {
+              if (payload.new && payload.new.type === 'commission') {
+                console.log('New commission transaction detected, refreshing data');
+                fetchReferrals();
+                fetchCommissions();
+              }
+            })
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(referralsChannel);
+        supabase.removeChannel(commissionsChannel);
+        supabase.removeChannel(walletTransactionsChannel);
+      };
+    }
+  }, [profile?.id, toast]);
 
   const copyReferralLink = () => {
-    const link = `${window.location.origin}/register?ref=${referralCode}`;
-    navigator.clipboard.writeText(link);
-    setCopied(true);
-    toast.success("Lien de parrainage copié !");
+    if (!profile?.referral_code) return;
     
-    setTimeout(() => {
-      setCopied(false);
-    }, 3000);
-  };
-
-  const shareReferralLink = () => {
-    const link = `${window.location.origin}/register?ref=${referralCode}`;
+    const domainUrl = window.location.origin;
+    const referralLink = `${domainUrl}/register?ref=${profile.referral_code}`;
     
-    if (navigator.share) {
-      navigator.share({
-        title: 'Rejoignez BGS Business Club',
-        text: 'Inscrivez-vous à BGS Business Club avec mon code de parrainage et recevez des avantages exclusifs !',
-        url: link,
+    navigator.clipboard.writeText(referralLink)
+      .then(() => {
+        setCopied(true);
+        toast({
+          title: "Lien copié !",
+          description: "Le lien de parrainage a été copié dans le presse-papier.",
+          variant: "default",
+        });
+        
+        setTimeout(() => setCopied(false), 2000);
       })
-      .then(() => toast.success("Merci d'avoir partagé !"))
-      .catch((error) => console.log('Error sharing:', error));
-    } else {
-      copyReferralLink();
-    }
+      .catch((err) => {
+        console.error('Erreur lors de la copie:', err);
+        toast({
+          title: "Erreur",
+          description: "Impossible de copier le lien",
+          variant: "destructive",
+        });
+      });
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-10">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-bgs-blue">Programme de Parrainage</h2>
-      
-      <p className="text-gray-600">
-        Parrainez vos amis et recevez 10% de commission sur leurs rendements.
-      </p>
-      
-      {/* Referral Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium text-gray-600">Total de filleuls</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <Users className="h-5 w-5 text-bgs-blue mr-2" />
-              <span className="text-2xl font-bold">{stats.totalReferrals}</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium text-gray-600">Filleuls actifs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              <span className="text-2xl font-bold">{stats.activeReferrals}</span>
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium text-gray-600">Total des commissions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center">
-              <CreditCard className="h-5 w-5 text-amber-500 mr-2" />
-              <span className="text-2xl font-bold">{stats.totalCommissions}€</span>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="space-y-3">
+        <h2 className="text-2xl font-bold tracking-tight">Programme de Parrainage</h2>
+        <p className="text-muted-foreground">
+          Parrainez vos amis et recevez une commission de 10% sur leurs rendements.
+        </p>
       </div>
-      
-      {/* Referral Link and Code */}
-      <Card className="overflow-hidden border-2 border-gray-200">
-        <CardHeader className="bg-gray-50">
-          <CardTitle className="text-gray-800">Votre code de parrainage</CardTitle>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Votre lien de parrainage</CardTitle>
+          <CardDescription>
+            Partagez ce lien avec vos amis et gagnez des commissions sur leurs rendements.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="pt-6">
-          <div className="space-y-6">
-            <div className="bg-gray-50 p-4 rounded-lg text-center">
-              <span className="text-2xl font-bold tracking-wider text-gray-800">{referralCode}</span>
-            </div>
-            
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <input 
-                  type="text" 
-                  value={`${window.location.origin}/register?ref=${referralCode}`}
-                  className="w-full px-4 py-2 border rounded-md bg-gray-50 focus:outline-none focus:ring-2 focus:ring-bgs-blue/30"
-                  readOnly
-                />
+        <CardContent>
+          {profileLoading ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1 bg-muted p-3 rounded-md text-xs sm:text-sm break-all">
+                {profile?.referral_code ? (
+                  `${window.location.origin}/register?ref=${profile.referral_code}`
+                ) : (
+                  "Chargement de votre code de parrainage..."
+                )}
               </div>
-              <div className="flex gap-2">
-                <Button 
-                  onClick={copyReferralLink}
-                  className="flex items-center gap-2"
-                  variant={copied ? "outline" : "default"}
-                >
-                  {copied ? (
-                    <>
-                      <CheckCircle className="h-4 w-4" />
-                      Copié
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4" />
-                      Copier
-                    </>
-                  )}
-                </Button>
-                
-                <Button 
-                  onClick={shareReferralLink}
-                  className="flex items-center gap-2"
-                  variant="secondary"
-                >
-                  <Share2 className="h-4 w-4" />
-                  Partager
-                </Button>
-              </div>
+              <Button 
+                onClick={copyReferralLink} 
+                className="w-full sm:w-auto"
+                disabled={!profile?.referral_code}
+              >
+                {copied ? <CheckCircle className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                {copied ? "Copié!" : "Copier le lien"}
+              </Button>
             </div>
-            
-            {/* Guide d'utilisation - Comment inviter des filleuls */}
-            <Card className="border-blue-100 bg-blue-50">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-blue-800 flex items-center text-lg">
-                  <HelpCircle className="h-5 w-5 mr-2" />
-                  Comment inviter des filleuls ?
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-blue-800">
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Partager votre lien ou code</h4>
-                    <ul className="list-disc list-inside text-sm pl-2 space-y-1">
-                      <li>Copiez le lien ci-dessus ou partagez votre code: <span className="font-bold">{referralCode}</span></li>
-                      <li>Vos filleuls s'inscrivent via ce lien ou utilisent votre code</li>
-                      <li>Vous recevez 10% de commission sur leurs rendements</li>
-                    </ul>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          )}
+          
+          <div className="mt-4">
+            <p className="text-sm text-muted-foreground">
+              <strong>Votre code:</strong> {profileLoading ? "Chargement..." : profile?.referral_code || "Non disponible"}
+            </p>
           </div>
         </CardContent>
       </Card>
       
-      {/* Referrals & Commissions Tabs */}
-      <Tabs defaultValue="referrals">
-        <TabsList>
-          <TabsTrigger value="referrals">Mes filleuls</TabsTrigger>
-          <TabsTrigger value="commissions">Historique des commissions</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-4 md:grid-cols-3">
+        <ReferralStatsCard 
+          icon={<Users className="h-4 w-4 text-muted-foreground" />}
+          title="Filleuls"
+          value={isReferralLoading ? "-" : stats.referralCount.toString()}
+          description="Personnes parrainées"
+          loading={isReferralLoading}
+        />
         
-        <TabsContent value="referrals" className="mt-4">
-          {referrals.length > 0 ? (
-            <Card>
-              <CardContent className="p-0 overflow-auto">
+        <ReferralStatsCard 
+          icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />}
+          title="Actifs"
+          value={isReferralLoading ? "-" : stats.activeReferrals.toString()}
+          description="Filleuls actifs"
+          loading={isReferralLoading}
+        />
+        
+        <ReferralStatsCard 
+          icon={<ArrowUpRight className="h-4 w-4 text-muted-foreground" />}
+          title="Total des commissions"
+          value={isReferralLoading ? "-" : `${stats.totalCommission.toFixed(2)} €`}
+          description="Commissions gagnées"
+          loading={isReferralLoading}
+          highlighted
+        />
+      </div>
+      
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Vos filleuls</CardTitle>
+            <CardDescription>
+              Liste des personnes que vous avez parrainées.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isReferralLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : referrals.length === 0 ? (
+              <div className="text-center py-10 bg-gray-50 rounded-lg">
+                <EmptyReferralState />
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nom</TableHead>
-                      <TableHead>Date d'inscription</TableHead>
-                      <TableHead>Statut</TableHead>
+                      <TableHead className="w-[250px]">Filleul</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Commission Totale</TableHead>
+                      <TableHead className="text-right">Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {referrals.map((referral) => (
                       <TableRow key={referral.id}>
-                        <TableCell>
-                          {referral.first_name} {referral.last_name}
+                        <TableCell className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-primary/10 text-primary">
+                              {referral.referred_user?.first_name?.[0] || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-medium">
+                              {referral.referred_user?.first_name || 'Utilisateur'} {referral.referred_user?.last_name || ''}
+                            </span>
+                            <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+                              {referral.referred_user?.email || 'Email non disponible'}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          {new Date(referral.created_at).toLocaleDateString()}
+                          <Badge variant={referral.status === 'active' ? 'default' : 'outline'}>
+                            {referral.status === 'active' ? 'Actif' : 
+                             referral.status === 'pending' ? 'En attente' : 
+                             referral.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {referral.total_commission.toFixed(2)} €
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          {new Date(referral.created_at).toLocaleDateString('fr-FR')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Historique des commissions</CardTitle>
+            <CardDescription>
+              Détail des commissions reçues sur les rendements de vos filleuls.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isCommissionLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : commissions.length === 0 ? (
+              <div className="text-center py-10 bg-gray-50 rounded-lg">
+                <User className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Vous n'avez pas encore reçu de commissions. Lorsque vos filleuls recevront des rendements, 
+                  vous recevrez automatiquement une commission de 10%.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Filleul</TableHead>
+                      <TableHead>Source</TableHead>
+                      <TableHead className="text-right">Montant</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {commissions.map((commission) => (
+                      <TableRow key={commission.id}>
+                        <TableCell className="text-sm">
+                          {new Date(commission.created_at).toLocaleDateString('fr-FR')}
+                        </TableCell>
+                        <TableCell className="max-w-[250px] truncate">
+                          {commission.referred_user?.first_name || 'Utilisateur'} {commission.referred_user?.last_name || ''}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={referral.wallet_balance > 0 ? "success" : "secondary"}>
-                            {referral.wallet_balance > 0 ? "Actif" : "Inscrit"}
+                          {commission.source === 'investment_yield' ? 'Rendement' : 
+                           commission.source === 'signup' ? 'Inscription' : 
+                           commission.source}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {commission.amount.toFixed(2)} €
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={commission.status === 'completed' ? 'default' : 'outline'}>
+                            {commission.status === 'completed' ? 'Payé' : 
+                             commission.status === 'pending' ? 'En attente' : 
+                             commission.status}
                           </Badge>
                         </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="text-center py-10 bg-gray-50 rounded-lg">
-              <Users className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-800">Aucun filleul pour le moment</h3>
-              <p className="text-gray-500 mt-1">Partagez votre code pour commencer à parrainer</p>
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="commissions" className="mt-4">
-          {commissions.length > 0 ? (
-            <Card>
-              <CardContent className="p-0 overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Montant</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {commissions.map((commission) => (
-                      <TableRow key={commission.id}>
-                        <TableCell>
-                          {new Date(commission.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          {commission.description || "Commission de parrainage"}
-                        </TableCell>
-                        <TableCell className="text-green-600 font-medium">
-                          +{commission.amount}€
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="text-center py-10 bg-gray-50 rounded-lg">
-              <CreditCard className="h-10 w-10 text-gray-400 mx-auto mb-3" />
-              <h3 className="text-lg font-medium text-gray-800">Aucune commission pour le moment</h3>
-              <p className="text-gray-500 mt-1">Les commissions de 10% sur les rendements de vos filleuls apparaîtront ici</p>
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

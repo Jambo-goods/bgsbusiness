@@ -181,6 +181,9 @@ export const processPaymentToWallet = async (userId: string, amount: number, pay
     // Send notification about the yield payment
     await sendYieldNotification(userId, amount, projectName);
     
+    // Process referral commission
+    await processReferralCommission(userId, amount, projectName);
+    
     return true;
   } catch (error) {
     console.error("Error processing payment to wallet:", error);
@@ -254,10 +257,11 @@ export const processReferralCommission = async (userId: string, yieldAmount: num
     }
     
     // Update total commission in referral record
-    const { error: updateError } = await supabase
+    const { data, error: updateError } = await supabase
       .from('referrals')
-      .update({ total_commission: supabase.rpc('increment', { value: commissionAmount }) })
-      .eq('id', referralData.id);
+      .update({ total_commission: referralData.total_commission + commissionAmount })
+      .eq('id', referralData.id)
+      .select();
       
     if (updateError) {
       console.error("Failed to update referral record:", updateError);
