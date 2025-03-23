@@ -12,8 +12,8 @@ export const calculateReturns = (
   duration: number,
   firstPaymentDelay: number
 ) => {
-  // Le rendement mensuel est le montant d'investissement multiplié par le taux annuel
-  const monthlyReturn = investmentAmount * (yieldRate / 100);
+  // Le rendement mensuel est le montant d'investissement multiplié par le taux annuel divisé par 12
+  const monthlyReturn = (investmentAmount * yieldRate / 100) / 12;
   const effectiveDuration = duration - firstPaymentDelay;
   const totalReturn = investmentAmount + (monthlyReturn * Math.max(0, effectiveDuration));
   

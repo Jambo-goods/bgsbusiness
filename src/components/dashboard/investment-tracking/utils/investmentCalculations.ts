@@ -61,16 +61,12 @@ export const calculateEarningsFromScheduledPayments = (
 ): number => {
   if (!scheduledPayments || scheduledPayments.length === 0 || !projectId) return 0;
   
-  // Set default target total to match the 74.00€ from the UI
-  const targetTotal = 74;
-  
   // Filter payments to only include those related to the specific project and paid status
   const paidPayments = scheduledPayments
     .filter(payment => payment.project_id === projectId && payment.status === 'paid');
     
   if (paidPayments.length === 0) {
-    // If no paid payments are found, return the target total
-    return targetTotal;
+    return 0;
   }
   
   // Calculate the total from actual paid payments
@@ -89,9 +85,13 @@ export const calculateEarningsFromScheduledPayments = (
 };
 
 /**
- * Calculate a fixed total earnings amount of 74€ for display purposes
- * This is used as a fallback when other calculation methods aren't viable
+ * Sum the payments directly from the transaction history data
+ * This should be the most accurate method when we have the transaction table data
  */
-export const getDefaultTotalEarnings = (): number => {
-  return 74;
+export const sumTransactionTableData = (tableData: any[]): number => {
+  if (!tableData || tableData.length === 0) return 0;
+  
+  // Sum the amounts of all transactions (should match what is displayed in the UI table)
+  return tableData.reduce((sum, tx) => sum + tx.amount, 0);
 };
+
