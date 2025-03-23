@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Investment } from "../types/investment";
 import { Transaction } from "../types/investment";
 import { supabase } from "@/integrations/supabase/client";
-import { calculateMonthlyYield } from "../utils/investmentCalculations";
+import { calculateTotalEarnings } from "../utils/investmentCalculations";
 
 interface InvestmentSummaryCardsProps {
   investment: Investment;
@@ -15,18 +15,28 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
   const [totalEarnings, setTotalEarnings] = useState(0);
   
   useEffect(() => {
-    // Calculate total earnings from all yield transactions that are completed
-    const earningsFromTransactions = transactions
+    // Calculate cumulative total from transactions - THIS MATCHES THE TRANSACTION HISTORY TABLE
+    let cumulativeTotal = 0;
+    
+    // Sort transactions by date
+    const sortedTransactions = [...transactions]
       .filter(t => t.type === 'yield' && t.status === 'completed')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     
-    console.log('Earnings from completed transactions:', earningsFromTransactions);
-    console.log('All transactions:', transactions);
+    // Get the last transaction's cumulative amount
+    if (sortedTransactions.length > 0) {
+      sortedTransactions.forEach(t => {
+        cumulativeTotal += t.amount;
+      });
+    }
     
-    // Directly set the total earnings from completed transactions
-    setTotalEarnings(earningsFromTransactions);
+    console.log('Sorted completed yield transactions:', sortedTransactions);
+    console.log('Calculated cumulative total:', cumulativeTotal);
     
-  }, [investment, transactions]);
+    // Set the total earnings to match the cumulative amount from the transaction history
+    setTotalEarnings(cumulativeTotal);
+    
+  }, [transactions]);
     
   console.log('Transactions available:', transactions);
   console.log('Transactions filtered (rendements):', 
