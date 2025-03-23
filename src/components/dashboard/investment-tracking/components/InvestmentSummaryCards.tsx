@@ -3,8 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Investment } from "../types/investment";
 import { Transaction } from "../types/investment";
-import { supabase } from "@/integrations/supabase/client";
-import { calculateTotalEarnings } from "../utils/investmentCalculations";
+import { toast } from "@/components/ui/use-toast";
 
 interface InvestmentSummaryCardsProps {
   investment: Investment;
@@ -23,33 +22,20 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
     console.log('Investment ID:', investment.id);
     console.log('Filtered transactions for this investment:', investmentTransactions);
     
-    // Calculate cumulative total from transactions - THIS MATCHES THE TRANSACTION HISTORY TABLE
-    let cumulativeTotal = 0;
-    
-    // Sort transactions by date
-    const sortedTransactions = [...investmentTransactions]
-      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    // Calculate total from transactions
+    let total = 0;
     
     // Sum up all completed yield transactions
-    if (sortedTransactions.length > 0) {
-      sortedTransactions.forEach(t => {
-        cumulativeTotal += t.amount;
-      });
-    }
+    investmentTransactions.forEach(transaction => {
+      total += transaction.amount;
+    });
     
-    console.log('Sorted completed yield transactions for this investment:', sortedTransactions);
-    console.log('Calculated cumulative total for this investment:', cumulativeTotal);
+    console.log('Total earnings calculated:', total);
     
-    // Set the total earnings to match the cumulative amount from the transaction history
-    setTotalEarnings(cumulativeTotal);
+    // Set the total earnings
+    setTotalEarnings(total);
     
   }, [transactions, investment.id]);
-    
-  console.log('Transactions available:', transactions);
-  console.log('Transactions filtered (rendements):', 
-    transactions.filter(t => t.type === 'yield' && t.status === 'completed')
-  );
-  console.log('Current total des bénéfices calculés:', totalEarnings);
     
   return (
     <div className="grid md:grid-cols-3 gap-4">
