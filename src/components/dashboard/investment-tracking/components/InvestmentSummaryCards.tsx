@@ -15,28 +15,35 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
   const [totalEarnings, setTotalEarnings] = useState(0);
   
   useEffect(() => {
+    // Filter transactions to only include those related to this specific investment
+    const investmentTransactions = transactions.filter(t => 
+      t.investment_id === investment.id && t.type === 'yield' && t.status === 'completed'
+    );
+    
+    console.log('Investment ID:', investment.id);
+    console.log('Filtered transactions for this investment:', investmentTransactions);
+    
     // Calculate cumulative total from transactions - THIS MATCHES THE TRANSACTION HISTORY TABLE
     let cumulativeTotal = 0;
     
     // Sort transactions by date
-    const sortedTransactions = [...transactions]
-      .filter(t => t.type === 'yield' && t.status === 'completed')
+    const sortedTransactions = [...investmentTransactions]
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     
-    // Get the last transaction's cumulative amount
+    // Sum up all completed yield transactions
     if (sortedTransactions.length > 0) {
       sortedTransactions.forEach(t => {
         cumulativeTotal += t.amount;
       });
     }
     
-    console.log('Sorted completed yield transactions:', sortedTransactions);
-    console.log('Calculated cumulative total:', cumulativeTotal);
+    console.log('Sorted completed yield transactions for this investment:', sortedTransactions);
+    console.log('Calculated cumulative total for this investment:', cumulativeTotal);
     
     // Set the total earnings to match the cumulative amount from the transaction history
     setTotalEarnings(cumulativeTotal);
     
-  }, [transactions]);
+  }, [transactions, investment.id]);
     
   console.log('Transactions available:', transactions);
   console.log('Transactions filtered (rendements):', 
