@@ -14,6 +14,9 @@ export interface Investment {
     company_name: string;
     status: string;
     first_payment_delay_months?: number;
+    category?: string;
+    description?: string;
+    funding_progress?: number;
   };
   payments?: Payment[];
 }
@@ -38,4 +41,20 @@ export interface Transaction {
   created_at: string;
   status: string;
   investment_id?: string;
+}
+
+export interface ScheduledPayment {
+  id: string;
+  project_id: string;
+  payment_date: string;
+  status: 'scheduled' | 'pending' | 'paid';
+  percentage: number;
+  total_scheduled_amount: number;
+  processed_at?: string;
+  projects?: {
+    name: string;
+    image?: string;
+    company_name?: string;
+    status?: string;
+  };
 }

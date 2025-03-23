@@ -114,19 +114,25 @@ const InvestmentTrackingPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <GeneralInformationCard investment={investment} />
-            <TransactionHistoryCard 
-              investmentId={investment.id} 
-              userId={investment.user_id}
-            />
-            <ProjectUpdatesCard 
-              projectId={investment.project_id}
-            />
+            {investment && (
+              <TransactionHistoryCard 
+                investmentId={investment.id} 
+                userId={investment.user_id}
+              />
+            )}
+            {investment && (
+              <ProjectUpdatesCard 
+                projectId={investment.project_id}
+              />
+            )}
           </div>
           
           <div className="space-y-6">
-            <ContactActionsCard 
-              investmentId={investment.id}
-            />
+            {investment && (
+              <ContactActionsCard 
+                investmentId={investment.id}
+              />
+            )}
           </div>
         </div>
       </div>
