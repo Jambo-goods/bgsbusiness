@@ -47,16 +47,20 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
             (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
           );
           
-          // Calculate the total amount of all payments for this project
-          const totalProjectPayments = sortedPayments.reduce((total, payment) => {
+          // Calculate the cumulative total from each payment - similar to the table calculation
+          let finalTotal = 0;
+          
+          for (const payment of sortedPayments) {
+            // Calculate this payment's amount
             const paymentAmount = calculateMonthlyYield(investment.amount, payment.percentage || 12);
-            return total + paymentAmount;
-          }, 0);
+            // Add to our running total
+            finalTotal += paymentAmount;
+          }
           
-          console.log(`Total of all payments for this project: ${totalProjectPayments}`);
+          console.log(`Final total calculated from all paid scheduled payments: ${finalTotal}`);
           
-          // Set the total earnings to be the sum of all payments for this project
-          setTotalEarnings(totalProjectPayments);
+          // Set the total earnings to match the final cumulative amount from transactions table
+          setTotalEarnings(finalTotal);
         } else {
           // No scheduled payments found, just use transaction earnings
           setTotalEarnings(earningsFromTransactions);
