@@ -1,3 +1,4 @@
+
 import React, { useMemo, useEffect, useState } from "react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -136,7 +137,8 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     
     let cumulativeScheduledAmount = totalYieldReceived;
     
-    const monthlyYield = (actualInvestmentAmount * (fixedYieldPercentage / 100)) / 12;
+    // Correctly calculate monthly yield: annual percentage / 12 * investment amount
+    const monthlyYield = (actualInvestmentAmount * fixedYieldPercentage / 100) / 12;
     console.log("Rendement mensuel calculé:", monthlyYield);
     
     const sortedPayments = [...investmentScheduledPayments].sort(
@@ -151,6 +153,7 @@ export default function TransactionHistoryCard({ transactions, investmentId }: T
     console.log("Paiements valides après le délai du premier versement:", validPayments.length);
     
     return validPayments.map(payment => {
+      // Use the correctly calculated monthly yield
       const paymentAmount = monthlyYield;
       console.log(`Paiement programmé: ${payment.id}, montant: ${paymentAmount}, date: ${payment.payment_date}`);
       
