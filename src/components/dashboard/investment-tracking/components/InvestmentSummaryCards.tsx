@@ -42,13 +42,20 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
         console.log('Paid scheduled payments found:', payments?.length || 0);
         
         if (payments && payments.length > 0) {
-          // Get only the scheduled payment that has been marked as paid
-          // For this specific investment, there should only be one
-          const paymentAmount = calculateMonthlyYield(investment.amount, payments[0].percentage || 12);
-          console.log(`Payment amount calculated for investment ${investment.id}: ${paymentAmount}`);
+          // Calculate earnings for ALL paid scheduled payments
+          let totalFromScheduledPayments = 0;
           
-          // Set the earnings to just this one payment's amount
-          setTotalEarnings(paymentAmount);
+          // Process each payment
+          for (const payment of payments) {
+            const paymentAmount = calculateMonthlyYield(investment.amount, payment.percentage || 12);
+            totalFromScheduledPayments += paymentAmount;
+            console.log(`Payment calculated for investment ${investment.id} with percentage ${payment.percentage}: ${paymentAmount}`);
+          }
+          
+          console.log(`Total from all scheduled payments: ${totalFromScheduledPayments}`);
+          
+          // Set the earnings to the sum of all payments
+          setTotalEarnings(totalFromScheduledPayments);
         } else {
           // No scheduled payments found, just use transaction earnings
           setTotalEarnings(earningsFromTransactions);
