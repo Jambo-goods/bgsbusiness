@@ -39,6 +39,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [firstPaymentDelay, setFirstPaymentDelay] = useState<number>(1);
+  const [investmentDate, setInvestmentDate] = useState<string | null>(null);
 
   const fetchScheduledPayments = useCallback(async () => {
     setIsLoading(true);
@@ -46,9 +47,25 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     setIsRefreshing(true);
     
     try {
-      console.log('Récupération des détails du projet pour l\'investissement:', investmentId);
+      console.log('Récupération des détails du projet et investissement:', projectId, investmentId);
       
-      // Récupérer les détails du projet pour obtenir le délai du premier paiement
+      // Get investment date first
+      const { data: investmentData, error: investmentError } = await supabase
+        .from("investments")
+        .select("date")
+        .eq("id", investmentId)
+        .single();
+        
+      if (investmentError) {
+        console.error("Erreur lors de la récupération des détails de l'investissement:", investmentError);
+        throw new Error(investmentError.message);
+      }
+      
+      const investDate = investmentData?.date || null;
+      setInvestmentDate(investDate);
+      console.log("Date d'investissement:", investDate);
+      
+      // Get project details for first payment delay
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .select("first_payment_delay_months")
@@ -60,12 +77,12 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
         throw new Error(projectError.message);
       }
       
-      // Stocker le délai du premier paiement
+      // Store first payment delay
       const firstPaymentDelayMonths = projectData?.first_payment_delay_months || 1;
       setFirstPaymentDelay(firstPaymentDelayMonths);
       console.log("Délai du premier paiement:", firstPaymentDelayMonths, "mois");
       
-      // Récupérer les paiements programmés pour ce projet
+      // Get scheduled payments
       const { data: paymentsData, error: paymentsError } = await supabase
         .from("scheduled_payments")
         .select(`
@@ -88,8 +105,27 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
 
       console.log('Données de paiements programmés récupérées:', paymentsData);
       
-      // Convertir les status string en status typed
-      const typedPayments = paymentsData?.map(payment => ({
+      // Filter payments based on first payment date
+      let filteredPayments = paymentsData || [];
+      
+      if (investDate && firstPaymentDelayMonths > 0) {
+        const investmentDate = new Date(investDate);
+        const firstPaymentDate = new Date(investmentDate);
+        firstPaymentDate.setMonth(firstPaymentDate.getMonth() + firstPaymentDelayMonths);
+        
+        console.log("Date du premier paiement calculée:", firstPaymentDate.toISOString());
+        
+        // Only include payments that are on or after the first payment date
+        filteredPayments = filteredPayments.filter(payment => {
+          const paymentDate = new Date(payment.payment_date);
+          return paymentDate >= firstPaymentDate;
+        });
+        
+        console.log(`Filtrés: ${filteredPayments.length} paiements sur ${paymentsData?.length || 0} après application du délai de premier paiement`);
+      }
+      
+      // Convert to typed payments
+      const typedPayments = filteredPayments.map(payment => ({
         ...payment,
         status: (payment.status === 'paid' ? 'paid' : 
                 payment.status === 'pending' ? 'pending' : 'scheduled') as 'scheduled' | 'pending' | 'paid'
@@ -106,7 +142,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
   }, [investmentId, projectId]);
 
   useEffect(() => {
-    if (projectId) {
+    if (projectId && investmentId) {
       fetchScheduledPayments();
     }
     
@@ -125,13 +161,20 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     return () => {
       supabase.removeChannel(scheduledPaymentsChannel);
     };
-  }, [projectId, fetchScheduledPayments]);
+  }, [projectId, investmentId, fetchScheduledPayments]);
 
   // Calculate payment statistics
   const paidPayments = scheduledPayments.filter(p => p.status === 'paid');
   const pendingPayments = scheduledPayments.filter(p => p.status === 'pending' || p.status === 'scheduled');
   const totalPaid = paidPayments.reduce((sum, p) => sum + (p.total_scheduled_amount || 0), 0);
   const totalPending = pendingPayments.reduce((sum, p) => sum + (p.total_scheduled_amount || 0), 0);
+
+  // Calculate first payment date to display
+  const firstPaymentDateDisplay = investmentDate ? (() => {
+    const date = new Date(investmentDate);
+    date.setMonth(date.getMonth() + firstPaymentDelay);
+    return formatDate(date.toISOString());
+  })() : 'Non défini';
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -190,17 +233,17 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex items-center">
-                    <span className="text-xl font-bold text-blue-600">{firstPaymentDelay} mois</span>
+                    <span className="text-sm font-bold text-blue-600">{firstPaymentDateDisplay}</span>
                     <Info className="h-4 w-4 ml-1 text-blue-500" />
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Délai avant le premier versement après investissement</p>
+                  <p>Date calculée du premier versement après {firstPaymentDelay} mois</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
             <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-200">
-              Délai initial
+              {firstPaymentDelay} mois de délai
             </Badge>
           </div>
         </div>
