@@ -81,6 +81,65 @@ export default function NavbarActions({
     }
   }, [isAuthenticated]);
 
+  // Set up real-time listener for wallet balance changes
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const getWalletBalance = async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session) return;
+        
+        const userId = data.session.user.id;
+        
+        // Set up subscription for wallet_transactions changes
+        const txChannel = supabase
+          .channel('navbar-wallet-tx-changes')
+          .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` },
+            async () => {
+              // Update wallet balance on transaction change
+              const { data: profileData } = await supabase
+                .from('profiles')
+                .select('wallet_balance')
+                .eq('id', userId)
+                .maybeSingle();
+                
+              if (profileData) {
+                setWalletBalance(profileData.wallet_balance || 0);
+              }
+            }
+          )
+          .subscribe();
+          
+        // Set up subscription for profile balance changes
+        const profileChannel = supabase
+          .channel('navbar-profile-changes')
+          .on('postgres_changes', 
+            { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
+            (payload) => {
+              if (payload.new && typeof (payload.new as any).wallet_balance === 'number') {
+                setWalletBalance((payload.new as any).wallet_balance);
+              }
+            }
+          )
+          .subscribe();
+          
+        return () => {
+          supabase.removeChannel(txChannel);
+          supabase.removeChannel(profileChannel);
+        };
+      } catch (error) {
+        console.error("Error setting up wallet balance listener:", error);
+      }
+    };
+    
+    const cleanup = getWalletBalance();
+    return () => {
+      cleanup.then(fn => fn && fn());
+    };
+  }, [isAuthenticated]);
+
   const fetchUnreadCount = async () => {
     try {
       const count = await notificationService.getUnreadCount();

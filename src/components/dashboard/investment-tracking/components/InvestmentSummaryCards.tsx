@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Investment } from "../types/investment";
@@ -115,6 +116,13 @@ export default function InvestmentSummaryCards({
         </CardContent>
       </Card>
       
-      
+      <Card>
+        <CardContent className="pt-6">
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-1">Versements reçus</p>
+            <p className="text-3xl font-bold text-bgs-blue">{totalEarnings}€</p>
+          </div>
+        </CardContent>
+      </Card>
     </div>;
 }
