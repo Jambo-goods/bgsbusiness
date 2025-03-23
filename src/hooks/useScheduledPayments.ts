@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -27,7 +27,7 @@ export const useScheduledPayments = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchScheduledPayments = async () => {
+  const fetchScheduledPayments = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -65,7 +65,7 @@ export const useScheduledPayments = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Subscribe to realtime updates for scheduled payments
   useEffect(() => {
@@ -103,11 +103,19 @@ export const useScheduledPayments = () => {
                 };
                 
                 // Update state with the updated payment
-                setScheduledPayments(prevPayments => 
-                  prevPayments.map(payment => 
-                    payment.id === updatedPayment.id ? fullUpdatedPayment : payment
-                  )
-                );
+                setScheduledPayments(prevPayments => {
+                  // Check if payment exists in state, if not, add it
+                  const paymentExists = prevPayments.some(p => p.id === updatedPayment.id);
+                  
+                  if (paymentExists) {
+                    return prevPayments.map(payment => 
+                      payment.id === updatedPayment.id ? fullUpdatedPayment : payment
+                    );
+                  } else {
+                    // Add the new payment to the state if it doesn't exist
+                    return [...prevPayments, fullUpdatedPayment];
+                  }
+                });
                 
                 // Call edge function to update wallet balance if payment status changed to paid
                 if (fullUpdatedPayment.status === 'paid' && 
@@ -184,7 +192,7 @@ export const useScheduledPayments = () => {
       console.log('Cleaning up realtime channel');
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchScheduledPayments]);
 
   // Function to add a new scheduled payment
   const addScheduledPayment = async (newPayment: Omit<ScheduledPayment, 'id' | 'created_at' | 'updated_at'>) => {
@@ -291,27 +299,30 @@ export const useScheduledPayments = () => {
       }
       
       // Find the current payment to be updated (for UI update before network response)
-      const currentPayment = scheduledPayments.find(p => p.id === paymentId);
-      if (!currentPayment) {
-        throw new Error('Paiement non trouvé');
-      }
+      const paymentToUpdate = scheduledPayments.find(p => p.id === paymentId);
+      
+      // First attempt to update without checking if payment exists in local state
+      // This way we can still update payments that might exist in the database but not in our local state
+      console.log(`Attempting to update payment with ID: ${paymentId}, status: ${newStatus}`);
       
       // Immediately update the UI with the new status for better UX
-      setScheduledPayments(prev => 
-        prev.map(payment => {
-          if (payment.id === paymentId) {
-            return { 
-              ...payment, 
-              ...updateData,
-              // Keep the current payment's projects data
-              projects: payment.projects
-            } as ScheduledPayment;
-          }
-          return payment;
-        })
-      );
+      if (paymentToUpdate) {
+        setScheduledPayments(prev => 
+          prev.map(payment => {
+            if (payment.id === paymentId) {
+              return { 
+                ...payment, 
+                ...updateData,
+                // Keep the current payment's projects data
+                projects: payment.projects
+              } as ScheduledPayment;
+            }
+            return payment;
+          })
+        );
+      }
       
-      // Then make the actual API call
+      // Then make the actual API call to Supabase
       const { data, error } = await supabase
         .from('scheduled_payments')
         .update(updateData)
@@ -330,15 +341,25 @@ export const useScheduledPayments = () => {
         console.error('Error updating payment status:', error);
         
         // Revert the optimistic update if there was an error
-        setScheduledPayments(prev => [...prev]);
+        await fetchScheduledPayments(); // Re-fetch all data to ensure consistency
         throw error;
       }
 
       toast.success(`Statut du paiement mis à jour: ${newStatus === 'paid' ? 'Payé' : newStatus === 'pending' ? 'En attente' : 'Programmé'}`);
       console.log('Payment updated successfully:', data);
       
-      // Note: We already updated the UI optimistically, but we'll update with the server data to be safe
-      if (data && data.length > 0) {
+      // If we got data back but the payment wasn't in our local state, add it now
+      if (data && data.length > 0 && !paymentToUpdate) {
+        // Ensure correct typing for the updated payment data
+        const typedData = data.map(payment => ({
+          ...payment,
+          status: (payment.status as 'pending' | 'scheduled' | 'paid') || 'pending'
+        }));
+        
+        setScheduledPayments(prev => [...prev, ...typedData]);
+      }
+      // If we have data and the payment was in our local state, update it
+      else if (data && data.length > 0) {
         // Ensure correct typing for the updated payment data
         const typedData = data.map(payment => ({
           ...payment,
@@ -351,6 +372,8 @@ export const useScheduledPayments = () => {
           )
         );
       }
+      
+      return data;
     } catch (err: any) {
       console.error('Error in updatePaymentStatus:', err);
       toast.error(`Erreur: ${err.message || 'Une erreur est survenue'}`);

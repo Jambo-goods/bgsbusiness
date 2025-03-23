@@ -1,18 +1,25 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useScheduledPayments } from "@/hooks/useScheduledPayments";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, RefreshCw } from "lucide-react";
 import EditPaymentModal from "@/components/scheduled-payments/EditPaymentModal";
 import AddPaymentModal from "@/components/scheduled-payments/AddPaymentModal";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { toast } from "sonner";
 
 export default function ScheduledPayments() {
-  const { scheduledPayments, isLoading, addScheduledPayment } = useScheduledPayments();
+  const { scheduledPayments, isLoading, addScheduledPayment, refetch } = useScheduledPayments();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // On component mount or when route is navigated to, refresh data
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
 
   const handleEditPayment = (payment: any) => {
     setSelectedPayment(payment);
@@ -32,18 +39,43 @@ export default function ScheduledPayments() {
     }
   };
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch();
+      toast.success("Données actualisées");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Erreur lors de l'actualisation des données");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <div className="min-h-full">
       <div className="container mx-auto py-8 px-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Paiements Programmés</h1>
-          <Button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2"
-          >
-            <Plus size={16} />
-            Ajouter un paiement
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isRefreshing || isLoading}
+              className="flex items-center gap-1"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing || isLoading ? 'animate-spin' : ''}`} />
+              <span>Actualiser</span>
+            </Button>
+            <Button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus size={16} />
+              Ajouter un paiement
+            </Button>
+          </div>
         </div>
         
         <Card className="bg-white rounded-lg shadow">
