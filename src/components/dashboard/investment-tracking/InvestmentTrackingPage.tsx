@@ -13,6 +13,7 @@ import ProjectUpdatesCard from './components/ProjectUpdatesCard';
 import { Investment } from './types/investment';
 import { Skeleton } from '@/components/ui/skeleton';
 import DashboardLayout from '@/layouts/DashboardLayout';
+import { toast } from 'sonner';
 
 const InvestmentTrackingPage: React.FC = () => {
   const { investmentId } = useParams<{ investmentId: string }>();
@@ -23,7 +24,7 @@ const InvestmentTrackingPage: React.FC = () => {
   useEffect(() => {
     const loadInvestmentData = async () => {
       if (!investmentId) {
-        setError('No investment ID provided');
+        setError('Aucun identifiant d\'investissement fourni');
         setIsLoading(false);
         return;
       }
@@ -33,14 +34,28 @@ const InvestmentTrackingPage: React.FC = () => {
         const investmentData = await fetchInvestmentDetails(investmentId);
         
         if (investmentData) {
-          console.log('Fetched investment details:', investmentData);
-          setInvestment(investmentData);
+          console.log('Données d\'investissement récupérées:', investmentData);
+          
+          // Fetch payments data for this investment
+          const paymentsData = await fetchTransactionHistory(investmentData.user_id);
+          
+          // Filter payments related to this investment
+          const investmentPayments = paymentsData.filter(payment => 
+            payment.investment_id === investmentId
+          );
+          
+          // Add payments to the investment data
+          setInvestment({
+            ...investmentData,
+            payments: investmentPayments
+          });
         } else {
-          setError('Investment not found');
+          setError('Investissement non trouvé');
         }
       } catch (err: any) {
-        console.error('Error fetching investment data:', err);
-        setError(err.message || 'An error occurred');
+        console.error('Erreur lors de la récupération des données d\'investissement:', err);
+        setError(err.message || 'Une erreur est survenue');
+        toast.error('Erreur lors du chargement des données');
       } finally {
         setIsLoading(false);
       }
@@ -53,10 +68,11 @@ const InvestmentTrackingPage: React.FC = () => {
     if (isLoading) {
       return (
         <div className="p-6 space-y-6">
-          <Skeleton className="h-8 w-1/3 mb-4" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Skeleton className="h-40 col-span-2" />
-            <Skeleton className="h-40" />
+          <Skeleton className="h-8 w-1/3 mb-6" />
+          <Skeleton className="h-24 w-full mb-6" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
           </div>
           <Skeleton className="h-60" />
         </div>
@@ -66,9 +82,9 @@ const InvestmentTrackingPage: React.FC = () => {
     if (error || !investment) {
       return (
         <div className="p-6">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
-            <p className="font-medium">Error: {error || 'Investment not found'}</p>
-            <p className="text-sm mt-1">Please try again later or contact support.</p>
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded-md">
+            <p className="font-medium">Erreur: {error || 'Investissement non trouvé'}</p>
+            <p className="text-sm mt-1">Veuillez réessayer plus tard ou contacter le support.</p>
           </div>
         </div>
       );
@@ -76,12 +92,19 @@ const InvestmentTrackingPage: React.FC = () => {
 
     return (
       <div className="p-6 space-y-6">
-        <h1 className="text-2xl font-bold">
-          Investment in {investment.projects?.name || 'Project'}
-        </h1>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-lg border border-blue-100">
+          <h1 className="text-2xl font-bold text-blue-800 mb-2">
+            Investissement dans {investment.projects?.name || 'Projet'}
+          </h1>
+          <p className="text-blue-600">
+            Suivez les performances et les paiements de votre investissement
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2 space-y-6">
+        <InvestmentSummaryCards investmentData={investment} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
             <GeneralInformationCard investment={investment} />
             <TransactionHistoryCard 
               investmentId={investment.id} 
@@ -91,12 +114,6 @@ const InvestmentTrackingPage: React.FC = () => {
           </div>
           
           <div className="space-y-6">
-            <InvestmentSummaryCards 
-              totalInvested={investment.amount}
-              monthlyYield={investment.projects?.yield || 0}
-              remainingDuration={investment.remainingDuration || 0}
-              startDate={investment.date}
-            />
             <ContactActionsCard investmentId={investment.id} />
           </div>
         </div>
