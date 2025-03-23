@@ -42,34 +42,13 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
         console.log('Paid scheduled payments found:', payments?.length || 0);
         
         if (payments && payments.length > 0) {
-          // We should only count each payment once for this investment
-          let totalFromScheduledPayments = 0;
+          // Get only the scheduled payment that has been marked as paid
+          // For this specific investment, there should only be one
+          const paymentAmount = calculateMonthlyYield(investment.amount, payments[0].percentage || 12);
+          console.log(`Payment amount calculated for investment ${investment.id}: ${paymentAmount}`);
           
-          // Track which payments we've already counted to avoid duplicates
-          const processedPaymentIds = new Set();
-          
-          for (const payment of payments) {
-            // Skip if we've already processed this payment
-            if (processedPaymentIds.has(payment.id)) continue;
-            
-            // Mark this payment as processed
-            processedPaymentIds.add(payment.id);
-            
-            // Get the monthly yield percentage from the payment or use default
-            const monthlyYieldPercentage = payment.percentage || 12;
-            
-            // Calculate the exact amount for this payment
-            const paymentAmount = (investment.amount * monthlyYieldPercentage) / 100;
-            totalFromScheduledPayments += paymentAmount;
-            
-            console.log(`Payment ${payment.id}: ${paymentAmount} (${monthlyYieldPercentage}% of ${investment.amount})`);
-          }
-          
-          // For debugging, log all the calculated values
-          console.log('Total earnings from scheduled payments only:', totalFromScheduledPayments);
-          
-          // Set only the scheduled payments amount as the total earnings
-          setTotalEarnings(totalFromScheduledPayments);
+          // Set the earnings to just this one payment's amount
+          setTotalEarnings(paymentAmount);
         } else {
           // No scheduled payments found, just use transaction earnings
           setTotalEarnings(earningsFromTransactions);
