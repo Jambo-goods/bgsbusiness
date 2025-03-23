@@ -15,7 +15,7 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
   const [totalEarnings, setTotalEarnings] = useState(0);
   
   useEffect(() => {
-    // Calculate total earnings from transactions
+    // Calculate total earnings from transactions that are already completed
     const earningsFromTransactions = transactions
       .filter(t => 
         t.type === 'yield' && 
@@ -24,7 +24,7 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
       )
       .reduce((sum, t) => sum + t.amount, 0);
     
-    console.log('Earnings from transactions:', earningsFromTransactions);
+    console.log('Earnings from completed transactions:', earningsFromTransactions);
     
     // Function to get all scheduled payments for this investment's project
     const fetchScheduledPayments = async () => {
@@ -42,25 +42,9 @@ export default function InvestmentSummaryCards({ investment, transactions }: Inv
         console.log('Paid scheduled payments found for project:', payments?.length || 0);
         
         if (payments && payments.length > 0) {
-          // Sort payments by date to ensure proper cumulative calculation
-          const sortedPayments = [...payments].sort(
-            (a, b) => new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime()
-          );
-          
-          // Calculate the cumulative total from each payment - similar to the table calculation
-          let finalTotal = 0;
-          
-          for (const payment of sortedPayments) {
-            // Calculate this payment's amount
-            const paymentAmount = calculateMonthlyYield(investment.amount, payment.percentage || 12);
-            // Add to our running total
-            finalTotal += paymentAmount;
-          }
-          
-          console.log(`Final total calculated from all paid scheduled payments: ${finalTotal}`);
-          
-          // Set the total earnings to match the final cumulative amount from transactions table
-          setTotalEarnings(finalTotal);
+          // Set the total earnings to match the transaction earnings
+          // This ensures we only count confirmed/paid payments
+          setTotalEarnings(earningsFromTransactions);
         } else {
           // No scheduled payments found, just use transaction earnings
           setTotalEarnings(earningsFromTransactions);
