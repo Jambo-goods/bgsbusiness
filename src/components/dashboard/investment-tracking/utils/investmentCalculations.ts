@@ -32,7 +32,7 @@ export const calculateTotalEarnings = (
 };
 
 /**
- * Calculate total earnings for a specific investment
+ * Calculate total earnings for a specific investment from transactions
  */
 export const calculateInvestmentEarnings = (
   transactions: any[],
@@ -48,4 +48,34 @@ export const calculateInvestmentEarnings = (
       tx.status === 'completed'
     )
     .reduce((sum, tx) => sum + tx.amount, 0);
+};
+
+/**
+ * Calculate total earnings for a specific investment from scheduled payments
+ * This is a more reliable method when direct transaction data is unavailable
+ */
+export const calculateEarningsFromScheduledPayments = (
+  scheduledPayments: any[],
+  projectId: string
+): number => {
+  if (!scheduledPayments || scheduledPayments.length === 0 || !projectId) return 0;
+  
+  // Filter payments to only include those related to the specific project and paid status
+  return scheduledPayments
+    .filter(payment => 
+      payment.project_id === projectId && 
+      payment.status === 'paid'
+    )
+    .reduce((sum, payment) => {
+      // If payment has a specific amount, use that
+      if (payment.amount) return sum + payment.amount;
+      
+      // For payments that don't have a specific amount, we can try to calculate it
+      // based on percentage and total_invested_amount if available
+      if (payment.percentage && payment.total_invested_amount) {
+        return sum + (payment.total_invested_amount * (payment.percentage / 100));
+      }
+      
+      return sum;
+    }, 0);
 };
