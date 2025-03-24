@@ -273,7 +273,7 @@ export default function ReferralTab() {
       <div className="space-y-3">
         <h2 className="text-2xl font-bold tracking-tight">Programme de Parrainage</h2>
         <p className="text-muted-foreground">
-          Parrainez vos amis et recevez une commission de 10% sur leurs rendements.
+          Parrainez vos amis et recevez une commission de 10% sur leurs rendements (versements programmés).
         </p>
       </div>
 
@@ -414,7 +414,7 @@ export default function ReferralTab() {
           <CardHeader>
             <CardTitle>Historique des commissions</CardTitle>
             <CardDescription>
-              Détail des commissions reçues sur les rendements de vos filleuls.
+              Détail des commissions reçues (10% des rendements de vos filleuls).
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -429,7 +429,7 @@ export default function ReferralTab() {
                 <User className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
                 <p className="text-sm text-muted-foreground">
                   Vous n'avez pas encore reçu de commissions. Lorsque vos filleuls recevront des rendements, 
-                  vous recevrez automatiquement une commission de 10%.
+                  vous recevrez automatiquement une commission de 10% de ces rendements.
                 </p>
               </div>
             ) : (
@@ -455,6 +455,7 @@ export default function ReferralTab() {
                         </TableCell>
                         <TableCell>
                           {commission.source === 'investment_yield' ? 'Rendement' : 
+                           commission.source === 'investment_payment' ? 'Versement programmé' :
                            commission.source === 'signup' ? 'Inscription' : 
                            commission.source}
                         </TableCell>

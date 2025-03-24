@@ -23,7 +23,7 @@ export const calculateReferralCommission = (
   }
 
   try {
-    // Calculate commission amount (10% of yield by default)
+    // Calculate commission amount (10% of yield/payment amount by default)
     const commissionAmount = yieldAmount * commissionRate;
     
     return {
