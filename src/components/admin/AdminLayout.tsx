@@ -1,10 +1,11 @@
+
 import React, { useState } from 'react';
 import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAdmin } from '@/contexts/AdminContext';
 import { logoutAdmin } from '@/services/adminAuthService';
 import { 
   Database, ArrowLeftRight, 
-  LayoutDashboard, LogOut, Menu, X, Bell, Users, BanknoteIcon, CalendarIcon
+  LayoutDashboard, LogOut, Menu, X, Bell, Users, BanknoteIcon, CalendarIcon, MessageSquare
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -53,14 +54,19 @@ export default function AdminLayout() {
       path: '/admin/profiles' 
     },
     { 
-      label: 'Parrainages', 
-      icon: <Users className="w-5 h-5" />, 
-      path: '/admin/referrals' 
-    },
-    { 
       label: 'Paiements programmés', 
       icon: <CalendarIcon className="w-5 h-5" />, 
       path: '/admin/scheduled-payments' 
+    },
+    { 
+      label: 'Notifications', 
+      icon: <Bell className="w-5 h-5" />, 
+      path: '/admin/notifications' 
+    },
+    { 
+      label: 'Mises à jour de projets', 
+      icon: <MessageSquare className="w-5 h-5" />, 
+      path: '/admin/project-updates' 
     },
   ];
 

@@ -27,6 +27,8 @@ const ProfilesPage = lazy(() => import("./pages/ProfilesPage"));
 const AdminApp = lazy(() => import("./pages/admin/AdminApp"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
+const NotificationManagement = lazy(() => import("./pages/admin/NotificationManagement"));
+const ProjectUpdateNotifications = lazy(() => import("./pages/admin/ProjectUpdateNotifications"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -79,6 +81,8 @@ const App = () => (
                   <Route path="bank-transfers" element={<BankTransfersPage />} />
                   <Route path="profiles" element={<ProfilesPage />} />
                   <Route path="settings" element={<div>Paramètres</div>} />
+                  <Route path="notifications" element={<NotificationManagement />} />
+                  <Route path="project-updates" element={<ProjectUpdateNotifications />} />
                 </Route>
                 
                 <Route path="*" element={<NotFound />} />

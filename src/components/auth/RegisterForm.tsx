@@ -214,9 +214,13 @@ export default function RegisterForm() {
         )}
       </CardContent>
       <CardFooter>
-        <Button disabled={isLoading} className="w-full" onClick={handleSubmit}>
-          {isLoading ? 'Création du compte...' : 'Créer un compte'}
-        </Button>
+        <button
+          type="submit"
+          className="w-full bg-bgs-blue hover:bg-bgs-blue-dark text-white font-semibold py-3 px-6 rounded-md transition-colors"
+          disabled={isLoading}
+        >
+          {isLoading ? "Création en cours..." : "Créer un compte"}
+        </button>
       </CardFooter>
     </Card>
   );
