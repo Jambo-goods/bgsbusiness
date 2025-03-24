@@ -9,7 +9,6 @@ import GeneralInformationCard from './components/GeneralInformationCard';
 import TransactionHistoryCard from './components/TransactionHistoryCard';
 import ProjectUpdatesCard from './components/ProjectUpdatesCard';
 import ContactActionsCard from './components/ContactActionsCard';
-import InvestmentSummaryCards from './components/InvestmentSummaryCards';
 import { useScheduledPayments } from './hooks/useScheduledPayments';
 
 const InvestmentTrackingPage: React.FC = () => {
@@ -98,10 +97,6 @@ const InvestmentTrackingPage: React.FC = () => {
       </div>
 
       <div className="space-y-6">
-        <InvestmentSummaryCards 
-          investmentData={investment}
-        />
-        
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <GeneralInformationCard 
