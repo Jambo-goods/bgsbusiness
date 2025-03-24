@@ -28,7 +28,38 @@ serve(async (req) => {
     
     console.log("🔍 Starting fix-referral-commissions function");
     
-    // First check if there are any valid referrals in the system
+    // First get the valid transaction types from the database
+    const { data: validTypeData, error: typeCheckError } = await supabase
+      .from('wallet_transactions')
+      .select('type')
+      .limit(10);
+      
+    if (typeCheckError) {
+      console.error("❌ Error fetching valid transaction types:", typeCheckError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Error fetching valid transaction types: ${typeCheckError.message}`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+    
+    // Create a set of valid transaction types
+    const validTypes = new Set();
+    if (validTypeData && validTypeData.length > 0) {
+      validTypeData.forEach(item => validTypes.add(item.type));
+      console.log(`📊 Found valid transaction types: ${Array.from(validTypes).join(', ')}`);
+    } else {
+      // Default fallback types if we can't determine from existing data
+      // From postgres logs, we know that 'commission' is a valid type
+      validTypes.add('commission');
+      validTypes.add('withdrawal');
+      validTypes.add('deposit');
+      console.log("⚠️ No transaction types found in database, using fallback types");
+    }
+    
+    // Check if referrals exist
     const { data: referrals, error: referralsError } = await supabase
       .from('referrals')
       .select(`
@@ -74,6 +105,13 @@ serve(async (req) => {
     // Now fetch all yield transactions for users who have been referred
     const referredUserIds = referrals.map(r => r.referred_id);
     
+    // Check if 'yield' is a valid type, otherwise use an appropriate type
+    const yieldType = validTypes.has('yield') ? 'yield' : 
+                     (validTypes.has('investment_return') ? 'investment_return' : 
+                     Array.from(validTypes)[0] || 'commission');
+    
+    console.log(`🔍 Using transaction type '${yieldType}' for yield transactions`);
+    
     const { data: yieldTransactions, error: yieldError } = await supabase
       .from('wallet_transactions')
       .select(`
@@ -84,7 +122,7 @@ serve(async (req) => {
         created_at,
         status
       `)
-      .eq('type', 'yield')
+      .eq('type', yieldType)
       .eq('status', 'completed')
       .in('user_id', referredUserIds);
       
@@ -117,28 +155,22 @@ serve(async (req) => {
       console.log(`📝 Creating test yield transaction for referred user ${testReferral.referred_id}`);
       
       try {
-        // First, check what valid transaction types are in the database
-        // by fetching an existing transaction
-        const { data: existingTxs, error: existingTxsError } = await supabase
-          .from('wallet_transactions')
-          .select('type')
-          .limit(5);
-          
-        if (existingTxsError) {
-          console.error("❌ Error fetching existing transactions:", existingTxsError);
-          throw new Error(`Error fetching existing transactions: ${existingTxsError.message}`);
+        // Make sure we're using a valid transaction type
+        // Using 'commission' type which is confirmed valid from postgres logs
+        const commissionType = validTypes.has('commission') ? 'commission' : Array.from(validTypes)[0];
+        
+        if (!commissionType) {
+          throw new Error("No valid transaction types found in the database. Please check the wallet_transactions table schema.");
         }
         
-        console.log(`✅ Found existing transaction types:`, existingTxs ? existingTxs.map(t => t.type).join(', ') : 'none');
+        console.log(`✅ Using transaction type '${commissionType}' for test transaction`);
         
-        // Create a test yield transaction for the referred user using 'yield' as the type
-        // since we know this is a valid type (we queried for it above)
         const { data: testTransaction, error: createError } = await supabase
           .from('wallet_transactions')
           .insert({
             user_id: testReferral.referred_id,
-            amount: 100, // 100 euros yield
-            type: 'yield', // Using a known valid type
+            amount: 100,
+            type: commissionType,
             description: 'Test de rendement pour commission',
             status: 'completed',
             receipt_confirmed: true
@@ -148,55 +180,20 @@ serve(async (req) => {
           
         if (createError) {
           console.error("❌ Error creating test transaction:", createError);
-          
-          // If that fails, try with 'commission' type which should be valid
-          // from looking at the database tables
-          const { data: testTransaction2, error: createError2 } = await supabase
-            .from('wallet_transactions')
-            .insert({
-              user_id: testReferral.referred_id,
-              amount: 100, 
-              type: 'commission', // Using 'commission' as an alternative valid type
-              description: 'Test de rendement pour commission',
-              status: 'completed',
-              receipt_confirmed: true
-            })
-            .select()
-            .single();
-            
-          if (createError2) {
-            console.error("❌ Error creating test transaction with alternative type:", createError2);
-            return new Response(
-              JSON.stringify({
-                success: false,
-                error: `Error creating test transaction: ${createError.message}. Alternative attempt also failed: ${createError2.message}. Valid transaction types needed.`
-              }),
-              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
-            );
-          }
-          
-          console.log(`✅ Created test transaction with alternative type: ${testTransaction2?.id}`);
-          
-          // Now process this test transaction
-          const source = `transaction_${testTransaction2.id}`;
-          await processTransactionCommission(
-            supabase, 
-            testTransaction2, 
-            source, 
-            results
-          );
-        } else {
-          console.log(`✅ Created test transaction: ${testTransaction?.id}`);
-          
-          // Now process this test transaction
-          const source = `transaction_${testTransaction.id}`;
-          await processTransactionCommission(
-            supabase, 
-            testTransaction, 
-            source, 
-            results
-          );
+          throw new Error(`Error creating test transaction: ${createError.message}. Please check valid transaction types in your database schema for the wallet_transactions table, column 'type'.`);
         }
+        
+        console.log(`✅ Created test transaction: ${testTransaction?.id}`);
+        
+        // Now process this test transaction
+        const source = `transaction_${testTransaction.id}`;
+        await processTransactionCommission(
+          supabase, 
+          testTransaction, 
+          source, 
+          results,
+          validTypes
+        );
       } catch (testError) {
         console.error("❌ Error in test transaction creation/processing:", testError);
         return new Response(
@@ -235,6 +232,7 @@ serve(async (req) => {
             transaction, 
             source, 
             results,
+            validTypes,
             referral
           );
         } catch (txProcessError) {
@@ -296,6 +294,7 @@ async function processTransactionCommission(
   transaction: any,
   source: string,
   results: any,
+  validTypes: Set<string>,
   existingReferral?: any
 ) {
   const userId = transaction.user_id;
@@ -417,12 +416,19 @@ async function processTransactionCommission(
     
     // Create wallet transaction for commission
     try {
+      // Make sure we're using a valid transaction type for the commission
+      const commissionType = validTypes.has('commission') ? 'commission' : Array.from(validTypes)[0];
+      
+      if (!commissionType) {
+        throw new Error("No valid transaction types found for commissions");
+      }
+      
       const { data: walletTx, error: walletError } = await supabase
         .from('wallet_transactions')
         .insert({
           user_id: referralData.referrer_id,
           amount: commissionAmount,
-          type: 'commission', // Using 'commission' as the type
+          type: commissionType,
           description: `Commission de parrainage (${commissionRate * 100}%)`,
           status: 'completed',
           receipt_confirmed: true
