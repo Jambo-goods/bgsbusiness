@@ -38,11 +38,13 @@ const InvestmentTrackingPage: React.FC = () => {
   // Get the project from the investment data
   const project = investment?.projects;
   
+  // Only fetch scheduled payments if we have a project ID
+  const projectId = project?.id || '';
   const {
     scheduledPayments,
     loading: paymentsLoading,
     error: paymentsError
-  } = useScheduledPayments(project?.id || '');
+  } = useScheduledPayments(projectId);
 
   if (loading) {
     return (
@@ -109,13 +111,13 @@ const InvestmentTrackingPage: React.FC = () => {
             <TransactionHistoryCard 
               investmentId={investmentId} 
               userId={investment.user_id} 
-              projectId={project.id} 
+              projectId={projectId} 
             />
           </div>
           
           <div className="space-y-6">
             <ProjectUpdatesCard 
-              projectId={project.id} 
+              projectId={projectId} 
             />
             
             <ContactActionsCard 
