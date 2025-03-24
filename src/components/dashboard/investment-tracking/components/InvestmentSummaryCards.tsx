@@ -3,9 +3,10 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DollarSign, TrendingUp, Clock, CheckCircle } from 'lucide-react';
 import { formatCurrency } from '@/utils/currencyUtils';
+import { Investment } from '../types/investment';
 
 interface InvestmentSummaryCardsProps {
-  investmentData: any;
+  investmentData: Investment;
 }
 
 const InvestmentSummaryCards: React.FC<InvestmentSummaryCardsProps> = ({

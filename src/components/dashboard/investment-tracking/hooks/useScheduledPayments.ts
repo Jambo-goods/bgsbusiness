@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ScheduledPayment } from "../types/investment";
 
-export function useScheduledPayments(projectId: string | undefined) {
+export function useScheduledPayments(projectId: string) {
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,7 +11,12 @@ export function useScheduledPayments(projectId: string | undefined) {
   const [firstPaymentDelay, setFirstPaymentDelay] = useState<number>(1);
 
   const fetchScheduledPayments = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId) {
+      setError("ID du projet manquant");
+      setLoading(false);
+      setIsRefreshing(false);
+      return;
+    }
     
     setIsRefreshing(true);
     setError(null);
@@ -72,6 +77,9 @@ export function useScheduledPayments(projectId: string | undefined) {
     if (projectId) {
       setLoading(true);
       fetchScheduledPayments();
+    } else {
+      setError("ID du projet manquant");
+      setLoading(false);
     }
     
     // Set up real-time listener

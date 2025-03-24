@@ -29,20 +29,20 @@ const InvestmentTrackingPage: React.FC = () => {
 
   const { 
     investment, 
-    project, 
-    isLoading, 
-    error,
-    reloadInvestment
+    transactions, 
+    loading: isLoading, 
+    isRefreshing, 
+    refreshData
   } = useInvestmentTracking(investmentId);
+  
+  // Récupérer le project_id de l'investissement pour les requêtes de paiements programmés
+  const projectId = investment?.project_id || '';
   
   const {
     scheduledPayments,
-    isLoading: paymentsLoading,
+    loading: paymentsLoading,
     error: paymentsError
-  } = useScheduledPayments({
-    projectId: project?.id || '',
-    investmentId
-  });
+  } = useScheduledPayments(projectId);
 
   if (isLoading) {
     return (
@@ -61,17 +61,19 @@ const InvestmentTrackingPage: React.FC = () => {
     );
   }
 
-  if (error || !investment || !project) {
+  const error = !investment || !investment.projects;
+
+  if (error) {
     return (
       <div className="container py-8">
         <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
           <h3 className="font-semibold text-lg mb-2">Erreur lors du chargement des données</h3>
-          <p>{error || "Impossible de trouver les détails de l'investissement demandé."}</p>
+          <p>{"Impossible de trouver les détails de l'investissement demandé."}</p>
           <div className="mt-4">
             <Button variant="outline" asChild className="mr-2">
               <Link to="/dashboard/investments">Retour aux investissements</Link>
             </Button>
-            <Button variant="secondary" onClick={reloadInvestment}>
+            <Button variant="secondary" onClick={refreshData}>
               Réessayer
             </Button>
           </div>
@@ -79,6 +81,8 @@ const InvestmentTrackingPage: React.FC = () => {
       </div>
     );
   }
+
+  const project = investment.projects;
 
   return (
     <div className="container py-6">
@@ -95,27 +99,25 @@ const InvestmentTrackingPage: React.FC = () => {
 
       <div className="space-y-6">
         <InvestmentSummaryCards 
-          investment={investment} 
-          project={project} 
+          investmentData={investment}
         />
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <GeneralInformationCard 
-              investment={investment} 
-              project={project} 
+              investment={investment}
             />
             
             <TransactionHistoryCard 
               investmentId={investmentId} 
               userId={investment.user_id} 
-              projectId={project.id} 
+              projectId={projectId} 
             />
           </div>
           
           <div className="space-y-6">
             <ProjectUpdatesCard 
-              projectId={project.id} 
+              projectId={projectId} 
             />
             
             <ContactActionsCard 
