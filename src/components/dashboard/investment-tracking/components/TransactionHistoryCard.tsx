@@ -50,14 +50,6 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     try {
       console.log('Récupération des détails du projet et investissement:', projectId, investmentId);
       
-      // Don't proceed if there's no valid projectId
-      if (!projectId) {
-        setError("ID du projet manquant");
-        setIsLoading(false);
-        setIsRefreshing(false);
-        return;
-      }
-      
       // Get investment date and amount first
       const { data: investmentData, error: investmentError } = await supabase
         .from("investments")
@@ -161,7 +153,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
   }, [investmentId, projectId]);
 
   useEffect(() => {
-    if (investmentId) {
+    if (projectId && investmentId) {
       fetchScheduledPayments();
     }
     
