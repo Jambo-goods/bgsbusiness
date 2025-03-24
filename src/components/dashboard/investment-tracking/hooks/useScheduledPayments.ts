@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ScheduledPayment } from "../types/investment";
 
-export function useScheduledPayments(projectId: string | undefined) {
+export function useScheduledPayments(projectId: string) {
   const [scheduledPayments, setScheduledPayments] = useState<ScheduledPayment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,8 +127,7 @@ export function useScheduledPayments(projectId: string | undefined) {
           throw new Error('Paiement non trouvé');
         }
         
-        console.log('Fetched payment directly:', directPayment);
-        paymentToUpdate = directPayment;
+        paymentToUpdate = directPayment as ScheduledPayment;
       }
       
       // Create update object
@@ -183,8 +182,6 @@ export function useScheduledPayments(projectId: string | undefined) {
               
               if (notifError) {
                 console.error("Error creating payment notification:", notifError);
-              } else {
-                console.log("Created payment status notification successfully");
               }
             }
           }
@@ -202,13 +199,9 @@ export function useScheduledPayments(projectId: string | undefined) {
           
           if (functionError) {
             console.error('Error invoking edge function:', functionError);
-            // Continue anyway, the UI will be updated via real-time subscription
-          } else {
-            console.log('Edge function called successfully to update wallet balances');
           }
         } catch (funcError) {
           console.error('Exception invoking edge function:', funcError);
-          // Continue anyway
         }
       }
 
