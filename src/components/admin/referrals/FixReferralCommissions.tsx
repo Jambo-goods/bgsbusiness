@@ -61,9 +61,7 @@ export default function FixReferralCommissions() {
       setDebugInfo(prev => [...prev, "Invoking fix-referral-commissions function"]);
       console.log("Invoking fix-referral-commissions function");
       
-      const { data, error } = await supabase.functions.invoke('fix-referral-commissions', {
-        body: {}
-      });
+      const { data, error } = await supabase.functions.invoke('fix-referral-commissions', {});
       
       if (error) {
         console.error("Error fixing commissions:", error);

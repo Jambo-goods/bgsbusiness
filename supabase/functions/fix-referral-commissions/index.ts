@@ -30,7 +30,6 @@ serve(async (req) => {
         user_id,
         amount,
         type,
-        payment_id,
         created_at
       `)
       .eq('type', 'yield')
@@ -69,9 +68,7 @@ serve(async (req) => {
         console.log(`🔄 Processing transaction ${transaction.id}, amount: ${transaction.amount}`);
         
         // Generate source identifier
-        const source = transaction.payment_id 
-          ? `payment_${transaction.payment_id}` 
-          : `transaction_${transaction.id}`;
+        const source = `transaction_${transaction.id}`;
           
         await processTransactionCommission(
           supabase, 
