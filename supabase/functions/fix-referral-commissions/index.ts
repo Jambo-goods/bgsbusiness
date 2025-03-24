@@ -112,6 +112,7 @@ serve(async (req) => {
     
     console.log(`🔍 Using transaction type '${yieldType}' for yield transactions`);
     
+    // Fetch all yield transactions for referred users
     const { data: yieldTransactions, error: yieldError } = await supabase
       .from('wallet_transactions')
       .select(`
@@ -120,7 +121,8 @@ serve(async (req) => {
         amount,
         type,
         created_at,
-        status
+        status,
+        payment_id
       `)
       .eq('type', yieldType)
       .eq('status', 'completed')
@@ -139,6 +141,25 @@ serve(async (req) => {
     
     console.log(`📊 Found ${yieldTransactions?.length || 0} yield transactions to check for referred users`);
     
+    // Also check scheduled payments that have been paid (these might not have wallet transactions yet)
+    const { data: scheduledPayments, error: paymentsError } = await supabase
+      .from('scheduled_payments')
+      .select(`
+        id,
+        project_id,
+        payment_date,
+        status,
+        percentage,
+        total_scheduled_amount
+      `)
+      .eq('status', 'paid');
+    
+    if (paymentsError) {
+      console.error("❌ Error fetching scheduled payments:", paymentsError);
+    } else {
+      console.log(`📊 Found ${scheduledPayments?.length || 0} paid scheduled payments to check`);
+    }
+    
     // Process results
     const results = {
       processedCount: 0,
@@ -147,10 +168,10 @@ serve(async (req) => {
       details: [] as any[]
     };
     
-    if (!yieldTransactions || yieldTransactions.length === 0) {
-      console.log("⚠️ No yield transactions found for referred users");
+    if ((!yieldTransactions || yieldTransactions.length === 0) && (!scheduledPayments || scheduledPayments.length === 0)) {
+      console.log("⚠️ No yield transactions or scheduled payments found for referred users");
       
-      // Try to create a test transaction instead
+      // Create a test transaction for the first referral
       const testReferral = referrals[0];
       console.log(`📝 Creating test yield transaction for referred user ${testReferral.referred_id}`);
       
@@ -187,12 +208,11 @@ serve(async (req) => {
         
         console.log(`✅ Created test yield transaction: ${testTransaction?.id}`);
         
-        // Now process this test transaction for commission (10% of yield amount)
-        const source = `yield_transaction_${testTransaction.id}`;
+        // Process commission for test transaction (10% of yield amount)
         await processTransactionCommission(
           supabase, 
           testTransaction, 
-          source, 
+          `yield_transaction_${testTransaction.id}`, 
           results,
           validTypes,
           testReferral
@@ -208,44 +228,120 @@ serve(async (req) => {
         );
       }
     } else {
-      // Process each yield transaction from users who have been referred
-      for (const transaction of yieldTransactions) {
-        try {
-          // Find the referral for this user
-          const referral = referralMap.get(transaction.user_id);
-          
-          if (!referral) {
-            console.log(`⏩ Skipping transaction ${transaction.id}: No valid referral found for user ${transaction.user_id}`);
-            results.skippedCount++;
+      // Process real yield transactions
+      if (yieldTransactions && yieldTransactions.length > 0) {
+        for (const transaction of yieldTransactions) {
+          try {
+            // Find the referral for this user
+            const referral = referralMap.get(transaction.user_id);
+            
+            if (!referral) {
+              console.log(`⏩ Skipping transaction ${transaction.id}: No valid referral found for user ${transaction.user_id}`);
+              results.skippedCount++;
+              results.details.push({
+                transactionId: transaction.id,
+                status: 'skipped',
+                reason: `No valid referral found for user ${transaction.user_id}`
+              });
+              continue;
+            }
+            
+            console.log(`🔄 Processing yield transaction ${transaction.id}, amount: ${transaction.amount} for user ${transaction.user_id}`);
+            
+            // Generate simple source identifier for this yield transaction
+            const source = `yield_transaction_${transaction.id}`;
+              
+            await processTransactionCommission(
+              supabase, 
+              transaction, 
+              source, 
+              results,
+              validTypes,
+              referral
+            );
+          } catch (txProcessError) {
+            console.error(`❌ Error processing transaction ${transaction.id}:`, txProcessError);
+            results.failedCount++;
             results.details.push({
               transactionId: transaction.id,
-              status: 'skipped',
-              reason: `No valid referral found for user ${transaction.user_id}`
+              status: 'failed',
+              reason: txProcessError instanceof Error ? txProcessError.message : 'Unknown error'
             });
-            continue;
           }
-          
-          console.log(`🔄 Processing yield transaction ${transaction.id}, amount: ${transaction.amount} for user ${transaction.user_id}`);
-          
-          // Generate simple source identifier for this yield transaction
-          const source = `yield_transaction_${transaction.id}`;
+        }
+      }
+      
+      // Process scheduled payments that don't have wallet transactions yet
+      if (scheduledPayments && scheduledPayments.length > 0) {
+        console.log(`🔍 Processing ${scheduledPayments.length} scheduled payments`);
+        
+        for (const payment of scheduledPayments) {
+          try {
+            // Get all investments for this project to find the referred users
+            const { data: investments, error: investError } = await supabase
+              .from('investments')
+              .select('id, user_id, amount, project_id')
+              .eq('project_id', payment.project_id);
+              
+            if (investError) {
+              console.error(`❌ Error fetching investments for project ${payment.project_id}:`, investError);
+              continue;
+            }
             
-          await processTransactionCommission(
-            supabase, 
-            transaction, 
-            source, 
-            results,
-            validTypes,
-            referral
-          );
-        } catch (txProcessError) {
-          console.error(`❌ Error processing transaction ${transaction.id}:`, txProcessError);
-          results.failedCount++;
-          results.details.push({
-            transactionId: transaction.id,
-            status: 'failed',
-            reason: txProcessError instanceof Error ? txProcessError.message : 'Unknown error'
-          });
+            if (!investments || investments.length === 0) {
+              console.log(`⏩ No investments found for project ${payment.project_id}`);
+              continue;
+            }
+            
+            console.log(`🔍 Processing ${investments.length} investments for scheduled payment ${payment.id}`);
+            
+            for (const investment of investments) {
+              const userId = investment.user_id;
+              
+              // Check if this user is referred
+              const referral = referralMap.get(userId);
+              if (!referral) {
+                console.log(`⏩ Skipping investment for user ${userId}: No valid referral found`);
+                continue;
+              }
+              
+              // Calculate individual yield amount for this user's investment
+              // Using the percentage from the scheduled payment
+              const yieldAmount = investment.amount * (payment.percentage / 100);
+              
+              console.log(`💰 Calculated yield of ${yieldAmount} for user ${userId} investment of ${investment.amount}`);
+              
+              // Create a synthetic transaction to process
+              const syntheticTransaction = {
+                id: `scheduled_payment_${payment.id}_investment_${investment.id}`,
+                user_id: userId,
+                amount: yieldAmount,
+                type: validTypes.has('yield') ? 'yield' : 'investment_return',
+                created_at: new Date().toISOString(),
+                status: 'completed',
+                payment_id: payment.id
+              };
+              
+              const source = `scheduled_payment_${payment.id}_investment_${investment.id}`;
+              
+              await processTransactionCommission(
+                supabase, 
+                syntheticTransaction, 
+                source, 
+                results,
+                validTypes,
+                referral
+              );
+            }
+          } catch (paymentProcessError) {
+            console.error(`❌ Error processing scheduled payment ${payment.id}:`, paymentProcessError);
+            results.failedCount++;
+            results.details.push({
+              paymentId: payment.id,
+              status: 'failed',
+              reason: paymentProcessError instanceof Error ? paymentProcessError.message : 'Unknown error'
+            });
+          }
         }
       }
     }
