@@ -12,6 +12,8 @@ interface PaymentData {
   amount: number;
   paymentId: string;
   projectName?: string;
+  projectId?: string;
+  percentage?: number;
 }
 
 serve(async (req) => {
@@ -27,7 +29,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { userId, amount, paymentId, projectName }: PaymentData = await req.json();
+    const { userId, amount, paymentId, projectName, projectId, percentage }: PaymentData = await req.json();
 
     if (!userId || !amount || !paymentId) {
       return new Response(
@@ -60,21 +62,39 @@ serve(async (req) => {
       );
     }
 
+    // Get project details if we have a project ID
+    let projectDetails;
+    if (projectId) {
+      const { data: project, error: projectError } = await supabase
+        .from('projects')
+        .select('name, company_name')
+        .eq('id', projectId)
+        .single();
+        
+      if (!projectError && project) {
+        projectDetails = project;
+      }
+    }
+    
+    const actualProjectName = projectDetails?.name || projectName || 'Investissement';
+
     // Create a wallet transaction for the payment
-    const { error: txError } = await supabase.from('wallet_transactions').insert({
+    const { data: transaction, error: txError } = await supabase.from('wallet_transactions').insert({
       user_id: userId,
       amount: amount,
       type: 'yield',
-      description: `Rendement automatique: ${projectName || 'Investissement'}`,
+      description: `Rendement automatique: ${actualProjectName}`,
       status: 'completed',
       receipt_confirmed: true,
       payment_id: paymentId
-    });
+    }).select().single();
     
     if (txError) {
       console.error("Failed to create wallet transaction:", txError);
       throw new Error("Failed to create transaction record");
     }
+    
+    console.log("Created wallet transaction:", transaction.id);
     
     // Update wallet balance directly using RPC function
     const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
@@ -88,10 +108,10 @@ serve(async (req) => {
     }
 
     // Send notification to the user
-    await sendYieldNotification(supabase, userId, amount, projectName || 'Investissement');
+    await sendYieldNotification(supabase, userId, amount, actualProjectName);
 
     // Process referral commission (10% to the referrer)
-    await processReferralCommission(supabase, userId, amount, projectName || 'Investissement');
+    await processReferralCommission(supabase, userId, amount, actualProjectName);
     
     return new Response(
       JSON.stringify({ 
@@ -150,10 +170,12 @@ async function sendYieldNotification(supabase, userId, amount, projectName) {
 // Helper function to process referral commission
 async function processReferralCommission(supabase, userId, yieldAmount, projectName) {
   try {
+    console.log(`Checking for referral relationship for user ${userId}`);
+    
     // First check if this user has a referrer
     const { data: referralData, error: referralError } = await supabase
       .from('referrals')
-      .select('id, referrer_id, total_commission')
+      .select('id, referrer_id, status, total_commission')
       .eq('referred_id', userId)
       .single();
       
@@ -161,6 +183,7 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
       if (referralError.code !== 'PGRST116') { // Not found
         console.error("Error checking referral:", referralError);
       }
+      console.log(`No referrer found for user ${userId}, skipping commission`);
       return; // No referrer or error
     }
     
@@ -168,29 +191,38 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
       console.log(`No referrer found for user ${userId}, skipping commission`);
       return; // No referrer found
     }
+
+    // Skip if referral status is not valid
+    if (referralData.status !== 'valid') {
+      console.log(`Referral for user ${userId} has status ${referralData.status}, not valid, skipping commission`);
+      return;
+    }
     
     // Calculate 10% commission
-    const commissionAmount = Math.round(yieldAmount * 0.1);
+    const commissionAmount = Math.round(yieldAmount * 0.1 * 100) / 100; // Round to 2 decimal places
     console.log(`Processing ${commissionAmount}€ commission for referrer ${referralData.referrer_id}`);
     
     if (commissionAmount <= 0) {
+      console.log(`Commission amount ${commissionAmount} is too small, skipping`);
       return; // No commission to pay
     }
     
     // Create a wallet transaction for the commission
-    const { error: txError } = await supabase.from('wallet_transactions').insert({
+    const { data: transaction, error: txError } = await supabase.from('wallet_transactions').insert({
       user_id: referralData.referrer_id,
       amount: commissionAmount,
       type: 'commission',
       description: `Commission de parrainage (10%)`,
       status: 'completed',
       receipt_confirmed: true
-    });
+    }).select().single();
     
     if (txError) {
       console.error("Failed to create commission transaction:", txError);
       return;
     }
+
+    console.log(`Created commission wallet transaction: ${transaction.id}`);
     
     // Update referrer's wallet balance
     const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
@@ -201,6 +233,22 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
     if (balanceError) {
       console.error("Failed to update referrer wallet balance:", balanceError);
       return;
+    }
+    
+    // Create a record in referral_commissions table
+    const { data: commissionData, error: commissionError } = await supabase.from('referral_commissions').insert({
+      referral_id: referralData.id,
+      referrer_id: referralData.referrer_id,
+      referred_id: userId,
+      amount: commissionAmount,
+      source: 'investment_yield',
+      status: 'completed'
+    }).select().single();
+    
+    if (commissionError) {
+      console.error("Failed to create referral commission record:", commissionError);
+    } else {
+      console.log(`Created referral commission record: ${commissionData.id}`);
     }
     
     // Update total commission in referral record
