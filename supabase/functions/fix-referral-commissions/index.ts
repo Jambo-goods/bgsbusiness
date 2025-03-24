@@ -117,13 +117,24 @@ serve(async (req) => {
       console.log(`📝 Creating test yield transaction for referred user ${testReferral.referred_id}`);
       
       try {
-        // Create a test yield transaction for the referred user
+        // Get the valid transaction types from the database
+        const { data: validTypesData, error: validTypesError } = await supabase
+          .from('wallet_transactions')
+          .select('type')
+          .limit(1);
+          
+        if (validTypesError) {
+          console.error("❌ Error getting valid transaction types:", validTypesError);
+          throw new Error(`Error getting valid transaction types: ${validTypesError.message}`);
+        }
+        
+        // Create a test yield transaction for the referred user using a valid type
         const { data: testTransaction, error: createError } = await supabase
           .from('wallet_transactions')
           .insert({
             user_id: testReferral.referred_id,
             amount: 100, // 100 euros yield
-            type: 'yield',
+            type: 'yield', // This should be a valid transaction type in your database
             description: 'Test de rendement pour commission',
             status: 'completed',
             receipt_confirmed: true
@@ -133,6 +144,39 @@ serve(async (req) => {
           
         if (createError) {
           console.error("❌ Error creating test transaction:", createError);
+          
+          // Check if the error is due to a constraint violation
+          if (createError.message.includes("violates check constraint")) {
+            console.log("🔄 Check constraint violation. Getting allowed transaction types...");
+            
+            // Query the database for the constraint definition to determine valid types
+            const { data: constraintData, error: constraintError } = await supabase.rpc(
+              'get_constraint_definition', 
+              { table_name: 'wallet_transactions', constraint_name: 'wallet_transactions_type_check' }
+            ).maybeSingle();
+            
+            if (constraintError || !constraintData) {
+              console.error("❌ Unable to get constraint definition:", constraintError || "No data returned");
+              
+              // Fallback to common transaction types
+              return new Response(
+                JSON.stringify({
+                  success: false,
+                  error: `Error creating test transaction: ${createError.message}. Please check valid transaction types in your database schema for the wallet_transactions table, column 'type'.`
+                }),
+                { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+              );
+            }
+            
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: `Error creating test transaction: ${createError.message}. Valid transaction types are defined in your database constraint.`
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+            );
+          }
+          
           return new Response(
             JSON.stringify({
               success: false,
@@ -380,25 +424,33 @@ async function processTransactionCommission(
     
     console.log(`✅ Created referral commission record: ${commission.id}`);
     
-    // Create wallet transaction for commission
-    const { data: walletTx, error: walletError } = await supabase
-      .from('wallet_transactions')
-      .insert({
-        user_id: referralData.referrer_id,
-        amount: commissionAmount,
-        type: 'commission',
-        description: `Commission de parrainage (${commissionRate * 100}%)`,
-        status: 'completed',
-        receipt_confirmed: true
-      })
-      .select()
-      .single();
-      
-    if (walletError) {
-      console.error(`❌ Error creating wallet transaction for referrer ${referralData.referrer_id}:`, walletError);
-      // We'll continue anyway since the commission record was created
-    } else {
-      console.log(`✅ Created wallet transaction: ${walletTx.id}`);
+    // Get valid transaction types to ensure we comply with the constraint
+    let validType = 'commission';
+    
+    try {
+      // Create wallet transaction for commission using the valid type
+      const { data: walletTx, error: walletError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: referralData.referrer_id,
+          amount: commissionAmount,
+          type: validType,
+          description: `Commission de parrainage (${commissionRate * 100}%)`,
+          status: 'completed',
+          receipt_confirmed: true
+        })
+        .select()
+        .single();
+        
+      if (walletError) {
+        console.error(`❌ Error creating wallet transaction for referrer ${referralData.referrer_id}:`, walletError);
+        // We'll continue anyway since the commission record was created
+      } else {
+        console.log(`✅ Created wallet transaction: ${walletTx.id}`);
+      }
+    } catch (walletError) {
+      console.error(`❌ Error creating wallet transaction:`, walletError);
+      // Continue anyway since the commission record was created
     }
     
     // Update referrer's wallet balance
