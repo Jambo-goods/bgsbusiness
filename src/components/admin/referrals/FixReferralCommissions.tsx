@@ -29,20 +29,25 @@ export default function FixReferralCommissions() {
         duration: 5000,
       });
       
+      console.log("Invoking fix-referral-commissions function");
       const { data, error } = await supabase.functions.invoke('fix-referral-commissions', {
         body: {}
       });
       
       if (error) {
-        toast.error(`Erreur: ${error.message}`);
         console.error("Error fixing commissions:", error);
+        toast.error(`Erreur: ${error.message}`);
         return;
       }
       
       console.log("Fix results:", data);
       setResults(data);
       
-      toast.success(`${data.message}`);
+      if (data.results.processedCount > 0) {
+        toast.success(`${data.message}`);
+      } else {
+        toast.info(`Aucune commission à traiter. ${data.results.skippedCount} transaction(s) ignorée(s).`);
+      }
     } catch (error) {
       console.error("Error running fix:", error);
       toast.error("Une erreur est survenue lors de la correction des commissions");
@@ -95,7 +100,7 @@ export default function FixReferralCommissions() {
                 </div>
               </div>
               
-              {results.results.details.length > 0 && (
+              {results.results.details && results.results.details.length > 0 && (
                 <div className="mt-4">
                   <h5 className="text-sm font-medium mb-2">Détails (10 premiers résultats)</h5>
                   <div className="max-h-60 overflow-y-auto border rounded-md">
@@ -124,7 +129,7 @@ export default function FixReferralCommissions() {
                             </td>
                             <td className="px-3 py-2 text-xs">
                               {detail.status === 'success' 
-                                ? `Commission: ${detail.commission}€`
+                                ? `Commission: ${detail.commission}€` 
                                 : detail.reason}
                             </td>
                           </tr>
