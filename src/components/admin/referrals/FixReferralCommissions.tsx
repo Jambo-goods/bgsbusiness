@@ -22,7 +22,7 @@ export default function FixReferralCommissions() {
       
       const { data, error } = await supabase
         .from('referral_commissions')
-        .select('id, source, amount, created_at, status');
+        .select('id, referrer_id, referred_id, source, amount, created_at, status');
       
       if (error) {
         toast.error(`Erreur lors de la vérification de la table: ${error.message}`);
@@ -37,7 +37,7 @@ export default function FixReferralCommissions() {
         setDebugInfo(prev => [...prev, `${count} commissions trouvées dans la table`]);
         data.forEach((commission, idx) => {
           if (idx < 5) { // Log first 5 for debugging
-            setDebugInfo(prev => [...prev, `Commission ${idx+1}: ID=${commission.id}, Source=${commission.source}, Amount=${commission.amount}, Status=${commission.status}`]);
+            setDebugInfo(prev => [...prev, `Commission ${idx+1}: ID=${commission.id}, Référant=${commission.referrer_id}, Filleul=${commission.referred_id}, Montant=${commission.amount}, Status=${commission.status}`]);
           }
         });
       }
@@ -47,6 +47,68 @@ export default function FixReferralCommissions() {
       console.error("Error checking table:", error);
       toast.error("Erreur lors de la vérification de la table");
       setDebugInfo(prev => [...prev, `Erreur vérification: ${error instanceof Error ? error.message : 'Inconnue'}`]);
+    }
+  };
+
+  const checkReferralsData = async () => {
+    try {
+      setDebugInfo(prev => [...prev, "Vérification des parrainages valides..."]);
+      
+      const { data, error } = await supabase
+        .from('referrals')
+        .select('id, referrer_id, referred_id, status, commission_rate, total_commission')
+        .eq('status', 'valid');
+      
+      if (error) {
+        toast.error(`Erreur lors de la vérification des parrainages: ${error.message}`);
+        setDebugInfo(prev => [...prev, `Erreur parrainages: ${error.message}`]);
+        return;
+      }
+      
+      const count = data?.length || 0;
+      
+      if (data) {
+        setDebugInfo(prev => [...prev, `${count} parrainages valides trouvés`]);
+        data.forEach((referral, idx) => {
+          if (idx < 5) { // Log first 5 for debugging
+            setDebugInfo(prev => [...prev, `Parrainage ${idx+1}: ID=${referral.id}, Parrain=${referral.referrer_id}, Filleul=${referral.referred_id}, Taux=${referral.commission_rate}%, Total perçu=${referral.total_commission}`]);
+          }
+        });
+      }
+      
+      // Check for yield transactions for these users
+      if (count > 0) {
+        const referredUserIds = data.map(r => r.referred_id);
+        
+        setDebugInfo(prev => [...prev, "Vérification des transactions de rendement pour les filleuls..."]);
+        
+        const { data: yieldTxs, error: yieldError } = await supabase
+          .from('wallet_transactions')
+          .select('id, user_id, amount, type, status')
+          .eq('type', 'yield')
+          .eq('status', 'completed')
+          .in('user_id', referredUserIds);
+          
+        if (yieldError) {
+          toast.error(`Erreur lors de la vérification des transactions: ${yieldError.message}`);
+          setDebugInfo(prev => [...prev, `Erreur transactions: ${yieldError.message}`]);
+          return;
+        }
+        
+        const yieldCount = yieldTxs?.length || 0;
+        setDebugInfo(prev => [...prev, `${yieldCount} transactions de rendement trouvées pour des filleuls`]);
+        
+        yieldTxs?.forEach((tx, idx) => {
+          if (idx < 5) { // Log first 5 for debugging
+            setDebugInfo(prev => [...prev, `Transaction ${idx+1}: ID=${tx.id}, Utilisateur=${tx.user_id}, Montant=${tx.amount}, Type=${tx.type}, Status=${tx.status}`]);
+          }
+        });
+      }
+      
+    } catch (error) {
+      console.error("Error checking referrals:", error);
+      toast.error("Erreur lors de la vérification des parrainages");
+      setDebugInfo(prev => [...prev, `Erreur vérification parrainages: ${error instanceof Error ? error.message : 'Inconnue'}`]);
     }
   };
 
@@ -81,6 +143,7 @@ export default function FixReferralCommissions() {
           console.error("Error fixing commissions:", error);
           toast.error(`Erreur: ${error.message}`);
           setDebugInfo(prev => [...prev, `Erreur API: ${error.message}`]);
+          setIsProcessing(false);
           return;
         }
         
@@ -90,6 +153,7 @@ export default function FixReferralCommissions() {
         if (!data.success) {
           toast.error(`Erreur serveur: ${data.error || 'Erreur inconnue'}`);
           setDebugInfo(prev => [...prev, `Erreur serveur: ${data.error || 'Erreur inconnue'}`]);
+          setIsProcessing(false);
           return;
         }
         
@@ -104,6 +168,8 @@ export default function FixReferralCommissions() {
         console.error("Error invoking function:", invokeError);
         toast.error("Une erreur est survenue lors de l'appel à la fonction");
         setDebugInfo(prev => [...prev, `Erreur d'invocation: ${invokeError instanceof Error ? invokeError.message : 'Inconnue'}`]);
+        setIsProcessing(false);
+        return;
       }
       
       // Vérifier de nouveau la table après le traitement
@@ -156,6 +222,15 @@ export default function FixReferralCommissions() {
             >
               <DatabaseIcon className="h-4 w-4 mr-2" />
               Vérifier la table
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={checkReferralsData}
+              disabled={isProcessing}
+            >
+              <Info className="h-4 w-4 mr-2" />
+              Vérifier les parrainages
             </Button>
           </div>
           

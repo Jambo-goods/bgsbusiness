@@ -28,7 +28,52 @@ serve(async (req) => {
     
     console.log("🔍 Starting fix-referral-commissions function");
     
-    // First, check if there are any wallet transactions with type 'yield'
+    // First check if there are any valid referrals in the system
+    const { data: referrals, error: referralsError } = await supabase
+      .from('referrals')
+      .select(`
+        id,
+        referrer_id,
+        referred_id,
+        status,
+        commission_rate,
+        total_commission
+      `)
+      .eq('status', 'valid');
+      
+    if (referralsError) {
+      console.error("❌ Error fetching referrals:", referralsError);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Error fetching referrals: ${referralsError.message}`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+    
+    console.log(`📊 Found ${referrals?.length || 0} valid referrals to process`);
+    
+    if (!referrals || referrals.length === 0) {
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Aucun parrainage valide trouvé dans le système.",
+          results: { processedCount: 0, skippedCount: 0, failedCount: 0, details: [] }
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+    
+    // Create a map of referred_id to referral for quick lookup
+    const referralMap = new Map();
+    referrals.forEach(referral => {
+      referralMap.set(referral.referred_id, referral);
+    });
+    
+    // Now fetch all yield transactions for users who have been referred
+    const referredUserIds = referrals.map(r => r.referred_id);
+    
     const { data: yieldTransactions, error: yieldError } = await supabase
       .from('wallet_transactions')
       .select(`
@@ -36,17 +81,25 @@ serve(async (req) => {
         user_id,
         amount,
         type,
-        created_at
+        created_at,
+        status
       `)
       .eq('type', 'yield')
-      .eq('status', 'completed');
+      .eq('status', 'completed')
+      .in('user_id', referredUserIds);
       
     if (yieldError) {
       console.error("❌ Error fetching yield transactions:", yieldError);
-      throw new Error(`Error fetching yield transactions: ${yieldError.message}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Error fetching yield transactions: ${yieldError.message}`
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
     
-    console.log(`📊 Found ${yieldTransactions?.length || 0} yield transactions to check`);
+    console.log(`📊 Found ${yieldTransactions?.length || 0} yield transactions to check for referred users`);
     
     // Process results
     const results = {
@@ -57,40 +110,9 @@ serve(async (req) => {
     };
     
     if (!yieldTransactions || yieldTransactions.length === 0) {
-      console.log("⚠️ No yield transactions found to process");
+      console.log("⚠️ No yield transactions found for referred users");
       
-      // Let's create a test yield transaction for debugging purposes
-      console.log("🧪 Creating a test yield transaction to test the commission system");
-      
-      // Try to get a random user with a valid referral
-      const { data: referrals, error: referralsError } = await supabase
-        .from('referrals')
-        .select(`
-          id,
-          referred_id,
-          referrer_id,
-          status
-        `)
-        .eq('status', 'valid')
-        .limit(1);
-        
-      if (referralsError) {
-        console.error("❌ Error finding referrals:", referralsError);
-        throw new Error(`Error finding referrals: ${referralsError.message}`);
-      }
-      
-      if (!referrals || referrals.length === 0) {
-        console.log("⚠️ No valid referrals found to create test transaction");
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: "Aucune transaction de rendement trouvée et aucun parrainage valide pour créer un test.",
-            results: results
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
+      // Try to create a test transaction instead
       const testReferral = referrals[0];
       console.log(`📝 Creating test yield transaction for referred user ${testReferral.referred_id}`);
       
@@ -111,59 +133,84 @@ serve(async (req) => {
           
         if (createError) {
           console.error("❌ Error creating test transaction:", createError);
-          throw new Error(`Error creating test transaction: ${createError.message}`);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: `Error creating test transaction: ${createError.message}`
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
         }
         
         if (!testTransaction) {
-          throw new Error("Test transaction creation failed - no data returned");
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Test transaction creation failed - no data returned"
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+          );
         }
         
         console.log(`✅ Created test transaction: ${testTransaction.id}`);
         
         // Now process this test transaction
+        const source = `transaction_${testTransaction.id}`;
         await processTransactionCommission(
           supabase, 
           testTransaction, 
-          `transaction_${testTransaction.id}`, 
-          results
-        );
-        
-        return new Response(
-          JSON.stringify({
-            success: true,
-            message: results.processedCount > 0 ? "Transaction de test traitée avec succès." : "Échec du traitement de la transaction de test.",
-            results: results
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      } catch (testError) {
-        console.error("❌ Error in test transaction creation/processing:", testError);
-        throw testError; // Re-throw to be caught by outer try/catch
-      }
-    }
-    
-    // Process each yield transaction
-    for (const transaction of yieldTransactions) {
-      try {
-        console.log(`🔄 Processing transaction ${transaction.id}, amount: ${transaction.amount}`);
-        
-        // Generate simple source identifier
-        const source = `transaction_${transaction.id}`;
-          
-        await processTransactionCommission(
-          supabase, 
-          transaction, 
           source, 
           results
         );
-      } catch (txProcessError) {
-        console.error(`❌ Error processing transaction ${transaction.id}:`, txProcessError);
-        results.failedCount++;
-        results.details.push({
-          transactionId: transaction.id,
-          status: 'failed',
-          reason: txProcessError instanceof Error ? txProcessError.message : 'Unknown error'
-        });
+      } catch (testError) {
+        console.error("❌ Error in test transaction creation/processing:", testError);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: testError instanceof Error ? testError.message : "Unknown error in test transaction"
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+    } else {
+      // Process each yield transaction from users who have been referred
+      for (const transaction of yieldTransactions) {
+        try {
+          // Find the referral for this user
+          const referral = referralMap.get(transaction.user_id);
+          
+          if (!referral) {
+            console.log(`⏩ Skipping transaction ${transaction.id}: No valid referral found for user ${transaction.user_id}`);
+            results.skippedCount++;
+            results.details.push({
+              transactionId: transaction.id,
+              status: 'skipped',
+              reason: `No valid referral found for user ${transaction.user_id}`
+            });
+            continue;
+          }
+          
+          console.log(`🔄 Processing transaction ${transaction.id}, amount: ${transaction.amount} for user ${transaction.user_id}`);
+          
+          // Generate simple source identifier
+          const source = `transaction_${transaction.id}`;
+            
+          await processTransactionCommission(
+            supabase, 
+            transaction, 
+            source, 
+            results,
+            referral
+          );
+        } catch (txProcessError) {
+          console.error(`❌ Error processing transaction ${transaction.id}:`, txProcessError);
+          results.failedCount++;
+          results.details.push({
+            transactionId: transaction.id,
+            status: 'failed',
+            reason: txProcessError instanceof Error ? txProcessError.message : 'Unknown error'
+          });
+        }
       }
     }
     
@@ -184,7 +231,8 @@ serve(async (req) => {
         headers: { 
           ...corsHeaders,
           "Content-Type": "application/json" 
-        } 
+        },
+        status: 200
       }
     );
   } catch (error) {
@@ -201,7 +249,7 @@ serve(async (req) => {
           ...corsHeaders,
           "Content-Type": "application/json" 
         },
-        status: 200 // Changed from 500 to 200 to avoid Edge Function non-2xx error
+        status: 200
       }
     );
   }
@@ -212,7 +260,8 @@ async function processTransactionCommission(
   supabase: any,
   transaction: any,
   source: string,
-  results: any
+  results: any,
+  existingReferral?: any
 ) {
   const userId = transaction.user_id;
   const txAmount = transaction.amount;
@@ -256,17 +305,23 @@ async function processTransactionCommission(
       return false;
     }
     
-    // Find referrer for this user
-    const { data: referralData, error: referralError } = await supabase
-      .from('referrals')
-      .select('id, referrer_id, status, total_commission')
-      .eq('referred_id', userId)
-      .eq('status', 'valid')
-      .maybeSingle();
+    // Find referrer for this user if not provided
+    let referralData = existingReferral;
+    
+    if (!referralData) {
+      const { data: fetchedReferral, error: referralError } = await supabase
+        .from('referrals')
+        .select('id, referrer_id, status, commission_rate, total_commission')
+        .eq('referred_id', userId)
+        .eq('status', 'valid')
+        .maybeSingle();
+        
+      if (referralError) {
+        console.error(`❌ Error finding referral for user ${userId}:`, referralError);
+        throw new Error(`Error finding referral: ${referralError.message}`);
+      }
       
-    if (referralError) {
-      console.error(`❌ Error finding referral for user ${userId}:`, referralError);
-      throw new Error(`Error finding referral: ${referralError.message}`);
+      referralData = fetchedReferral;
     }
     
     if (!referralData || !referralData.referrer_id) {
@@ -282,8 +337,9 @@ async function processTransactionCommission(
     
     console.log(`🔗 Found referral: referrer=${referralData.referrer_id}, referral_id=${referralData.id}`);
     
-    // Calculate commission (10%)
-    const commissionAmount = Math.round(txAmount * 0.1 * 100) / 100;
+    // Calculate commission (10% or commission_rate if specified)
+    const commissionRate = referralData.commission_rate ? referralData.commission_rate / 100 : 0.1;
+    const commissionAmount = Math.round(txAmount * commissionRate * 100) / 100;
     
     if (commissionAmount <= 0) {
       console.log(`⏩ Commission amount ${commissionAmount} is too small for transaction ${transactionId}`);
@@ -331,7 +387,7 @@ async function processTransactionCommission(
         user_id: referralData.referrer_id,
         amount: commissionAmount,
         type: 'commission',
-        description: `Commission de parrainage (10%)`,
+        description: `Commission de parrainage (${commissionRate * 100}%)`,
         status: 'completed',
         receipt_confirmed: true
       })
