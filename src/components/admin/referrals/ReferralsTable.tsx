@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Table, 
@@ -69,12 +70,31 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialRefer
     return user.email || 'Inconnu';
   };
   
-  const handleStatusChange = (id: string, newStatus: string) => {
-    setReferrals(current => 
-      current.map(referral => 
-        referral.id === id ? { ...referral, status: newStatus } : referral
-      )
-    );
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      // Update local state
+      setReferrals(current => 
+        current.map(referral => 
+          referral.id === id ? { ...referral, status: newStatus } : referral
+        )
+      );
+      
+      // Update status in database
+      const { error } = await supabase
+        .from('referrals')
+        .update({ status: newStatus })
+        .eq('id', id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      toast.success('Statut mis à jour avec succès');
+      
+    } catch (error) {
+      console.error('Error updating referral status:', error);
+      toast.error('Erreur lors de la mise à jour du statut');
+    }
   };
 
   if (isLoading) {
