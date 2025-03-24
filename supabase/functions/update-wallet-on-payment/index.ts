@@ -38,7 +38,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing payment for user ${userId}, amount: ${amount}, paymentId: ${paymentId}`);
+    console.log(`Processing yield payment for user ${userId}, amount: ${amount}, paymentId: ${paymentId}`);
 
     // First check if this payment was already processed
     const { data: existingTransaction, error: checkError } = await supabase
@@ -78,7 +78,7 @@ serve(async (req) => {
     
     const actualProjectName = projectDetails?.name || projectName || 'Investissement';
 
-    // Create a wallet transaction for the payment
+    // Create a wallet transaction for the yield payment
     const { data: transaction, error: txError } = await supabase.from('wallet_transactions').insert({
       user_id: userId,
       amount: amount,
@@ -94,7 +94,7 @@ serve(async (req) => {
       throw new Error("Failed to create transaction record");
     }
     
-    console.log("Created wallet transaction:", transaction.id);
+    console.log("Created yield wallet transaction:", transaction.id);
     
     // Update wallet balance directly using RPC function
     const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
@@ -116,7 +116,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Successfully processed payment of ${amount}€ for user ${userId}` 
+        message: `Successfully processed yield payment of ${amount}€ for user ${userId}` 
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -167,7 +167,7 @@ async function sendYieldNotification(supabase, userId, amount, projectName) {
   }
 }
 
-// Helper function to process referral commission
+// Helper function to process referral commission (10% of YIELD amount)
 async function processReferralCommission(supabase, userId, yieldAmount, projectName, paymentId) {
   try {
     console.log(`Checking for referral relationship for user ${userId}`);
@@ -175,7 +175,7 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
     // First check if this user has a referrer
     const { data: referralData, error: referralError } = await supabase
       .from('referrals')
-      .select('id, referrer_id, status, total_commission')
+      .select('id, referrer_id, status, commission_rate, total_commission')
       .eq('referred_id', userId)
       .single();
       
@@ -198,9 +198,11 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
       return;
     }
     
-    // Calculate 10% commission
-    const commissionAmount = Math.round(yieldAmount * 0.1 * 100) / 100; // Round to 2 decimal places
-    console.log(`Processing ${commissionAmount}€ commission for referrer ${referralData.referrer_id}`);
+    // Calculate commission (10% of yield amount or using commission_rate if specified)
+    const commissionRate = referralData.commission_rate ? referralData.commission_rate / 100 : 0.1;
+    const commissionAmount = Math.round(yieldAmount * commissionRate * 100) / 100; // Round to 2 decimal places
+    
+    console.log(`Processing ${commissionAmount}€ commission (${commissionRate * 100}% of ${yieldAmount}€ yield) for referrer ${referralData.referrer_id}`);
     
     if (commissionAmount <= 0) {
       console.log(`Commission amount ${commissionAmount} is too small, skipping`);
@@ -223,12 +225,30 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
       return;
     }
     
+    // Create a record in referral_commissions table
+    const { data: commissionData, error: commissionError } = await supabase.from('referral_commissions').insert({
+      referral_id: referralData.id,
+      referrer_id: referralData.referrer_id,
+      referred_id: userId,
+      amount: commissionAmount,
+      source: 'investment_yield',
+      status: 'completed',
+      payment_id: paymentId
+    }).select().single();
+    
+    if (commissionError) {
+      console.error("Failed to create referral commission record:", commissionError);
+      return;
+    }
+    
+    console.log(`Created referral commission record: ${commissionData.id}`);
+    
     // Create a wallet transaction for the commission
     const { data: transaction, error: txError } = await supabase.from('wallet_transactions').insert({
       user_id: referralData.referrer_id,
       amount: commissionAmount,
       type: 'commission',
-      description: `Commission de parrainage (10%)`,
+      description: `Commission de parrainage (${commissionRate * 100}% du rendement)`,
       status: 'completed',
       receipt_confirmed: true,
       payment_id: paymentId
@@ -250,23 +270,6 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
     if (balanceError) {
       console.error("Failed to update referrer wallet balance:", balanceError);
       return;
-    }
-    
-    // Create a record in referral_commissions table
-    const { data: commissionData, error: commissionError } = await supabase.from('referral_commissions').insert({
-      referral_id: referralData.id,
-      referrer_id: referralData.referrer_id,
-      referred_id: userId,
-      amount: commissionAmount,
-      source: 'investment_yield',
-      status: 'completed',
-      payment_id: paymentId
-    }).select().single();
-    
-    if (commissionError) {
-      console.error("Failed to create referral commission record:", commissionError);
-    } else {
-      console.log(`Created referral commission record: ${commissionData.id}`);
     }
     
     // Update total commission in referral record

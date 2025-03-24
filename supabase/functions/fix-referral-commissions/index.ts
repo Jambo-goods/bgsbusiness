@@ -52,10 +52,10 @@ serve(async (req) => {
       console.log(`📊 Found valid transaction types: ${Array.from(validTypes).join(', ')}`);
     } else {
       // Default fallback types if we can't determine from existing data
-      // From postgres logs, we know that 'commission' is a valid type
       validTypes.add('commission');
       validTypes.add('withdrawal');
       validTypes.add('deposit');
+      validTypes.add('yield');
       console.log("⚠️ No transaction types found in database, using fallback types");
     }
     
@@ -155,22 +155,24 @@ serve(async (req) => {
       console.log(`📝 Creating test yield transaction for referred user ${testReferral.referred_id}`);
       
       try {
-        // Make sure we're using a valid transaction type
-        // Using 'commission' type which is confirmed valid from postgres logs
-        const commissionType = validTypes.has('commission') ? 'commission' : Array.from(validTypes)[0];
+        // Make sure we're using a valid transaction type for yield
+        const yieldTypeForTest = validTypes.has('yield') ? 'yield' : 
+                             (validTypes.has('investment_return') ? 'investment_return' : 
+                              Array.from(validTypes)[0]);
         
-        if (!commissionType) {
-          throw new Error("No valid transaction types found in the database. Please check the wallet_transactions table schema.");
+        if (!yieldTypeForTest) {
+          throw new Error("No valid transaction types found in the database for yield transactions.");
         }
         
-        console.log(`✅ Using transaction type '${commissionType}' for test transaction`);
+        console.log(`✅ Using transaction type '${yieldTypeForTest}' for test yield transaction`);
         
+        // Create a small test yield transaction for the referred user
         const { data: testTransaction, error: createError } = await supabase
           .from('wallet_transactions')
           .insert({
             user_id: testReferral.referred_id,
-            amount: 100,
-            type: commissionType,
+            amount: 100, // Small test amount
+            type: yieldTypeForTest,
             description: 'Test de rendement pour commission',
             status: 'completed',
             receipt_confirmed: true
@@ -179,20 +181,21 @@ serve(async (req) => {
           .single();
           
         if (createError) {
-          console.error("❌ Error creating test transaction:", createError);
-          throw new Error(`Error creating test transaction: ${createError.message}. Please check valid transaction types in your database schema for the wallet_transactions table, column 'type'.`);
+          console.error("❌ Error creating test yield transaction:", createError);
+          throw new Error(`Error creating test yield transaction: ${createError.message}`);
         }
         
-        console.log(`✅ Created test transaction: ${testTransaction?.id}`);
+        console.log(`✅ Created test yield transaction: ${testTransaction?.id}`);
         
-        // Now process this test transaction
-        const source = `transaction_${testTransaction.id}`;
+        // Now process this test transaction for commission (10% of yield amount)
+        const source = `yield_transaction_${testTransaction.id}`;
         await processTransactionCommission(
           supabase, 
           testTransaction, 
           source, 
           results,
-          validTypes
+          validTypes,
+          testReferral
         );
       } catch (testError) {
         console.error("❌ Error in test transaction creation/processing:", testError);
@@ -222,10 +225,10 @@ serve(async (req) => {
             continue;
           }
           
-          console.log(`🔄 Processing transaction ${transaction.id}, amount: ${transaction.amount} for user ${transaction.user_id}`);
+          console.log(`🔄 Processing yield transaction ${transaction.id}, amount: ${transaction.amount} for user ${transaction.user_id}`);
           
-          // Generate simple source identifier
-          const source = `transaction_${transaction.id}`;
+          // Generate simple source identifier for this yield transaction
+          const source = `yield_transaction_${transaction.id}`;
             
           await processTransactionCommission(
             supabase, 
@@ -298,14 +301,14 @@ async function processTransactionCommission(
   existingReferral?: any
 ) {
   const userId = transaction.user_id;
-  const txAmount = transaction.amount;
+  const yieldAmount = transaction.amount;
   const transactionId = transaction.id;
   
-  console.log(`👤 Processing commission for user ${userId}, transaction amount: ${txAmount}, transaction ID: ${transactionId}, source: ${source}`);
+  console.log(`👤 Processing commission for user ${userId}, yield amount: ${yieldAmount}, transaction ID: ${transactionId}, source: ${source}`);
   
   // Validate transaction data
-  if (!userId || !txAmount || txAmount <= 0) {
-    console.log(`⏩ Skipping transaction with invalid data: userId=${userId}, amount=${txAmount}`);
+  if (!userId || !yieldAmount || yieldAmount <= 0) {
+    console.log(`⏩ Skipping transaction with invalid data: userId=${userId}, amount=${yieldAmount}`);
     results.skippedCount++;
     results.details.push({
       transactionId: transactionId || 'unknown',
@@ -371,9 +374,9 @@ async function processTransactionCommission(
     
     console.log(`🔗 Found referral: referrer=${referralData.referrer_id}, referral_id=${referralData.id}`);
     
-    // Calculate commission (10% or commission_rate if specified)
+    // Calculate commission (10% of the yield amount or commission_rate if specified)
     const commissionRate = referralData.commission_rate ? referralData.commission_rate / 100 : 0.1;
-    const commissionAmount = Math.round(txAmount * commissionRate * 100) / 100;
+    const commissionAmount = Math.round(yieldAmount * commissionRate * 100) / 100;
     
     if (commissionAmount <= 0) {
       console.log(`⏩ Commission amount ${commissionAmount} is too small for transaction ${transactionId}`);
@@ -386,7 +389,7 @@ async function processTransactionCommission(
       return false;
     }
     
-    console.log(`💰 Creating commission of ${commissionAmount} for referrer ${referralData.referrer_id}`);
+    console.log(`💰 Creating commission of ${commissionAmount} (${commissionRate * 100}% of ${yieldAmount}) for referrer ${referralData.referrer_id}`);
     
     // IMPORTANT: Creating the referral commission record first
     console.log(`📝 Creating referral_commission record with source: ${source}`);
@@ -429,7 +432,7 @@ async function processTransactionCommission(
           user_id: referralData.referrer_id,
           amount: commissionAmount,
           type: commissionType,
-          description: `Commission de parrainage (${commissionRate * 100}%)`,
+          description: `Commission de parrainage (${commissionRate * 100}% du rendement)`,
           status: 'completed',
           receipt_confirmed: true
         })
