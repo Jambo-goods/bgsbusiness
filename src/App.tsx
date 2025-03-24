@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -26,7 +27,6 @@ const ProfilesPage = lazy(() => import("./pages/ProfilesPage"));
 const AdminApp = lazy(() => import("./pages/admin/AdminApp"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
-const ReferralsManagement = lazy(() => import("./pages/admin/ReferralsManagement"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -78,7 +78,6 @@ const App = () => (
                   <Route path="withdrawal-requests" element={<WithdrawalRequestsPage />} />
                   <Route path="bank-transfers" element={<BankTransfersPage />} />
                   <Route path="profiles" element={<ProfilesPage />} />
-                  <Route path="referrals" element={<ReferralsManagement />} />
                   <Route path="settings" element={<div>Paramètres</div>} />
                 </Route>
                 

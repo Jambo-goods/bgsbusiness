@@ -9,7 +9,6 @@ interface UserProfile {
   last_name?: string;
   avatar_url?: string;
   wallet_balance?: number;
-  referral_code?: string;
   created_at?: string;
 }
 

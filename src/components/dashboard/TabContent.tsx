@@ -10,7 +10,6 @@ import { Project } from "@/types/project";
 // Prefetch critical paths
 const preloadWalletTab = () => import("./tabs/WalletTab");
 const preloadInvestments = () => import("./Investments");
-const preloadReferralTab = () => import("./tabs/ReferralTab");
 
 // Lazy load tabs that aren't used as frequently
 const WalletTab = lazy(() => preloadWalletTab());
@@ -19,7 +18,6 @@ const Investments = lazy(() => preloadInvestments());
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
 const NotificationsTab = lazy(() => import("./tabs/NotificationsTab"));
-const ReferralTab = lazy(() => preloadReferralTab());
 
 interface TabContentProps {
   activeTab: string;
@@ -43,7 +41,6 @@ if (typeof window !== 'undefined') {
   setTimeout(() => {
     preloadWalletTab();
     preloadInvestments();
-    preloadReferralTab();
   }, 2000); // Delay to prioritize initial render
 }
 
@@ -128,8 +125,6 @@ export default function TabContent({
               )}
             </div>
           )}
-          
-          {activeTab === "referral" && <ReferralTab />}
           
           {activeTab === "profile" && (
             <ProfileTab userData={userData} />

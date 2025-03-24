@@ -196,9 +196,6 @@ export type Database = {
           last_name: string | null
           phone: string | null
           projects_count: number | null
-          referral_code: string | null
-          referred_by: string | null
-          referrer_id: string | null
           updated_at: string | null
           wallet_balance: number | null
         }
@@ -213,9 +210,6 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           projects_count?: number | null
-          referral_code?: string | null
-          referred_by?: string | null
-          referrer_id?: string | null
           updated_at?: string | null
           wallet_balance?: number | null
         }
@@ -230,9 +224,6 @@ export type Database = {
           last_name?: string | null
           phone?: string | null
           projects_count?: number | null
-          referral_code?: string | null
-          referred_by?: string | null
-          referrer_id?: string | null
           updated_at?: string | null
           wallet_balance?: number | null
         }
@@ -315,106 +306,6 @@ export type Database = {
           yield?: number
         }
         Relationships: []
-      }
-      referral_commissions: {
-        Row: {
-          amount: number
-          created_at: string
-          id: string
-          referral_id: string
-          referred_id: string
-          referrer_id: string
-          source: string
-          status: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          id?: string
-          referral_id: string
-          referred_id: string
-          referrer_id: string
-          source: string
-          status?: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          id?: string
-          referral_id?: string
-          referred_id?: string
-          referrer_id?: string
-          source?: string
-          status?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "referral_commissions_referral_id_fkey"
-            columns: ["referral_id"]
-            isOneToOne: false
-            referencedRelation: "referrals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "referral_commissions_referred_id_fkey"
-            columns: ["referred_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "referral_commissions_referrer_id_fkey"
-            columns: ["referrer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      referrals: {
-        Row: {
-          commission_rate: number
-          created_at: string
-          id: string
-          referred_id: string
-          referrer_id: string
-          status: string
-          total_commission: number
-        }
-        Insert: {
-          commission_rate?: number
-          created_at?: string
-          id?: string
-          referred_id: string
-          referrer_id: string
-          status?: string
-          total_commission?: number
-        }
-        Update: {
-          commission_rate?: number
-          created_at?: string
-          id?: string
-          referred_id?: string
-          referrer_id?: string
-          status?: string
-          total_commission?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "referrals_referred_id_fkey"
-            columns: ["referred_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "referrals_referrer_id_fkey"
-            columns: ["referrer_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       scheduled_payments: {
         Row: {
@@ -613,12 +504,6 @@ export type Database = {
           investment_amount: number
         }
         Returns: undefined
-      }
-      verify_referral_code: {
-        Args: {
-          code: string
-        }
-        Returns: string
       }
     }
     Enums: {
