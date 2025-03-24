@@ -27,7 +27,8 @@ const ProjectUpdatesCard: React.FC<ProjectUpdatesCardProps> = ({ projectId }) =>
     const fetchUpdates = async () => {
       try {
         setLoading(true);
-        const { data, error } = await supabase
+        // We need to cast this to any since the Supabase types don't know about our new table yet
+        const { data, error } = await (supabase as any)
           .from('project_updates')
           .select('*')
           .eq('project_id', projectId)

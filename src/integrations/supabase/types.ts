@@ -229,6 +229,41 @@ export type Database = {
         }
         Relationships: []
       }
+      project_updates: {
+        Row: {
+          created_at: string
+          details: string
+          id: string
+          project_id: string
+          title: string
+          update_type: string
+        }
+        Insert: {
+          created_at?: string
+          details: string
+          id?: string
+          project_id: string
+          title: string
+          update_type: string
+        }
+        Update: {
+          created_at?: string
+          details?: string
+          id?: string
+          project_id?: string
+          title?: string
+          update_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_updates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           category: string

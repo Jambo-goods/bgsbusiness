@@ -1,63 +1,103 @@
 
-import React from "react";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Info } from "lucide-react";
-import useProfiles from "@/hooks/useProfiles";
-import ProfileList from "@/components/profiles/ProfileList";
-import ProfileSearch from "@/components/profiles/ProfileSearch";
-import ProfilesHeader from "@/components/profiles/ProfilesHeader";
-import LoadingState from "@/components/profiles/LoadingState";
-import { Toaster } from "sonner";
+import React, { useState, useEffect } from 'react';
+import { useProfiles } from '@/hooks/useProfiles';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Loader2, RefreshCcw, Search } from 'lucide-react';
 
-export default function ProfilesPage() {
-  const {
-    filteredProfiles,
-    isLoading,
-    searchTerm,
-    setSearchTerm,
-    totalCount,
-    refreshProfiles
-  } = useProfiles();
+const ProfilesPage: React.FC = () => {
+  const { profiles, isLoading, error, fetchProfiles } = useProfiles();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredProfiles, setFilteredProfiles] = useState(profiles);
 
-  console.log("ProfilesPage: Affichage de", filteredProfiles.length, "profils filtrés sur", totalCount, "au total");
+  useEffect(() => {
+    // Filter profiles based on search term
+    const filtered = profiles.filter(profile => 
+      profile.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      profile.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      profile.last_name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredProfiles(filtered);
+  }, [profiles, searchTerm]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const refreshProfiles = async () => {
+    await fetchProfiles();
+  };
 
   return (
-    <div className="min-h-full">
-      <Toaster />
-      
-      <div className="container mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">Tous les Profils Utilisateurs ({totalCount})</h1>
-        
-        <Card className="bg-white rounded-lg shadow">
-          <CardHeader className="pb-2">
-            <ProfilesHeader 
-              totalCount={totalCount} 
-              isLoading={isLoading} 
-              onRefresh={refreshProfiles} 
+    <div className="container mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Profils utilisateurs</h1>
+        <div className="flex gap-4">
+          <div className="relative">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Rechercher un utilisateur..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={handleSearch}
             />
-          </CardHeader>
-          <CardContent>
-            <ProfileSearch 
-              searchTerm={searchTerm} 
-              setSearchTerm={setSearchTerm} 
-            />
-            
-            <div className="mb-4 flex items-center gap-2 text-sm text-gray-500">
-              <Info className="h-4 w-4" />
-              <span>Affichage de {filteredProfiles.length} profils sur {totalCount} au total</span>
-            </div>
+          </div>
+          <Button onClick={refreshProfiles} variant="outline" disabled={isLoading}>
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCcw className="h-4 w-4" />}
+          </Button>
+        </div>
+      </div>
 
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          {error}
+        </div>
+      )}
+
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <Table>
+          <TableCaption>Liste des profils utilisateurs ({filteredProfiles.length} utilisateurs)</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Email</TableHead>
+              <TableHead>Prénom</TableHead>
+              <TableHead>Nom</TableHead>
+              <TableHead>Solde</TableHead>
+              <TableHead>Date d'inscription</TableHead>
+              <TableHead>Dernière activité</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {isLoading ? (
-              <LoadingState />
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-10">
+                  <Loader2 className="animate-spin h-6 w-6 mx-auto text-gray-400" />
+                </TableCell>
+              </TableRow>
+            ) : filteredProfiles.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-6 text-gray-500">
+                  {searchTerm ? "Aucun résultat pour cette recherche" : "Aucun profil trouvé"}
+                </TableCell>
+              </TableRow>
             ) : (
-              <ProfileList 
-                profiles={filteredProfiles} 
-                isLoading={isLoading} 
-              />
+              filteredProfiles.map((profile) => (
+                <TableRow key={profile.id}>
+                  <TableCell className="font-medium">{profile.email || 'N/A'}</TableCell>
+                  <TableCell>{profile.first_name || 'N/A'}</TableCell>
+                  <TableCell>{profile.last_name || 'N/A'}</TableCell>
+                  <TableCell>{profile.wallet_balance ? `${profile.wallet_balance} €` : '0 €'}</TableCell>
+                  <TableCell>{profile.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR') : 'N/A'}</TableCell>
+                  <TableCell>{profile.last_active_at ? new Date(profile.last_active_at).toLocaleDateString('fr-FR') : 'N/A'}</TableCell>
+                </TableRow>
+              ))
             )}
-          </CardContent>
-        </Card>
+          </TableBody>
+        </Table>
       </div>
     </div>
   );
-}
+};
+
+export default ProfilesPage;
