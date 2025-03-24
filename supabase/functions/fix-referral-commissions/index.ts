@@ -22,18 +22,6 @@ serve(async (req) => {
     
     console.log("🔍 Starting fix-referral-commissions function");
     
-    // Vérifier l'existence de la table referral_commissions
-    try {
-      const { data: tableCheck, error: tableError } = await supabase
-        .from('referral_commissions')
-        .select('id')
-        .limit(1);
-        
-      console.log("📋 Table referral_commissions check:", tableCheck ? "exists" : "error", tableError?.message || "no error");
-    } catch (tableCheckError) {
-      console.error("❌ Error checking referral_commissions table:", tableCheckError);
-    }
-    
     // Find all yield transactions that might need commissions
     const { data: yieldTransactions, error: yieldError } = await supabase
       .from('wallet_transactions')
@@ -42,7 +30,8 @@ serve(async (req) => {
         user_id,
         amount,
         type,
-        payment_id
+        payment_id,
+        created_at
       `)
       .eq('type', 'yield')
       .eq('status', 'completed');
@@ -77,10 +66,17 @@ serve(async (req) => {
     // Process each yield transaction
     for (const transaction of yieldTransactions) {
       try {
+        console.log(`🔄 Processing transaction ${transaction.id}, amount: ${transaction.amount}`);
+        
+        // Generate source identifier
+        const source = transaction.payment_id 
+          ? `payment_${transaction.payment_id}` 
+          : `transaction_${transaction.id}`;
+          
         await processTransactionCommission(
           supabase, 
           transaction, 
-          transaction.payment_id, 
+          source, 
           results
         );
       } catch (txProcessError) {
@@ -137,15 +133,16 @@ serve(async (req) => {
 async function processTransactionCommission(
   supabase: any,
   transaction: any,
-  paymentId: string,
+  source: string,
   results: any
 ) {
   const userId = transaction.user_id;
   const txAmount = transaction.amount;
   const transactionId = transaction.id;
   
-  console.log(`👤 Processing commission for user ${userId}, transaction amount: ${txAmount}, transaction ID: ${transactionId}`);
+  console.log(`👤 Processing commission for user ${userId}, transaction amount: ${txAmount}, transaction ID: ${transactionId}, source: ${source}`);
   
+  // Validate transaction data
   if (!userId || !txAmount || txAmount <= 0) {
     console.log(`⏩ Skipping transaction with invalid data: userId=${userId}, amount=${txAmount}`);
     results.skippedCount++;
@@ -161,7 +158,7 @@ async function processTransactionCommission(
   const { data: existingCommission, error: checkError } = await supabase
     .from('referral_commissions')
     .select('id')
-    .eq('source', 'transaction_' + transactionId)
+    .eq('source', source)
     .maybeSingle();
     
   if (checkError) {
@@ -170,7 +167,7 @@ async function processTransactionCommission(
   }
   
   if (existingCommission) {
-    console.log(`⏩ Commission already exists for transaction ${transactionId}`);
+    console.log(`⏩ Commission already exists for transaction ${transactionId} with source ${source}`);
     results.skippedCount++;
     results.details.push({
       transactionId: transactionId,
@@ -231,7 +228,7 @@ async function processTransactionCommission(
         referrer_id: referralData.referrer_id,
         referred_id: userId,
         amount: commissionAmount,
-        source: 'transaction_' + transactionId,
+        source: source,
         status: 'completed'
       })
       .select()

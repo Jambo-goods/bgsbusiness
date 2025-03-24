@@ -14,12 +14,13 @@ export default function FixReferralCommissions() {
   const [results, setResults] = useState<any>(null);
   const [expandedList, setExpandedList] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [commissionCount, setCommissionCount] = useState<number | null>(null);
 
   const checkReferralTable = async () => {
     try {
       const { data, error } = await supabase
         .from('referral_commissions')
-        .select('*', { count: 'exact' });
+        .select('id');
       
       if (error) {
         toast.error(`Erreur lors de la vérification de la table: ${error.message}`);
@@ -28,6 +29,7 @@ export default function FixReferralCommissions() {
       }
       
       const count = data?.length || 0;
+      setCommissionCount(count);
       toast.info(`${count} commissions trouvées dans la table`);
       setDebugInfo(prev => [...prev, `${count} commissions trouvées dans la table`]);
     } catch (error) {
@@ -132,6 +134,18 @@ export default function FixReferralCommissions() {
               Vérifier la table
             </Button>
           </div>
+          
+          {commissionCount !== null && (
+            <div className="border rounded-md p-3 bg-blue-50 my-2">
+              <h5 className="text-sm font-medium flex items-center text-blue-800">
+                <Info className="h-4 w-4 mr-1 text-blue-500" />
+                État actuel de la table
+              </h5>
+              <p className="text-sm text-blue-700 mt-1">
+                {commissionCount} commissions de parrainage enregistrées dans la base de données
+              </p>
+            </div>
+          )}
           
           {debugInfo.length > 0 && (
             <div className="border rounded-md p-3 bg-gray-50 my-2">
