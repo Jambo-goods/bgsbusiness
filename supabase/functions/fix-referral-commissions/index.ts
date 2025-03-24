@@ -34,25 +34,25 @@ serve(async (req) => {
       console.error("❌ Error checking referral_commissions table:", tableCheckError);
     }
     
-    // Get all paid yield payments that don't have corresponding commissions
-    const { data: payments, error: paymentsError } = await supabase
-      .from('scheduled_payments')
+    // Find all yield transactions that might need commissions
+    const { data: yieldTransactions, error: yieldError } = await supabase
+      .from('wallet_transactions')
       .select(`
         id,
-        project_id,
-        total_scheduled_amount,
-        percentage,
-        status,
-        projects:project_id (name)
+        user_id,
+        amount,
+        type,
+        payment_id
       `)
-      .eq('status', 'paid');
+      .eq('type', 'yield')
+      .eq('status', 'completed');
       
-    if (paymentsError) {
-      console.error("❌ Error fetching payments:", paymentsError);
-      throw new Error(`Error fetching payments: ${paymentsError.message}`);
+    if (yieldError) {
+      console.error("❌ Error fetching yield transactions:", yieldError);
+      throw new Error(`Error fetching yield transactions: ${yieldError.message}`);
     }
     
-    console.log(`📊 Found ${payments?.length || 0} paid payments to check`);
+    console.log(`📊 Found ${yieldTransactions?.length || 0} yield transactions to check`);
     
     // Process results
     const results = {
@@ -62,124 +62,34 @@ serve(async (req) => {
       details: [] as any[]
     };
     
-    if (!payments || payments.length === 0) {
-      console.log("⚠️ No paid payments found to process");
+    if (!yieldTransactions || yieldTransactions.length === 0) {
+      console.log("⚠️ No yield transactions found to process");
       return new Response(
         JSON.stringify({
           success: true,
-          message: "Aucun paiement au statut 'payé' trouvé.",
+          message: "Aucune transaction de rendement trouvée.",
           results: results
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
-    // Process each payment
-    for (const payment of payments || []) {
+    // Process each yield transaction
+    for (const transaction of yieldTransactions) {
       try {
-        const paymentId = payment.id;
-        const amount = payment.total_scheduled_amount || 0;
-        
-        console.log(`🔄 Processing payment ${paymentId}, amount: ${amount}, status: ${payment.status}`);
-        
-        if (!paymentId || amount <= 0) {
-          console.log(`⏩ Skipping payment with invalid data: ${paymentId}, amount: ${amount}`);
-          results.skippedCount++;
-          results.details.push({
-            transactionId: paymentId || 'unknown',
-            status: 'skipped',
-            reason: 'Invalid payment data'
-          });
-          continue;
-        }
-        
-        // Get all investment transactions for this payment
-        const { data: transactions, error: txError } = await supabase
-          .from('wallet_transactions')
-          .select('*')
-          .eq('payment_id', paymentId)
-          .eq('type', 'yield');
-        
-        if (txError) {
-          console.error(`❌ Error fetching transactions for payment ${paymentId}:`, txError);
-          results.failedCount++;
-          results.details.push({
-            transactionId: paymentId,
-            status: 'failed',
-            reason: `Error fetching transactions: ${txError.message}`
-          });
-          continue;
-        }
-        
-        console.log(`📝 Found ${transactions?.length || 0} yield transactions for payment ${paymentId}`);
-        
-        // If no transactions, check if we need to create them first
-        if (!transactions || transactions.length === 0) {
-          // Get the users who have investments in this project
-          const { data: investments, error: investError } = await supabase
-            .from('investments')
-            .select(`
-              id,
-              user_id,
-              amount,
-              yield_rate
-            `)
-            .eq('project_id', payment.project_id)
-            .eq('status', 'active');
-            
-          if (investError) {
-            console.error(`❌ Error fetching investments for project ${payment.project_id}:`, investError);
-            results.failedCount++;
-            results.details.push({
-              transactionId: paymentId,
-              status: 'failed',
-              reason: `Error fetching investments: ${investError.message}`
-            });
-            continue;
-          }
-          
-          console.log(`📈 Found ${investments?.length || 0} active investments for this project`);
-          
-          if (!investments || investments.length === 0) {
-            console.log(`⏩ Skipping payment ${paymentId} - no active investments found`);
-            results.skippedCount++;
-            results.details.push({
-              transactionId: paymentId,
-              status: 'skipped',
-              reason: 'No active investments found for this project'
-            });
-            continue;
-          }
-        }
-        
-        // Process using existing transactions
-        if (transactions && transactions.length > 0) {
-          for (const transaction of transactions) {
-            try {
-              await processTransactionCommission(
-                supabase, 
-                transaction, 
-                paymentId, 
-                results
-              );
-            } catch (txProcessError) {
-              console.error(`❌ Error processing transaction for payment ${paymentId}:`, txProcessError);
-              results.failedCount++;
-              results.details.push({
-                transactionId: paymentId,
-                status: 'failed',
-                reason: txProcessError instanceof Error ? txProcessError.message : 'Unknown error'
-              });
-            }
-          }
-        }
-      } catch (error) {
-        console.error(`❌ Error processing payment ${payment.id}:`, error);
+        await processTransactionCommission(
+          supabase, 
+          transaction, 
+          transaction.payment_id, 
+          results
+        );
+      } catch (txProcessError) {
+        console.error(`❌ Error processing transaction ${transaction.id}:`, txProcessError);
         results.failedCount++;
         results.details.push({
-          transactionId: payment.id || 'unknown',
+          transactionId: transaction.id,
           status: 'failed',
-          reason: error instanceof Error ? error.message : 'Unknown error'
+          reason: txProcessError instanceof Error ? txProcessError.message : 'Unknown error'
         });
       }
     }
@@ -232,29 +142,40 @@ async function processTransactionCommission(
 ) {
   const userId = transaction.user_id;
   const txAmount = transaction.amount;
+  const transactionId = transaction.id;
   
-  console.log(`👤 Processing commission for user ${userId}, transaction amount: ${txAmount}`);
+  console.log(`👤 Processing commission for user ${userId}, transaction amount: ${txAmount}, transaction ID: ${transactionId}`);
   
-  // Check for existing commission for this transaction/payment
+  if (!userId || !txAmount || txAmount <= 0) {
+    console.log(`⏩ Skipping transaction with invalid data: userId=${userId}, amount=${txAmount}`);
+    results.skippedCount++;
+    results.details.push({
+      transactionId: transactionId || 'unknown',
+      status: 'skipped',
+      reason: 'Invalid transaction data'
+    });
+    return;
+  }
+  
+  // Check for existing commission for this transaction
   const { data: existingCommission, error: checkError } = await supabase
     .from('referral_commissions')
     .select('id')
-    .eq('payment_id', paymentId)
-    .eq('referred_id', userId)
+    .eq('source', 'transaction_' + transactionId)
     .maybeSingle();
     
   if (checkError) {
-    console.error(`❌ Error checking existing commission for user ${userId}:`, checkError);
+    console.error(`❌ Error checking existing commission for transaction ${transactionId}:`, checkError);
     throw new Error(`Error checking commission: ${checkError.message}`);
   }
   
   if (existingCommission) {
-    console.log(`⏩ Commission already exists for user ${userId} and payment ${paymentId}`);
+    console.log(`⏩ Commission already exists for transaction ${transactionId}`);
     results.skippedCount++;
     results.details.push({
-      transactionId: paymentId,
+      transactionId: transactionId,
       status: 'skipped',
-      reason: `Commission already exists for user ${userId}`
+      reason: `Commission already exists for this transaction`
     });
     return;
   }
@@ -276,7 +197,7 @@ async function processTransactionCommission(
     console.log(`ℹ️ No valid referral found for user ${userId}`);
     results.skippedCount++;
     results.details.push({
-      transactionId: paymentId,
+      transactionId: transactionId,
       status: 'skipped',
       reason: `No valid referral found for user ${userId}`
     });
@@ -289,10 +210,10 @@ async function processTransactionCommission(
   const commissionAmount = Math.round(txAmount * 0.1 * 100) / 100;
   
   if (commissionAmount <= 0) {
-    console.log(`⏩ Commission amount ${commissionAmount} is too small for user ${userId}`);
+    console.log(`⏩ Commission amount ${commissionAmount} is too small for transaction ${transactionId}`);
     results.skippedCount++;
     results.details.push({
-      transactionId: paymentId,
+      transactionId: transactionId,
       status: 'skipped',
       reason: `Commission amount is too small: ${commissionAmount}`
     });
@@ -302,7 +223,7 @@ async function processTransactionCommission(
   console.log(`💰 Creating commission of ${commissionAmount} for referrer ${referralData.referrer_id}`);
   
   try {
-    // Create referral commission record FIRST
+    // Create referral commission record
     const { data: commission, error: commissionError } = await supabase
       .from('referral_commissions')
       .insert({
@@ -310,9 +231,8 @@ async function processTransactionCommission(
         referrer_id: referralData.referrer_id,
         referred_id: userId,
         amount: commissionAmount,
-        source: 'investment_yield',
-        status: 'completed',
-        payment_id: paymentId
+        source: 'transaction_' + transactionId,
+        status: 'completed'
       })
       .select()
       .single();
@@ -333,8 +253,7 @@ async function processTransactionCommission(
         type: 'commission',
         description: `Commission de parrainage (10%)`,
         status: 'completed',
-        receipt_confirmed: true,
-        payment_id: paymentId
+        receipt_confirmed: true
       })
       .select()
       .single();
@@ -386,7 +305,7 @@ async function processTransactionCommission(
           category: "transaction",
           amount: commissionAmount,
           status: "completed",
-          payment_id: paymentId
+          transaction_id: transactionId
         },
         seen: false
       });
@@ -403,13 +322,13 @@ async function processTransactionCommission(
     
     results.processedCount++;
     results.details.push({
-      transactionId: paymentId,
+      transactionId: transactionId,
       status: 'success',
       commission: commissionAmount,
       referrerId: referralData.referrer_id
     });
     
-    console.log(`✅ Successfully processed commission for payment ${paymentId}`);
+    console.log(`✅ Successfully processed commission for transaction ${transactionId}`);
     return true;
   } catch (error) {
     console.error(`❌ Error in commission creation:`, error);
