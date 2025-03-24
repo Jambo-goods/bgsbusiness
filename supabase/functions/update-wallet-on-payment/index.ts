@@ -111,7 +111,7 @@ serve(async (req) => {
     await sendYieldNotification(supabase, userId, amount, actualProjectName);
 
     // Process referral commission (10% to the referrer)
-    await processReferralCommission(supabase, userId, amount, actualProjectName);
+    await processReferralCommission(supabase, userId, amount, actualProjectName, paymentId);
     
     return new Response(
       JSON.stringify({ 
@@ -168,7 +168,7 @@ async function sendYieldNotification(supabase, userId, amount, projectName) {
 }
 
 // Helper function to process referral commission
-async function processReferralCommission(supabase, userId, yieldAmount, projectName) {
+async function processReferralCommission(supabase, userId, yieldAmount, projectName, paymentId) {
   try {
     console.log(`Checking for referral relationship for user ${userId}`);
     
@@ -207,6 +207,22 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
       return; // No commission to pay
     }
     
+    // Check if we already processed a commission for this payment
+    const { data: existingCommission, error: checkCommissionError } = await supabase
+      .from('referral_commissions')
+      .select('id')
+      .eq('referrer_id', referralData.referrer_id)
+      .eq('referred_id', userId)
+      .eq('payment_id', paymentId)
+      .maybeSingle();
+      
+    if (checkCommissionError) {
+      console.error("Error checking existing commission:", checkCommissionError);
+    } else if (existingCommission) {
+      console.log(`Commission for payment ${paymentId} already processed, skipping`);
+      return;
+    }
+    
     // Create a wallet transaction for the commission
     const { data: transaction, error: txError } = await supabase.from('wallet_transactions').insert({
       user_id: referralData.referrer_id,
@@ -214,7 +230,8 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
       type: 'commission',
       description: `Commission de parrainage (10%)`,
       status: 'completed',
-      receipt_confirmed: true
+      receipt_confirmed: true,
+      payment_id: paymentId
     }).select().single();
     
     if (txError) {
@@ -242,7 +259,8 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
       referred_id: userId,
       amount: commissionAmount,
       source: 'investment_yield',
-      status: 'completed'
+      status: 'completed',
+      payment_id: paymentId
     }).select().single();
     
     if (commissionError) {
@@ -274,7 +292,8 @@ async function processReferralCommission(supabase, userId, yieldAmount, projectN
       data: {
         category: "transaction",
         amount: commissionAmount,
-        status: "completed"
+        status: "completed",
+        payment_id: paymentId
       },
       seen: false
     });
