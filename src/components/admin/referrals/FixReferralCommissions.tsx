@@ -18,9 +18,11 @@ export default function FixReferralCommissions() {
 
   const checkReferralTable = async () => {
     try {
+      setDebugInfo(prev => [...prev, "Vérification de la table referral_commissions..."]);
+      
       const { data, error } = await supabase
         .from('referral_commissions')
-        .select('id');
+        .select('id, source, amount, created_at, status');
       
       if (error) {
         toast.error(`Erreur lors de la vérification de la table: ${error.message}`);
@@ -30,8 +32,17 @@ export default function FixReferralCommissions() {
       
       const count = data?.length || 0;
       setCommissionCount(count);
+      
+      if (data) {
+        setDebugInfo(prev => [...prev, `${count} commissions trouvées dans la table`]);
+        data.forEach((commission, idx) => {
+          if (idx < 5) { // Log first 5 for debugging
+            setDebugInfo(prev => [...prev, `Commission ${idx+1}: ID=${commission.id}, Source=${commission.source}, Amount=${commission.amount}, Status=${commission.status}`]);
+          }
+        });
+      }
+      
       toast.info(`${count} commissions trouvées dans la table`);
-      setDebugInfo(prev => [...prev, `${count} commissions trouvées dans la table`]);
     } catch (error) {
       console.error("Error checking table:", error);
       toast.error("Erreur lors de la vérification de la table");
@@ -151,7 +162,7 @@ export default function FixReferralCommissions() {
                 <Info className="h-4 w-4 mr-1 text-blue-500" />
                 Informations de débogage
               </h5>
-              <ScrollArea className="h-24 w-full">
+              <ScrollArea className="h-48 w-full">
                 <ul className="text-xs font-mono space-y-1">
                   {debugInfo.map((info, index) => (
                     <li key={index} className="text-gray-600">{info}</li>
