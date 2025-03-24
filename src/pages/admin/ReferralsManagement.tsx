@@ -3,8 +3,10 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async';
 import ReferralsTable from '@/components/admin/referrals/ReferralsTable';
 import ReferralsHeader from '@/components/admin/referrals/ReferralsHeader';
+import FixReferralCommissions from '@/components/admin/referrals/FixReferralCommissions';
 import { useReferrals } from '@/hooks/admin/useReferrals';
 import { AlertTriangle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function ReferralsManagement() {
   const { 
@@ -38,10 +40,25 @@ export default function ReferralsManagement() {
             </div>
           </div>
         ) : (
-          <ReferralsTable 
-            referrals={referrals} 
-            isLoading={isLoading} 
-          />
+          <Tabs defaultValue="referrals">
+            <TabsList className="mb-4">
+              <TabsTrigger value="referrals">Parrainages</TabsTrigger>
+              <TabsTrigger value="tools">Outils</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="referrals">
+              <ReferralsTable 
+                referrals={referrals} 
+                isLoading={isLoading} 
+              />
+            </TabsContent>
+            
+            <TabsContent value="tools">
+              <div className="space-y-6">
+                <FixReferralCommissions />
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </div>
     </>
