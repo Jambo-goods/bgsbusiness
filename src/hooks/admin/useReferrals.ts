@@ -78,6 +78,7 @@ export function useReferrals() {
 
   const updateReferralStatus = async (referralId: string, newStatus: string) => {
     try {
+      // 1. Mettre à jour le statut dans la base de données
       const { error } = await supabase
         .from('referrals')
         .update({ status: newStatus })
@@ -85,34 +86,10 @@ export function useReferrals() {
       
       if (error) throw error;
       
-      // Fetch the updated referral data with new total_commission
-      const { data: updatedReferral, error: fetchError } = await supabase
-        .from('referrals')
-        .select(`
-          id,
-          referrer_id,
-          referred_id,
-          status,
-          commission_rate,
-          total_commission,
-          created_at,
-          referrer:profiles!referrals_referrer_id_fkey(first_name, last_name, email),
-          referred:profiles!referrals_referred_id_fkey(first_name, last_name, email)
-        `)
-        .eq('id', referralId)
-        .single();
-        
-      if (fetchError) {
-        console.error("Error fetching updated referral:", fetchError);
-      } else if (updatedReferral) {
-        // Update local state with the latest data
-        setReferrals(current => 
-          current.map(referral => 
-            referral.id === referralId ? updatedReferral : referral
-          )
-        );
-      }
+      // 2. Recharger les données complètes du parrainage pour avoir total_commission à jour
+      await fetchReferrals();
       
+      toast.success("Statut du parrainage mis à jour avec succès");
       return { success: true };
     } catch (err) {
       console.error("Error updating referral status:", err);

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { 
   Table, 
   TableBody, 
@@ -13,8 +13,7 @@ import { formatCurrency } from '@/utils/currencyUtils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ReferralStatusSelect from './ReferralStatusSelect';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useReferrals } from '@/hooks/admin/useReferrals';
 
 interface Referral {
   id: string;
@@ -41,14 +40,9 @@ interface ReferralsTableProps {
   isLoading: boolean;
 }
 
-const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialReferrals, isLoading }) => {
-  const [referrals, setReferrals] = useState<Referral[]>(initialReferrals);
+const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals, isLoading }) => {
+  const { updateReferralStatus } = useReferrals();
   
-  // Load referrals when initialReferrals data changes
-  useEffect(() => {
-    setReferrals(initialReferrals);
-  }, [initialReferrals]);
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
@@ -68,61 +62,6 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialRefer
       return `${user.first_name} ${user.last_name}`;
     }
     return user.email || 'Inconnu';
-  };
-  
-  const handleStatusChange = async (id: string, newStatus: string) => {
-    try {
-      // Update local state
-      setReferrals(current => 
-        current.map(referral => 
-          referral.id === id ? { ...referral, status: newStatus } : referral
-        )
-      );
-      
-      // Update status in database
-      const { error } = await supabase
-        .from('referrals')
-        .update({ status: newStatus })
-        .eq('id', id);
-        
-      if (error) {
-        throw error;
-      }
-      
-      // Fetch updated data to get the recalculated total_commission
-      const { data: updatedReferral, error: fetchError } = await supabase
-        .from('referrals')
-        .select(`
-          id,
-          referrer_id,
-          referred_id,
-          status,
-          commission_rate,
-          total_commission,
-          created_at,
-          referrer:profiles!referrals_referrer_id_fkey(first_name, last_name, email),
-          referred:profiles!referrals_referred_id_fkey(first_name, last_name, email)
-        `)
-        .eq('id', id)
-        .single();
-      
-      if (fetchError) {
-        console.error('Error fetching updated referral:', fetchError);
-      } else if (updatedReferral) {
-        // Update this specific referral with fresh data from the server
-        setReferrals(current => 
-          current.map(referral => 
-            referral.id === id ? updatedReferral : referral
-          )
-        );
-      }
-      
-      toast.success('Statut mis à jour avec succès');
-      
-    } catch (error) {
-      console.error('Error updating referral status:', error);
-      toast.error('Erreur lors de la mise à jour du statut');
-    }
   };
 
   if (isLoading) {
@@ -193,7 +132,7 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialRefer
                 <ReferralStatusSelect 
                   referralId={referral.id}
                   currentStatus={referral.status}
-                  onStatusChange={(newStatus) => handleStatusChange(referral.id, newStatus)}
+                  onStatusChange={(newStatus) => updateReferralStatus(referral.id, newStatus)}
                 />
               </TableCell>
             </TableRow>

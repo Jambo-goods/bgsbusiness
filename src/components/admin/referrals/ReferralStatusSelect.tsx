@@ -8,8 +8,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Check } from 'lucide-react';
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from 'sonner';
 
 interface ReferralStatusSelectProps {
   referralId: string;
@@ -35,18 +33,7 @@ const ReferralStatusSelect: React.FC<ReferralStatusSelectProps> = ({
     
     setIsUpdating(true);
     try {
-      const { error } = await supabase
-        .from('referrals')
-        .update({ status: newStatus })
-        .eq('id', referralId);
-      
-      if (error) throw error;
-      
-      onStatusChange(newStatus);
-      toast.success('Statut mis à jour avec succès');
-    } catch (err) {
-      console.error('Error updating referral status:', err);
-      toast.error('Erreur lors de la mise à jour du statut');
+      await onStatusChange(newStatus);
     } finally {
       setIsUpdating(false);
     }
