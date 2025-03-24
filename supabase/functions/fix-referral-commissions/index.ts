@@ -16,8 +16,14 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    // Get Supabase connection
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Supabase environment variables not set");
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     console.log("🔍 Starting fix-referral-commissions function");
@@ -68,7 +74,12 @@ serve(async (req) => {
         .eq('status', 'valid')
         .limit(1);
         
-      if (referralsError || !referrals || referrals.length === 0) {
+      if (referralsError) {
+        console.error("❌ Error finding referrals:", referralsError);
+        throw new Error(`Error finding referrals: ${referralsError.message}`);
+      }
+      
+      if (!referrals || referrals.length === 0) {
         console.log("⚠️ No valid referrals found to create test transaction");
         return new Response(
           JSON.stringify({
@@ -83,50 +94,52 @@ serve(async (req) => {
       const testReferral = referrals[0];
       console.log(`📝 Creating test yield transaction for referred user ${testReferral.referred_id}`);
       
-      // Create a test yield transaction for the referred user
-      const { data: testTransaction, error: createError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: testReferral.referred_id,
-          amount: 100, // 100 euros yield
-          type: 'yield',
-          description: 'Test de rendement pour commission',
-          status: 'completed',
-          receipt_confirmed: true
-        })
-        .select()
-        .single();
+      try {
+        // Create a test yield transaction for the referred user
+        const { data: testTransaction, error: createError } = await supabase
+          .from('wallet_transactions')
+          .insert({
+            user_id: testReferral.referred_id,
+            amount: 100, // 100 euros yield
+            type: 'yield',
+            description: 'Test de rendement pour commission',
+            status: 'completed',
+            receipt_confirmed: true
+          })
+          .select()
+          .single();
+          
+        if (createError) {
+          console.error("❌ Error creating test transaction:", createError);
+          throw new Error(`Error creating test transaction: ${createError.message}`);
+        }
         
-      if (createError) {
-        console.error("❌ Error creating test transaction:", createError);
+        if (!testTransaction) {
+          throw new Error("Test transaction creation failed - no data returned");
+        }
+        
+        console.log(`✅ Created test transaction: ${testTransaction.id}`);
+        
+        // Now process this test transaction
+        await processTransactionCommission(
+          supabase, 
+          testTransaction, 
+          `transaction_${testTransaction.id}`, 
+          results
+        );
+        
         return new Response(
           JSON.stringify({
-            success: false,
-            message: "Erreur lors de la création de la transaction de test.",
-            error: createError.message
+            success: true,
+            message: results.processedCount > 0 ? "Transaction de test traitée avec succès." : "Échec du traitement de la transaction de test.",
+            results: results
           }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      } catch (testError) {
+        console.error("❌ Error in test transaction creation/processing:", testError);
+        throw testError; // Re-throw to be caught by outer try/catch
       }
-      
-      console.log(`✅ Created test transaction: ${testTransaction.id}`);
-      
-      // Now process this test transaction
-      await processTransactionCommission(
-        supabase, 
-        testTransaction, 
-        `transaction_${testTransaction.id}`, 
-        results
-      );
-      
-      return new Response(
-        JSON.stringify({
-          success: true,
-          message: results.processedCount > 0 ? "Transaction de test traitée avec succès." : "Échec du traitement de la transaction de test.",
-          results: results
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
     
     // Process each yield transaction
@@ -177,6 +190,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("❌ Error in fix-referral-commissions function:", error);
     
+    // Always return a 200 status to prevent the Edge Function returned a non-2xx status code error
     return new Response(
       JSON.stringify({
         success: false,
@@ -187,7 +201,7 @@ serve(async (req) => {
           ...corsHeaders,
           "Content-Type": "application/json" 
         },
-        status: 500
+        status: 200 // Changed from 500 to 200 to avoid Edge Function non-2xx error
       }
     );
   }
@@ -218,73 +232,74 @@ async function processTransactionCommission(
     return false;
   }
   
-  // Check for existing commission for this transaction
-  const { data: existingCommission, error: checkError } = await supabase
-    .from('referral_commissions')
-    .select('id')
-    .eq('source', source)
-    .maybeSingle();
-    
-  if (checkError) {
-    console.error(`❌ Error checking existing commission for transaction ${transactionId}:`, checkError);
-    throw new Error(`Error checking commission: ${checkError.message}`);
-  }
-  
-  if (existingCommission) {
-    console.log(`⏩ Commission already exists for transaction ${transactionId} with source ${source}`);
-    results.skippedCount++;
-    results.details.push({
-      transactionId: transactionId,
-      status: 'skipped',
-      reason: `Commission already exists for this transaction`
-    });
-    return false;
-  }
-  
-  // Find referrer for this user
-  const { data: referralData, error: referralError } = await supabase
-    .from('referrals')
-    .select('id, referrer_id, status, total_commission')
-    .eq('referred_id', userId)
-    .eq('status', 'valid')
-    .maybeSingle();
-    
-  if (referralError) {
-    console.error(`❌ Error finding referral for user ${userId}:`, referralError);
-    throw new Error(`Error finding referral: ${referralError.message}`);
-  }
-  
-  if (!referralData || !referralData.referrer_id) {
-    console.log(`ℹ️ No valid referral found for user ${userId}`);
-    results.skippedCount++;
-    results.details.push({
-      transactionId: transactionId,
-      status: 'skipped',
-      reason: `No valid referral found for user ${userId}`
-    });
-    return false;
-  }
-  
-  console.log(`🔗 Found referral: referrer=${referralData.referrer_id}, referral_id=${referralData.id}`);
-  
-  // Calculate commission (10%)
-  const commissionAmount = Math.round(txAmount * 0.1 * 100) / 100;
-  
-  if (commissionAmount <= 0) {
-    console.log(`⏩ Commission amount ${commissionAmount} is too small for transaction ${transactionId}`);
-    results.skippedCount++;
-    results.details.push({
-      transactionId: transactionId,
-      status: 'skipped',
-      reason: `Commission amount is too small: ${commissionAmount}`
-    });
-    return false;
-  }
-  
-  console.log(`💰 Creating commission of ${commissionAmount} for referrer ${referralData.referrer_id}`);
-  
   try {
-    // First create the referral commission record
+    // Check for existing commission for this transaction
+    const { data: existingCommission, error: checkError } = await supabase
+      .from('referral_commissions')
+      .select('id')
+      .eq('source', source)
+      .maybeSingle();
+      
+    if (checkError) {
+      console.error(`❌ Error checking existing commission for transaction ${transactionId}:`, checkError);
+      throw new Error(`Error checking commission: ${checkError.message}`);
+    }
+    
+    if (existingCommission) {
+      console.log(`⏩ Commission already exists for transaction ${transactionId} with source ${source}`);
+      results.skippedCount++;
+      results.details.push({
+        transactionId: transactionId,
+        status: 'skipped',
+        reason: `Commission already exists for this transaction`
+      });
+      return false;
+    }
+    
+    // Find referrer for this user
+    const { data: referralData, error: referralError } = await supabase
+      .from('referrals')
+      .select('id, referrer_id, status, total_commission')
+      .eq('referred_id', userId)
+      .eq('status', 'valid')
+      .maybeSingle();
+      
+    if (referralError) {
+      console.error(`❌ Error finding referral for user ${userId}:`, referralError);
+      throw new Error(`Error finding referral: ${referralError.message}`);
+    }
+    
+    if (!referralData || !referralData.referrer_id) {
+      console.log(`ℹ️ No valid referral found for user ${userId}`);
+      results.skippedCount++;
+      results.details.push({
+        transactionId: transactionId,
+        status: 'skipped',
+        reason: `No valid referral found for user ${userId}`
+      });
+      return false;
+    }
+    
+    console.log(`🔗 Found referral: referrer=${referralData.referrer_id}, referral_id=${referralData.id}`);
+    
+    // Calculate commission (10%)
+    const commissionAmount = Math.round(txAmount * 0.1 * 100) / 100;
+    
+    if (commissionAmount <= 0) {
+      console.log(`⏩ Commission amount ${commissionAmount} is too small for transaction ${transactionId}`);
+      results.skippedCount++;
+      results.details.push({
+        transactionId: transactionId,
+        status: 'skipped',
+        reason: `Commission amount is too small: ${commissionAmount}`
+      });
+      return false;
+    }
+    
+    console.log(`💰 Creating commission of ${commissionAmount} for referrer ${referralData.referrer_id}`);
+    
+    // IMPORTANT: Creating the referral commission record first
+    console.log(`📝 Creating referral_commission record with source: ${source}`);
     const { data: commission, error: commissionError } = await supabase
       .from('referral_commissions')
       .insert({
@@ -301,6 +316,10 @@ async function processTransactionCommission(
     if (commissionError) {
       console.error(`❌ Error creating referral commission record:`, commissionError);
       throw new Error(`Error creating commission record: ${commissionError.message}`);
+    }
+    
+    if (!commission) {
+      throw new Error("Failed to create commission record - no data returned");
     }
     
     console.log(`✅ Created referral commission record: ${commission.id}`);

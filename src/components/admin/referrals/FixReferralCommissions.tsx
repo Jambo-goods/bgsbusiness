@@ -72,23 +72,38 @@ export default function FixReferralCommissions() {
       setDebugInfo(prev => [...prev, "Invoking fix-referral-commissions function"]);
       console.log("Invoking fix-referral-commissions function");
       
-      const { data, error } = await supabase.functions.invoke('fix-referral-commissions', {});
-      
-      if (error) {
-        console.error("Error fixing commissions:", error);
-        toast.error(`Erreur: ${error.message}`);
-        setDebugInfo(prev => [...prev, `Erreur API: ${error.message}`]);
-        return;
-      }
-      
-      console.log("Fix results:", data);
-      setDebugInfo(prev => [...prev, `Résultats reçus: ${JSON.stringify(data.results)}`]);
-      setResults(data);
-      
-      if (data.results.processedCount > 0) {
-        toast.success(`${data.message}`);
-      } else {
-        toast.info(`Aucune commission à traiter. ${data.results.skippedCount} transaction(s) ignorée(s).`);
+      try {
+        const { data, error } = await supabase.functions.invoke('fix-referral-commissions', {
+          method: 'POST',
+        });
+        
+        if (error) {
+          console.error("Error fixing commissions:", error);
+          toast.error(`Erreur: ${error.message}`);
+          setDebugInfo(prev => [...prev, `Erreur API: ${error.message}`]);
+          return;
+        }
+        
+        console.log("Fix results:", data);
+        setDebugInfo(prev => [...prev, `Résultats reçus: ${JSON.stringify(data)}`]);
+        
+        if (!data.success) {
+          toast.error(`Erreur serveur: ${data.error || 'Erreur inconnue'}`);
+          setDebugInfo(prev => [...prev, `Erreur serveur: ${data.error || 'Erreur inconnue'}`]);
+          return;
+        }
+        
+        setResults(data);
+        
+        if (data.results && data.results.processedCount > 0) {
+          toast.success(`${data.message}`);
+        } else {
+          toast.info(`Aucune commission à traiter. ${data.results?.skippedCount || 0} transaction(s) ignorée(s).`);
+        }
+      } catch (invokeError) {
+        console.error("Error invoking function:", invokeError);
+        toast.error("Une erreur est survenue lors de l'appel à la fonction");
+        setDebugInfo(prev => [...prev, `Erreur d'invocation: ${invokeError instanceof Error ? invokeError.message : 'Inconnue'}`]);
       }
       
       // Vérifier de nouveau la table après le traitement
@@ -178,22 +193,22 @@ export default function FixReferralCommissions() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="flex flex-col items-center p-3 bg-green-50 rounded-md">
                   <CheckCircle className="h-5 w-5 text-green-500 mb-1" />
-                  <span className="text-lg font-bold text-green-600">{results.results.processedCount}</span>
+                  <span className="text-lg font-bold text-green-600">{results.results?.processedCount || 0}</span>
                   <span className="text-xs text-green-700">Commissions créées</span>
                 </div>
                 <div className="flex flex-col items-center p-3 bg-blue-50 rounded-md">
                   <Clock className="h-5 w-5 text-blue-500 mb-1" />
-                  <span className="text-lg font-bold text-blue-600">{results.results.skippedCount}</span>
+                  <span className="text-lg font-bold text-blue-600">{results.results?.skippedCount || 0}</span>
                   <span className="text-xs text-blue-700">Transactions ignorées</span>
                 </div>
                 <div className="flex flex-col items-center p-3 bg-red-50 rounded-md">
                   <AlertTriangle className="h-5 w-5 text-red-500 mb-1" />
-                  <span className="text-lg font-bold text-red-600">{results.results.failedCount}</span>
+                  <span className="text-lg font-bold text-red-600">{results.results?.failedCount || 0}</span>
                   <span className="text-xs text-red-700">Échecs</span>
                 </div>
               </div>
               
-              {results.results.details && results.results.details.length > 0 && (
+              {results.results?.details && results.results.details.length > 0 && (
                 <div className="mt-4">
                   <div className="flex justify-between items-center mb-2">
                     <h5 className="text-sm font-medium">
