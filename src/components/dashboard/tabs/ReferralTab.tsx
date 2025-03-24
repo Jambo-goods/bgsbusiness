@@ -87,9 +87,24 @@ export default function ReferralTab() {
         console.log("Referrals data:", data);
         setReferrals(data as Referral[] || []);
         
-        // Calculate statistics
+        // Calculate statistics based on actual commissions in the database
         if (data) {
-          const totalCommission = data.reduce((sum, ref) => sum + (ref.total_commission || 0), 0);
+          // We'll get the actual commission data from referral_commissions table
+          // for more accurate stats
+          const { data: commissionsData, error: commissionsError } = await supabase
+            .from('referral_commissions')
+            .select('amount, status')
+            .eq('referrer_id', profile.id)
+            .eq('status', 'completed');
+            
+          if (commissionsError) {
+            console.error("Error fetching commission stats:", commissionsError);
+          }
+          
+          const totalCommission = commissionsData 
+            ? commissionsData.reduce((sum, comm) => sum + (comm.amount || 0), 0) 
+            : data.reduce((sum, ref) => sum + (ref.total_commission || 0), 0);
+            
           const validReferrals = data.filter(ref => ref.status === 'valid').length;
           
           setStats({
