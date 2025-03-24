@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useProfiles } from '@/hooks/useProfiles';
+import useProfiles from '@/hooks/useProfiles';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';

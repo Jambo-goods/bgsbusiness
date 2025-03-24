@@ -32,7 +32,7 @@ const ProjectUpdateNotifications = lazy(() => import("./pages/admin/ProjectUpdat
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-b-2 border-bgs-blue"></div>
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-bgs-blue"></div>
   </div>
 );
 
@@ -80,9 +80,9 @@ const App = () => (
                   <Route path="withdrawal-requests" element={<WithdrawalRequestsPage />} />
                   <Route path="bank-transfers" element={<BankTransfersPage />} />
                   <Route path="profiles" element={<ProfilesPage />} />
-                  <Route path="settings" element={<div>Paramètres</div>} />
                   <Route path="notifications" element={<NotificationManagement />} />
                   <Route path="project-updates" element={<ProjectUpdateNotifications />} />
+                  <Route path="settings" element={<div>Paramètres</div>} />
                 </Route>
                 
                 <Route path="*" element={<NotFound />} />
