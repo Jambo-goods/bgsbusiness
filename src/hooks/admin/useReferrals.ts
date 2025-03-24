@@ -55,7 +55,14 @@ export function useReferrals() {
       if (error) throw error;
       
       console.log("Referrals data:", data);
-      setReferrals(data as Referral[]);
+      
+      // Make sure total_commission is a number, not null
+      const processedData = data?.map(referral => ({
+        ...referral,
+        total_commission: referral.total_commission || 0
+      })) || [];
+      
+      setReferrals(processedData as Referral[]);
       
       if (data && data.length === 0) {
         console.log("No referrals found");
@@ -78,12 +85,33 @@ export function useReferrals() {
       
       if (error) throw error;
       
-      // Update the local state
-      setReferrals(current => 
-        current.map(referral => 
-          referral.id === referralId ? { ...referral, status: newStatus } : referral
-        )
-      );
+      // Fetch the updated referral data with new total_commission
+      const { data: updatedReferral, error: fetchError } = await supabase
+        .from('referrals')
+        .select(`
+          id,
+          referrer_id,
+          referred_id,
+          status,
+          commission_rate,
+          total_commission,
+          created_at,
+          referrer:profiles!referrals_referrer_id_fkey(first_name, last_name, email),
+          referred:profiles!referrals_referred_id_fkey(first_name, last_name, email)
+        `)
+        .eq('id', referralId)
+        .single();
+        
+      if (fetchError) {
+        console.error("Error fetching updated referral:", fetchError);
+      } else if (updatedReferral) {
+        // Update local state with the latest data
+        setReferrals(current => 
+          current.map(referral => 
+            referral.id === referralId ? updatedReferral : referral
+          )
+        );
+      }
       
       return { success: true };
     } catch (err) {

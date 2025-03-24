@@ -89,6 +89,34 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialRefer
         throw error;
       }
       
+      // Fetch updated data to get the recalculated total_commission
+      const { data: updatedReferral, error: fetchError } = await supabase
+        .from('referrals')
+        .select(`
+          id,
+          referrer_id,
+          referred_id,
+          status,
+          commission_rate,
+          total_commission,
+          created_at,
+          referrer:profiles!referrals_referrer_id_fkey(first_name, last_name, email),
+          referred:profiles!referrals_referred_id_fkey(first_name, last_name, email)
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (fetchError) {
+        console.error('Error fetching updated referral:', fetchError);
+      } else if (updatedReferral) {
+        // Update this specific referral with fresh data from the server
+        setReferrals(current => 
+          current.map(referral => 
+            referral.id === id ? updatedReferral : referral
+          )
+        );
+      }
+      
       toast.success('Statut mis à jour avec succès');
       
     } catch (error) {
