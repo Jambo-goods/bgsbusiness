@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -386,38 +385,44 @@ export default function ReferralTab() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {referrals.map((referral) => (
-                      <TableRow key={referral.id}>
-                        <TableCell className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8">
-                            <AvatarFallback className="bg-primary/10 text-primary">
-                              {referral.referred_user?.first_name?.[0] || 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {referral.referred_user?.first_name || 'Utilisateur'} {referral.referred_user?.last_name || ''}
-                            </span>
-                            <span className="text-xs text-muted-foreground truncate max-w-[180px]">
-                              {referral.referred_user?.email || 'Email non disponible'}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={referral.status === 'valid' ? 'default' : 'outline'}>
-                            {referral.status === 'valid' ? 'Validé' : 
-                             referral.status === 'pending' ? 'En attente' : 
-                             referral.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {referral.total_commission.toFixed(2)} €
-                        </TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {new Date(referral.created_at).toLocaleDateString('fr-FR')}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {referrals.map((referral) => {
+                      // Calculate total commission for this referral from commissions
+                      const referralCommissions = commissions.filter(comm => comm.referred_id === referral.referred_id);
+                      const commissionTotal = referralCommissions.reduce((sum, comm) => sum + (comm.amount || 0), 0);
+                      
+                      return (
+                        <TableRow key={referral.id}>
+                          <TableCell className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback className="bg-primary/10 text-primary">
+                                {referral.referred_user?.first_name?.[0] || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {referral.referred_user?.first_name || 'Utilisateur'} {referral.referred_user?.last_name || ''}
+                              </span>
+                              <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+                                {referral.referred_user?.email || 'Email non disponible'}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={referral.status === 'valid' ? 'default' : 'outline'}>
+                              {referral.status === 'valid' ? 'Validé' : 
+                               referral.status === 'pending' ? 'En attente' : 
+                               referral.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {commissionTotal.toFixed(2)} €
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {new Date(referral.created_at).toLocaleDateString('fr-FR')}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
