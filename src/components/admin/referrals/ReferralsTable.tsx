@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -13,6 +13,7 @@ import { formatCurrency } from '@/utils/currencyUtils';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ReferralStatusSelect from './ReferralStatusSelect';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Referral {
   id: string;
@@ -41,10 +42,57 @@ interface ReferralsTableProps {
 
 const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialReferrals, isLoading }) => {
   const [referrals, setReferrals] = useState<Referral[]>(initialReferrals);
+  const [totalCommissions, setTotalCommissions] = useState<{[key: string]: number}>({});
   
   React.useEffect(() => {
     setReferrals(initialReferrals);
+    // When referrals data changes, calculate the total commissions
+    if (initialReferrals.length > 0) {
+      calculateTotalCommissions(initialReferrals);
+    }
   }, [initialReferrals]);
+  
+  // Function to calculate total commissions from referral_commissions table
+  const calculateTotalCommissions = async (refs: Referral[]) => {
+    try {
+      // For each referral, get the total from referral_commissions table
+      const referralIds = refs.map(ref => ref.id);
+      
+      const { data, error } = await supabase
+        .from('referral_commissions')
+        .select('referral_id, amount')
+        .in('referral_id', referralIds)
+        .eq('status', 'completed');
+      
+      if (error) {
+        console.error("Error fetching commission data:", error);
+        return;
+      }
+      
+      // Calculate totals by referral_id
+      const totals: {[key: string]: number} = {};
+      
+      // Initialize with zeros
+      refs.forEach(ref => {
+        totals[ref.id] = 0;
+      });
+      
+      // Sum up commissions
+      if (data) {
+        data.forEach((commission: {referral_id: string, amount: number}) => {
+          if (totals[commission.referral_id] !== undefined) {
+            totals[commission.referral_id] += Number(commission.amount);
+          } else {
+            totals[commission.referral_id] = Number(commission.amount);
+          }
+        });
+      }
+      
+      setTotalCommissions(totals);
+    } catch (error) {
+      console.error("Error calculating total commissions:", error);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -137,7 +185,11 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialRefer
               <TableCell>{formatName(referral.referred)}</TableCell>
               <TableCell>{getStatusBadge(referral.status)}</TableCell>
               <TableCell>{referral.commission_rate}%</TableCell>
-              <TableCell>{formatCurrency(referral.total_commission)}</TableCell>
+              <TableCell>
+                {totalCommissions[referral.id] !== undefined 
+                  ? formatCurrency(totalCommissions[referral.id]) 
+                  : formatCurrency(referral.total_commission)}
+              </TableCell>
               <TableCell>{formatDate(referral.created_at)}</TableCell>
               <TableCell>
                 <ReferralStatusSelect 
