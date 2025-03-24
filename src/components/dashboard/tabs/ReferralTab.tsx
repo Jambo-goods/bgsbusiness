@@ -49,7 +49,7 @@ export default function ReferralTab() {
   const [stats, setStats] = useState({
     referralCount: 0,
     totalCommission: 0,
-    activeReferrals: 0
+    validReferrals: 0
   });
   const [copied, setCopied] = useState(false);
 
@@ -90,12 +90,12 @@ export default function ReferralTab() {
         // Calculate statistics
         if (data) {
           const totalCommission = data.reduce((sum, ref) => sum + (ref.total_commission || 0), 0);
-          const activeReferrals = data.filter(ref => ref.status === 'active').length;
+          const validReferrals = data.filter(ref => ref.status === 'valid').length;
           
           setStats({
             referralCount: data.length,
             totalCommission: totalCommission,
-            activeReferrals: activeReferrals
+            validReferrals: validReferrals
           });
         }
       } catch (error) {
@@ -327,8 +327,8 @@ export default function ReferralTab() {
         <ReferralStatsCard 
           icon={<CheckCircle className="h-4 w-4 text-muted-foreground" />}
           title="Actifs"
-          value={isReferralLoading ? "-" : stats.activeReferrals.toString()}
-          description="Filleuls actifs"
+          value={isReferralLoading ? "-" : stats.validReferrals.toString()}
+          description="Filleuls validés"
           loading={isReferralLoading}
         />
         
@@ -389,8 +389,8 @@ export default function ReferralTab() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={referral.status === 'active' ? 'default' : 'outline'}>
-                            {referral.status === 'active' ? 'Actif' : 
+                          <Badge variant={referral.status === 'valid' ? 'default' : 'outline'}>
+                            {referral.status === 'valid' ? 'Validé' : 
                              referral.status === 'pending' ? 'En attente' : 
                              referral.status}
                           </Badge>
