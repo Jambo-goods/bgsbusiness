@@ -19,7 +19,7 @@ export default function FixReferralCommissions() {
     try {
       const { data, error } = await supabase
         .from('referral_commissions')
-        .select('count(*)');
+        .select('*', { count: 'exact' });
       
       if (error) {
         toast.error(`Erreur lors de la vérification de la table: ${error.message}`);
@@ -27,7 +27,7 @@ export default function FixReferralCommissions() {
         return;
       }
       
-      const count = data?.[0]?.count || 0;
+      const count = data?.length || 0;
       toast.info(`${count} commissions trouvées dans la table`);
       setDebugInfo(prev => [...prev, `${count} commissions trouvées dans la table`]);
     } catch (error) {
@@ -105,7 +105,7 @@ export default function FixReferralCommissions() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <Alert variant="warning">
+          <Alert>
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Fonctionnement</AlertTitle>
             <AlertDescription>
