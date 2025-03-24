@@ -112,7 +112,7 @@ serve(async (req) => {
       console.log(`✅ Created test transaction: ${testTransaction.id}`);
       
       // Now process this test transaction
-      const processResult = await processTransactionCommission(
+      await processTransactionCommission(
         supabase, 
         testTransaction, 
         `transaction_${testTransaction.id}`, 
@@ -122,7 +122,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          message: processResult ? "Transaction de test traitée avec succès." : "Échec du traitement de la transaction de test.",
+          message: results.processedCount > 0 ? "Transaction de test traitée avec succès." : "Échec du traitement de la transaction de test.",
           results: results
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -134,7 +134,7 @@ serve(async (req) => {
       try {
         console.log(`🔄 Processing transaction ${transaction.id}, amount: ${transaction.amount}`);
         
-        // Generate source identifier
+        // Generate simple source identifier
         const source = `transaction_${transaction.id}`;
           
         await processTransactionCommission(
@@ -284,21 +284,17 @@ async function processTransactionCommission(
   console.log(`💰 Creating commission of ${commissionAmount} for referrer ${referralData.referrer_id}`);
   
   try {
-    // Create referral commission record - THIS IS THE KEY PART THAT WAS FAILING
-    const insertData = {
-      referral_id: referralData.id,
-      referrer_id: referralData.referrer_id,
-      referred_id: userId,
-      amount: commissionAmount,
-      source: source,
-      status: 'completed'
-    };
-    
-    console.log("📝 Inserting commission record with data:", JSON.stringify(insertData));
-    
+    // First create the referral commission record
     const { data: commission, error: commissionError } = await supabase
       .from('referral_commissions')
-      .insert(insertData)
+      .insert({
+        referral_id: referralData.id,
+        referrer_id: referralData.referrer_id,
+        referred_id: userId,
+        amount: commissionAmount,
+        source: source,
+        status: 'completed'
+      })
       .select()
       .single();
       
