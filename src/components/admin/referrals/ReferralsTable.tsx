@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import ReferralStatusSelect from './ReferralStatusSelect';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface Referral {
   id: string;
@@ -43,10 +44,11 @@ interface ReferralsTableProps {
 const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialReferrals, isLoading }) => {
   const [referrals, setReferrals] = useState<Referral[]>(initialReferrals);
   const [totalCommissions, setTotalCommissions] = useState<{[key: string]: number}>({});
+  const [isCalculating, setIsCalculating] = useState(false);
   
-  React.useEffect(() => {
+  // Load commissions when referrals data changes
+  useEffect(() => {
     setReferrals(initialReferrals);
-    // When referrals data changes, calculate the total commissions
     if (initialReferrals.length > 0) {
       calculateTotalCommissions(initialReferrals);
     }
@@ -55,19 +57,25 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialRefer
   // Function to calculate total commissions from referral_commissions table
   const calculateTotalCommissions = async (refs: Referral[]) => {
     try {
+      setIsCalculating(true);
+      console.log("Calculating commissions for", refs.length, "referrals");
+      
       // For each referral, get the total from referral_commissions table
       const referralIds = refs.map(ref => ref.id);
       
       const { data, error } = await supabase
         .from('referral_commissions')
-        .select('referral_id, amount')
-        .in('referral_id', referralIds)
-        .eq('status', 'completed');
+        .select('referral_id, amount, status')
+        .in('referral_id', referralIds);
       
       if (error) {
         console.error("Error fetching commission data:", error);
+        toast.error("Erreur lors du calcul des commissions");
+        setIsCalculating(false);
         return;
       }
+      
+      console.log("Commission data fetched:", data);
       
       // Calculate totals by referral_id
       const totals: {[key: string]: number} = {};
@@ -77,20 +85,25 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialRefer
         totals[ref.id] = 0;
       });
       
-      // Sum up commissions
-      if (data) {
-        data.forEach((commission: {referral_id: string, amount: number}) => {
-          if (totals[commission.referral_id] !== undefined) {
+      // Sum up commissions with status='completed'
+      if (data && data.length > 0) {
+        data.forEach((commission: {referral_id: string, amount: number, status: string}) => {
+          if (commission.status === 'completed' && totals[commission.referral_id] !== undefined) {
             totals[commission.referral_id] += Number(commission.amount);
-          } else {
-            totals[commission.referral_id] = Number(commission.amount);
           }
         });
+        
+        console.log("Calculated totals:", totals);
+      } else {
+        console.log("No commission data found");
       }
       
       setTotalCommissions(totals);
     } catch (error) {
       console.error("Error calculating total commissions:", error);
+      toast.error("Erreur lors du calcul des commissions");
+    } finally {
+      setIsCalculating(false);
     }
   };
 
@@ -186,9 +199,11 @@ const ReferralsTable: React.FC<ReferralsTableProps> = ({ referrals: initialRefer
               <TableCell>{getStatusBadge(referral.status)}</TableCell>
               <TableCell>{referral.commission_rate}%</TableCell>
               <TableCell>
-                {totalCommissions[referral.id] !== undefined 
-                  ? formatCurrency(totalCommissions[referral.id]) 
-                  : formatCurrency(referral.total_commission)}
+                {isCalculating ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                ) : (
+                  formatCurrency(totalCommissions[referral.id] || 0)
+                )}
               </TableCell>
               <TableCell>{formatDate(referral.created_at)}</TableCell>
               <TableCell>
