@@ -89,12 +89,12 @@ export default function Dashboard() {
             firstName: userData?.firstName || "",
             lastName: userData?.lastName || "",
             email: userData?.email || "",
-            investmentTotal: investmentTotal, // Use real-time calculated value
-            projectsCount: activeProjectsCount, // Use real-time calculated value
+            investmentTotal: investmentTotal || 0, 
+            projectsCount: activeProjectsCount || 0, 
             walletBalance: userData?.walletBalance || 0
           }} 
           activeTab={activeTab} 
-          userInvestments={userInvestments}
+          userInvestments={userInvestments || []}
           setActiveTab={setActiveTab}
           refreshData={refreshAllData}
         />

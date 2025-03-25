@@ -1,28 +1,18 @@
 
 export interface Project {
   id: string;
-  name: string;
-  companyName: string;
-  description: string;
-  profitability: number;
-  duration: string;
-  location: string;
-  status: "upcoming" | "active" | "completed";
-  minInvestment: number;
-  image: string;
-  category: string;
-  price: number;
-  yield: number;
-  fundingProgress: number;
-  featured?: boolean;
-  possibleDurations?: number[];
-  startDate?: string;
-  endDate?: string;
-  raised?: number;
-  target?: number;
+  title?: string;
+  description?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  category?: string;
   amount?: number;
-  investmentDate?: string;
-  firstPaymentDelayMonths?: number;
-  investedAmount?: number;
-  maxInvestment?: number;  // Added this property
+  duration?: number;
+  yield_rate?: number;
+  image_url?: string;
+  owner_id?: string;
+  location?: string;
+  risk_level?: string;
+  [key: string]: any;
 }

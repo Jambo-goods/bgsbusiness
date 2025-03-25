@@ -3,18 +3,12 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
 import { Skeleton } from "@/components/ui/skeleton";
-import ProjectsList from "../projects/ProjectsList";
-import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { Project } from "@/types/project";
 
-// Prefetch critical paths
-const preloadWalletTab = () => import("./tabs/WalletTab");
-const preloadInvestments = () => import("./Investments");
-
-// Lazy load tabs that aren't used as frequently
-const WalletTab = lazy(() => preloadWalletTab());
+// Prefetch critical paths - using dynamic imports instead of direct imports
+const WalletTab = lazy(() => import("./tabs/WalletTab"));
 const YieldTab = lazy(() => import("./tabs/YieldTab"));
-const Investments = lazy(() => preloadInvestments());
+const Investments = lazy(() => import("./Investments"));
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
 const NotificationsTab = lazy(() => import("./tabs/NotificationsTab"));
@@ -36,14 +30,6 @@ const TabLoading = () => (
   </div>
 );
 
-// Prefetch critical paths on page load
-if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    preloadWalletTab();
-    preloadInvestments();
-  }, 2000); // Delay to prioritize initial render
-}
-
 export default function TabContent({
   activeTab,
   userData,
@@ -56,24 +42,26 @@ export default function TabContent({
   
   console.log("TabContent rendering with active tab:", activeTab);
   
-  // Load projects from database only
+  // Load projects from database only when "projects" tab is active
   useEffect(() => {
     const loadProjects = async () => {
       try {
-        setLoading(true);
-        const projects = await fetchProjectsFromDatabase();
-        setDbProjects(projects || []);
+        if (activeTab === "projects") {
+          setLoading(true);
+          // Import the function dynamically to avoid circular references
+          const { fetchProjectsFromDatabase } = await import("@/utils/projectUtils");
+          const projects = await fetchProjectsFromDatabase();
+          setDbProjects(projects || []);
+          setLoading(false);
+        }
       } catch (error) {
         console.error("Error loading database projects:", error);
         setDbProjects([]);
-      } finally {
         setLoading(false);
       }
     };
     
-    if (activeTab === "projects") {
-      loadProjects();
-    }
+    loadProjects();
   }, [activeTab]);
   
   // Add debug logging when tab content changes
@@ -115,8 +103,15 @@ export default function TabContent({
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-bgs-blue"></div>
                 </div>
               ) : (
-                dbProjects.length > 0 ? (
-                  <ProjectsList projects={dbProjects} />
+                dbProjects && dbProjects.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {dbProjects.map((project) => (
+                      <div key={project.id} className="bg-white rounded-lg shadow-md p-4">
+                        <h3 className="text-lg font-semibold">{project.title || "Projet sans titre"}</h3>
+                        <p className="text-sm text-gray-600 mt-2">{project.description || "Aucune description"}</p>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div className="text-center py-20">
                     <p className="text-gray-500">Aucun projet disponible actuellement.</p>
