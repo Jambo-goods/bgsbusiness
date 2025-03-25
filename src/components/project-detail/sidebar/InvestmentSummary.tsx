@@ -2,6 +2,7 @@
 import React from "react";
 import { Project } from "@/types/project";
 import { TrendingUp, Clock, Calculator } from "lucide-react";
+import { formatCurrency } from "@/utils/currencyUtils";
 
 interface InvestmentSummaryProps {
   project: Project;
@@ -23,6 +24,9 @@ export default function InvestmentSummary({
   // Calculate annual yield from monthly yield
   const annualYield = project.yield * 12;
   const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
+  
+  // Calculate correct monthly return based on investment amount and yield percentage
+  const correctMonthlyReturn = investmentAmount * (project.yield / 100);
   
   return (
     <div className="bg-gradient-to-br from-white to-bgs-gray-light p-4 rounded-lg mb-4 shadow-sm border border-gray-100">
@@ -76,7 +80,7 @@ export default function InvestmentSummary({
             </div>
             <span>Revenus mensuels</span>
           </div>
-          <span className="font-semibold text-purple-600">{monthlyReturn.toFixed(2)}€ par mois</span>
+          <span className="font-semibold text-purple-600">{formatCurrency(correctMonthlyReturn)}</span>
         </div>
         
         <div className="flex justify-between items-center text-sm">
@@ -86,7 +90,7 @@ export default function InvestmentSummary({
             </div>
             <span>Total sur la période</span>
           </div>
-          <span className="font-semibold text-purple-600">{totalReturn.toFixed(2)}€</span>
+          <span className="font-semibold text-purple-600">{formatCurrency(investmentAmount + (correctMonthlyReturn * Math.max(0, duration - firstPaymentDelay)))}</span>
         </div>
       </div>
       
@@ -95,7 +99,7 @@ export default function InvestmentSummary({
         onClick={onInvest}
         className="w-full btn-primary mt-4"
       >
-        Investir {investmentAmount}€
+        Investir {formatCurrency(investmentAmount)}
       </button>
     </div>
   );
