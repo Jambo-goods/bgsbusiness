@@ -5,13 +5,15 @@ import { Slider } from "@/components/ui/slider";
 import { Check, AlertCircle, Calculator, Calendar, TrendingUp, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCurrency } from "@/utils/currencyUtils";
 
 interface ProjectInvestmentSimulatorProps {
   project: Project;
 }
 
 export default function ProjectInvestmentSimulator({ project }: ProjectInvestmentSimulatorProps) {
-  const [investmentAmount, setInvestmentAmount] = useState<number>(project.minInvestment);
+  const minInvestment = project.min_investment || 500;
+  const [investmentAmount, setInvestmentAmount] = useState<number>(minInvestment);
   const [duration, setDuration] = useState<number>(
     project.possibleDurations ? project.possibleDurations[0] : 12
   );
@@ -88,19 +90,19 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
       <div className="mb-6">
         <div className="flex justify-between items-center mb-2">
           <label className="text-sm font-medium text-bgs-blue">Montant à investir</label>
-          <span className="text-sm font-bold text-bgs-blue">{investmentAmount.toLocaleString()} €</span>
+          <span className="text-sm font-bold text-bgs-blue">{formatCurrency(investmentAmount)}</span>
         </div>
         <Slider
           value={[investmentAmount]}
-          min={project.minInvestment}
+          min={minInvestment}
           max={maxInvestment}
           step={100}
           onValueChange={(value) => setInvestmentAmount(value[0])}
           className="mb-2"
         />
         <div className="flex justify-between text-xs text-bgs-blue/60">
-          <span>Min: {project.minInvestment} €</span>
-          <span>Max: {maxInvestment.toLocaleString()} €</span>
+          <span>Min: {formatCurrency(minInvestment)}</span>
+          <span>Max: {formatCurrency(maxInvestment)}</span>
         </div>
       </div>
       
@@ -159,11 +161,11 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
           </div>
           <div>
             <p className="text-xs text-bgs-blue/70 mb-1">Retour total estimé</p>
-            <p className="text-bgs-blue font-bold">{totalReturn.toLocaleString(undefined, {maximumFractionDigits: 2})} €</p>
+            <p className="text-bgs-blue font-bold">{formatCurrency(totalReturn)}</p>
           </div>
           <div>
             <p className="text-xs text-bgs-blue/70 mb-1">Retour mensuel estimé</p>
-            <p className="text-bgs-blue font-bold">{monthlyReturn.toLocaleString(undefined, {maximumFractionDigits: 2})} €</p>
+            <p className="text-bgs-blue font-bold">{formatCurrency(monthlyReturn)}</p>
           </div>
         </div>
       </div>
