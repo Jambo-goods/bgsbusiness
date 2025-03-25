@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Project } from "@/types/project";
-import { TrendingUp, Clock, Calculator } from "lucide-react";
+import { TrendingUp, Clock, Calculator, Info } from "lucide-react";
 import { formatCurrency } from "@/utils/currencyUtils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -89,26 +89,32 @@ export default function InvestmentSummary({
           <span className="font-semibold text-purple-600">{formatCurrency(correctMonthlyReturn)}</span>
         </div>
         
-        <TooltipProvider>
-          <div className="flex justify-between items-center text-sm">
-            <div className="flex items-center gap-2 text-bgs-blue">
-              <div className="bg-purple-100 p-1.5 rounded-lg">
-                <Calculator size={14} className="text-purple-600" />
-              </div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="border-b border-dotted border-gray-400 cursor-help">
-                    Total sur la période
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent className="bg-white p-2 text-xs max-w-[250px] shadow-md">
-                  Ce montant inclut votre investissement initial plus tous les revenus mensuels accumulés
-                </TooltipContent>
-              </Tooltip>
+        <div className="flex justify-between items-center text-sm">
+          <div className="flex items-center gap-2 text-bgs-blue">
+            <div className="bg-purple-100 p-1.5 rounded-lg">
+              <Calculator size={14} className="text-purple-600" />
             </div>
-            <span className="font-semibold text-purple-600">{formatCurrency(correctTotalReturn)}</span>
+            <div className="flex items-center">
+              <span>Total sur la période</span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button className="ml-1 bg-gray-100 rounded-full p-0.5 text-gray-600 hover:bg-gray-200 transition-colors">
+                      <Info size={12} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="center" className="bg-white p-3 text-xs max-w-[250px] shadow-lg border border-gray-200 rounded-lg z-50">
+                    <p className="font-medium text-bgs-blue mb-1">Calcul du total</p>
+                    <p className="text-gray-700">
+                      Ce montant inclut votre investissement initial ({formatCurrency(investmentAmount)}) plus tous les revenus mensuels accumulés pendant {effectiveMonths} mois.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
-        </TooltipProvider>
+          <span className="font-semibold text-purple-600">{formatCurrency(correctTotalReturn)}</span>
+        </div>
       </div>
       
       {/* Add investment button */}
