@@ -28,6 +28,11 @@ export default function InvestmentSummary({
   // Calculate correct monthly return based on investment amount and yield percentage
   const correctMonthlyReturn = investmentAmount * (project.yield / 100);
   
+  // Calculate the correct total return
+  // This should be: initial investment + (monthly returns × effective months)
+  const effectiveMonths = Math.max(0, duration - firstPaymentDelay);
+  const correctTotalReturn = investmentAmount + (correctMonthlyReturn * effectiveMonths);
+  
   return (
     <div className="bg-gradient-to-br from-white to-bgs-gray-light p-4 rounded-lg mb-4 shadow-sm border border-gray-100">
       <h4 className="text-sm font-medium text-bgs-blue mb-3">Résumé de l'investissement</h4>
@@ -90,7 +95,7 @@ export default function InvestmentSummary({
             </div>
             <span>Total sur la période</span>
           </div>
-          <span className="font-semibold text-purple-600">{formatCurrency(investmentAmount + (correctMonthlyReturn * Math.max(0, duration - firstPaymentDelay)))}</span>
+          <span className="font-semibold text-purple-600">{formatCurrency(correctTotalReturn)}</span>
         </div>
       </div>
       
