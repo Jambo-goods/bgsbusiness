@@ -29,14 +29,14 @@ interface InfoSectionProps {
 
 export default function InfoSection({ title, subtitle, steps }: InfoSectionProps) {
   return (
-    <section className="py-20 relative overflow-hidden bg-white">
+    <section className="py-20 relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] rounded-full bg-bgs-blue/5 blur-3xl" />
       <div className="absolute -bottom-[30%] -left-[10%] w-[600px] h-[600px] rounded-full bg-bgs-orange/5 blur-3xl" />
 
       <div className="container px-4 md:px-6 mx-auto relative">
         <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="mb-4 text-3xl font-bold md:text-4xl animate-fade-up">
+          <h2 className="mb-4 animate-fade-up">
             <span className="text-gradient">{title}</span>
           </h2>
           <p className="text-xl text-bgs-blue/80 animate-fade-up" style={{ animationDelay: "0.1s" }}>
@@ -51,7 +51,7 @@ export default function InfoSection({ title, subtitle, steps }: InfoSectionProps
               className="animate-fade-up"
               style={{ animationDelay: `${0.1 * index}s` }}
             >
-              <InfoStep {...step} number={index + 1} />
+              <InfoStep {...step} number={index + 1} /> {/* Add the number prop here */}
             </div>
           ))}
         </div>
