@@ -69,13 +69,15 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   }, []);
   
   useEffect(() => {
-    // Calculer le rendement mensuel sans diviser par 12
+    // Calculate the monthly return based on monthly yield rate
     const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
+    
+    // The total return includes both the principal (investmentAmount) and all monthly returns
     const effectiveDuration = duration - firstPaymentDelay; 
     const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * Math.max(0, effectiveDuration));
     
-    setTotalReturn(calculatedTotalReturn);
     setMonthlyReturn(calculatedMonthlyReturn);
+    setTotalReturn(calculatedTotalReturn);
   }, [investmentAmount, duration, project.yield, firstPaymentDelay]);
   
   const annualYieldPercentage = project.yield * 12;
@@ -156,7 +158,7 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
             <p className="text-xs text-bgs-blue/70 mb-1">Rendement annuel</p>
             <div className="flex items-center text-green-600 font-bold">
               <TrendingUp className="h-4 w-4 mr-1" />
-              {project.yield * 12}% par an
+              {annualYieldPercentage}% par an
             </div>
           </div>
           <div>
