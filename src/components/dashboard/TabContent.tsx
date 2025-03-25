@@ -5,6 +5,8 @@ import Overview from "./Overview";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
+import { Calendar, MapPin, TrendingUp } from "lucide-react";
+import { Link } from "react-router-dom";
 
 // Prefetch critical paths - using dynamic imports instead of direct imports
 const WalletTab = lazy(() => import("./tabs/WalletTab"));
@@ -106,9 +108,75 @@ export default function TabContent({
                 dbProjects && dbProjects.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {dbProjects.map((project) => (
-                      <div key={project.id} className="bg-white rounded-lg shadow-md p-4">
-                        <h3 className="text-lg font-semibold">{project.title || "Projet sans titre"}</h3>
-                        <p className="text-sm text-gray-600 mt-2">{project.description || "Aucune description"}</p>
+                      <div key={project.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300">
+                        <div className="relative h-48 overflow-hidden">
+                          <img 
+                            src={project.image_url || "https://via.placeholder.com/400x300?text=Projet+BGS"} 
+                            alt={project.title || "Projet d'investissement"} 
+                            className="w-full h-full object-cover transition-transform hover:scale-105 duration-700"
+                          />
+                          {project.status && (
+                            <div className="absolute top-4 right-4">
+                              <span className={cn(
+                                "px-3 py-1 text-xs font-medium rounded-full",
+                                project.status === "active" ? "bg-blue-100 text-blue-800" :
+                                project.status === "completed" ? "bg-green-100 text-green-800" :
+                                "bg-orange-100 text-orange-800"
+                              )}>
+                                {project.status === "active" ? "En cours" : 
+                                 project.status === "completed" ? "Terminé" : "À venir"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-6">
+                          <h3 className="text-xl font-semibold mb-2">{project.title || "Projet sans titre"}</h3>
+                          {project.category && (
+                            <p className="text-sm text-bgs-gray-medium mb-2">{project.category}</p>
+                          )}
+                          <p className="text-bgs-blue/80 mb-4 line-clamp-2">{project.description || "Aucune description disponible"}</p>
+                          
+                          <div className="grid grid-cols-2 gap-4 mb-4">
+                            {project.yield_rate !== undefined && (
+                              <div className="flex items-center gap-2">
+                                <TrendingUp size={18} className="text-bgs-orange" />
+                                <div>
+                                  <p className="text-xs text-bgs-gray-medium">Rentabilité</p>
+                                  <p className="font-semibold">{project.yield_rate}%</p>
+                                </div>
+                              </div>
+                            )}
+                            {project.duration !== undefined && (
+                              <div className="flex items-center gap-2">
+                                <Calendar size={18} className="text-bgs-orange" />
+                                <div>
+                                  <p className="text-xs text-bgs-gray-medium">Durée</p>
+                                  <p className="font-semibold">{project.duration} mois</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {project.location && (
+                            <div className="flex items-center gap-2 mb-4">
+                              <MapPin size={18} className="text-bgs-orange flex-shrink-0" />
+                              <p className="text-sm text-bgs-blue/80">{project.location}</p>
+                            </div>
+                          )}
+
+                          <div className="flex justify-between items-center mt-4">
+                            <div>
+                              <p className="text-xs text-bgs-gray-medium">Investissement min</p>
+                              <p className="font-semibold">{project.amount?.toLocaleString() || 0} €</p>
+                            </div>
+                            <Link
+                              to={`/project/${project.id}`}
+                              className="bg-bgs-blue hover:bg-bgs-blue-light text-white px-4 py-2 rounded-lg transition-colors text-sm"
+                            >
+                              Voir détails
+                            </Link>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
