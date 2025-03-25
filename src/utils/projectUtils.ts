@@ -1,19 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-
-export interface Project {
-  id: string;
-  title?: string;
-  description?: string;
-  status?: string;
-  created_at?: string;
-  updated_at?: string;
-  category?: string;
-  amount?: number;
-  duration?: number;
-  yield_rate?: number;
-  [key: string]: any;
-}
+import { Project } from "@/types/project";
 
 /**
  * Fetches projects from the Supabase database

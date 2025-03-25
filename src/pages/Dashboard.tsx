@@ -1,7 +1,6 @@
 
 import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
-import { toast } from "sonner";
 import DashboardLayout from "../layouts/DashboardLayout";
 import DashboardMain from "../components/dashboard/DashboardMain";
 import { useProfileData } from "@/hooks/dashboard/useProfileData";

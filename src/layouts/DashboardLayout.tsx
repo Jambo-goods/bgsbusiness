@@ -60,6 +60,10 @@ export default function DashboardLayout({
   
   const effectiveHandleLogout = propHandleLogout || defaultHandleLogout;
 
+  useEffect(() => {
+    console.log("DashboardLayout rendered with activeTab:", effectiveActiveTab);
+  }, [effectiveActiveTab]);
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <Navbar isScrolled={isScrolled} isOnDashboard={true} />

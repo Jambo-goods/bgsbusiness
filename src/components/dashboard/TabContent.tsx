@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import Overview from "./Overview";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Project } from "@/types/project";
+import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 
 // Prefetch critical paths - using dynamic imports instead of direct imports
 const WalletTab = lazy(() => import("./tabs/WalletTab"));
@@ -48,8 +49,7 @@ export default function TabContent({
       try {
         if (activeTab === "projects") {
           setLoading(true);
-          // Import the function dynamically to avoid circular references
-          const { fetchProjectsFromDatabase } = await import("@/utils/projectUtils");
+          // Load projects directly from utils
           const projects = await fetchProjectsFromDatabase();
           setDbProjects(projects || []);
           setLoading(false);

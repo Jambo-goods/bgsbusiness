@@ -1,5 +1,6 @@
 
 import { useEffect } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "@/components/layout/Navbar";
 import HeaderSection from "@/components/ui/HeaderSection";
 import Footer from "@/components/layout/Footer";
@@ -11,6 +12,7 @@ import CallToAction from "@/components/home/CallToAction";
 export default function Index() {
   useEffect(() => {
     window.scrollTo(0, 0);
+    console.log("Index page loaded and visible");
   }, []);
   
   return (
