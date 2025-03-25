@@ -2,10 +2,16 @@
 import React, { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { Slider } from "@/components/ui/slider";
-import { Check, AlertCircle, Calculator, Calendar, TrendingUp, Clock } from "lucide-react";
+import { Check, AlertCircle, Calculator, Calendar, TrendingUp, Clock, Info } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { formatCurrency } from "@/utils/currencyUtils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ProjectInvestmentSimulatorProps {
   project: Project;
@@ -72,9 +78,9 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
     // Calculate the monthly return based on monthly yield rate
     const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
     
-    // The total return includes both the principal (investmentAmount) and all monthly returns
-    const effectiveDuration = duration - firstPaymentDelay; 
-    const calculatedTotalReturn = investmentAmount + (calculatedMonthlyReturn * Math.max(0, effectiveDuration));
+    // The total return includes ONLY the monthly returns, not the principal
+    const effectiveDuration = Math.max(0, duration - firstPaymentDelay);
+    const calculatedTotalReturn = calculatedMonthlyReturn * effectiveDuration;
     
     setMonthlyReturn(calculatedMonthlyReturn);
     setTotalReturn(calculatedTotalReturn);
@@ -162,11 +168,25 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
             </div>
           </div>
           <div>
-            <p className="text-xs text-bgs-blue/70 mb-1">Retour total estimé</p>
+            <p className="text-xs text-bgs-blue/70 mb-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-1">
+                      <span>Total des revenus</span>
+                      <Info size={16} className="text-purple-600" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="bg-white p-2 border border-gray-200 shadow-md text-xs">
+                    <p>Uniquement les revenus générés sur la période</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </p>
             <p className="text-bgs-blue font-bold">{formatCurrency(totalReturn)}</p>
           </div>
           <div>
-            <p className="text-xs text-bgs-blue/70 mb-1">Retour mensuel estimé</p>
+            <p className="text-xs text-bgs-blue/70 mb-1">Revenu mensuel estimé</p>
             <p className="text-bgs-blue font-bold">{formatCurrency(monthlyReturn)}</p>
           </div>
         </div>
