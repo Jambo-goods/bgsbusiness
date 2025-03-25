@@ -167,10 +167,8 @@ export default function TabContent({
                           <div className="flex justify-between items-center mt-4">
                             <div>
                               <p className="text-xs text-bgs-gray-medium">Investissement min</p>
-                              <p className="font-semibold">
-                                {project.min_investment || project.amount 
-                                  ? formatCurrency(project.min_investment || project.amount) 
-                                  : "N/A"}
+                              <p className="font-semibold text-bgs-blue">
+                                {getInvestmentDisplay(project)}
                               </p>
                             </div>
                             <Link
@@ -204,4 +202,18 @@ export default function TabContent({
       )}
     </div>
   );
+}
+
+// Helper function to handle investment display with consistent formatting
+function getInvestmentDisplay(project: Project): string {
+  // First check for min_investment, fallback to amount
+  const value = project.min_investment || project.amount;
+  
+  // If we have a value, format it properly
+  if (value && typeof value === 'number' && value > 0) {
+    return formatCurrency(value);
+  }
+  
+  // Default fallback
+  return "Non spécifié";
 }
