@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Project } from "@/types/project";
 import { TrendingUp, Clock, Calculator, Info } from "lucide-react";
@@ -100,7 +99,7 @@ export default function InvestmentSummary({
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button className="ml-1 bg-gray-100 rounded-full p-0.5 text-gray-600 hover:bg-gray-200 transition-colors">
-                      <Info size={12} />
+                      <Info size={14} className="text-gray-600" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="top" align="center" className="bg-white p-3 text-xs max-w-[250px] shadow-lg border border-gray-200 rounded-lg z-50">
@@ -117,7 +116,6 @@ export default function InvestmentSummary({
         </div>
       </div>
       
-      {/* Add investment button */}
       <button 
         onClick={onInvest}
         className="w-full btn-primary mt-4"
