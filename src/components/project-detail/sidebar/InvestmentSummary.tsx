@@ -3,6 +3,7 @@ import React from "react";
 import { Project } from "@/types/project";
 import { TrendingUp, Clock, Calculator } from "lucide-react";
 import { formatCurrency } from "@/utils/currencyUtils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface InvestmentSummaryProps {
   project: Project;
@@ -88,15 +89,26 @@ export default function InvestmentSummary({
           <span className="font-semibold text-purple-600">{formatCurrency(correctMonthlyReturn)}</span>
         </div>
         
-        <div className="flex justify-between items-center text-sm">
-          <div className="flex items-center gap-2 text-bgs-blue">
-            <div className="bg-purple-100 p-1.5 rounded-lg">
-              <Calculator size={14} className="text-purple-600" />
+        <TooltipProvider>
+          <div className="flex justify-between items-center text-sm">
+            <div className="flex items-center gap-2 text-bgs-blue">
+              <div className="bg-purple-100 p-1.5 rounded-lg">
+                <Calculator size={14} className="text-purple-600" />
+              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="border-b border-dotted border-gray-400 cursor-help">
+                    Total sur la période
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white p-2 text-xs max-w-[250px] shadow-md">
+                  Ce montant inclut votre investissement initial plus tous les revenus mensuels accumulés
+                </TooltipContent>
+              </Tooltip>
             </div>
-            <span>Total sur la période</span>
+            <span className="font-semibold text-purple-600">{formatCurrency(correctTotalReturn)}</span>
           </div>
-          <span className="font-semibold text-purple-600">{formatCurrency(correctTotalReturn)}</span>
-        </div>
+        </TooltipProvider>
       </div>
       
       {/* Add investment button */}
