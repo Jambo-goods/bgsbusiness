@@ -20,7 +20,7 @@ export default function ProjectSidebar({
   // Add default values for project to prevent undefined errors
   const safeProject = {
     ...project,
-    minInvestment: project.minInvestment || 500,
+    minInvestment: project.min_investment || 500,
     yield: project.yield || 0.8,
     duration: project.duration || "12 mois"
   };

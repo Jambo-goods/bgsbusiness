@@ -29,7 +29,7 @@ interface UseInvestmentReturn {
 
 export const useInvestment = (project: Project, investorCount: number): UseInvestmentReturn => {
   // Investment amount state
-  const [investmentAmount, setInvestmentAmount] = useState<number>(project.minInvestment || 500);
+  const [investmentAmount, setInvestmentAmount] = useState<number>(project.min_investment || 500);
   const [selectedDuration, setSelectedDuration] = useState<number>(12); // Default to 12 months
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -43,7 +43,7 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
   const [error, setError] = useState<string | null>(null);
 
   // Calculate derived data
-  const minInvestment = project.minInvestment || 500;
+  const minInvestment = project.min_investment || 500;
   const maxInvestment = project.maxInvestment || 10000;
   const projectYield = project.yield || 0.08; // Default to 8%
   
