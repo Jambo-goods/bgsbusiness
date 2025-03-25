@@ -27,9 +27,9 @@ export default function FAQ() {
   ];
 
   return (
-    <section className="py-20 container px-4 md:px-6 mx-auto">
+    <section className="py-20 container px-4 md:px-6 mx-auto bg-white">
       <div className="max-w-4xl mx-auto text-center mb-16">
-        <h2 className="mb-4 animate-fade-up">
+        <h2 className="mb-4 text-3xl font-bold md:text-4xl animate-fade-up">
           <span className="text-gradient">Questions fréquentes</span>
         </h2>
         <p className="text-xl text-bgs-blue/80 animate-fade-up" style={{ animationDelay: "0.1s" }}>
@@ -41,7 +41,7 @@ export default function FAQ() {
         {faqItems.map((faq, index) => (
           <div 
             key={index} 
-            className="glass-card p-6 animate-fade-up"
+            className="glass-card p-6 animate-fade-up bg-white border border-gray-100 rounded-xl shadow-sm"
             style={{ animationDelay: `${0.1 * index}s` }}
           >
             <h4 className="text-xl font-semibold mb-2 text-bgs-blue">{faq.question}</h4>
@@ -54,7 +54,7 @@ export default function FAQ() {
         <p className="text-bgs-blue/80 mb-4">
           Vous avez d'autres questions ? N'hésitez pas à nous contacter.
         </p>
-        <Link to="/contact" className="btn-primary">
+        <Link to="/contact" className="btn-primary bg-bgs-blue hover:bg-bgs-blue/90 text-white px-6 py-3 rounded-lg inline-block">
           Contactez-nous
         </Link>
       </div>

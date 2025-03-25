@@ -10,10 +10,11 @@ import FAQ from "@/components/howItWorks/FAQ";
 export default function HowItWorks() {
   useEffect(() => {
     window.scrollTo(0, 0);
+    document.title = "Comment ça marche | BGS Business Club";
   }, []);
   
   return (
-    <div className="min-h-screen page-transition">
+    <div className="min-h-screen page-transition bg-white">
       <Navbar />
       
       <main className="pt-32 pb-20">

@@ -10,7 +10,7 @@ export default function BusinessModel() {
       
       <div className="container px-4 md:px-6 mx-auto relative">
         <div className="max-w-4xl mx-auto text-center mb-16">
-          <h2 className="mb-4 animate-fade-up">
+          <h2 className="mb-4 text-3xl font-bold md:text-4xl animate-fade-up">
             <span className="text-gradient">Notre modèle économique</span>
           </h2>
           <p className="text-xl text-bgs-blue/80 animate-fade-up" style={{ animationDelay: "0.1s" }}>
@@ -19,7 +19,7 @@ export default function BusinessModel() {
         </div>
         
         <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div className="glass-card p-8 animate-fade-up" style={{ animationDelay: "0.2s" }}>
+          <div className="glass-card p-8 animate-fade-up bg-white border border-gray-100 rounded-xl shadow-sm" style={{ animationDelay: "0.2s" }}>
             <h3 className="text-2xl font-semibold mb-6 text-bgs-blue">Comment nous générons des rendements</h3>
             
             <ul className="space-y-4">
@@ -39,7 +39,7 @@ export default function BusinessModel() {
           </div>
           
           <div className="space-y-8 animate-fade-up" style={{ animationDelay: "0.3s" }}>
-            <div className="glass-card p-6">
+            <div className="glass-card p-6 bg-white border border-gray-100 rounded-xl shadow-sm">
               <h4 className="text-lg font-semibold mb-2 text-bgs-blue">Exemple concret: BGS Wood Africa</h4>
               <p className="text-bgs-blue/80 mb-4">
                 Investissement dans des tronçonneuses à 1 500 € permettant de générer 15% de rendement mensuel.
@@ -54,7 +54,7 @@ export default function BusinessModel() {
               </div>
             </div>
             
-            <div className="glass-card p-6">
+            <div className="glass-card p-6 bg-white border border-gray-100 rounded-xl shadow-sm">
               <h4 className="text-lg font-semibold mb-2 text-bgs-blue">Sécurité de votre investissement</h4>
               <ul className="space-y-3">
                 {[
