@@ -1,4 +1,3 @@
-
 import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
@@ -7,6 +6,7 @@ import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { Calendar, MapPin, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
+import { formatCurrency } from "@/utils/currencyUtils";
 
 // Prefetch critical paths - using dynamic imports instead of direct imports
 const WalletTab = lazy(() => import("./tabs/WalletTab"));
@@ -167,7 +167,11 @@ export default function TabContent({
                           <div className="flex justify-between items-center mt-4">
                             <div>
                               <p className="text-xs text-bgs-gray-medium">Investissement min</p>
-                              <p className="font-semibold">{project.amount?.toLocaleString() || 0} €</p>
+                              <p className="font-semibold">
+                                {project.min_investment || project.amount 
+                                  ? formatCurrency(project.min_investment || project.amount) 
+                                  : "N/A"}
+                              </p>
                             </div>
                             <Link
                               to={`/project/${project.id}`}

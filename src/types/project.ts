@@ -8,11 +8,12 @@ export interface Project {
   updated_at?: string;
   category?: string;
   amount?: number;
-  duration?: number;
+  duration?: number | string;
   yield_rate?: number;
   image_url?: string;
   owner_id?: string;
   location?: string;
   risk_level?: string;
+  min_investment?: number;
   [key: string]: any;
 }
