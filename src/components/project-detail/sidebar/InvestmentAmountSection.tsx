@@ -1,6 +1,5 @@
 
 import React from "react";
-import { formatCurrency } from "@/utils/currencyUtils";
 
 interface InvestmentAmountSectionProps {
   minInvestment: number;
@@ -61,7 +60,7 @@ export default function InvestmentAmountSection({
       </div>
       
       <p className="text-xs text-bgs-blue/70 mt-1">
-        Min: {formatCurrency(minInvestment)} • Max: {formatCurrency(maxInvestment)}
+        Min: {minInvestment}€ • Max: {maxInvestment}€
       </p>
     </div>
   );
