@@ -1,8 +1,14 @@
 
 import React from "react";
 import { Project } from "@/types/project";
-import { TrendingUp, Clock, Calculator } from "lucide-react";
+import { TrendingUp, Clock, Calculator, Info } from "lucide-react";
 import { formatCurrency } from "@/utils/currencyUtils";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface InvestmentSummaryProps {
   project: Project;
@@ -28,10 +34,9 @@ export default function InvestmentSummary({
   // Calculate correct monthly return based on investment amount and yield percentage
   const correctMonthlyReturn = investmentAmount * (project.yield / 100);
   
-  // Calculate the correct total return
-  // This should be: initial investment + (monthly returns × effective months)
+  // Calculate the correct total return - ONLY the accumulated returns, not including initial investment
   const effectiveMonths = Math.max(0, duration - firstPaymentDelay);
-  const correctTotalReturn = investmentAmount + (correctMonthlyReturn * effectiveMonths);
+  const correctTotalReturn = correctMonthlyReturn * effectiveMonths;
   
   return (
     <div className="bg-gradient-to-br from-white to-bgs-gray-light p-4 rounded-lg mb-4 shadow-sm border border-gray-100">
@@ -93,7 +98,19 @@ export default function InvestmentSummary({
             <div className="bg-purple-100 p-1.5 rounded-lg">
               <Calculator size={14} className="text-purple-600" />
             </div>
-            <span>Total sur la période</span>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-1">
+                    <span>Total des revenus</span>
+                    <Info size={16} className="text-purple-600" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white p-2 border border-gray-200 shadow-md text-xs">
+                  <p>Uniquement les revenus générés sur la période</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
           <span className="font-semibold text-purple-600">{formatCurrency(correctTotalReturn)}</span>
         </div>
