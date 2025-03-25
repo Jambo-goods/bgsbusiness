@@ -1,3 +1,4 @@
+
 import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
@@ -112,7 +113,7 @@ export default function TabContent({
                         <div className="relative h-48 overflow-hidden">
                           <img 
                             src={project.image_url || "https://via.placeholder.com/400x300?text=Projet+BGS"} 
-                            alt={project.title || "Projet d'investissement"} 
+                            alt={project.name || "Projet d'investissement"} 
                             className="w-full h-full object-cover transition-transform hover:scale-105 duration-700"
                           />
                           {project.status && (
@@ -130,19 +131,19 @@ export default function TabContent({
                           )}
                         </div>
                         <div className="p-6">
-                          <h3 className="text-xl font-semibold mb-2">{project.title || "Projet sans titre"}</h3>
+                          <h3 className="text-xl font-semibold mb-2">{project.name || "Projet sans titre"}</h3>
                           {project.category && (
                             <p className="text-sm text-bgs-gray-medium mb-2">{project.category}</p>
                           )}
                           <p className="text-bgs-blue/80 mb-4 line-clamp-2">{project.description || "Aucune description disponible"}</p>
                           
                           <div className="grid grid-cols-2 gap-4 mb-4">
-                            {project.yield_rate !== undefined && (
+                            {project.yield !== undefined && (
                               <div className="flex items-center gap-2">
                                 <TrendingUp size={18} className="text-bgs-orange" />
                                 <div>
                                   <p className="text-xs text-bgs-gray-medium">Rentabilité</p>
-                                  <p className="font-semibold">{project.yield_rate}%</p>
+                                  <p className="font-semibold">{project.yield}%</p>
                                 </div>
                               </div>
                             )}
