@@ -54,6 +54,7 @@ export default function TabContent({
           setLoading(true);
           // Load projects directly from utils
           const projects = await fetchProjectsFromDatabase();
+          console.log("Projects loaded:", projects);
           setDbProjects(projects || []);
           setLoading(false);
         }
@@ -112,7 +113,7 @@ export default function TabContent({
                       <div key={project.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-all duration-300">
                         <div className="relative h-48 overflow-hidden">
                           <img 
-                            src={project.image_url || "https://via.placeholder.com/400x300?text=Projet+BGS"} 
+                            src={project.image || "https://via.placeholder.com/400x300?text=Projet+BGS"} 
                             alt={project.name || "Projet d'investissement"} 
                             className="w-full h-full object-cover transition-transform hover:scale-105 duration-700"
                           />
