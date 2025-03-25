@@ -7,7 +7,6 @@ import { Save, RefreshCw } from "lucide-react";
 
 // Import our new components
 import LanguageSection from "./settings/LanguageSection";
-import ThemeSection from "./settings/ThemeSection";
 import InterfaceSection from "./settings/InterfaceSection";
 import SecuritySection from "./settings/SecuritySection";
 import NotificationsSection from "./settings/NotificationsSection";
@@ -73,13 +72,6 @@ export default function SettingsTab() {
     }));
   };
 
-  const handleThemeChange = (theme: string) => {
-    setSettings(prev => ({
-      ...prev,
-      theme
-    }));
-  };
-
   // Password change handler
   const handlePasswordChange = async (currentPassword: string, newPassword: string): Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -137,14 +129,6 @@ export default function SettingsTab() {
           <LanguageSection 
             selectedLanguage={settings.language}
             onLanguageChange={handleLanguageChange}
-          />
-
-          <Separator />
-          
-          {/* Theme Section */}
-          <ThemeSection 
-            selectedTheme={settings.theme}
-            onThemeChange={handleThemeChange}
           />
 
           <Separator />
