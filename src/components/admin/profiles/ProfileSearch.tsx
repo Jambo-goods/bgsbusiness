@@ -1,25 +1,25 @@
 
 import React from 'react';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
 
 interface ProfileSearchProps {
   searchTerm: string;
-  setSearchTerm: (term: string) => void;
+  setSearchTerm: (value: string) => void;
 }
 
 const ProfileSearch: React.FC<ProfileSearchProps> = ({ searchTerm, setSearchTerm }) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
   return (
-    <div className="relative">
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-      <Input
-        type="text"
-        placeholder="Rechercher par nom, prénom ou email..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="pl-10"
-      />
-    </div>
+    <Input
+      type="text"
+      placeholder="Rechercher par nom, email..."
+      value={searchTerm}
+      onChange={handleChange}
+      className="pl-10 w-full max-w-md"
+    />
   );
 };
 
