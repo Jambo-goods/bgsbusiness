@@ -86,8 +86,8 @@ export default function ProfilesTable({
 
   return (
     <>
-      <div className="overflow-x-auto">
-        <Table>
+      <div className="overflow-x-auto w-full relative">
+        <Table className="min-w-full">
           <TableHeader>
             <TableRow>
               <TableHead>Email</TableHead>
@@ -109,7 +109,7 @@ export default function ProfilesTable({
             ) : (
               filteredProfiles.map((profile) => (
                 <TableRow key={profile.id}>
-                  <TableCell>{profile.email || '-'}</TableCell>
+                  <TableCell className="max-w-[200px] truncate">{profile.email || '-'}</TableCell>
                   <TableCell>{profile.first_name || '-'}</TableCell>
                   <TableCell>{profile.last_name || '-'}</TableCell>
                   <TableCell>
@@ -123,7 +123,7 @@ export default function ProfilesTable({
                   <TableCell>
                     {profile.last_active_at ? new Date(profile.last_active_at).toLocaleDateString('fr-FR') : '-'}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right whitespace-nowrap">
                     <div className="flex justify-end space-x-2">
                       <Button 
                         variant="outline" 
