@@ -9,7 +9,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Eye, Wallet, ArrowUp, ArrowDown, RefreshCw, Info } from 'lucide-react';
+import { Eye, Wallet, Plus, Minus, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from "sonner";
 import UserStatusBadge from '@/components/admin/users/UserStatusBadge';
@@ -89,48 +89,38 @@ export default function ProfilesTable({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Email</TableHead>
             <TableHead>Prénom</TableHead>
             <TableHead>Nom</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Téléphone</TableHead>
+            <TableHead>Solde</TableHead>
             <TableHead>Date d'inscription</TableHead>
-            <TableHead>Durée d'inactivité</TableHead>
-            <TableHead>Solde portefeuille</TableHead>
-            <TableHead>Statut</TableHead>
+            <TableHead>Dernière activité</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {filteredProfiles.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} className="text-center py-8 text-gray-500">
+              <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                 Aucun utilisateur trouvé
               </TableCell>
             </TableRow>
           ) : (
             filteredProfiles.map((profile) => (
               <TableRow key={profile.id}>
+                <TableCell>{profile.email || '-'}</TableCell>
                 <TableCell>{profile.first_name || '-'}</TableCell>
                 <TableCell>{profile.last_name || '-'}</TableCell>
-                <TableCell>{profile.email || '-'}</TableCell>
-                <TableCell>{profile.phone || '-'}</TableCell>
-                <TableCell>
-                  {profile.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR') : '-'}
-                </TableCell>
-                <TableCell>
-                  {calculateInactivityTime(profile.last_active_at, profile.created_at)}
-                </TableCell>
                 <TableCell>
                   {profile.wallet_balance !== undefined && profile.wallet_balance !== null 
                     ? `${profile.wallet_balance.toLocaleString()} €` 
                     : '-'}
                 </TableCell>
                 <TableCell>
-                  <UserStatusBadge 
-                    status={profile.last_active_at && new Date(profile.last_active_at).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000 
-                      ? 'active' 
-                      : 'inactive'} 
-                  />
+                  {profile.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR') : '-'}
+                </TableCell>
+                <TableCell>
+                  {profile.last_active_at ? new Date(profile.last_active_at).toLocaleDateString('fr-FR') : '-'}
                 </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
@@ -139,9 +129,8 @@ export default function ProfilesTable({
                       size="sm" 
                       onClick={() => handleAddFunds(profile)}
                       title="Gérer les fonds"
-                      className="flex items-center gap-1"
                     >
-                      <Wallet className="h-4 w-4" />
+                      <Wallet className="h-4 w-4 mr-1" />
                       Fonds
                     </Button>
                     <Button 
