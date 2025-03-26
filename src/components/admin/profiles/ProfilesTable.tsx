@@ -13,8 +13,8 @@ import { Eye, Wallet, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import UserStatusBadge from '@/components/admin/users/UserStatusBadge';
 import { calculateInactivityTime } from '@/utils/inactivityCalculator';
-import AddFundsDialog from './funds/AddFundsDialog';
 import { Profile } from './types';
+import AddFundsDialog from './funds/AddFundsDialog';
 
 interface ProfilesTableProps {
   profiles: Profile[];
@@ -29,17 +29,12 @@ export default function ProfilesTable({
 }: ProfilesTableProps) {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
+  const [amount, setAmount] = useState('');
 
   const handleAddFunds = (profile: Profile) => {
     setSelectedProfile(profile);
     setIsAddFundsOpen(true);
-  };
-
-  const handleFundsAdded = () => {
-    // This would be handled by the parent component's refresh function
-    // For now we just close the dialog
-    setIsAddFundsOpen(false);
-    setSelectedProfile(null);
+    setAmount('');
   };
 
   if (isLoading) {
@@ -138,7 +133,7 @@ export default function ProfilesTable({
           userId={selectedProfile.id}
           userName={`${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`}
           currentBalance={selectedProfile.wallet_balance || 0}
-          onSuccess={handleFundsAdded}
+          onSuccess={() => setIsAddFundsOpen(false)}
           onClose={() => setIsAddFundsOpen(false)}
         />
       )}
