@@ -108,6 +108,9 @@ export const useAddFunds = ({
       toast.error(error.message || 'Erreur lors de l\'opération');
     } finally {
       setIsProcessing(false);
+      if (onClose) {
+        onClose();
+      }
     }
   };
 

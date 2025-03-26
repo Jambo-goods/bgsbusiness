@@ -113,7 +113,7 @@ export default function ProfilesTable({
                 <TableCell>{profile.last_name || '-'}</TableCell>
                 <TableCell>
                   {profile.wallet_balance !== undefined && profile.wallet_balance !== null 
-                    ? `${profile.wallet_balance.toLocaleString()} €` 
+                    ? `${profile.wallet_balance} €` 
                     : '-'}
                 </TableCell>
                 <TableCell>
