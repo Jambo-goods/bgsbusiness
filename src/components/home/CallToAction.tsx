@@ -1,5 +1,4 @@
 
-import { CircleArrowDown } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function CallToAction() {
@@ -22,7 +21,6 @@ export default function CallToAction() {
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             <Link to="/register" className="btn-primary group">
               Créez votre compte
-              <CircleArrowDown size={18} className="ml-2 transition-transform group-hover:translate-y-1" />
             </Link>
             <Link to="/how-it-works" className="btn-secondary">
               En savoir plus
