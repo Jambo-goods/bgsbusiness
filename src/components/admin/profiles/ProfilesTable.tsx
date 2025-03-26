@@ -9,12 +9,14 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Eye, Wallet, Info } from 'lucide-react';
+import { Eye, Wallet, ArrowUp, ArrowDown, RefreshCw, Info } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from "sonner";
 import UserStatusBadge from '@/components/admin/users/UserStatusBadge';
 import { calculateInactivityTime } from '@/utils/inactivityCalculator';
 import { Profile } from './types';
 import AddFundsDialog from './funds/AddFundsDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProfilesTableProps {
   profiles: Profile[];
@@ -30,11 +32,41 @@ export default function ProfilesTable({
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
   const [amount, setAmount] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAddFunds = (profile: Profile) => {
     setSelectedProfile(profile);
     setIsAddFundsOpen(true);
     setAmount('');
+  };
+
+  const handleFundsSuccess = async () => {
+    setIsAddFundsOpen(false);
+    
+    // Refresh the profile data after funds are added/removed
+    try {
+      if (selectedProfile) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', selectedProfile.id)
+          .single();
+          
+        if (error) throw error;
+        
+        // Update the selected profile in the state
+        if (data) {
+          toast.success("Opération réussie", {
+            description: "Le solde du portefeuille a été mis à jour"
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error refreshing profile data:", error);
+      toast.error("Erreur lors de la mise à jour", {
+        description: "Veuillez rafraîchir la page pour voir les changements"
+      });
+    }
   };
 
   if (isLoading) {
@@ -106,9 +138,11 @@ export default function ProfilesTable({
                       variant="outline" 
                       size="sm" 
                       onClick={() => handleAddFunds(profile)}
-                      title="Ajouter des fonds"
+                      title="Gérer les fonds"
+                      className="flex items-center gap-1"
                     >
                       <Wallet className="h-4 w-4" />
+                      Fonds
                     </Button>
                     <Button 
                       variant="outline" 
@@ -133,7 +167,7 @@ export default function ProfilesTable({
           userId={selectedProfile.id}
           userName={`${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`}
           currentBalance={selectedProfile.wallet_balance || 0}
-          onSuccess={() => setIsAddFundsOpen(false)}
+          onSuccess={handleFundsSuccess}
           onClose={() => setIsAddFundsOpen(false)}
         />
       )}
