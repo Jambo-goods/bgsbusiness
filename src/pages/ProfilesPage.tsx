@@ -1,14 +1,19 @@
+
 import React, { useState, useEffect } from 'react';
 import useProfiles from '@/hooks/useProfiles';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCcw, Search, Pencil, UserRound } from 'lucide-react';
+import { Profile } from '@/components/admin/profiles/types';
+import EditProfileDialog from '@/components/admin/profiles/EditProfileDialog';
 
 const ProfilesPage: React.FC = () => {
   const { profiles, isLoading, error, fetchProfiles } = useProfiles();
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredProfiles, setFilteredProfiles] = useState(profiles);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
 
   useEffect(() => {
     const filtered = profiles.filter(profile => 
@@ -28,7 +33,16 @@ const ProfilesPage: React.FC = () => {
   };
 
   const handleEdit = (profileId: string) => {
-    console.log('Edit profile:', profileId);
+    const profile = profiles.find(p => p.id === profileId);
+    if (profile) {
+      setSelectedProfile(profile);
+      setIsEditProfileOpen(true);
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditProfileOpen(false);
+    fetchProfiles(); // Rafraîchir les données après modification
   };
 
   const handleViewProfile = (profileId: string) => {
@@ -124,6 +138,15 @@ const ProfilesPage: React.FC = () => {
           </TableBody>
         </Table>
       </div>
+
+      {selectedProfile && (
+        <EditProfileDialog
+          isOpen={isEditProfileOpen}
+          onOpenChange={setIsEditProfileOpen}
+          profile={selectedProfile}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </div>
   );
 };
