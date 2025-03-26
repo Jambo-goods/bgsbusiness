@@ -1,44 +1,32 @@
 
 import React from 'react';
-
-type StatusType = 'active' | 'inactive' | 'suspended';
+import { Badge } from '@/components/ui/badge';
+import { User } from 'lucide-react';
 
 interface UserStatusBadgeProps {
-  status: StatusType;
+  status: 'active' | 'inactive' | 'suspended';
 }
 
-const UserStatusBadge: React.FC<UserStatusBadgeProps> = ({ status }) => {
-  const getStatusStyles = () => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-800';
-      case 'inactive':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'suspended':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusText = () => {
-    switch (status) {
-      case 'active':
-        return 'Actif';
-      case 'inactive':
-        return 'Inactif';
-      case 'suspended':
-        return 'Suspendu';
-      default:
-        return 'Inconnu';
-    }
-  };
-
+export default function UserStatusBadge({ status }: UserStatusBadgeProps) {
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusStyles()}`}>
-      {getStatusText()}
-    </span>
+    <Badge 
+      variant="secondary"
+      className={`flex items-center gap-1 ${
+        status === 'active' 
+          ? 'bg-green-100 text-green-800' 
+          : status === 'inactive'
+            ? 'bg-gray-200 text-gray-800'
+            : 'bg-red-100 text-red-800'
+      }`}
+    >
+      <User className="h-3 w-3" />
+      <span>
+        {status === 'active' 
+          ? 'Actif' 
+          : status === 'inactive' 
+            ? 'Inactif' 
+            : 'Suspendu'}
+      </span>
+    </Badge>
   );
-};
-
-export default UserStatusBadge;
+}
