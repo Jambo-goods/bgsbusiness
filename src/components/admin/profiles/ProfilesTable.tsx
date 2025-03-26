@@ -9,13 +9,14 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, Eye, RefreshCw } from 'lucide-react';
+import { Wallet, Eye, RefreshCw, Pencil } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from "sonner";
 import UserStatusBadge from '@/components/admin/users/UserStatusBadge';
 import { calculateInactivityTime } from '@/utils/inactivityCalculator';
 import { Profile } from './types';
 import AddFundsDialog from './funds/AddFundsDialog';
+import EditProfileDialog from './EditProfileDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ProfilesTableProps {
@@ -31,6 +32,7 @@ export default function ProfilesTable({
 }: ProfilesTableProps) {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -38,6 +40,11 @@ export default function ProfilesTable({
     setSelectedProfile(profile);
     setIsAddFundsOpen(true);
     setAmount('');
+  };
+
+  const handleEditProfile = (profile: Profile) => {
+    setSelectedProfile(profile);
+    setIsEditProfileOpen(true);
   };
 
   const handleFundsSuccess = async () => {
@@ -138,6 +145,14 @@ export default function ProfilesTable({
                         <Button 
                           variant="outline" 
                           size="sm" 
+                          onClick={() => handleEditProfile(profile)}
+                          title="Modifier le profil"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
                           onClick={() => {/* View profile details would go here */}}
                           title="Voir le profil"
                         >
@@ -154,15 +169,27 @@ export default function ProfilesTable({
       </div>
 
       {selectedProfile && (
-        <AddFundsDialog
-          isOpen={isAddFundsOpen}
-          onOpenChange={setIsAddFundsOpen}
-          userId={selectedProfile.id}
-          userName={`${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`}
-          currentBalance={selectedProfile.wallet_balance || 0}
-          onSuccess={handleFundsSuccess}
-          onClose={() => setIsAddFundsOpen(false)}
-        />
+        <>
+          <AddFundsDialog
+            isOpen={isAddFundsOpen}
+            onOpenChange={setIsAddFundsOpen}
+            userId={selectedProfile.id}
+            userName={`${selectedProfile.first_name || ''} ${selectedProfile.last_name || ''}`}
+            currentBalance={selectedProfile.wallet_balance || 0}
+            onSuccess={handleFundsSuccess}
+            onClose={() => setIsAddFundsOpen(false)}
+          />
+          
+          <EditProfileDialog
+            isOpen={isEditProfileOpen}
+            onOpenChange={setIsEditProfileOpen}
+            profile={selectedProfile}
+            onSuccess={() => {
+              // Refresh profile data
+              window.location.reload();
+            }}
+          />
+        </>
       )}
     </>
   );
