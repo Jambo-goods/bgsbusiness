@@ -6,7 +6,6 @@ import AddFundsDialog from '@/components/admin/profiles/funds/AddFundsDialog';
 import ProfileSearch from '@/components/admin/profiles/ProfileSearch';
 import ProfileHeader from '@/components/admin/profiles/ProfileHeader';
 import LoadingState from '@/components/admin/profiles/LoadingState';
-import { Search } from 'lucide-react';
 
 export default function ProfileManagement() {
   const {
@@ -35,15 +34,10 @@ export default function ProfileManagement() {
         onRefresh={handleRefresh}
       />
 
-      <div className="relative">
-        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-          <Search className="h-4 w-4 text-gray-400" />
-        </div>
-        <ProfileSearch 
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-        />
-      </div>
+      <ProfileSearch 
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+      />
 
       <div className="bg-white rounded-md shadow">
         {isLoading ? (
