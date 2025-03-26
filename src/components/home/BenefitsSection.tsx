@@ -26,7 +26,7 @@ export default function BenefitsSection() {
     {
       icon: <TrendingUp size={32} className="text-bgs-orange" />,
       title: "Rendements attractifs",
-      description: "Bénéficiez de rendements élevés, à partir de 12% annualisés sur vos investissements."
+      description: "Bénéficiez de rendements élevés, à partir de 5% mensualisé sur vos investissements."
     },
     {
       icon: <ShieldCheck size={32} className="text-bgs-orange" />,
