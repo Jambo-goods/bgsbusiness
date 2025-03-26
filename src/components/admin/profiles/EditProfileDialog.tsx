@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from './types';
+import { formatCurrency } from '@/utils/currencyUtils';
 
 interface EditProfileDialogProps {
   isOpen: boolean;
@@ -27,7 +28,9 @@ export default function EditProfileDialog({
   const [email, setEmail] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
   const [address, setAddress] = useState<string>('');
+  const [walletBalance, setWalletBalance] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [originalBalance, setOriginalBalance] = useState<number>(0);
 
   useEffect(() => {
     if (profile) {
@@ -36,6 +39,8 @@ export default function EditProfileDialog({
       setEmail(profile.email || '');
       setPhone(profile.phone || '');
       setAddress(profile.address || '');
+      setWalletBalance(profile.wallet_balance?.toString() || '0');
+      setOriginalBalance(profile.wallet_balance || 0);
     }
   }, [profile]);
 
@@ -47,6 +52,9 @@ export default function EditProfileDialog({
     setIsProcessing(true);
     
     try {
+      const balanceValue = parseFloat(walletBalance);
+      
+      // Update profile information
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -55,11 +63,32 @@ export default function EditProfileDialog({
           email: email,
           phone: phone,
           address: address,
+          wallet_balance: balanceValue,
           updated_at: new Date().toISOString()
         })
         .eq('id', profile.id);
       
       if (error) throw error;
+      
+      // If balance was changed, create a transaction record
+      if (balanceValue !== originalBalance) {
+        const difference = balanceValue - originalBalance;
+        
+        const { error: transactionError } = await supabase
+          .from('wallet_transactions')
+          .insert({
+            user_id: profile.id,
+            amount: Math.abs(difference),
+            type: difference > 0 ? 'deposit' : 'withdrawal',
+            status: 'completed',
+            description: `Modification manuelle du solde par administrateur (${difference > 0 ? 'ajout' : 'retrait'})`
+          });
+          
+        if (transactionError) {
+          console.error('Error creating transaction record:', transactionError);
+          // Continue anyway as the balance was already updated
+        }
+      }
       
       toast.success('Profil mis à jour avec succès');
       onSuccess();
@@ -131,6 +160,26 @@ export default function EditProfileDialog({
               onChange={(e) => setAddress(e.target.value)}
               placeholder="Adresse"
             />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="walletBalance">Solde du portefeuille (€)</Label>
+            <Input
+              id="walletBalance"
+              type="number"
+              step="0.01"
+              value={walletBalance}
+              onChange={(e) => setWalletBalance(e.target.value)}
+              placeholder="Solde du portefeuille"
+            />
+            {originalBalance !== parseFloat(walletBalance || '0') && (
+              <p className="text-xs text-amber-600 mt-1">
+                {parseFloat(walletBalance || '0') > originalBalance 
+                  ? `+${formatCurrency(parseFloat(walletBalance || '0') - originalBalance)}` 
+                  : formatCurrency(parseFloat(walletBalance || '0') - originalBalance)}
+                {" "}(Modification du solde)
+              </p>
+            )}
           </div>
           
           <DialogFooter>
