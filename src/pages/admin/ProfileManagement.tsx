@@ -2,7 +2,7 @@
 import React from 'react';
 import { useProfileManagement } from '@/components/admin/profiles/useProfileManagement';
 import ProfilesTable from '@/components/admin/profiles/ProfilesTable';
-import AddFundsDialog from '@/components/admin/profiles/AddFundsDialog';
+import AddFundsDialog from '@/components/admin/profiles/funds/AddFundsDialog';
 import ProfileSearch from '@/components/admin/profiles/ProfileSearch';
 import ProfileHeader from '@/components/admin/profiles/ProfileHeader';
 import LoadingState from '@/components/admin/profiles/LoadingState';
