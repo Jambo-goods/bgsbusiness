@@ -4,7 +4,7 @@ import useProfiles from '@/hooks/useProfiles';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCcw, Search, Pencil, UserRound } from 'lucide-react';
+import { Loader2, RefreshCcw, Search, Pencil } from 'lucide-react';
 import { Profile } from '@/components/admin/profiles/types';
 import EditProfileDialog from '@/components/admin/profiles/EditProfileDialog';
 
@@ -43,10 +43,6 @@ const ProfilesPage: React.FC = () => {
   const handleEditSuccess = () => {
     setIsEditProfileOpen(false);
     fetchProfiles(); // Rafraîchir les données après modification
-  };
-
-  const handleViewProfile = (profileId: string) => {
-    console.log('View profile:', profileId);
   };
 
   return (
@@ -120,15 +116,6 @@ const ProfilesPage: React.FC = () => {
                         title="Modifier l'utilisateur"
                       >
                         <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleViewProfile(profile.id)}
-                        title="Voir le profil de l'utilisateur"
-                      >
-                        <UserRound className="h-4 w-4 mr-1" />
-                        Profil
                       </Button>
                     </div>
                   </TableCell>
