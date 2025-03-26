@@ -102,10 +102,10 @@ const ProfilesPage: React.FC = () => {
                       variant="outline" 
                       size="sm" 
                       onClick={() => handleEdit(profile.id)}
-                      title="Voir le profil de l'utilisateur"
+                      title="Modifier l'utilisateur"
                     >
                       <Pencil className="h-4 w-4 mr-1" />
-                      Profil
+                      Modifier
                     </Button>
                   </TableCell>
                 </TableRow>
