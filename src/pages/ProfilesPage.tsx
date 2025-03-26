@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import useProfiles from '@/hooks/useProfiles';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,7 +11,6 @@ const ProfilesPage: React.FC = () => {
   const [filteredProfiles, setFilteredProfiles] = useState(profiles);
 
   useEffect(() => {
-    // Filter profiles based on search term
     const filtered = profiles.filter(profile => 
       profile.email?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       profile.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -30,15 +28,11 @@ const ProfilesPage: React.FC = () => {
   };
 
   const handleEdit = (profileId: string) => {
-    // This function will be implemented later for editing profiles
     console.log('Edit profile:', profileId);
-    // You could navigate to an edit page or open a modal here
   };
 
   const handleViewProfile = (profileId: string) => {
-    // Function to view user profile details
     console.log('View profile:', profileId);
-    // You could navigate to a profile detail page or open a modal here
   };
 
   return (
@@ -111,8 +105,7 @@ const ProfilesPage: React.FC = () => {
                         onClick={() => handleEdit(profile.id)}
                         title="Modifier l'utilisateur"
                       >
-                        <Pencil className="h-4 w-4 mr-1" />
-                        Modifier
+                        <Pencil className="h-4 w-4" />
                       </Button>
                       <Button 
                         variant="outline" 
