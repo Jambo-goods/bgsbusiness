@@ -4,7 +4,7 @@ import useProfiles from '@/hooks/useProfiles';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCcw, Search } from 'lucide-react';
+import { Loader2, RefreshCcw, Search, Pencil } from 'lucide-react';
 
 const ProfilesPage: React.FC = () => {
   const { profiles, isLoading, error, fetchProfiles } = useProfiles();
@@ -27,6 +27,12 @@ const ProfilesPage: React.FC = () => {
 
   const refreshProfiles = async () => {
     await fetchProfiles();
+  };
+
+  const handleEdit = (profileId: string) => {
+    // This function will be implemented later for editing profiles
+    console.log('Edit profile:', profileId);
+    // You could navigate to an edit page or open a modal here
   };
 
   return (
@@ -66,18 +72,19 @@ const ProfilesPage: React.FC = () => {
               <TableHead>Solde</TableHead>
               <TableHead>Date d'inscription</TableHead>
               <TableHead>Dernière activité</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
+                <TableCell colSpan={7} className="text-center py-10">
                   <Loader2 className="animate-spin h-6 w-6 mx-auto text-gray-400" />
                 </TableCell>
               </TableRow>
             ) : filteredProfiles.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-6 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-6 text-gray-500">
                   {searchTerm ? "Aucun résultat pour cette recherche" : "Aucun profil trouvé"}
                 </TableCell>
               </TableRow>
@@ -90,6 +97,17 @@ const ProfilesPage: React.FC = () => {
                   <TableCell>{profile.wallet_balance ? `${profile.wallet_balance} €` : '0 €'}</TableCell>
                   <TableCell>{profile.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR') : 'N/A'}</TableCell>
                   <TableCell>{profile.last_active_at ? new Date(profile.last_active_at).toLocaleDateString('fr-FR') : 'N/A'}</TableCell>
+                  <TableCell className="text-right">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleEdit(profile.id)}
+                      title="Modifier l'utilisateur"
+                    >
+                      <Pencil className="h-4 w-4 mr-1" />
+                      Modifier
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))
             )}
