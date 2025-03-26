@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { 
   Facebook, 
@@ -12,6 +11,7 @@ import {
 import { useEffect, useState } from "react";
 
 export default function Footer() {
+  // We're keeping the state variable but removing the button that uses it
   const [showScrollTop, setShowScrollTop] = useState(false);
   
   useEffect(() => {
@@ -36,16 +36,7 @@ export default function Footer() {
   
   return (
     <footer className="bg-gradient-to-r from-bgs-blue/95 to-bgs-blue text-white pt-12 pb-6 mt-auto relative">
-      {/* Scroll to top button */}
-      {showScrollTop && (
-        <button 
-          onClick={scrollToTop}
-          className="absolute -top-5 right-8 bg-bgs-orange p-3 rounded-full shadow-lg hover:bg-bgs-orange-light transition-all duration-300 transform hover:-translate-y-1"
-          aria-label="Retour en haut"
-        >
-          <ArrowUp className="h-5 w-5 text-white" />
-        </button>
-      )}
+      {/* Removed the scroll to top button */}
       
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
