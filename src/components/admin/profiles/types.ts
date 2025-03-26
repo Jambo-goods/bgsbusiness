@@ -9,5 +9,6 @@ export type Profile = {
   projects_count: number | null;
   investment_total: number | null;
   created_at: string | null;
+  last_active_at?: string | null;
   online_status?: 'online' | 'offline';
 };

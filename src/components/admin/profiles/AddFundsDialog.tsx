@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,11 +18,11 @@ import { supabase } from "@/integrations/supabase/client";
 export interface AddFundsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  amountToAdd?: string;
-  setAmountToAdd?: (amount: string) => void;
-  handleAddFundsToAll?: () => Promise<void>;
-  isProcessing?: boolean;
-  totalProfiles?: number;
+  amountToAdd: string;
+  setAmountToAdd: (amount: string) => void;
+  handleAddFundsToAll: () => Promise<void>;
+  isProcessing: boolean;
+  totalProfiles: number;
   userId?: string;
   userName?: string;
   currentBalance?: number;
@@ -33,11 +33,11 @@ export interface AddFundsDialogProps {
 export default function AddFundsDialog({
   isOpen,
   onOpenChange,
-  amountToAdd = '',
-  setAmountToAdd = () => {},
+  amountToAdd,
+  setAmountToAdd,
   handleAddFundsToAll,
-  isProcessing = false,
-  totalProfiles = 0,
+  isProcessing,
+  totalProfiles,
   userId,
   userName,
   currentBalance = 0,
@@ -46,40 +46,35 @@ export default function AddFundsDialog({
 }: AddFundsDialogProps) {
   const [operation, setOperation] = useState<'add' | 'subtract'>('add');
   const [description, setDescription] = useState('');
-  const [localAmountToAdd, setLocalAmountToAdd] = useState(amountToAdd);
   const isSingleUser = !!userId;
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setLocalAmountToAdd(value);
-    if (setAmountToAdd) {
-      setAmountToAdd(value);
-    }
+    setAmountToAdd(e.target.value);
   };
 
   const handleSingleUserFunds = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!userId || parseFloat(localAmountToAdd) <= 0) {
+    if (!userId || parseFloat(amountToAdd) <= 0) {
       toast.error("Le montant doit être supérieur à zéro");
       return;
     }
 
-    if (operation === 'subtract' && parseFloat(localAmountToAdd) > currentBalance) {
+    if (operation === 'subtract' && parseFloat(amountToAdd) > currentBalance) {
       toast.error("Le montant à déduire ne peut pas être supérieur au solde actuel");
       return;
     }
 
     try {
       // Calculate the final amount (positive for adding, negative for subtracting)
-      const finalAmount = operation === 'add' ? parseFloat(localAmountToAdd) : -parseFloat(localAmountToAdd);
+      const finalAmount = operation === 'add' ? parseFloat(amountToAdd) : -parseFloat(amountToAdd);
       
       // Create a transaction record
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
           user_id: userId,
-          amount: Math.abs(parseFloat(localAmountToAdd)),
+          amount: Math.abs(parseFloat(amountToAdd)),
           type: operation === 'add' ? 'deposit' : 'withdrawal',
           description: description || `Ajustement manuel par administrateur (${operation === 'add' ? 'ajout' : 'retrait'})`,
           status: 'completed'
@@ -97,7 +92,7 @@ export default function AddFundsDialog({
 
       toast.success(
         `${operation === 'add' ? 'Ajout' : 'Retrait'} de fonds réussi`,
-        { description: `${localAmountToAdd} € ont été ${operation === 'add' ? 'ajoutés au' : 'retirés du'} compte.` }
+        { description: `${amountToAdd} € ont été ${operation === 'add' ? 'ajoutés au' : 'retirés du'} compte.` }
       );
       
       if (onSuccess) onSuccess();
@@ -116,7 +111,7 @@ export default function AddFundsDialog({
     e.preventDefault();
     if (isSingleUser) {
       handleSingleUserFunds(e);
-    } else if (handleAddFundsToAll) {
+    } else {
       handleAddFundsToAll();
     }
   };
@@ -163,7 +158,7 @@ export default function AddFundsDialog({
               type="number"
               min="0"
               step="0.01"
-              value={localAmountToAdd}
+              value={amountToAdd}
               onChange={handleAmountChange}
               required
             />
@@ -192,7 +187,7 @@ export default function AddFundsDialog({
             </Button>
             <Button 
               type="submit"
-              disabled={isProcessing || parseFloat(localAmountToAdd) <= 0}
+              disabled={isProcessing || parseFloat(amountToAdd) <= 0}
             >
               {isProcessing ? 'Traitement...' : isSingleUser ? 'Confirmer' : 'Ajouter à tous les comptes'}
             </Button>
