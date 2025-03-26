@@ -4,7 +4,7 @@ import useProfiles from '@/hooks/useProfiles';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCcw, Search, Pencil } from 'lucide-react';
+import { Loader2, RefreshCcw, Search, Pencil, UserRound } from 'lucide-react';
 
 const ProfilesPage: React.FC = () => {
   const { profiles, isLoading, error, fetchProfiles } = useProfiles();
@@ -33,6 +33,12 @@ const ProfilesPage: React.FC = () => {
     // This function will be implemented later for editing profiles
     console.log('Edit profile:', profileId);
     // You could navigate to an edit page or open a modal here
+  };
+
+  const handleViewProfile = (profileId: string) => {
+    // Function to view user profile details
+    console.log('View profile:', profileId);
+    // You could navigate to a profile detail page or open a modal here
   };
 
   return (
@@ -98,15 +104,26 @@ const ProfilesPage: React.FC = () => {
                   <TableCell>{profile.created_at ? new Date(profile.created_at).toLocaleDateString('fr-FR') : 'N/A'}</TableCell>
                   <TableCell>{profile.last_active_at ? new Date(profile.last_active_at).toLocaleDateString('fr-FR') : 'N/A'}</TableCell>
                   <TableCell className="text-right">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleEdit(profile.id)}
-                      title="Modifier l'utilisateur"
-                    >
-                      <Pencil className="h-4 w-4 mr-1" />
-                      Modifier
-                    </Button>
+                    <div className="flex justify-end space-x-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleEdit(profile.id)}
+                        title="Modifier l'utilisateur"
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Modifier
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleViewProfile(profile.id)}
+                        title="Voir le profil de l'utilisateur"
+                      >
+                        <UserRound className="h-4 w-4 mr-1" />
+                        Profil
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
