@@ -3,12 +3,13 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon, Filter, RefreshCw } from 'lucide-react';
+import { CalendarIcon, Filter, RefreshCw, FileCheck, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/utils/currencyUtils';
 
 const ScheduledPaymentsSection = () => {
   const [showPastPayments, setShowPastPayments] = useState(false);
@@ -33,6 +34,13 @@ const ScheduledPaymentsSection = () => {
   const sortedPayments = [...filteredPayments].sort((a, b) => {
     return new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime();
   });
+
+  // Calculate summary stats
+  const paidPayments = scheduledPayments.filter(payment => payment.status === 'paid');
+  const pendingPayments = scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled');
+  
+  const totalPaid = paidPayments.reduce((sum, payment) => sum + (payment.total_scheduled_amount || 0), 0);
+  const totalPending = pendingPayments.reduce((sum, payment) => sum + (payment.total_scheduled_amount || 0), 0);
 
   // Get status badge color and text
   const getStatusBadge = (status: string) => {
@@ -79,6 +87,35 @@ const ScheduledPaymentsSection = () => {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Résumé des versements */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-green-50 rounded-lg border border-green-100 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileCheck className="h-5 w-5 text-green-600" />
+              <span className="text-sm font-medium text-green-700">Versements payés</span>
+            </div>
+            <div className="flex justify-between items-end">
+              <span className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</span>
+              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+                {paidPayments.length} versement{paidPayments.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
+          </div>
+          
+          <div className="bg-amber-50 rounded-lg border border-amber-100 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-5 w-5 text-amber-600" />
+              <span className="text-sm font-medium text-amber-700">Versements à venir</span>
+            </div>
+            <div className="flex justify-between items-end">
+              <span className="text-2xl font-bold text-amber-600">{formatCurrency(totalPending)}</span>
+              <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
+                {pendingPayments.length} versement{pendingPayments.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-10 w-full" />
