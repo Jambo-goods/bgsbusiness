@@ -211,13 +211,13 @@ export function useWalletBalance() {
     }
   };
   
-  // Set up polling with a much lower frequency and respect refresh state
+  // Set up polling with a much less frequent interval (2 minutes)
   useEffect(() => {
     const pollingInterval = setInterval(() => {
       if (userId && !isRefreshing) {
         const timeElapsed = Date.now() - lastUpdateTime;
-        // Only refresh if it's been more than 30 seconds since the last update
-        if (timeElapsed > 30000) {
+        // Only refresh if it's been more than 2 minutes since the last update
+        if (timeElapsed > 120000) {
           console.log("Polling wallet balance");
           fetchWalletBalance(false); // Silent refresh
           
@@ -225,7 +225,7 @@ export function useWalletBalance() {
           checkUnprocessedPayments();
         }
       }
-    }, 30000); // Check every 30 seconds instead of 3
+    }, 120000); // Check every 2 minutes instead of 30 seconds
     
     return () => {
       clearInterval(pollingInterval);

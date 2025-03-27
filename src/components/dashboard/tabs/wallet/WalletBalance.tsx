@@ -111,10 +111,10 @@ export default function WalletBalance({
     };
   }, [refreshBalance]);
   
-  // Force balance refresh on component mount only, removing periodic refresh
+  // Initial fetch only on mount - removing periodic refresh completely
   useEffect(() => {
     if (refreshBalance) {
-      // Initial refresh only, without periodic check
+      // Single refresh on mount
       refreshBalance();
     }
   }, [refreshBalance]);
@@ -135,7 +135,7 @@ export default function WalletBalance({
           <Skeleton className="h-9 w-32 bg-gray-200" />
         ) : (
           <div className="flex items-center text-3xl font-bold text-bgs-blue">
-            {balance?.toLocaleString('fr-FR')} €
+            {balance.toLocaleString('fr-FR')} €
           </div>
         )}
       </div>

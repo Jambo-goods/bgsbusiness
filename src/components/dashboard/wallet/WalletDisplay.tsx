@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { WalletCard } from "./WalletCard";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
@@ -7,24 +7,12 @@ import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 export function WalletDisplay() {
   const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
-  const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // Force refresh every 3 seconds to ensure balance is up-to-date
-  useEffect(() => {
-    const refreshInterval = setInterval(() => {
-      refreshBalance(false); // Silent refresh (no loading state)
-      setLastRefreshed(new Date());
-    }, 3000); // Every 3 seconds
-
-    return () => clearInterval(refreshInterval);
-  }, [refreshBalance]);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
       await refreshBalance(true); // Show loading state for manual refresh
-      setLastRefreshed(new Date());
     } finally {
       setIsRefreshing(false);
     }
