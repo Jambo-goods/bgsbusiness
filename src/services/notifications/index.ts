@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
@@ -51,6 +50,16 @@ class NotificationService {
       .from('notifications')
       .delete()
       .eq('id', notificationId);
+  }
+
+  async deleteAllNotifications(): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+
+    await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userData.user.id);
   }
 
   async getNotifications(): Promise<Notification[]> {

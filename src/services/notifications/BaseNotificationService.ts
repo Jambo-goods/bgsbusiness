@@ -37,6 +37,16 @@ export class BaseNotificationService {
       .eq('id', notificationId);
   }
 
+  async deleteAllNotifications(): Promise<void> {
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+
+    await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userData.user.id);
+  }
+
   async getNotifications(): Promise<Notification[]> {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData?.user) return [];

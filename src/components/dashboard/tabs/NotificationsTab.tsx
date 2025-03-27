@@ -120,6 +120,26 @@ export default function NotificationsTab() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        toast.error("Erreur", { description: "Vous devez être connecté pour effectuer cette action" });
+        return;
+      }
+      
+      await notificationService.deleteAllNotifications();
+      
+      // Update local state
+      setNotifications([]);
+      
+      toast.success("Toutes les notifications ont été supprimées");
+    } catch (error) {
+      console.error("Error deleting all notifications:", error);
+      toast.error("Erreur", { description: "Impossible de supprimer toutes les notifications" });
+    }
+  };
+
   const handleRefresh = async () => {
     await fetchNotifications();
     toast.info("Notifications actualisées");
@@ -163,6 +183,7 @@ export default function NotificationsTab() {
           onRefresh={fetchNotifications}
           onMarkAllAsRead={handleMarkAllAsRead}
           totalCount={notifications.length}
+          onDeleteAll={handleDeleteAll}
         />
       </div>
 

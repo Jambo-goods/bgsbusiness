@@ -1,7 +1,8 @@
 
 import { Button } from "@/components/ui/button";
 import { CheckCircle, RefreshCw, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { notificationService } from "@/services/notifications";
 
 interface NotificationActionsProps {
   unreadCount: number;
@@ -9,6 +10,7 @@ interface NotificationActionsProps {
   onRefresh: () => void;
   onMarkAllAsRead: () => void;
   totalCount: number;
+  onDeleteAll: () => Promise<void>;
 }
 
 export default function NotificationActions({
@@ -16,33 +18,16 @@ export default function NotificationActions({
   isRefreshing,
   onRefresh,
   onMarkAllAsRead,
-  totalCount
+  totalCount,
+  onDeleteAll
 }: NotificationActionsProps) {
   const handleDeleteAll = async () => {
     try {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) return;
-      
-      // Find all notification IDs for this user
-      const { data } = await supabase
-        .from('notifications')
-        .select('id')
-        .eq('user_id', session.session.user.id);
-      
-      if (!data || data.length === 0) return;
-      
-      // Delete by IDs as we can't use direct user_id filtering with delete
-      const ids = data.map(n => n.id);
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .in('id', ids);
-      
-      if (error) throw error;
-      
-      return [];
+      await onDeleteAll();
+      toast.success("Toutes les notifications ont été supprimées");
     } catch (error) {
       console.error("Error deleting all notifications:", error);
+      toast.error("Erreur", { description: "Impossible de supprimer toutes les notifications" });
     }
   };
 
