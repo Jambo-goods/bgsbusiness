@@ -11,6 +11,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/utils/currencyUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from "sonner";
+import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from "@/components/ui/pagination";
 
 const ScheduledPaymentsSection = () => {
   const [showPastPayments, setShowPastPayments] = useState(false);
@@ -19,6 +27,8 @@ const ScheduledPaymentsSection = () => {
   const [projectInvestments, setProjectInvestments] = useState<Record<string, number>>({});
   const [totalProjectInvestments, setTotalProjectInvestments] = useState<Record<string, number>>({});
   const [projectNames, setProjectNames] = useState<Record<string, string>>({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const paymentsPerPage = 10;
   
   const FIXED_INVESTMENTS = {
     "BGS Poules Pondeuses": 2600,
@@ -207,6 +217,15 @@ const ScheduledPaymentsSection = () => {
     return new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime();
   });
 
+  const indexOfLastPayment = currentPage * paymentsPerPage;
+  const indexOfFirstPayment = indexOfLastPayment - paymentsPerPage;
+  const currentPayments = sortedPayments.slice(indexOfFirstPayment, indexOfLastPayment);
+  const totalPages = Math.ceil(sortedPayments.length / paymentsPerPage);
+
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  const goToPrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
+
   const paidPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'paid') : [];
   const pendingPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled') : [];
   
@@ -355,49 +374,84 @@ const ScheduledPaymentsSection = () => {
             <p className="text-xs mt-1">Les paiements apparaîtront ici une fois programmés par l'équipe</p>
           </div>
         ) : (
-          <div className="overflow-x-auto bg-white rounded-md">
-            <Table>
-              <TableHeader className="bg-gray-50">
-                <TableRow>
-                  <TableHead>Projet</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Pourcentage</TableHead>
-                  <TableHead>Montant investi total</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sortedPayments.map((payment) => (
-                  <TableRow key={payment.id} className="bg-white">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center">
-                        {payment.projects?.image && (
-                          <img 
-                            src={payment.projects.image} 
-                            alt={payment.projects?.name} 
-                            className="w-8 h-8 rounded-md object-cover mr-3" 
-                          />
-                        )}
-                        {payment.projects?.name || "Projet inconnu"}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDate(payment.payment_date)}</TableCell>
-                    <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(getTotalInvestmentAmount(payment.project_id))}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(calculatePaymentAmount(payment.percentage, payment.project_id))}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(payment.status)}
-                    </TableCell>
+          <>
+            <div className="overflow-x-auto bg-white rounded-md">
+              <Table>
+                <TableHeader className="bg-gray-50">
+                  <TableRow>
+                    <TableHead>Projet</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Pourcentage</TableHead>
+                    <TableHead>Montant investi total</TableHead>
+                    <TableHead>Montant</TableHead>
+                    <TableHead>Statut</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableHeader>
+                <TableBody>
+                  {currentPayments.map((payment) => (
+                    <TableRow key={payment.id} className="bg-white">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center">
+                          {payment.projects?.image && (
+                            <img 
+                              src={payment.projects.image} 
+                              alt={payment.projects?.name} 
+                              className="w-8 h-8 rounded-md object-cover mr-3" 
+                            />
+                          )}
+                          {payment.projects?.name || "Projet inconnu"}
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatDate(payment.payment_date)}</TableCell>
+                      <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(getTotalInvestmentAmount(payment.project_id))}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(calculatePaymentAmount(payment.percentage, payment.project_id))}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(payment.status)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="mt-4">
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={goToPrevPage} 
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                    
+                    {[...Array(totalPages)].map((_, index) => (
+                      <PaginationItem key={index}>
+                        <PaginationLink 
+                          onClick={() => paginate(index + 1)}
+                          isActive={currentPage === index + 1}
+                        >
+                          {index + 1}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={goToNextPage} 
+                        className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
+          </>
         )}
       </CardContent>
     </Card>
