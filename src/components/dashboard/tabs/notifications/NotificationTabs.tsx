@@ -20,7 +20,7 @@ export default function NotificationTabs({
         value="all" 
         onClick={() => onFilterChange('all')}
         data-state={filter === 'all' ? 'active' : 'inactive'}
-        className={filter === 'all' ? 'data-[state=active]:bg-primary' : ''}
+        className={filter === 'all' ? 'data-[state=active]:bg-bgs-blue text-white' : ''}
       >
         Toutes ({totalCount})
       </TabsTrigger>
@@ -28,7 +28,7 @@ export default function NotificationTabs({
         value="unread" 
         onClick={() => onFilterChange('unread')}
         data-state={filter === 'unread' ? 'active' : 'inactive'}
-        className={filter === 'unread' ? 'data-[state=active]:bg-primary' : ''}
+        className={filter === 'unread' ? 'data-[state=active]:bg-bgs-blue text-white' : ''}
         disabled={unreadCount === 0}
       >
         Non lues ({unreadCount})
