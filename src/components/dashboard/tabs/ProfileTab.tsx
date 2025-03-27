@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, MapPin, Save, RefreshCw, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -226,17 +225,6 @@ export default function ProfileTab({ userData }: ProfileTabProps) {
             <div className="flex items-center gap-3">
               <Shield size={20} className="text-bgs-blue" />
               <span className="font-medium text-bgs-blue">Modifier le mot de passe</span>
-            </div>
-            <span className="text-bgs-gray-medium">&gt;</span>
-          </button>
-          
-          <button 
-            type="button" 
-            className="w-full text-left px-4 py-3 bg-bgs-gray-light rounded-lg hover:bg-bgs-gray-light/80 transition-colors flex justify-between items-center"
-          >
-            <div className="flex items-center gap-3">
-              <Shield size={20} className="text-bgs-blue" />
-              <span className="font-medium text-bgs-blue">Authentification à deux facteurs</span>
             </div>
             <span className="text-bgs-gray-medium">&gt;</span>
           </button>
