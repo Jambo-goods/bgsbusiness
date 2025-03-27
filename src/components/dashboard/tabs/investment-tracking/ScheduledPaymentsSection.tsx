@@ -116,8 +116,26 @@ const ScheduledPaymentsSection = () => {
       return 0;
     }
     
+    // Special case for "BGS Poule Pondeuse" project
+    // Check if the project name contains "Poule Pondeuse" (case insensitive)
+    const isPouleProject = scheduledPayments.some(payment => 
+      payment.project_id === projectId && 
+      payment.projects?.name?.toLowerCase().includes("poule pondeuse")
+    );
+    
     // Get the investment amount for this specific project
-    const investmentAmount = projectInvestments[projectId] || 0;
+    let investmentAmount = projectInvestments[projectId] || 0;
+    
+    // If it's the Poule Pondeuse project, use the total invested amount for this project
+    // This is a fix specifically for the BGS Poule Pondeuse project
+    if (isPouleProject) {
+      // Get the project from the scheduled payments list
+      const project = scheduledPayments.find(p => p.project_id === projectId);
+      // Use the total_invested_amount from the project if available
+      if (project && project.total_invested_amount) {
+        investmentAmount = Number(project.total_invested_amount);
+      }
+    }
     
     // Calculate based on the project-specific investment amount
     return (investmentAmount * percentage) / 100;
