@@ -209,14 +209,6 @@ export default function ProfileTab({ userData }: ProfileTabProps) {
       <div className="bg-white p-6 rounded-xl shadow-sm">
         <h2 className="text-xl font-semibold text-bgs-blue mb-4">Sécurité</h2>
         
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-bgs-blue">Niveau de sécurité</span>
-            <span className="text-sm text-bgs-blue">{securityLevel}%</span>
-          </div>
-          <Progress value={securityLevel} className="h-2" />
-        </div>
-        
         <div className="space-y-4">
           <button 
             type="button" 
