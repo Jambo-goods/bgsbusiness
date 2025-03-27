@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import WalletBalance from "./wallet/WalletBalance";
@@ -19,6 +20,9 @@ export default function WalletTab() {
 
   useEffect(() => {
     checkForMissingDeposit();
+    
+    // Check for unprocessed payments immediately
+    checkForUnprocessedPayments();
   }, []);
 
   const checkForMissingDeposit = async () => {
@@ -76,63 +80,60 @@ export default function WalletTab() {
     toast.success("Le dépôt a été correctement crédité sur votre compte");
   };
 
-  useEffect(() => {
-    const checkForUnprocessedPayments = async () => {
-      try {
-        const { data: payments } = await supabase
-          .from('scheduled_payments')
-          .select('id, project_id, percentage')
-          .eq('status', 'paid')
-          .is('processed_at', null);
+  const checkForUnprocessedPayments = async () => {
+    try {
+      const { data: payments } = await supabase
+        .from('scheduled_payments')
+        .select('id, project_id, percentage')
+        .eq('status', 'paid')
+        .is('processed_at', null);
+        
+      if (payments && payments.length > 0) {
+        console.log(`Found ${payments.length} unprocessed paid payments in WalletTab`);
+        
+        for (const payment of payments) {
+          console.log(`Processing payment ${payment.id} for project ${payment.project_id}`);
           
-        if (payments && payments.length > 0) {
-          console.log(`Found ${payments.length} unprocessed paid payments in WalletTab`);
-          
-          for (const payment of payments) {
-            console.log(`Processing payment ${payment.id} for project ${payment.project_id}`);
-            
-            try {
-              const { data: result, error } = await supabase.functions.invoke(
-                'update-wallet-on-payment',
-                {
-                  body: {
-                    paymentId: payment.id,
-                    projectId: payment.project_id,
-                    percentage: payment.percentage,
-                    processAll: true,
-                    forceRefresh: true
-                  }
-                }
-              );
-              
-              if (error) {
-                console.error(`Error processing payment ${payment.id}:`, error);
-              } else {
-                console.log(`Successfully processed payment ${payment.id}:`, result);
-                
-                if (result?.processed > 0) {
-                  if (refreshBalance) {
-                    await refreshBalance(false);
-                  }
-                  
-                  toast.success("Paiement traité", {
-                    description: `Votre solde a été mis à jour`
-                  });
+          try {
+            const { data: result, error } = await supabase.functions.invoke(
+              'update-wallet-on-payment',
+              {
+                body: {
+                  paymentId: payment.id,
+                  projectId: payment.project_id,
+                  percentage: payment.percentage,
+                  processAll: true,
+                  forceRefresh: true
                 }
               }
-            } catch (err) {
-              console.error(`Error invoking edge function for payment ${payment.id}:`, err);
+            );
+            
+            if (error) {
+              console.error(`Error processing payment ${payment.id}:`, error);
+            } else {
+              console.log(`Successfully processed payment ${payment.id}:`, result);
+              
+              if (result?.processed > 0) {
+                if (refreshBalance) {
+                  await refreshBalance(false);
+                }
+                
+                toast.success("Paiement traité", {
+                  description: `Votre solde a été mis à jour`
+                });
+              }
             }
+          } catch (err) {
+            console.error(`Error invoking edge function for payment ${payment.id}:`, err);
           }
         }
-      } catch (err) {
-        console.error("Error checking for unprocessed payments:", err);
       }
-    };
-    
-    checkForUnprocessedPayments();
-  }, [refreshBalance]);
+    } catch (err) {
+      console.error("Error checking for unprocessed payments:", err);
+    }
+  };
 
+  // Set up subscription to detect newly paid scheduled payments
   useEffect(() => {
     const scheduledPaymentChannel = supabase
       .channel('wallet_tab_scheduled_payments')
@@ -140,14 +141,34 @@ export default function WalletTab() {
         { event: 'UPDATE', schema: 'public', table: 'scheduled_payments' },
         (payload) => {
           if ((payload.new as any).status === 'paid' && (payload.old as any).status !== 'paid') {
-            console.log('WalletTab: Payment marked as paid, refreshing balance');
-            if (refreshBalance) {
-              refreshBalance(false); // Silent refresh
-              
-              toast.success("Paiement programmé exécuté", {
-                description: "Votre solde disponible a été mis à jour"
-              });
-            }
+            console.log('WalletTab: Payment marked as paid, processing immediately');
+            
+            // Directly process the payment
+            supabase.functions.invoke(
+              'update-wallet-on-payment',
+              {
+                body: {
+                  paymentId: (payload.new as any).id,
+                  projectId: (payload.new as any).project_id,
+                  percentage: (payload.new as any).percentage,
+                  processAll: true,
+                  forceRefresh: true
+                }
+              }
+            ).then(({data, error}) => {
+              if (error) {
+                console.error('Error processing new paid payment:', error);
+              } else {
+                console.log('Successfully processed new paid payment:', data);
+                if (refreshBalance) {
+                  refreshBalance(false); // Silent refresh
+                }
+                
+                toast.success("Paiement programmé exécuté", {
+                  description: "Votre solde disponible a été mis à jour"
+                });
+              }
+            });
           }
         }
       )

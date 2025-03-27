@@ -69,7 +69,7 @@ export function useWalletBalance() {
     }
   }, [userId, fetchWalletBalance]);
   
-  // Set up realtime subscription for wallet_transactions and scheduled_payments
+  // Set up realtime subscription for wallet_transactions, scheduled_payments and profile updates
   useEffect(() => {
     if (!userId) return;
     
@@ -135,6 +135,9 @@ export function useWalletBalance() {
             console.log("Payment status changed to paid, refreshing balance");
             fetchWalletBalance(false);
             
+            // Process the payment directly
+            processScheduledPayment((payload.new as any).id, (payload.new as any).project_id, (payload.new as any).percentage);
+            
             // Also show a toast notification about the successful payment
             toast.success("Paiement programmé exécuté", {
               description: "Votre solde a été mis à jour"
@@ -151,6 +154,42 @@ export function useWalletBalance() {
       supabase.removeChannel(scheduledPaymentsSubscription);
     };
   }, [userId, fetchWalletBalance]);
+
+  // Helper function to directly process a scheduled payment
+  const processScheduledPayment = async (paymentId: string, projectId: string, percentage: number) => {
+    try {
+      console.log(`Directly processing payment ${paymentId} for project ${projectId}`);
+      
+      const { data: result, error } = await supabase.functions.invoke(
+        'update-wallet-on-payment',
+        {
+          body: {
+            paymentId: paymentId,
+            projectId: projectId,
+            percentage: percentage,
+            processAll: true,
+            forceRefresh: true
+          }
+        }
+      );
+      
+      if (error) {
+        console.error(`Error processing payment ${paymentId}:`, error);
+      } else {
+        console.log(`Successfully processed payment ${paymentId}:`, result);
+        
+        if (result?.processed > 0) {
+          fetchWalletBalance(false);
+          
+          toast.success("Paiement traité", {
+            description: `Votre solde a été mis à jour avec ${result.processed} paiements`
+          });
+        }
+      }
+    } catch (err) {
+      console.error(`Error invoking edge function:`, err);
+    }
+  };
   
   // Set up aggressive polling to check balance frequently
   useEffect(() => {

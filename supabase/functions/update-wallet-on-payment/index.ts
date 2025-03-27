@@ -121,45 +121,17 @@ serve(async (req) => {
       console.log(`Processing investor ${userId}: ${percentage}% of ${investmentAmount} = ${yieldAmount}`)
 
       try {
-        // Check if a transaction already exists for this payment and user
-        try {
-          const { data: existingTx, error: existingTxError } = await supabaseClient
-            .from('wallet_transactions')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('payment_id', paymentId)
-            .eq('type', 'yield')
-            .maybeSingle()
-
-          if (existingTxError && !existingTxError.message.includes('does not exist')) {
-            console.error(`Error checking existing transaction for user ${userId}: ${existingTxError.message}`)
-          }
-
-          // If transaction already exists and we're not forcing a refresh, skip
-          if (existingTx && !forceRefresh) {
-            console.log(`Transaction already exists for user ${userId} and payment ${paymentId}, skipping`)
-            continue
-          } else if (existingTx && forceRefresh) {
-            console.log(`Transaction exists but force refresh requested, updating for user ${userId}`)
-          }
-        } catch (checkError) {
-          // If there's an error checking existing transactions, log it but continue
-          console.error(`Error checking existing transaction: ${checkError.message || checkError}`)
-        }
-
         // Create wallet transaction
         const { data: txData, error: txError } = await supabaseClient
           .from('wallet_transactions')
-          .upsert({
+          .insert({
             user_id: userId,
             amount: yieldAmount,
             type: 'yield',
             status: 'completed',
             description: `Rendement ${percentage}% du projet ${projectName}`,
-            payment_id: paymentId,
-            project_id: projectId,
+            project_id: projectId
           })
-          .select()
 
         if (txError) {
           console.error(`Error creating wallet transaction for user ${userId}: ${txError.message}`)
@@ -169,7 +141,7 @@ serve(async (req) => {
         }
 
         // Update wallet balance directly
-        const { data: updateResult, error: updateError } = await supabaseClient
+        const { error: updateError } = await supabaseClient
           .rpc('increment_wallet_balance', {
             user_id: userId,
             increment_amount: yieldAmount
@@ -223,7 +195,6 @@ serve(async (req) => {
             seen: false,
             data: {
               project_id: projectId,
-              payment_id: paymentId,
               amount: yieldAmount,
               category: 'success'
             }
@@ -244,13 +215,11 @@ serve(async (req) => {
       }
     }
 
-    // Update the payment record to add processed information
+    // Update the payment record to mark it as processed
     const { error: updateError } = await supabaseClient
       .from('scheduled_payments')
       .update({
         processed_at: new Date().toISOString(),
-        processed_investors_count: successCount,
-        processed_amount: totalYieldAmount,
         status: 'paid'
       })
       .eq('id', paymentId)

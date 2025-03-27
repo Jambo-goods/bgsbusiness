@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/utils/currencyUtils';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from "sonner";
 
 const ScheduledPaymentsSection = () => {
   const [showPastPayments, setShowPastPayments] = useState(false);
@@ -214,7 +215,7 @@ const ScheduledPaymentsSection = () => {
     
     for (const [fixedName, amount] of Object.entries(FIXED_INVESTMENTS)) {
       if (projectName.toLowerCase().includes(fixedName.toLowerCase())) {
-        console.log(`Using fixed investment amount for ${projectName}: ${amount}€`);
+        console.log(`Using fixed investment amount for ${projectName}: ${amount}��`);
         return amount;
       }
     }
