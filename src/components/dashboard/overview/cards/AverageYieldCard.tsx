@@ -27,7 +27,7 @@ export default function AverageYieldCard({
       changePercentage={yieldChange.value || "0%"}
       changeValue={yieldChange.value || "0%"}
       changeTimeframe="le dernier mois"
-      description={`${monthlyYieldPercentage * 12}% annualisé`}
+      description={`${(monthlyYieldPercentage * 12).toFixed(2)}% annualisé`}
     />
   );
 }

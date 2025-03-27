@@ -31,12 +31,12 @@ export default function PerformanceSection({ project }: PerformanceSectionProps)
         </div>
         <div>
           <p className="text-xs text-bgs-blue/70">Rendement annualisé</p>
-          <p className="text-sm font-bold text-green-600">{annualYield}% par an</p>
+          <p className="text-sm font-bold text-green-600">{annualYield.toFixed(2)}% par an</p>
         </div>
       </div>
       
       <p className="text-xs text-bgs-blue/70 mb-2">
-        Ce rendement mensuel de {project.yield}% ({annualYield}% annualisé par an) est une estimation basée sur les performances historiques de projets similaires. 
+        Ce rendement mensuel de {project.yield}% ({annualYield.toFixed(2)}% annualisé par an) est une estimation basée sur les performances historiques de projets similaires. 
         Les rendements réels peuvent varier.
       </p>
       

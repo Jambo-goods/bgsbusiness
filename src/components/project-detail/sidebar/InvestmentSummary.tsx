@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Project } from "@/types/project";
 import { TrendingUp, Clock, Calculator, Info } from "lucide-react";
@@ -60,7 +59,7 @@ export default function InvestmentSummary({
             </div>
             <span>Rendement annualisé</span>
           </div>
-          <span className="font-semibold text-green-600">{annualYield}% par an</span>
+          <span className="font-semibold text-green-600">{annualYield.toFixed(2)}% par an</span>
         </div>
         
         <div className="flex justify-between items-center text-sm">

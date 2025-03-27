@@ -68,7 +68,7 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
         <div className="grid grid-cols-2 gap-4 mt-6">
           <div className="bg-bgs-gray-light p-3 rounded-lg">
             <p className="text-xs text-bgs-gray-medium mb-1">Rentabilité annualisée</p>
-            <p className="font-semibold text-green-600">{annualYield}%</p>
+            <p className="font-semibold text-green-600">{annualYield.toFixed(2)}%</p>
           </div>
           <div className="bg-bgs-gray-light p-3 rounded-lg">
             <p className="text-xs text-bgs-gray-medium mb-1">Min. investissement</p>
