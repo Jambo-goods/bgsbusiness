@@ -11,82 +11,15 @@ import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
 import { FixDepositButton } from "../wallet/FixDepositButton";
 import { AlertCircle } from "lucide-react";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
 
 export default function WalletTab() {
-  const [balance, setBalance] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+  const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
   const [activeTab, setActiveTab] = useState("overview");
   const [hasMissingDeposit, setHasMissingDeposit] = useState(false);
 
   useEffect(() => {
-    fetchWalletBalance();
     checkForMissingDeposit();
-    
-    const balanceInterval = setInterval(() => {
-      fetchWalletBalance(false);
-    }, 15000);
-    
-    const profilesChannel = supabase
-      .channel('wallet-balance-changes')
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'profiles' },
-        async (payload) => {
-          const { data: session } = await supabase.auth.getSession();
-          
-          if (session.session?.user.id === payload.new.id && 
-              payload.new.wallet_balance !== payload.old.wallet_balance) {
-            console.log('Wallet balance updated via realtime:', payload.new.wallet_balance);
-            setBalance(payload.new.wallet_balance);
-          }
-        }
-      )
-      .subscribe();
-    
-    const transactionsChannel = supabase
-      .channel('wallet-transactions-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'wallet_transactions' },
-        (payload) => {
-          console.log('Wallet transaction change detected:', payload);
-          fetchWalletBalance(false);
-        }
-      )
-      .subscribe();
-    
-    const transfersChannel = supabase
-      .channel('bank-transfers-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'bank_transfers' },
-        (payload) => {
-          console.log('Bank transfer change detected:', payload);
-          fetchWalletBalance(false);
-        }
-      )
-      .subscribe();
-      
-    // Listen to scheduled payments changes to update wallet balance
-    const scheduledPaymentsChannel = supabase
-      .channel('scheduled-payments-for-wallet')
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'scheduled_payments' },
-        (payload) => {
-          // If status changed to paid, refresh wallet balance
-          if (payload.new && payload.old && 
-              payload.new.status === 'paid' && payload.old.status !== 'paid') {
-            console.log('Scheduled payment marked as paid, refreshing wallet balance');
-            fetchWalletBalance(false);
-          }
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      clearInterval(balanceInterval);
-      supabase.removeChannel(profilesChannel);
-      supabase.removeChannel(transactionsChannel);
-      supabase.removeChannel(transfersChannel);
-      supabase.removeChannel(scheduledPaymentsChannel);
-    };
   }, []);
 
   const checkForMissingDeposit = async () => {
@@ -120,48 +53,6 @@ export default function WalletTab() {
     }
   };
 
-  const fetchWalletBalance = async (showLoading = true) => {
-    try {
-      if (showLoading) {
-        setIsLoading(true);
-      }
-      
-      const { data: session } = await supabase.auth.getSession();
-      
-      if (!session.session) {
-        toast.error("Veuillez vous connecter pour accéder à votre portefeuille");
-        setIsLoading(false);
-        return;
-      }
-      
-      console.log('Récupération du solde pour l\'utilisateur:', session.session.user.id);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', session.session.user.id)
-        .maybeSingle();
-        
-      if (error) {
-        console.error("Erreur lors de la récupération du solde:", error);
-        toast.error("Impossible de récupérer votre solde");
-      } else {
-        console.log('Wallet balance fetch result:', data);
-        if (data) {
-          setBalance(data.wallet_balance || 0);
-          console.log('Wallet balance updated:', data.wallet_balance);
-        } else {
-          console.warn('No profile data found');
-        }
-      }
-    } catch (error) {
-      console.error("Erreur lors de la récupération du solde:", error);
-      toast.error("Impossible de récupérer votre solde");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleDeposit = () => {
     setActiveTab("deposit");
   };
@@ -169,7 +60,9 @@ export default function WalletTab() {
   const handleWithdraw = async () => {
     console.log('handleWithdraw called');
     setActiveTab("withdraw");
-    await fetchWalletBalance();
+    if (refreshBalance) {
+      await refreshBalance();
+    }
   };
 
   const handleTabChange = (tab: string) => {
@@ -177,7 +70,9 @@ export default function WalletTab() {
   };
 
   const handleFixSuccess = () => {
-    fetchWalletBalance();
+    if (refreshBalance) {
+      refreshBalance();
+    }
     setHasMissingDeposit(false);
     toast.success("Le dépôt a été correctement crédité sur votre compte");
   };
@@ -185,10 +80,10 @@ export default function WalletTab() {
   return (
     <div className="space-y-6">
       <WalletBalance 
-        balance={balance} 
-        isLoading={isLoading} 
+        balance={walletBalance} 
+        isLoading={isLoadingBalance} 
         onTabChange={handleTabChange}
-        refreshBalance={fetchWalletBalance}
+        refreshBalance={refreshBalance}
       />
       
       {hasMissingDeposit && (
@@ -215,9 +110,9 @@ export default function WalletTab() {
           <ActionButtons 
             onDeposit={handleDeposit} 
             onWithdraw={handleWithdraw} 
-            refreshBalance={fetchWalletBalance} 
+            refreshBalance={refreshBalance} 
           />
-          <WalletHistory className="mt-6" refreshBalance={fetchWalletBalance} />
+          <WalletHistory className="mt-6" refreshBalance={refreshBalance} />
         </TabsContent>
         
         <TabsContent value="deposit">
@@ -237,7 +132,7 @@ export default function WalletTab() {
               <CardTitle>Retirer des fonds</CardTitle>
             </CardHeader>
             <CardContent>
-              <WithdrawFundsForm balance={balance} onWithdraw={handleWithdraw} />
+              <WithdrawFundsForm balance={walletBalance} onWithdraw={handleWithdraw} />
             </CardContent>
           </Card>
         </TabsContent>

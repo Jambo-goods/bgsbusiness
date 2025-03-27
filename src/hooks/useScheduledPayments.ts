@@ -170,8 +170,15 @@ export const useScheduledPayments = () => {
             }
           }
           
-          // Call the edge function to update all investors' wallets
-          // Using direct invoke with proper parameters
+          // Call the edge function to update all investors' wallets with more detailed logging
+          console.log('Calling update-wallet-on-payment edge function with these parameters:', {
+            paymentId: paymentId,
+            projectId: paymentToUpdate.project_id,
+            percentage: newPercentage || paymentToUpdate.percentage,
+            processAll: true,
+            forceRefresh: true // Add a force refresh parameter
+          });
+          
           const { data: functionResult, error: functionError } = await supabase.functions.invoke(
             'update-wallet-on-payment',
             {
@@ -179,7 +186,8 @@ export const useScheduledPayments = () => {
                 paymentId: paymentId,
                 projectId: paymentToUpdate.project_id,
                 percentage: newPercentage || paymentToUpdate.percentage,
-                processAll: true // Flag to process all investors
+                processAll: true,
+                forceRefresh: true // Add force refresh parameter
               }
             }
           );

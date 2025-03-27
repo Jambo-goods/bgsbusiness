@@ -49,7 +49,9 @@ export default function WalletBalance({
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("Wallet balance changes display channel status:", status);
+        });
         
       // Also listen to profile updates (wallet_balance field)
       const profileChannel = supabase
@@ -67,9 +69,11 @@ export default function WalletBalance({
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("Profile balance changes channel status:", status);
+        });
         
-      // Listen to scheduled payments
+      // Listen to scheduled payments with better logging
       const scheduledPaymentsChannel = supabase
         .channel('scheduled-payments-wallet-changes')
         .on('postgres_changes', 
@@ -81,11 +85,18 @@ export default function WalletBalance({
               console.log('Payment marked as paid, refreshing wallet balance');
               if (refreshBalance) {
                 await refreshBalance();
+                
+                // Show toast for successful payment
+                toast.success("Paiement programmé reçu", {
+                  description: "Votre solde a été mis à jour avec le montant du paiement programmé"
+                });
               }
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log("Scheduled payments wallet changes channel status:", status);
+        });
       
       return () => {
         supabase.removeChannel(walletTxChannel);
@@ -98,6 +109,23 @@ export default function WalletBalance({
     return () => {
       cleanup.then(fn => fn && fn());
     };
+  }, [refreshBalance]);
+  
+  // Force balance refresh on component mount and periodically
+  useEffect(() => {
+    if (refreshBalance) {
+      // Initial refresh
+      refreshBalance();
+      
+      // Set up periodic refresh
+      const refreshInterval = setInterval(() => {
+        refreshBalance();
+      }, 5000); // Check every 5 seconds
+      
+      return () => {
+        clearInterval(refreshInterval);
+      };
+    }
   }, [refreshBalance]);
   
   return (

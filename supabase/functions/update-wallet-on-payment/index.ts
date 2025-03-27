@@ -1,518 +1,256 @@
 
-import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.1.0";
+// Follow this setup guide to integrate the Deno language server with your editor:
+// https://deno.land/manual/getting_started/setup_your_environment
+// This enables autocomplete, go to definition, etc.
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
-
-interface PaymentData {
-  userId?: string;
-  amount?: number;
-  paymentId?: string;
-  projectName?: string;
-  projectId?: string;
-  percentage?: number;
-  processAll?: boolean;
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, {
-      headers: corsHeaders,
-    });
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Create a Supabase client with the Auth context of the function
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    )
 
-    const requestData: PaymentData = await req.json();
-    console.log("Request data received:", JSON.stringify(requestData));
+    // Get the request body
+    const { paymentId, projectId, percentage, processAll, forceRefresh } = await req.json()
+    
+    console.log(`Request data received: ${JSON.stringify({ paymentId, projectId, percentage, processAll, forceRefresh })}`)
 
-    // Flag to process all investors or just a single one
-    const processAllInvestors = requestData.processAll === true;
-    const { paymentId, projectId, percentage } = requestData;
+    if (!paymentId || !projectId) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameters' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
 
-    if (processAllInvestors) {
-      // Process payment for all investors
-      if (!paymentId) {
-        return new Response(
-          JSON.stringify({ error: "Missing payment ID" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      // Get the payment details
-      const { data: payment, error: paymentError } = await supabase
-        .from('scheduled_payments')
-        .select(`
-          *,
-          projects:project_id (
-            name
-          )
-        `)
-        .eq('id', paymentId)
-        .single();
-        
-      if (paymentError || !payment) {
-        console.error("Error fetching payment:", paymentError);
-        return new Response(
-          JSON.stringify({ error: "Payment not found", details: paymentError }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      // Get all investments for this project
-      const { data: investments, error: investError } = await supabase
-        .from('investments')
-        .select('user_id, amount')
-        .eq('project_id', payment.project_id)
-        .eq('status', 'active');
-        
-      if (investError) {
-        console.error("Error fetching investments:", investError);
-        return new Response(
-          JSON.stringify({ error: "Error fetching investments", details: investError }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      console.log(`Processing payment ${paymentId} for project ${payment.project_id} (${payment.projects?.name || "Unknown Project"})`);
-      console.log(`Found ${investments.length} investors with active investments`);
-      console.log(`Payment percentage: ${payment.percentage}%`);
-      
-      // Process payment for each investor
-      const results = [];
-      
-      if (investments.length === 0) {
-        console.log("No active investments found for this project");
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: "No active investments found for this project",
-            results: []
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      for (const investment of investments) {
-        const userId = investment.user_id;
-        const investmentAmount = investment.amount;
-        const paymentAmount = Math.round(investmentAmount * (payment.percentage / 100));
-        
-        console.log(`Processing investor ${userId}: ${payment.percentage}% of ${investmentAmount} = ${paymentAmount}`);
-        
+    // Fetch project data to have the project name for better logging
+    const { data: projectData, error: projectError } = await supabaseClient
+      .from('projects')
+      .select('name')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError) {
+      console.error(`Error fetching project data: ${projectError.message}`)
+    }
+
+    const projectName = projectData?.name || projectId
+
+    console.log(`Processing payment ${paymentId} for project ${projectId} (${projectName})`)
+
+    // Find all investors who have invested in this project
+    const { data: investments, error: investmentError } = await supabaseClient
+      .from('investments')
+      .select('user_id, amount')
+      .eq('project_id', projectId)
+      .eq('status', 'active')
+
+    if (investmentError) {
+      console.error(`Error fetching investments: ${investmentError.message}`)
+      return new Response(
+        JSON.stringify({ error: investmentError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+
+    console.log(`Found ${investments.length} investors with active investments`)
+
+    // Determine the payment percentage
+    console.log(`Payment percentage: ${percentage}%`)
+
+    // Process payments for all investors
+    const results = []
+    const errors = []
+
+    // Track success and errors
+    let successCount = 0
+    let errorCount = 0
+    let totalYieldAmount = 0
+
+    // Loop through all investors and create wallet transactions
+    for (const investment of investments) {
+      const userId = investment.user_id
+      const investmentAmount = investment.amount
+      const yieldAmount = Math.round(investmentAmount * (percentage / 100))
+
+      console.log(`Processing investor ${userId}: ${percentage}% of ${investmentAmount} = ${yieldAmount}`)
+
+      try {
+        // Check if a transaction already exists for this payment and user
         try {
-          // First check if a transaction already exists for this payment and user
-          const { data: existingTransaction, error: checkError } = await supabase
+          const { data: existingTx, error: existingTxError } = await supabaseClient
             .from('wallet_transactions')
             .select('id')
             .eq('user_id', userId)
             .eq('payment_id', paymentId)
-            .eq('status', 'completed')
-            .maybeSingle();
-            
-          if (checkError) {
-            console.error(`Error checking existing transaction for user ${userId}:`, checkError);
-            results.push({ userId, success: false, error: checkError });
-            continue;
+            .eq('type', 'yield')
+            .maybeSingle()
+
+          if (existingTxError) {
+            console.error(`Error checking existing transaction for user ${userId}: ${existingTxError}`)
           }
-            
-          if (existingTransaction) {
-            console.log(`Payment ${paymentId} was already processed for user ${userId}, skipping`);
-            results.push({ userId, success: true, amount: paymentAmount, status: "already_processed" });
-            continue;
+
+          // If transaction already exists and we're not forcing a refresh, skip
+          if (existingTx && !forceRefresh) {
+            console.log(`Transaction already exists for user ${userId} and payment ${paymentId}, skipping`)
+            continue
+          } else if (existingTx && forceRefresh) {
+            console.log(`Transaction exists but force refresh requested, updating for user ${userId}`)
           }
-          
-          // Create a wallet transaction for this investor
-          const { data: transaction, error: txError } = await supabase.from('wallet_transactions').insert({
+        } catch (checkError) {
+          // If there's an error checking existing transactions, log it but continue
+          console.error(`Error checking existing transaction: ${checkError}`)
+        }
+
+        // Create wallet transaction
+        const { data: txData, error: txError } = await supabaseClient
+          .from('wallet_transactions')
+          .upsert({
             user_id: userId,
-            amount: paymentAmount,
+            amount: yieldAmount,
             type: 'yield',
-            description: `Rendement: ${payment.projects?.name || 'Investissement'}`,
             status: 'completed',
-            receipt_confirmed: true,
-            payment_id: paymentId
-          }).select().single();
-          
-          if (txError) {
-            console.error(`Error creating transaction for user ${userId}:`, txError);
-            results.push({ userId, success: false, error: txError });
-            continue;
-          }
-          
-          console.log(`Created transaction ${transaction.id} for user ${userId}`);
-          
-          // Update the wallet balance
-          const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
+            description: `Rendement ${percentage}% du projet ${projectName}`,
+            payment_id: paymentId,
+            project_id: projectId,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .maybeSingle()
+
+        if (txError) {
+          console.error(`Error creating wallet transaction for user ${userId}: ${txError.message}`)
+          errors.push({ userId, error: txError.message })
+          errorCount++
+          continue
+        }
+
+        // Update wallet balance directly
+        const { data: userData, error: userError } = await supabaseClient
+          .rpc('increment_wallet_balance', {
             user_id: userId,
-            increment_amount: paymentAmount
-          });
+            increment_amount: yieldAmount
+          })
+
+        if (userError) {
+          console.error(`Error updating wallet balance for user ${userId}: ${userError.message}`)
           
-          if (balanceError) {
-            console.error(`Error updating balance for user ${userId}:`, balanceError);
+          // Try a direct update as a fallback
+          const { data: profileData, error: profileError } = await supabaseClient
+            .from('profiles')
+            .select('wallet_balance')
+            .eq('id', userId)
+            .single()
             
-            // Try direct update as fallback
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('wallet_balance')
-              .eq('id', userId)
-              .single();
-              
-            if (!profileError && profileData) {
-              const { error: directUpdateError } = await supabase
-                .from('profiles')
-                .update({ wallet_balance: (profileData.wallet_balance || 0) + paymentAmount })
-                .eq('id', userId);
-                
-              if (directUpdateError) {
-                console.error(`Error direct updating balance for user ${userId}:`, directUpdateError);
-                results.push({ userId, success: false, error: directUpdateError });
-                continue;
-              } else {
-                console.log(`Updated wallet balance for user ${userId} directly (+${paymentAmount})`);
-              }
-            } else {
-              results.push({ userId, success: false, error: balanceError });
-              continue;
-            }
-          } else {
-            console.log(`Updated wallet balance for user ${userId} (+${paymentAmount})`);
+          if (profileError) {
+            console.error(`Error fetching profile for user ${userId}: ${profileError.message}`)
+            errors.push({ userId, error: profileError.message })
+            errorCount++
+            continue
           }
           
-          // Create a notification for the user
-          const { error: notifError } = await supabase.from('notifications').insert({
+          const currentBalance = profileData?.wallet_balance || 0
+          const newBalance = currentBalance + yieldAmount
+          
+          const { error: updateError } = await supabaseClient
+            .from('profiles')
+            .update({ wallet_balance: newBalance })
+            .eq('id', userId)
+            
+          if (updateError) {
+            console.error(`Error with direct wallet update for user ${userId}: ${updateError.message}`)
+            errors.push({ userId, error: updateError.message })
+            errorCount++
+            continue
+          } else {
+            console.log(`Direct wallet update successful for user ${userId}: ${currentBalance} + ${yieldAmount} = ${newBalance}`)
+          }
+        }
+
+        // Create notification for the user
+        const { error: notifError } = await supabaseClient
+          .from('notifications')
+          .insert({
             user_id: userId,
-            title: "Rendement reçu",
-            message: `Vous avez reçu ${paymentAmount}€ de rendement pour votre investissement dans ${payment.projects?.name || 'un projet'}.`,
-            type: "yield",
+            title: 'Rendement reçu',
+            message: `Vous avez reçu un rendement de ${yieldAmount}€ pour le projet ${projectName}`,
+            type: 'yield',
+            seen: false,
             data: {
-              category: "transaction",
-              amount: paymentAmount,
-              projectName: payment.projects?.name,
-              project_id: payment.project_id,
+              project_id: projectId,
               payment_id: paymentId,
-              status: "completed"
-            },
-            seen: false
-          });
-          
-          if (notifError) {
-            console.error(`Error creating notification for user ${userId}:`, notifError);
-          } else {
-            console.log(`Created notification for user ${userId}`);
-          }
-          
-          results.push({ userId, success: true, amount: paymentAmount });
-          
-          // Process referral commission for this payment
-          await processReferralCommission(supabase, userId, paymentAmount, payment.projects?.name || 'Investissement', paymentId);
-          
-        } catch (err) {
-          console.error(`Error processing payment for user ${userId}:`, err);
-          results.push({ userId, success: false, error: err });
+              amount: yieldAmount,
+              category: 'success'
+            }
+          })
+
+        if (notifError) {
+          console.error(`Error creating notification for user ${userId}: ${notifError.message}`)
+          // Don't fail the process if notification creation fails
         }
-      }
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: `Successfully processed payment ${paymentId} for ${results.length} investors`,
-          results
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
-    // Original flow for direct payment processing - single user
-    const { userId, amount, paymentId: singlePaymentId } = requestData;
-    
-    if (!userId || !amount || !singlePaymentId) {
-      return new Response(
-        JSON.stringify({ error: "Missing required data for payment processing" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log(`Processing yield payment for user ${userId}, amount: ${amount}, paymentId: ${singlePaymentId}`);
-
-    const { data: existingTransaction, error: checkError } = await supabase
-      .from('wallet_transactions')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('payment_id', singlePaymentId)
-      .eq('status', 'completed')
-      .maybeSingle();
-      
-    if (checkError) {
-      console.error("Error checking existing transaction:", checkError);
-      throw new Error("Error checking transaction status");
-    }
-      
-    if (existingTransaction) {
-      console.log(`Payment ${singlePaymentId} was already processed, skipping`);
-      return new Response(
-        JSON.stringify({ success: true, message: "Payment already processed" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    let projectDetails;
-    if (projectId) {
-      const { data: project, error: projectError } = await supabase
-        .from('projects')
-        .select('name, company_name')
-        .eq('id', projectId)
-        .single();
-        
-      if (!projectError && project) {
-        projectDetails = project;
+        results.push({ userId, amount: yieldAmount, status: 'success' })
+        successCount++
+        totalYieldAmount += yieldAmount
+      } catch (error) {
+        console.error(`Exception processing user ${userId}: ${error.message}`)
+        errors.push({ userId, error: error.message })
+        errorCount++
       }
     }
-    
-    const actualProjectName = projectDetails?.name || requestData.projectName || 'Investissement';
 
-    const { data: transaction, error: txError } = await supabase.from('wallet_transactions').insert({
-      user_id: userId,
-      amount: amount,
-      type: 'yield',
-      description: `Rendement automatique: ${actualProjectName}`,
-      status: 'completed',
-      receipt_confirmed: true,
-      payment_id: singlePaymentId
-    }).select().single();
-    
-    if (txError) {
-      console.error("Failed to create wallet transaction:", txError);
-      throw new Error("Failed to create transaction record");
-    }
-    
-    console.log("Created yield wallet transaction:", transaction.id);
-    
-    const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
-      user_id: userId,
-      increment_amount: amount
-    });
-    
-    if (balanceError) {
-      console.error("Failed to update wallet balance:", balanceError);
-      
-      // Try direct update as fallback
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', userId)
-        .single();
-        
-      if (!profileError && profileData) {
-        const { error: directUpdateError } = await supabase
-          .from('profiles')
-          .update({ wallet_balance: (profileData.wallet_balance || 0) + amount })
-          .eq('id', userId);
-          
-        if (directUpdateError) {
-          console.error("Direct balance update failed:", directUpdateError);
-          throw new Error("Failed to update wallet balance");
-        } else {
-          console.log(`Updated wallet balance for user ${userId} directly (+${amount})`);
-        }
-      } else {
-        throw new Error("Failed to update wallet balance");
-      }
-    } else {
-      console.log(`Updated wallet balance for user ${userId} (+${amount})`);
+    // Update the payment record to add processed information
+    const { error: updateError } = await supabaseClient
+      .from('scheduled_payments')
+      .update({
+        processed_at: new Date().toISOString(),
+        processed_investors_count: successCount,
+        processed_amount: totalYieldAmount
+      })
+      .eq('id', paymentId)
+
+    if (updateError) {
+      console.error(`Error updating payment record: ${updateError.message}`)
     }
 
-    await sendYieldNotification(supabase, userId, amount, actualProjectName, singlePaymentId);
-
-    await processReferralCommission(supabase, userId, amount, actualProjectName, singlePaymentId);
-    
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `Successfully processed yield payment of ${amount}€ for user ${userId}` 
+      JSON.stringify({
+        success: true,
+        message: `Payment processing completed for ${successCount} investors with ${errorCount} errors`,
+        processed: successCount,
+        errors: errorCount,
+        totalAmount: totalYieldAmount,
+        results,
+        errorDetails: errors
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-    
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   } catch (error) {
-    console.error("Error in update-wallet-on-payment function:", error);
-    
+    console.error(`Unhandled error: ${error.message}`)
     return new Response(
       JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+    )
   }
-});
+})
 
-async function sendYieldNotification(supabase, userId, amount, projectName, paymentId) {
-  try {
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .select('email, first_name')
-      .eq('id', userId)
-      .single();
-      
-    if (userError || !userData) {
-      console.error('Error fetching user data for notification:', userError);
-      return;
-    }
-    
-    await supabase.from('notifications').insert({
-      user_id: userId,
-      title: "Rendement reçu",
-      message: `Vous avez reçu ${amount}€ de rendement pour votre investissement dans ${projectName}.`,
-      type: "yield",
-      data: {
-        category: "transaction",
-        amount: amount,
-        projectName: projectName,
-        payment_id: paymentId,
-        status: "completed"
-      },
-      seen: false
-    });
-    
-    console.log(`Notification created for user ${userId} for yield of ${amount}€`);
-  } catch (error) {
-    console.error("Error sending yield notification:", error);
-  }
-}
-
-async function processReferralCommission(supabase, userId, paymentAmount, projectName, paymentId) {
-  try {
-    console.log(`Checking for referral relationship for user ${userId}`);
-    
-    const { data: referralData, error: referralError } = await supabase
-      .from('referrals')
-      .select('id, referrer_id, status, commission_rate, total_commission')
-      .eq('referred_id', userId)
-      .single();
-      
-    if (referralError) {
-      if (referralError.code !== 'PGRST116') { // Not found
-        console.error("Error checking referral:", referralError);
-      }
-      console.log(`No referrer found for user ${userId}, skipping commission`);
-      return; // No referrer or error
-    }
-    
-    if (!referralData || !referralData.referrer_id) {
-      console.log(`No referrer found for user ${userId}, skipping commission`);
-      return; // No referrer found
-    }
-
-    if (referralData.status !== 'valid') {
-      console.log(`Referral for user ${userId} has status ${referralData.status}, not valid, skipping commission`);
-      return;
-    }
-    
-    const commissionRate = referralData.commission_rate ? referralData.commission_rate / 100 : 0.1;
-    const commissionAmount = Math.round(paymentAmount * commissionRate * 100) / 100;
-    
-    console.log(`Processing ${commissionAmount}€ commission (${commissionRate * 100}% of ${paymentAmount}€ payment) for referrer ${referralData.referrer_id}`);
-    
-    if (commissionAmount <= 0) {
-      console.log(`Commission amount ${commissionAmount} is too small, skipping`);
-      return; // No commission to pay
-    }
-    
-    const { data: existingCommission, error: checkCommissionError } = await supabase
-      .from('referral_commissions')
-      .select('id')
-      .eq('referrer_id', referralData.referrer_id)
-      .eq('referred_id', userId)
-      .eq('payment_id', paymentId)
-      .maybeSingle();
-      
-    if (checkCommissionError) {
-      console.error("Error checking existing commission:", checkCommissionError);
-    } else if (existingCommission) {
-      console.log(`Commission for payment ${paymentId} already processed, skipping`);
-      return;
-    }
-    
-    const { data: commissionData, error: commissionError } = await supabase.from('referral_commissions').insert({
-      referral_id: referralData.id,
-      referrer_id: referralData.referrer_id,
-      referred_id: userId,
-      amount: commissionAmount,
-      source: 'investment_payment',
-      status: 'completed',
-      payment_id: paymentId
-    }).select().single();
-    
-    if (commissionError) {
-      console.error("Failed to create referral commission record:", commissionError);
-      return;
-    }
-    
-    console.log(`Created referral commission record: ${commissionData.id}`);
-    
-    const { data: transaction, error: txError } = await supabase.from('wallet_transactions').insert({
-      user_id: referralData.referrer_id,
-      amount: commissionAmount,
-      type: 'commission',
-      description: `Commission de parrainage (10% du rendement)`,
-      status: 'completed',
-      receipt_confirmed: true,
-      payment_id: paymentId
-    }).select().single();
-    
-    if (txError) {
-      console.error("Failed to create commission transaction:", txError);
-      return;
-    }
-
-    console.log(`Created commission wallet transaction: ${transaction.id}`);
-    
-    const { error: balanceError } = await supabase.rpc('increment_wallet_balance', {
-      user_id: referralData.referrer_id,
-      increment_amount: commissionAmount
-    });
-    
-    if (balanceError) {
-      console.error("Failed to update referrer wallet balance:", balanceError);
-      return;
-    }
-    
-    const totalCommission = (referralData.total_commission || 0) + commissionAmount;
-    const { error: updateError } = await supabase
-      .from('referrals')
-      .update({ 
-        total_commission: totalCommission 
-      })
-      .eq('id', referralData.id);
-    
-    if (updateError) {
-      console.error("Failed to update referral record:", updateError);
-      return;
-    }
-    
-    const { error: notificationError } = await supabase.from('notifications').insert({
-      user_id: referralData.referrer_id,
-      title: "Commission de parrainage reçue",
-      message: `Vous avez reçu ${commissionAmount}€ de commission sur le rendement de votre filleul.`,
-      type: "commission",
-      data: {
-        category: "transaction",
-        amount: commissionAmount,
-        status: "completed",
-        payment_id: paymentId
-      },
-      seen: false
-    });
-    
-    if (notificationError) {
-      console.error("Failed to create commission notification:", notificationError);
-    }
-    
-    console.log(`Successfully processed ${commissionAmount}€ commission for referrer ${referralData.referrer_id}`);
-  } catch (error) {
-    console.error("Error processing referral commission:", error);
-  }
-}
+/* To invoke:
+curl -i --location --request POST 'http://localhost:54321/functions/v1/update-wallet-on-payment' \
+  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
+  --header 'Content-Type: application/json' \
+  --data '{"paymentId":"123e4567-e89b-12d3-a456-426614174000","projectId":"123e4567-e89b-12d3-a456-426614174000","percentage":10,"processAll":true}'
+*/

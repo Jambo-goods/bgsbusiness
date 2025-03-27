@@ -69,7 +69,7 @@ export function useWalletBalance() {
     }
   }, [userId, fetchWalletBalance]);
   
-  // Set up realtime subscription for wallet_transactions
+  // Set up realtime subscription for wallet_transactions with improved error handling
   useEffect(() => {
     if (!userId) return;
     
@@ -95,9 +95,11 @@ export function useWalletBalance() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Wallet transactions channel status:", status);
+      });
     
-    // Subscribe to direct profile updates (wallet_balance field)
+    // Subscribe to direct profile updates (wallet_balance field) - more robust monitoring
     const profileSubscription = supabase
       .channel('profile_balance_changes')
       .on('postgres_changes', 
@@ -120,7 +122,9 @@ export function useWalletBalance() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Profile changes channel status:", status);
+      });
     
     // Subscribe to scheduled payments to update balance when payments are marked as paid
     const scheduledPaymentsSubscription = supabase
@@ -137,7 +141,9 @@ export function useWalletBalance() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Scheduled payments channel status:", status);
+      });
     
     return () => {
       console.log("Cleaning up wallet balance subscriptions");
@@ -147,11 +153,11 @@ export function useWalletBalance() {
     };
   }, [userId, fetchWalletBalance]);
   
-  // Set up polling to check balance periodically
+  // Set up polling to check balance periodically - better frequency for updates
   useEffect(() => {
     const pollingInterval = setInterval(() => {
       fetchWalletBalance(false); // Silent refresh
-    }, 10000); // Check every 10 seconds
+    }, 5000); // Check more frequently (5 seconds instead of 10)
     
     return () => {
       clearInterval(pollingInterval);
