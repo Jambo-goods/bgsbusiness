@@ -39,15 +39,21 @@ const ScheduledPaymentsSection = () => {
   const paidPayments = scheduledPayments.filter(payment => payment.status === 'paid');
   const pendingPayments = scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled');
   
-  // Calculate totals with proper number handling
-  const totalPaid = paidPayments.reduce((sum, payment) => {
-    const amount = typeof payment.total_scheduled_amount === 'number' ? payment.total_scheduled_amount : 0;
+  // Calculate the total investment amount across all investments
+  const totalInvestedAmount = scheduledPayments.reduce((sum, payment) => {
+    const amount = typeof payment.total_invested_amount === 'number' ? payment.total_invested_amount : 0;
     return sum + amount;
   }, 0);
   
+  // Calculate totals with proper number handling
+  const totalPaid = paidPayments.reduce((sum, payment) => {
+    const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
+    return sum + (totalInvestedAmount * percentage / 100);
+  }, 0);
+  
   const totalPending = pendingPayments.reduce((sum, payment) => {
-    const amount = typeof payment.total_scheduled_amount === 'number' ? payment.total_scheduled_amount : 0;
-    return sum + amount;
+    const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
+    return sum + (totalInvestedAmount * percentage / 100);
   }, 0);
 
   // Get status badge color and text
@@ -69,11 +75,12 @@ const ScheduledPaymentsSection = () => {
   };
 
   // Calculate the actual payment amount based on percentage and total investment
-  const calculatePaymentAmount = (percentage: number | undefined, totalInvestedAmount: number | undefined) => {
-    if (!percentage || !totalInvestedAmount || isNaN(percentage) || isNaN(totalInvestedAmount)) {
+  const calculatePaymentAmount = (percentage: number | undefined) => {
+    if (!percentage || isNaN(percentage)) {
       return 0;
     }
     
+    // Calculate based on the global total invested amount (for all investments)
     return (totalInvestedAmount * percentage) / 100;
   };
 
@@ -175,7 +182,7 @@ const ScheduledPaymentsSection = () => {
                     <TableCell>{formatDate(payment.payment_date)}</TableCell>
                     <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
                     <TableCell className="font-medium">
-                      {formatCurrency(calculatePaymentAmount(payment.percentage, payment.total_invested_amount))}
+                      {formatCurrency(calculatePaymentAmount(payment.percentage))}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(payment.status)}
