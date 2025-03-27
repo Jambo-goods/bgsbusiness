@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
@@ -43,6 +42,7 @@ const ScheduledPaymentsSection = () => {
         const investmentMap: Record<string, number> = {};
         
         data.forEach(inv => {
+          console.log(`User investment for project ${inv.project_id}:`, inv.amount);
           investmentMap[inv.project_id] = inv.amount;
         });
         
@@ -111,7 +111,13 @@ const ScheduledPaymentsSection = () => {
   const pendingPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled') : [];
   
   const getTotalInvestmentAmount = (projectId: string): number => {
-    // First check if we have the total raised amount for this project
+    // First check if the user has directly invested in this project
+    if (projectInvestments[projectId]) {
+      console.log(`User investment for project ${projectId}:`, projectInvestments[projectId]);
+      return projectInvestments[projectId];
+    }
+    
+    // Next check if we have the total raised amount for this project
     if (totalProjectInvestments[projectId]) {
       console.log(`Project ${projectId} total investment:`, totalProjectInvestments[projectId]);
       return totalProjectInvestments[projectId];
