@@ -92,9 +92,9 @@ const ScheduledPaymentsSection = () => {
             <p className="text-xs mt-1">Les paiements apparaîtront ici une fois programmés par l'équipe</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto bg-white rounded-md">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-gray-50">
                 <TableRow>
                   <TableHead>Projet</TableHead>
                   <TableHead>Date</TableHead>
@@ -105,7 +105,7 @@ const ScheduledPaymentsSection = () => {
               </TableHeader>
               <TableBody>
                 {sortedPayments.map((payment) => (
-                  <TableRow key={payment.id} className={payment.status === 'paid' ? 'bg-green-50' : ''}>
+                  <TableRow key={payment.id} className={payment.status === 'paid' ? 'bg-green-50' : 'bg-white'}>
                     <TableCell className="font-medium">
                       <div className="flex items-center">
                         {payment.projects?.image && (
