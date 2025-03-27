@@ -175,6 +175,11 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     return formatDate(date.toISOString());
   })() : 'Non défini';
 
+  // Function to calculate payment amount based on percentage
+  const calculatePaymentAmount = (percentage: number) => {
+    return investmentAmount * (percentage / 100);
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-center mb-6">
@@ -299,7 +304,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
                     <span className="text-blue-600 font-medium">{payment.percentage.toFixed(2)}%</span>
                   </TableCell>
                   <TableCell className="font-medium text-green-600">
-                    {formatCurrency(investmentAmount * (payment.percentage / 100) || 0)}
+                    {formatCurrency(calculatePaymentAmount(payment.percentage))}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">

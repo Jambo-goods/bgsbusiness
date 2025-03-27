@@ -1,7 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScheduledPayment } from './types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CalendarIcon, Filter, RefreshCw, FileCheck, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -56,12 +55,16 @@ const ScheduledPaymentsSection = () => {
   
   // Calculate totals with proper number handling
   const totalPaid = paidPayments.reduce((sum, payment) => {
-    const amount = calculatePaymentAmount(payment.percentage, payment.total_invested_amount);
+    const amount = payment.percentage && payment.total_invested_amount 
+      ? (payment.total_invested_amount * payment.percentage / 100)
+      : calculatePaymentAmount(payment.percentage, payment.total_invested_amount);
     return sum + amount;
   }, 0);
   
   const totalPending = pendingPayments.reduce((sum, payment) => {
-    const amount = calculatePaymentAmount(payment.percentage, payment.total_invested_amount);
+    const amount = payment.percentage && payment.total_invested_amount 
+      ? (payment.total_invested_amount * payment.percentage / 100)
+      : calculatePaymentAmount(payment.percentage, payment.total_invested_amount);
     return sum + amount;
   }, 0);
 
@@ -179,7 +182,9 @@ const ScheduledPaymentsSection = () => {
               </TableHeader>
               <TableBody>
                 {sortedPayments.map((payment) => {
-                  const paymentAmount = calculatePaymentAmount(payment.percentage, payment.total_invested_amount);
+                  const paymentAmount = payment.percentage && payment.total_invested_amount 
+                    ? (payment.total_invested_amount * payment.percentage / 100)
+                    : calculatePaymentAmount(payment.percentage, payment.total_invested_amount);
                   const isUsingFallback = !payment.total_invested_amount || payment.total_invested_amount === 0;
                   
                   return (

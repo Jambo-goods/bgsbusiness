@@ -39,8 +39,16 @@ export const useScheduledPayments = () => {
       }
 
       console.log('Scheduled payments fetched:', data?.length || 0);
-      setScheduledPayments(data || []);
-      return data || [];
+      
+      // Transform data to ensure percentage and total_invested_amount are properly handled
+      const transformedData = (data || []).map(payment => ({
+        ...payment,
+        percentage: payment.percentage || 0,
+        total_invested_amount: payment.total_invested_amount || 0
+      }));
+      
+      setScheduledPayments(transformedData);
+      return transformedData;
     } catch (err) {
       console.error('Error in fetchScheduledPayments:', err);
       setError('Une erreur est survenue');
