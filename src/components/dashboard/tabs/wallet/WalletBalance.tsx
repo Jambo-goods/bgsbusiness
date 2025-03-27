@@ -21,7 +21,7 @@ export default function WalletBalance({
   // Use ref to track if we've already refreshed to prevent multiple refreshes
   const refreshInProgress = useRef(false);
   const lastRefreshTime = useRef(Date.now());
-  const MIN_REFRESH_INTERVAL = 3000; // Minimum 3 seconds between refreshes
+  const MIN_REFRESH_INTERVAL = 5000; // Increase to 5 seconds between refreshes
   
   const handleRefresh = async () => {
     // Check if refresh is already in progress or if it's too soon after the last refresh
@@ -51,22 +51,27 @@ export default function WalletBalance({
       const userId = data.session.user.id;
       console.log('Setting up wallet balance change listener for user:', userId);
       
-      // Listen to wallet transactions with debounce mechanism
+      // Listen to wallet transactions with debounce mechanism - use a more selective channel name
       const walletTxChannel = supabase
-        .channel('wallet-balance-changes-display')
+        .channel('wallet-balance-changes-display-stable')
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` },
           async (payload) => {
             console.log('Wallet transaction change detected:', payload);
-            handleRefresh();
             
-            // Show toast for yield transactions
-            if (payload.new && payload.eventType === 'INSERT' && 
-                (payload.new as any).type === 'yield' && 
-                (payload.new as any).status === 'completed') {
-              toast.success("Rendement reçu !", {
-                description: `Votre portefeuille a été crédité de ${(payload.new as any).amount}€.`
-              });
+            // Only refresh if enough time has passed since last refresh
+            const currentTime = Date.now();
+            if (currentTime - lastRefreshTime.current >= MIN_REFRESH_INTERVAL) {
+              handleRefresh();
+              
+              // Show toast for yield transactions
+              if (payload.new && payload.eventType === 'INSERT' && 
+                  (payload.new as any).type === 'yield' && 
+                  (payload.new as any).status === 'completed') {
+                toast.success("Rendement reçu !", {
+                  description: `Votre portefeuille a été crédité de ${(payload.new as any).amount}€.`
+                });
+              }
             }
           }
         )
@@ -76,15 +81,22 @@ export default function WalletBalance({
         
       // Also listen to profile updates (wallet_balance field) with debounce
       const profileChannel = supabase
-        .channel('profile-balance-changes')
+        .channel('profile-balance-changes-stable')
         .on('postgres_changes', 
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
           async (payload) => {
             console.log('Profile update detected:', payload);
+            
+            // Only refresh if the wallet_balance field actually changed
             if ((payload.new as any).wallet_balance !== (payload.old as any).wallet_balance) {
               console.log('Wallet balance changed from:', (payload.old as any).wallet_balance, 
                           'to:', (payload.new as any).wallet_balance);
-              handleRefresh();
+              
+              // Only refresh if enough time has passed since last refresh
+              const currentTime = Date.now();
+              if (currentTime - lastRefreshTime.current >= MIN_REFRESH_INTERVAL) {
+                handleRefresh();
+              }
             }
           }
         )
@@ -94,7 +106,7 @@ export default function WalletBalance({
         
       // Listen to scheduled payments with better logging and debounce
       const scheduledPaymentsChannel = supabase
-        .channel('scheduled-payments-wallet-changes')
+        .channel('scheduled-payments-wallet-changes-stable')
         .on('postgres_changes', 
           { event: 'UPDATE', schema: 'public', table: 'scheduled_payments' },
           async (payload) => {
@@ -102,12 +114,17 @@ export default function WalletBalance({
             // If a payment was marked as paid
             if ((payload.new as any).status === 'paid' && (payload.old as any).status !== 'paid') {
               console.log('Payment marked as paid, refreshing wallet balance');
-              handleRefresh();
               
-              // Show toast for successful payment
-              toast.success("Paiement programmé reçu", {
-                description: "Votre solde a été mis à jour avec le montant du paiement programmé"
-              });
+              // Only refresh if enough time has passed since last refresh
+              const currentTime = Date.now();
+              if (currentTime - lastRefreshTime.current >= MIN_REFRESH_INTERVAL) {
+                handleRefresh();
+                
+                // Show toast for successful payment
+                toast.success("Paiement programmé reçu", {
+                  description: "Votre solde a été mis à jour avec le montant du paiement programmé"
+                });
+              }
             }
           }
         )

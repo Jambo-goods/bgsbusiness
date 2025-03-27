@@ -18,7 +18,8 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
   const navigate = useNavigate();
   const refreshTimeoutRef = useRef<number | null>(null);
   const lastRefreshTime = useRef<number>(Date.now());
-  const MIN_REFRESH_INTERVAL = 3000; // Minimum 3 seconds between refreshes
+  const isRefreshing = useRef<boolean>(false);
+  const MIN_REFRESH_INTERVAL = 5000; // Increase to 5 seconds between refreshes
   
   useEffect(() => {
     console.log("WalletCard rendered with balance:", balance, "isLoading:", isLoading);
@@ -32,16 +33,19 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
     }
     
     // Only schedule refresh if enough time has passed since last refresh
-    if (now - lastRefreshTime.current > MIN_REFRESH_INTERVAL) {
+    // and if we're not already refreshing
+    if (now - lastRefreshTime.current > MIN_REFRESH_INTERVAL && !isRefreshing.current) {
       refreshTimeoutRef.current = window.setTimeout(() => {
+        isRefreshing.current = true;
         onManualRefresh();
         lastRefreshTime.current = Date.now();
+        isRefreshing.current = false;
         refreshTimeoutRef.current = null;
-      }, 100); // Small delay to batch potential multiple updates
+      }, 300); // Small delay to batch potential multiple updates
     }
   };
   
-  // Listen to realtime updates for wallet balance
+  // Listen to realtime updates for wallet balance with less frequent updates
   useEffect(() => {
     const setupRealtimeListeners = async () => {
       const { data } = await supabase.auth.getSession();
@@ -52,7 +56,7 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
       
       // Listen for profile changes (direct wallet balance updates)
       const profilesChannel = supabase
-        .channel('wallet_card_balance_direct_updates')
+        .channel('wallet_card_balance_direct_updates_stable')
         .on('postgres_changes', 
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
           (payload) => {
@@ -62,25 +66,31 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
                 typeof payload.new === 'object' && typeof payload.old === 'object' &&
                 'wallet_balance' in payload.new && 'wallet_balance' in payload.old &&
                 payload.new.wallet_balance !== payload.old.wallet_balance) {
-              // Show a notification if balance increased
+              
+              // Only if balance has increased
               const newBalance = Number(payload.new.wallet_balance);
               const oldBalance = Number(payload.old.wallet_balance);
               const difference = newBalance - oldBalance;
               
               if (difference > 0) {
-                toast.success(`Votre solde a été augmenté de ${difference}€`);
+                // Show toast only for significant increases (> 1€)
+                if (difference > 1) {
+                  toast.success(`Votre solde a été augmenté de ${difference}€`);
+                }
               }
               
               // Force refresh with debounce
-              debouncedRefresh();
+              if (!isRefreshing.current) {
+                debouncedRefresh();
+              }
             }
           }
         )
         .subscribe();
       
-      // Listen for wallet transactions (admin completions)
+      // Listen for wallet transactions (completions) - with reduced frequency
       const walletTransactionsChannel = supabase
-        .channel('wallet_card_transactions_updates')
+        .channel('wallet_card_transactions_updates_stable')
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
           (payload) => {
@@ -96,20 +106,27 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
                 // Check for status change from pending to completed
                 if (payload.old && typeof payload.old === 'object' && 
                     (payload.old as Record<string, any>).status !== 'completed') {
-                  toast.success(`Dépôt de ${transaction.amount}€ crédité sur votre compte`);
+                  
+                  // Only show toast for significant amounts (> 1€)
+                  if (transaction.amount > 1) {
+                    toast.success(`Dépôt de ${transaction.amount}€ crédité sur votre compte`);
+                  }
                 }
                 
-                // Force refresh with debounce
-                debouncedRefresh();
+                // Only refresh if we're not already refreshing and enough time has passed
+                if (!isRefreshing.current && 
+                    Date.now() - lastRefreshTime.current > MIN_REFRESH_INTERVAL) {
+                  debouncedRefresh();
+                }
               }
             }
           }
         )
         .subscribe();
         
-      // Listen for bank transfers specifically
+      // Listen for bank transfers specifically (less frequently)
       const bankTransfersChannel = supabase
-        .channel('wallet_card_bank_transfers_updates')
+        .channel('wallet_card_bank_transfers_updates_stable')
         .on('postgres_changes', 
           { event: 'UPDATE', schema: 'public', table: 'bank_transfers' }, 
           (payload) => {
@@ -119,10 +136,16 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
             if (payload.new && typeof payload.new === 'object') {
               const newData = payload.new as Record<string, any>;
               
-              // Force refresh if a transfer is completed
-              if (newData.status === 'completed') {
-                // Force refresh with debounce
-                debouncedRefresh();
+              // Only refresh for confirmed completions, not every update
+              if (newData.status === 'completed' && 
+                  payload.old && 
+                  (payload.old as Record<string, any>).status !== 'completed') {
+                
+                // Only refresh if we're not already refreshing and enough time has passed
+                if (!isRefreshing.current && 
+                    Date.now() - lastRefreshTime.current > MIN_REFRESH_INTERVAL) {
+                  debouncedRefresh();
+                }
               }
             }
           }
@@ -144,8 +167,14 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
   
   const handleManualRefresh = () => {
     // Allow manual refresh regardless of debounce timing
-    lastRefreshTime.current = Date.now();
-    onManualRefresh();
+    if (!isRefreshing.current) {
+      isRefreshing.current = true;
+      lastRefreshTime.current = Date.now();
+      onManualRefresh();
+      setTimeout(() => {
+        isRefreshing.current = false;
+      }, 1000);
+    }
   };
   
   const handleInstructionsClick = () => {
@@ -165,10 +194,10 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
             variant="ghost"
             size="icon"
             onClick={handleManualRefresh}
-            disabled={isLoading}
+            disabled={isLoading || isRefreshing.current}
             className="h-8 w-8 text-white hover:bg-white/10"
           >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${isLoading || isRefreshing.current ? 'animate-spin' : ''}`} />
             <span className="sr-only">Actualiser</span>
           </Button>
         </CardTitle>

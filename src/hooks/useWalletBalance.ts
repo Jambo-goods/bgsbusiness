@@ -14,7 +14,7 @@ export function useWalletBalance() {
   
   // Add a debounce mechanism
   const refreshTimeoutRef = useRef<number | null>(null);
-  const MIN_REFRESH_INTERVAL = 2000; // Minimum time between refreshes in ms
+  const MIN_REFRESH_INTERVAL = 5000; // Increase to 5 seconds between refreshes
 
   // Get the current user's ID when the hook loads
   useEffect(() => {
@@ -109,6 +109,7 @@ export function useWalletBalance() {
   }, [userId, fetchWalletBalance]);
   
   // Set up realtime subscription for wallet_transactions, scheduled_payments and profile updates
+  // with improved debounce and stability
   useEffect(() => {
     if (!userId) return;
     
@@ -116,17 +117,24 @@ export function useWalletBalance() {
     
     // Subscribe to wallet transactions to catch direct wallet updates
     const txSubscription = supabase
-      .channel('wallet_balance_transactions')
+      .channel('wallet_balance_transactions_stable')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
         payload => {
           console.log("Wallet transaction detected:", payload);
-          // Use debounced refresh to prevent multiple rapid updates
-          debouncedRefresh(() => fetchWalletBalance(false));
+          
+          // Only update if we haven't updated recently
+          const currentTime = Date.now();
+          if (currentTime - lastUpdateTime > MIN_REFRESH_INTERVAL) {
+            // Use debounced refresh to prevent multiple rapid updates
+            debouncedRefresh(() => fetchWalletBalance(false));
+          }
           
           // Show toast for yield/deposit transactions related to project returns
+          // Only if it's significant (> 5€) and a completed insertion
           if (payload.new && payload.eventType === 'INSERT' && 
               (payload.new as any).status === 'completed' &&
+              (payload.new as any).amount > 5 &&
               (payload.new as any).description?.includes('Rendement')) {
             toast.success("Rendement reçu", {
               description: `Votre portefeuille a été crédité de ${(payload.new as any).amount}€`
@@ -138,7 +146,7 @@ export function useWalletBalance() {
     
     // Subscribe to direct profile updates (wallet_balance field)
     const profileSubscription = supabase
-      .channel('wallet_balance_profile')
+      .channel('wallet_balance_profile_stable')
       .on('postgres_changes', 
         { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
         payload => {
@@ -150,18 +158,19 @@ export function useWalletBalance() {
             
             console.log(`Balance changed from ${(payload.old as any).wallet_balance} to ${(payload.new as any).wallet_balance}`);
             
-            // Use debounced update to avoid UI flicker
-            debouncedRefresh(() => {
-              setWalletBalance((payload.new as any).wallet_balance);
-              setLastUpdateTime(Date.now());
-            });
+            // Directly set the balance without triggering a refresh
+            // This prevents refresh loops
+            setWalletBalance((payload.new as any).wallet_balance);
+            setLastUpdateTime(Date.now());
             
-            // Show toast when balance increases
+            // Show toast when balance increases significantly (> 5€)
             if ((payload.new as any).wallet_balance > (payload.old as any).wallet_balance) {
               const difference = (payload.new as any).wallet_balance - (payload.old as any).wallet_balance;
-              toast.success("Solde mis à jour", {
-                description: `Votre solde a été augmenté de ${difference}€`
-              });
+              if (difference > 5) {
+                toast.success("Solde mis à jour", {
+                  description: `Votre solde a été augmenté de ${difference}€`
+                });
+              }
             }
           }
         }
@@ -170,7 +179,7 @@ export function useWalletBalance() {
     
     // Subscribe to scheduled payments to update balance when payments are marked as paid
     const scheduledPaymentsSubscription = supabase
-      .channel('wallet_balance_scheduled_payments')
+      .channel('wallet_balance_scheduled_payments_stable')
       .on('postgres_changes', 
         { event: 'UPDATE', schema: 'public', table: 'scheduled_payments' }, 
         payload => {
@@ -178,12 +187,16 @@ export function useWalletBalance() {
           if ((payload.new as any).status === 'paid' && (payload.old as any).status !== 'paid') {
             console.log("Payment status changed to paid, refreshing balance");
             
-            // Use debounced refresh
-            debouncedRefresh(() => {
-              fetchWalletBalance(false);
-              // Process the payment directly
-              processScheduledPayment((payload.new as any).id, (payload.new as any).project_id, (payload.new as any).percentage);
-            });
+            // Only update if we haven't updated recently
+            const currentTime = Date.now();
+            if (currentTime - lastUpdateTime > MIN_REFRESH_INTERVAL) {
+              // Use debounced refresh
+              debouncedRefresh(() => {
+                fetchWalletBalance(false);
+                // Process the payment directly
+                processScheduledPayment((payload.new as any).id, (payload.new as any).project_id, (payload.new as any).percentage);
+              });
+            }
           }
         }
       )
@@ -199,7 +212,7 @@ export function useWalletBalance() {
       supabase.removeChannel(profileSubscription);
       supabase.removeChannel(scheduledPaymentsSubscription);
     };
-  }, [userId, fetchWalletBalance, debouncedRefresh]);
+  }, [userId, fetchWalletBalance, debouncedRefresh, lastUpdateTime]);
 
   // Helper function to directly process a scheduled payment
   const processScheduledPayment = async (paymentId: string, projectId: string, percentage: number) => {
@@ -244,13 +257,13 @@ export function useWalletBalance() {
     }
   };
   
-  // Set up polling with a very infrequent interval (5 minutes) to avoid flickering
+  // Set up polling with a very infrequent interval (10 minutes) to avoid flickering
   useEffect(() => {
     const pollingInterval = setInterval(() => {
       if (userId && !isRefreshing) {
         const timeElapsed = Date.now() - lastUpdateTime;
-        // Only refresh if it's been more than 5 minutes since the last update
-        if (timeElapsed > 300000) {
+        // Only refresh if it's been more than 10 minutes since the last update
+        if (timeElapsed > 600000) {
           console.log("Polling wallet balance");
           fetchWalletBalance(false); // Silent refresh
           
@@ -258,7 +271,7 @@ export function useWalletBalance() {
           checkUnprocessedPayments();
         }
       }
-    }, 300000); // Check every 5 minutes
+    }, 600000); // Check every 10 minutes (increased from 5)
     
     return () => {
       clearInterval(pollingInterval);
