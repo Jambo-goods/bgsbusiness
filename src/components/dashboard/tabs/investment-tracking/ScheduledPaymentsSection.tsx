@@ -105,7 +105,7 @@ const ScheduledPaymentsSection = () => {
               </TableHeader>
               <TableBody>
                 {sortedPayments.map((payment) => (
-                  <TableRow key={payment.id} className="bg-green-50">
+                  <TableRow key={payment.id} className="bg-white">
                     <TableCell className="font-medium">
                       <div className="flex items-center">
                         {payment.projects?.image && (
