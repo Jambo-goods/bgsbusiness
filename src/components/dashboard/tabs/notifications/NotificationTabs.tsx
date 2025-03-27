@@ -15,12 +15,16 @@ export default function NotificationTabs({
   onFilterChange 
 }: NotificationTabsProps) {
   return (
-    <TabsList className="grid w-full grid-cols-2 max-w-[200px]">
+    <TabsList className="grid w-full grid-cols-2 max-w-[200px] p-1 bg-gray-100 rounded-md">
       <TabsTrigger 
         value="all" 
         onClick={() => onFilterChange('all')}
         data-state={filter === 'all' ? 'active' : 'inactive'}
-        className={filter === 'all' ? 'data-[state=active]:bg-bgs-blue text-white' : ''}
+        className={`rounded-md transition-all ${
+          filter === 'all' 
+            ? 'bg-bgs-blue text-white shadow-md' 
+            : 'hover:bg-gray-200'
+        }`}
       >
         Toutes ({totalCount})
       </TabsTrigger>
@@ -28,7 +32,11 @@ export default function NotificationTabs({
         value="unread" 
         onClick={() => onFilterChange('unread')}
         data-state={filter === 'unread' ? 'active' : 'inactive'}
-        className={filter === 'unread' ? 'data-[state=active]:bg-bgs-blue text-white' : ''}
+        className={`rounded-md transition-all ${
+          filter === 'unread' 
+            ? 'bg-bgs-blue text-white shadow-md' 
+            : 'hover:bg-gray-200'
+        }`}
         disabled={unreadCount === 0}
       >
         Non lues ({unreadCount})
