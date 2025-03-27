@@ -10,6 +10,7 @@ export function useWalletBalance() {
   const [userId, setUserId] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Get the current user's ID when the hook loads
   useEffect(() => {
@@ -37,7 +38,7 @@ export function useWalletBalance() {
     if (isRefreshing) return;
     
     try {
-      if (showLoading) {
+      if (showLoading && !initialLoadComplete) {
         setIsLoadingBalance(true);
       }
       setIsRefreshing(true);
@@ -49,6 +50,7 @@ export function useWalletBalance() {
         setWalletBalance(0);
         setIsLoadingBalance(false);
         setIsRefreshing(false);
+        setInitialLoadComplete(true);
         return;
       }
       
@@ -72,14 +74,15 @@ export function useWalletBalance() {
     } catch (err) {
       console.error("Error:", err);
       setError("Une erreur est survenue");
-      setWalletBalance(0);
+      // Don't reset wallet balance on error to prevent flickering
     } finally {
       setIsLoadingBalance(false);
       setIsRefreshing(false);
+      setInitialLoadComplete(true);
     }
-  }, [isRefreshing]);
+  }, [isRefreshing, initialLoadComplete]);
 
-  // Initial balance fetch
+  // Initial balance fetch - only happens once when userId is set
   useEffect(() => {
     if (userId) {
       console.log("Initializing balance fetch for user:", userId);
@@ -211,13 +214,13 @@ export function useWalletBalance() {
     }
   };
   
-  // Set up polling with a much less frequent interval (2 minutes)
+  // Set up polling with a very infrequent interval (5 minutes) to avoid flickering
   useEffect(() => {
     const pollingInterval = setInterval(() => {
       if (userId && !isRefreshing) {
         const timeElapsed = Date.now() - lastUpdateTime;
-        // Only refresh if it's been more than 2 minutes since the last update
-        if (timeElapsed > 120000) {
+        // Only refresh if it's been more than 5 minutes since the last update
+        if (timeElapsed > 300000) {
           console.log("Polling wallet balance");
           fetchWalletBalance(false); // Silent refresh
           
@@ -225,7 +228,7 @@ export function useWalletBalance() {
           checkUnprocessedPayments();
         }
       }
-    }, 120000); // Check every 2 minutes instead of 30 seconds
+    }, 300000); // Check every 5 minutes
     
     return () => {
       clearInterval(pollingInterval);
