@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -93,6 +94,7 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
           
           if (error) {
             console.error(`Error processing payment ${payment.id}:`, error);
+            toast.error("Erreur lors du traitement du paiement. Veuillez réessayer.");
           } else {
             console.log(`Successfully processed payment ${payment.id}:`, result);
             
@@ -104,6 +106,7 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
           }
         } catch (err) {
           console.error(`Error invoking edge function:`, err);
+          toast.error("Erreur lors de la mise à jour des soldes");
         }
       } else {
         toast.success("Paiement programmé mis à jour avec succès");

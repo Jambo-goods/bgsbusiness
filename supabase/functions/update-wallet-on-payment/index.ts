@@ -121,7 +121,7 @@ serve(async (req) => {
       console.log(`Processing investor ${userId}: ${percentage}% of ${investmentAmount} = ${yieldAmount}`)
 
       try {
-        // Create wallet transaction
+        // Create wallet transaction - MODIFIED: Removed project_id field that doesn't exist
         const { data: txData, error: txError } = await supabaseClient
           .from('wallet_transactions')
           .insert({
@@ -129,8 +129,7 @@ serve(async (req) => {
             amount: yieldAmount,
             type: 'yield',
             status: 'completed',
-            description: `Rendement ${percentage}% du projet ${projectName}`,
-            project_id: projectId
+            description: `Rendement ${percentage}% du projet ${projectName}`
           })
 
         if (txError) {
@@ -194,7 +193,6 @@ serve(async (req) => {
             type: 'yield',
             seen: false,
             data: {
-              project_id: projectId,
               amount: yieldAmount,
               category: 'success'
             }
