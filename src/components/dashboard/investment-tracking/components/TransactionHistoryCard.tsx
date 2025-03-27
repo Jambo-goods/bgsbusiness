@@ -131,7 +131,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
       // Convert to typed payments and calculate the correct amount based on percentage and investment amount
       const typedPayments = filteredPayments.map(payment => {
         // Calculate the payment amount based on percentage of the investment amount
-        const calculatedAmount = (investAmount * (payment.percentage / 100));
+        const calculatedAmount = investAmount * (payment.percentage / 100);
         
         return {
           ...payment,
@@ -310,7 +310,9 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
                   <TableCell>
                     <span className="text-blue-600 font-medium">{payment.percentage.toFixed(2)}%</span>
                   </TableCell>
-                  <TableCell className="font-medium text-green-600">{formatCurrency(payment.total_scheduled_amount || 0)}</TableCell>
+                  <TableCell className="font-medium text-green-600">
+                    {formatCurrency(payment.total_scheduled_amount || 0)}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center">
                       {payment.status === 'paid' ? (
