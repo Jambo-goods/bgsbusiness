@@ -141,30 +141,6 @@ const ScheduledPaymentsSection = () => {
     return (investmentAmount * percentage) / 100;
   };
 
-  // Get the total invested amount for a specific project
-  const getProjectInvestmentAmount = (projectId: string) => {
-    // Special case for "BGS Poule Pondeuse" project
-    const isPouleProject = scheduledPayments.some(payment => 
-      payment.project_id === projectId && 
-      payment.projects?.name?.toLowerCase().includes("poule pondeuse")
-    );
-    
-    // Get the investment amount for this specific project
-    let investmentAmount = projectInvestments[projectId] || 0;
-    
-    // If it's the Poule Pondeuse project, use the total invested amount for this project
-    if (isPouleProject) {
-      // Get the project from the scheduled payments list
-      const project = scheduledPayments.find(p => p.project_id === projectId);
-      // Use the total_invested_amount from the project if available
-      if (project && project.total_invested_amount) {
-        investmentAmount = Number(project.total_invested_amount);
-      }
-    }
-    
-    return investmentAmount;
-  };
-
   return (
     <Card className="mt-6">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -241,7 +217,6 @@ const ScheduledPaymentsSection = () => {
                   <TableHead>Projet</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Pourcentage</TableHead>
-                  <TableHead>Montant investi</TableHead>
                   <TableHead>Montant</TableHead>
                   <TableHead>Statut</TableHead>
                 </TableRow>
@@ -263,9 +238,6 @@ const ScheduledPaymentsSection = () => {
                     </TableCell>
                     <TableCell>{formatDate(payment.payment_date)}</TableCell>
                     <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(getProjectInvestmentAmount(payment.project_id))}
-                    </TableCell>
                     <TableCell className="font-medium">
                       {formatCurrency(calculatePaymentAmount(payment.percentage, payment.project_id))}
                     </TableCell>
