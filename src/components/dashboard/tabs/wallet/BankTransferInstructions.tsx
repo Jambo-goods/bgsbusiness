@@ -153,7 +153,11 @@ export default function BankTransferInstructions() {
             
             <div className="border-t border-gray-200 pt-4">
               <p className="text-sm font-medium text-gray-500 mb-1">Référence à indiquer</p>
-              <p className="font-mono font-semibold tracking-wider text-bgs-blue">{bankDetails.reference}</p>
+              <div className="bg-white p-3 rounded-md border border-gray-200">
+                <p className="font-mono font-semibold tracking-wider text-bgs-blue text-center text-lg">
+                  {bankDetails.reference}
+                </p>
+              </div>
             </div>
           </div>
         </CardContent>
