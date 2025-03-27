@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from 'sonner';
 
 export const useScheduledPayments = () => {
@@ -176,7 +176,7 @@ export const useScheduledPayments = () => {
             projectId: paymentToUpdate.project_id,
             percentage: newPercentage || paymentToUpdate.percentage,
             processAll: true,
-            forceRefresh: true // Add a force refresh parameter
+            forceRefresh: true 
           });
           
           const { data: functionResult, error: functionError } = await supabase.functions.invoke(
@@ -187,7 +187,7 @@ export const useScheduledPayments = () => {
                 projectId: paymentToUpdate.project_id,
                 percentage: newPercentage || paymentToUpdate.percentage,
                 processAll: true,
-                forceRefresh: true // Add force refresh parameter
+                forceRefresh: true
               }
             }
           );
@@ -239,14 +239,37 @@ export const useScheduledPayments = () => {
         { event: '*', schema: 'public', table: 'scheduled_payments' },
         (payload) => {
           console.log('Real-time update on scheduled payments:', payload);
+          // Check if a payment has been marked as paid
+          if (payload.eventType === 'UPDATE' && 
+              (payload.new as any).status === 'paid' && 
+              (payload.old as any).status !== 'paid') {
+            console.log('Payment marked as paid, refreshing data');
+            toast.info("Un paiement programmé a été effectué", {
+              description: "Les soldes sont en cours de mise à jour"
+            });
+          }
           // Refresh without showing loading indicator
           fetchScheduledPayments(false);
         }
       )
       .subscribe();
 
+    // Also listen for wallet transactions
+    const walletTransactionsChannel = supabase
+      .channel('wallet_transactions_from_payments')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'wallet_transactions' },
+        (payload) => {
+          if ((payload.new as any).type === 'yield') {
+            console.log('New yield transaction detected:', payload.new);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(scheduledPaymentsChannel);
+      supabase.removeChannel(walletTransactionsChannel);
     };
   }, [fetchScheduledPayments]);
 

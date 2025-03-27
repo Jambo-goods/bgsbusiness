@@ -69,39 +69,28 @@ export function useWalletBalance() {
     }
   }, [userId, fetchWalletBalance]);
   
-  // Set up realtime subscription for wallet_transactions with improved error handling
+  // Set up realtime subscription for wallet_transactions and scheduled_payments
   useEffect(() => {
     if (!userId) return;
     
-    console.log("Setting up wallet transaction subscriptions for user:", userId);
+    console.log("Setting up real-time subscriptions for user:", userId);
     
-    // Subscribe to wallet transactions to catch deposit confirmations
+    // Subscribe to wallet transactions to catch direct wallet updates
     const txSubscription = supabase
-      .channel('wallet_transactions_balance_changes')
+      .channel('wallet_balance_transactions')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
         payload => {
           console.log("Wallet transaction detected:", payload);
           // Force refresh when a transaction affects wallet
           fetchWalletBalance(false);
-          
-          // Show toast for new yield transactions
-          if (payload.eventType === 'INSERT' && 
-              (payload.new as any).type === 'yield' &&
-              (payload.new as any).status === 'completed') {
-            toast.success("Rendement reçu!", {
-              description: `Votre portefeuille a été crédité de ${(payload.new as any).amount}€.`
-            });
-          }
         }
       )
-      .subscribe((status) => {
-        console.log("Wallet transactions channel status:", status);
-      });
+      .subscribe();
     
-    // Subscribe to direct profile updates (wallet_balance field) - more robust monitoring
+    // Subscribe to direct profile updates (wallet_balance field)
     const profileSubscription = supabase
-      .channel('profile_balance_changes')
+      .channel('wallet_balance_profile')
       .on('postgres_changes', 
         { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` }, 
         payload => {
@@ -113,27 +102,17 @@ export function useWalletBalance() {
             
             console.log(`Balance changed from ${(payload.old as any).wallet_balance} to ${(payload.new as any).wallet_balance}`);
             setWalletBalance((payload.new as any).wallet_balance);
-            
-            // If balance increased, show toast notification
-            const difference = (payload.new as any).wallet_balance - (payload.old as any).wallet_balance;
-            if (difference > 0) {
-              toast.success(`Votre solde a été crédité de ${difference}€`);
-            }
           }
         }
       )
-      .subscribe((status) => {
-        console.log("Profile changes channel status:", status);
-      });
+      .subscribe();
     
     // Subscribe to scheduled payments to update balance when payments are marked as paid
     const scheduledPaymentsSubscription = supabase
-      .channel('scheduled_payments_for_balance')
+      .channel('wallet_balance_scheduled_payments')
       .on('postgres_changes', 
         { event: 'UPDATE', schema: 'public', table: 'scheduled_payments' }, 
         payload => {
-          console.log("Scheduled payment change detected:", payload);
-          
           // If status changed to 'paid', refresh the balance
           if ((payload.new as any).status === 'paid' && (payload.old as any).status !== 'paid') {
             console.log("Payment status changed to paid, refreshing balance");
@@ -141,9 +120,7 @@ export function useWalletBalance() {
           }
         }
       )
-      .subscribe((status) => {
-        console.log("Scheduled payments channel status:", status);
-      });
+      .subscribe();
     
     return () => {
       console.log("Cleaning up wallet balance subscriptions");
@@ -153,11 +130,11 @@ export function useWalletBalance() {
     };
   }, [userId, fetchWalletBalance]);
   
-  // Set up polling to check balance periodically - better frequency for updates
+  // Set up polling to check balance periodically
   useEffect(() => {
     const pollingInterval = setInterval(() => {
       fetchWalletBalance(false); // Silent refresh
-    }, 5000); // Check more frequently (5 seconds instead of 10)
+    }, 5000); // Check every 5 seconds
     
     return () => {
       clearInterval(pollingInterval);

@@ -77,6 +77,56 @@ export default function WalletTab() {
     toast.success("Le dépôt a été correctement crédité sur votre compte");
   };
 
+  // Listen for scheduled payment notifications
+  useEffect(() => {
+    const scheduledPaymentChannel = supabase
+      .channel('wallet_tab_scheduled_payments')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'scheduled_payments' },
+        (payload) => {
+          // If a payment was marked as paid
+          if ((payload.new as any).status === 'paid' && (payload.old as any).status !== 'paid') {
+            console.log('WalletTab: Payment marked as paid, refreshing balance');
+            if (refreshBalance) {
+              refreshBalance(false); // Silent refresh
+              
+              // Show toast for the event
+              toast.success("Paiement programmé exécuté", {
+                description: "Votre solde disponible a été mis à jour"
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+      
+    // For yield transactions also listen
+    const yieldTransactionsChannel = supabase
+      .channel('wallet_tab_yield_transactions')
+      .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'wallet_transactions' },
+        (payload) => {
+          if ((payload.new as any).type === 'yield') {
+            console.log('WalletTab: New yield transaction detected, refreshing balance');
+            if (refreshBalance) {
+              refreshBalance(false); // Silent refresh
+              
+              // Show toast for the new yield
+              toast.success("Rendement reçu", {
+                description: `Votre solde a été crédité de ${(payload.new as any).amount}€`
+              });
+            }
+          }
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(scheduledPaymentChannel);
+      supabase.removeChannel(yieldTransactionsChannel);
+    };
+  }, [refreshBalance]);
+
   return (
     <div className="space-y-6">
       <WalletBalance 

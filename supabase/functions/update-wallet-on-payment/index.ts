@@ -37,6 +37,37 @@ serve(async (req) => {
       )
     }
 
+    // Get payment details
+    const { data: paymentData, error: paymentError } = await supabaseClient
+      .from('scheduled_payments')
+      .select('*')
+      .eq('id', paymentId)
+      .single()
+      
+    if (paymentError) {
+      console.error(`Error fetching payment data: ${paymentError.message}`)
+      return new Response(
+        JSON.stringify({ error: paymentError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      )
+    }
+
+    // If payment already processed and no force refresh, return early
+    if (paymentData.processed_at && !forceRefresh) {
+      console.log(`Payment ${paymentId} already processed at ${paymentData.processed_at}, skipping`)
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Payment already processed', 
+          processed: 0,
+          errors: 0,
+          alreadyProcessed: true,
+          paymentData
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Fetch project data to have the project name for better logging
     const { data: projectData, error: projectError } = await supabaseClient
       .from('projects')
@@ -100,8 +131,8 @@ serve(async (req) => {
             .eq('type', 'yield')
             .maybeSingle()
 
-          if (existingTxError) {
-            console.error(`Error checking existing transaction for user ${userId}: ${existingTxError}`)
+          if (existingTxError && !existingTxError.message.includes('does not exist')) {
+            console.error(`Error checking existing transaction for user ${userId}: ${existingTxError.message}`)
           }
 
           // If transaction already exists and we're not forcing a refresh, skip
@@ -113,7 +144,7 @@ serve(async (req) => {
           }
         } catch (checkError) {
           // If there's an error checking existing transactions, log it but continue
-          console.error(`Error checking existing transaction: ${checkError}`)
+          console.error(`Error checking existing transaction: ${checkError.message || checkError}`)
         }
 
         // Create wallet transaction
@@ -127,10 +158,8 @@ serve(async (req) => {
             description: `Rendement ${percentage}% du projet ${projectName}`,
             payment_id: paymentId,
             project_id: projectId,
-            created_at: new Date().toISOString()
           })
           .select()
-          .maybeSingle()
 
         if (txError) {
           console.error(`Error creating wallet transaction for user ${userId}: ${txError.message}`)
@@ -140,14 +169,14 @@ serve(async (req) => {
         }
 
         // Update wallet balance directly
-        const { data: userData, error: userError } = await supabaseClient
+        const { data: updateResult, error: updateError } = await supabaseClient
           .rpc('increment_wallet_balance', {
             user_id: userId,
             increment_amount: yieldAmount
           })
 
-        if (userError) {
-          console.error(`Error updating wallet balance for user ${userId}: ${userError.message}`)
+        if (updateError) {
+          console.error(`Error updating wallet balance for user ${userId}: ${updateError.message}`)
           
           // Try a direct update as a fallback
           const { data: profileData, error: profileError } = await supabaseClient
@@ -179,6 +208,8 @@ serve(async (req) => {
           } else {
             console.log(`Direct wallet update successful for user ${userId}: ${currentBalance} + ${yieldAmount} = ${newBalance}`)
           }
+        } else {
+          console.log(`Successfully updated wallet balance for user ${userId} by adding ${yieldAmount}`)
         }
 
         // Create notification for the user
@@ -207,8 +238,8 @@ serve(async (req) => {
         successCount++
         totalYieldAmount += yieldAmount
       } catch (error) {
-        console.error(`Exception processing user ${userId}: ${error.message}`)
-        errors.push({ userId, error: error.message })
+        console.error(`Exception processing user ${userId}: ${error.message || error}`)
+        errors.push({ userId, error: error.message || 'Unknown error' })
         errorCount++
       }
     }
@@ -219,7 +250,8 @@ serve(async (req) => {
       .update({
         processed_at: new Date().toISOString(),
         processed_investors_count: successCount,
-        processed_amount: totalYieldAmount
+        processed_amount: totalYieldAmount,
+        status: 'paid'
       })
       .eq('id', paymentId)
 
@@ -240,17 +272,10 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error(`Unhandled error: ${error.message}`)
+    console.error(`Unhandled error: ${error.message || error}`)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Unknown error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     )
   }
 })
-
-/* To invoke:
-curl -i --location --request POST 'http://localhost:54321/functions/v1/update-wallet-on-payment' \
-  --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0' \
-  --header 'Content-Type: application/json' \
-  --data '{"paymentId":"123e4567-e89b-12d3-a456-426614174000","projectId":"123e4567-e89b-12d3-a456-426614174000","percentage":10,"processAll":true}'
-*/

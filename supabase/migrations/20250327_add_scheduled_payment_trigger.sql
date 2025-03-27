@@ -1,5 +1,14 @@
 
--- Create a function to add wallet transactions when a scheduled payment is marked as paid
+-- Add payment_id column to wallet_transactions table
+ALTER TABLE wallet_transactions 
+ADD COLUMN payment_id UUID,
+ADD COLUMN project_id UUID;
+
+-- Update the trigger function to account for the processed fields
+ALTER FUNCTION public.process_scheduled_payment_yield()
+RENAME TO process_scheduled_payment_yield_old;
+
+-- Create the updated trigger function
 CREATE OR REPLACE FUNCTION public.process_scheduled_payment_yield()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -54,11 +63,7 @@ BEGIN
         'Rendement ' || percentage || '% du projet ' || COALESCE(project_name, 'inconnu'),
         NEW.id,
         NEW.project_id
-      ) ON CONFLICT (user_id, payment_id) WHERE type = 'yield'
-        DO UPDATE SET
-          amount = yield_amount,
-          status = 'completed',
-          updated_at = NOW();
+      ) ON CONFLICT DO NOTHING;
       
       -- Update wallet balance
       UPDATE public.profiles
@@ -91,7 +96,13 @@ BEGIN
     -- Update the payment record to mark as processed
     UPDATE public.scheduled_payments
     SET 
-      processed_at = NOW()
+      processed_at = NOW(),
+      processed_investors_count = (SELECT COUNT(*) FROM public.investments WHERE project_id = NEW.project_id AND status = 'active'),
+      processed_amount = (
+        SELECT SUM((amount * percentage / 100)::NUMERIC) 
+        FROM public.investments 
+        WHERE project_id = NEW.project_id AND status = 'active'
+      )
     WHERE id = NEW.id;
     
     RAISE NOTICE 'Completed processing scheduled payment % for project %', NEW.id, NEW.project_id;
@@ -101,7 +112,12 @@ BEGIN
 END;
 $$;
 
--- Create trigger to process scheduled payments when marked as paid
+-- Add columns for tracking processed data
+ALTER TABLE public.scheduled_payments 
+ADD COLUMN IF NOT EXISTS processed_investors_count INTEGER DEFAULT 0,
+ADD COLUMN IF NOT EXISTS processed_amount NUMERIC DEFAULT 0;
+
+-- Create or recreate the trigger
 DROP TRIGGER IF EXISTS process_scheduled_payment_trigger ON public.scheduled_payments;
 
 CREATE TRIGGER process_scheduled_payment_trigger
@@ -110,8 +126,7 @@ FOR EACH ROW
 WHEN (NEW.status = 'paid' AND OLD.status != 'paid')
 EXECUTE FUNCTION public.process_scheduled_payment_yield();
 
--- Add a unique constraint to wallet_transactions for yield type to prevent duplicates
-ALTER TABLE public.wallet_transactions 
-ADD CONSTRAINT unique_payment_per_user 
-UNIQUE (user_id, payment_id, type) 
+-- Create a unique index to prevent duplicate payments
+CREATE UNIQUE INDEX IF NOT EXISTS unique_yield_payment_per_user
+ON public.wallet_transactions (user_id, payment_id, type)
 WHERE type = 'yield';
