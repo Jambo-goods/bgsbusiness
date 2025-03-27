@@ -5,9 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Save, RefreshCw } from "lucide-react";
 
-// Import our new components
-import LanguageSection from "./settings/LanguageSection";
-import InterfaceSection from "./settings/InterfaceSection";
+// Import les sections de paramètres nécessaires
 import SecuritySection from "./settings/SecuritySection";
 import NotificationsSection from "./settings/NotificationsSection";
 import { UserSettings, defaultSettings } from "./settings/types";
@@ -64,14 +62,6 @@ export default function SettingsTab() {
     }
   };
 
-  // Handlers for various settings changes
-  const handleLanguageChange = (language: string) => {
-    setSettings(prev => ({
-      ...prev,
-      language
-    }));
-  };
-
   // Password change handler
   const handlePasswordChange = async (currentPassword: string, newPassword: string): Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -125,21 +115,7 @@ export default function SettingsTab() {
         <h2 className="text-xl font-semibold text-bgs-blue mb-4">Paramètres</h2>
         
         <div className="space-y-8">
-          {/* Language Section */}
-          <LanguageSection 
-            selectedLanguage={settings.language}
-            onLanguageChange={handleLanguageChange}
-          />
-
-          <Separator />
-          
-          {/* Interface Section */}
-          <InterfaceSection 
-            sidebarCollapsed={settings.sidebarCollapsed}
-            onToggle={() => handleSwitchChange("sidebarCollapsed")}
-          />
-
-          <Separator />
+          {/* Les sections langue et interface ont été supprimées */}
           
           {/* Security Section */}
           <SecuritySection 
