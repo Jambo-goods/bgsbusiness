@@ -167,6 +167,7 @@ export const useScheduledPayments = () => {
             }
           }
           
+          // Call the edge function to update all investors' wallets
           const { error: functionError } = await supabase.functions.invoke(
             'update-wallet-on-payment',
             {
@@ -183,6 +184,10 @@ export const useScheduledPayments = () => {
             // Continue anyway, the UI will be updated via real-time subscription
           } else {
             console.log('Edge function called successfully to update wallet balances');
+            // Show a toast notification about the successful payment
+            toast.success("Paiement traité avec succès", {
+              description: "Le versement a été ajouté à votre solde disponible"
+            });
           }
         } catch (funcError) {
           console.error('Exception invoking edge function:', funcError);
