@@ -1,9 +1,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Shield, Lock, Fingerprint } from "lucide-react";
+import { Lock } from "lucide-react";
 import PasswordFields from "@/components/auth/PasswordFields";
 
 interface SecuritySectionProps {
@@ -14,8 +13,6 @@ interface SecuritySectionProps {
 }
 
 export default function SecuritySection({ 
-  twoFactorEnabled, 
-  onTwoFactorToggle, 
   onPasswordChange,
   isLoading
 }: SecuritySectionProps) {
@@ -60,7 +57,7 @@ export default function SecuritySection({
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <Shield className="text-bgs-blue" size={20} />
+        <Lock className="text-bgs-blue" size={20} />
         <h3 className="text-lg font-medium text-bgs-blue">Sécurité</h3>
       </div>
       <div className="space-y-6">
@@ -140,22 +137,6 @@ export default function SecuritySection({
               </Button>
             </div>
           )}
-        </div>
-        
-        {/* Authentification à deux facteurs */}
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5">
-            <Label htmlFor="2fa-enabled" className="text-bgs-blue flex items-center gap-2">
-              <Fingerprint size={16} />
-              Authentification à deux facteurs
-            </Label>
-            <p className="text-sm text-bgs-gray-medium">Renforce la sécurité de votre compte</p>
-          </div>
-          <Switch 
-            id="2fa-enabled" 
-            checked={twoFactorEnabled}
-            onCheckedChange={onTwoFactorToggle}
-          />
         </div>
       </div>
     </div>
