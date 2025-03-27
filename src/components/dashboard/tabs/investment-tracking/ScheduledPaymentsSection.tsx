@@ -68,15 +68,6 @@ const ScheduledPaymentsSection = () => {
     return format(date, 'dd/MM/yyyy');
   };
 
-  // Calculate the actual payment amount based on percentage and total investment
-  const calculatePaymentAmount = (percentage: number | undefined, totalInvestedAmount: number | undefined) => {
-    if (!percentage || !totalInvestedAmount || isNaN(percentage) || isNaN(totalInvestedAmount)) {
-      return 0;
-    }
-    
-    return (totalInvestedAmount * percentage) / 100;
-  };
-
   return (
     <Card className="mt-6">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -175,7 +166,7 @@ const ScheduledPaymentsSection = () => {
                     <TableCell>{formatDate(payment.payment_date)}</TableCell>
                     <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
                     <TableCell className="font-medium">
-                      {formatCurrency(calculatePaymentAmount(payment.percentage, payment.total_invested_amount))}
+                      {formatCurrency(payment.total_scheduled_amount || 0)}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(payment.status)}
