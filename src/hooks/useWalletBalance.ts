@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -11,6 +11,10 @@ export function useWalletBalance() {
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  // Add a debounce mechanism
+  const refreshTimeoutRef = useRef<number | null>(null);
+  const MIN_REFRESH_INTERVAL = 2000; // Minimum time between refreshes in ms
 
   // Get the current user's ID when the hook loads
   useEffect(() => {
@@ -31,6 +35,20 @@ export function useWalletBalance() {
     };
     
     getUser();
+  }, []);
+
+  // Debounced refresh function
+  const debouncedRefresh = useCallback((callback: () => void) => {
+    // Clear any existing timeout
+    if (refreshTimeoutRef.current !== null) {
+      window.clearTimeout(refreshTimeoutRef.current);
+    }
+    
+    // Set a new timeout
+    refreshTimeoutRef.current = window.setTimeout(() => {
+      callback();
+      refreshTimeoutRef.current = null;
+    }, MIN_REFRESH_INTERVAL);
   }, []);
 
   const fetchWalletBalance = useCallback(async (showLoading = true) => {
@@ -103,8 +121,8 @@ export function useWalletBalance() {
         { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` }, 
         payload => {
           console.log("Wallet transaction detected:", payload);
-          // Force refresh when a transaction affects wallet
-          fetchWalletBalance(false);
+          // Use debounced refresh to prevent multiple rapid updates
+          debouncedRefresh(() => fetchWalletBalance(false));
           
           // Show toast for yield/deposit transactions related to project returns
           if (payload.new && payload.eventType === 'INSERT' && 
@@ -131,8 +149,12 @@ export function useWalletBalance() {
               (payload.new as any).wallet_balance !== (payload.old as any).wallet_balance) {
             
             console.log(`Balance changed from ${(payload.old as any).wallet_balance} to ${(payload.new as any).wallet_balance}`);
-            setWalletBalance((payload.new as any).wallet_balance);
-            setLastUpdateTime(Date.now());
+            
+            // Use debounced update to avoid UI flicker
+            debouncedRefresh(() => {
+              setWalletBalance((payload.new as any).wallet_balance);
+              setLastUpdateTime(Date.now());
+            });
             
             // Show toast when balance increases
             if ((payload.new as any).wallet_balance > (payload.old as any).wallet_balance) {
@@ -155,10 +177,13 @@ export function useWalletBalance() {
           // If status changed to 'paid', refresh the balance
           if ((payload.new as any).status === 'paid' && (payload.old as any).status !== 'paid') {
             console.log("Payment status changed to paid, refreshing balance");
-            fetchWalletBalance(false);
             
-            // Process the payment directly
-            processScheduledPayment((payload.new as any).id, (payload.new as any).project_id, (payload.new as any).percentage);
+            // Use debounced refresh
+            debouncedRefresh(() => {
+              fetchWalletBalance(false);
+              // Process the payment directly
+              processScheduledPayment((payload.new as any).id, (payload.new as any).project_id, (payload.new as any).percentage);
+            });
           }
         }
       )
@@ -166,11 +191,15 @@ export function useWalletBalance() {
     
     return () => {
       console.log("Cleaning up wallet balance subscriptions");
+      // Clear any pending timeout
+      if (refreshTimeoutRef.current !== null) {
+        window.clearTimeout(refreshTimeoutRef.current);
+      }
       supabase.removeChannel(txSubscription);
       supabase.removeChannel(profileSubscription);
       supabase.removeChannel(scheduledPaymentsSubscription);
     };
-  }, [userId, fetchWalletBalance]);
+  }, [userId, fetchWalletBalance, debouncedRefresh]);
 
   // Helper function to directly process a scheduled payment
   const processScheduledPayment = async (paymentId: string, projectId: string, percentage: number) => {
@@ -199,7 +228,8 @@ export function useWalletBalance() {
         console.log(`Successfully processed payment ${paymentId}:`, result);
         
         if (result?.processed > 0) {
-          fetchWalletBalance(false);
+          // Use debounced fetch to prevent UI flicker
+          debouncedRefresh(() => fetchWalletBalance(false));
           
           toast.success("Paiement traité", {
             description: `Votre solde a été mis à jour avec ${result.processed} paiements`

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { WalletCards } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +18,29 @@ export default function WalletBalance({
   onTabChange,
   refreshBalance
 }: WalletBalanceProps) {
+  // Use ref to track if we've already refreshed to prevent multiple refreshes
+  const refreshInProgress = useRef(false);
+  const lastRefreshTime = useRef(Date.now());
+  const MIN_REFRESH_INTERVAL = 3000; // Minimum 3 seconds between refreshes
+  
+  const handleRefresh = async () => {
+    // Check if refresh is already in progress or if it's too soon after the last refresh
+    const currentTime = Date.now();
+    if (refreshInProgress.current || (currentTime - lastRefreshTime.current < MIN_REFRESH_INTERVAL)) {
+      return;
+    }
+    
+    if (refreshBalance) {
+      try {
+        refreshInProgress.current = true;
+        await refreshBalance();
+        lastRefreshTime.current = Date.now();
+      } finally {
+        refreshInProgress.current = false;
+      }
+    }
+  };
+  
   // Set up a real-time listener for wallet balance changes
   useEffect(() => {
     // Set up real-time channel for wallet transactions
@@ -28,24 +51,22 @@ export default function WalletBalance({
       const userId = data.session.user.id;
       console.log('Setting up wallet balance change listener for user:', userId);
       
-      // Listen to wallet transactions
+      // Listen to wallet transactions with debounce mechanism
       const walletTxChannel = supabase
         .channel('wallet-balance-changes-display')
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` },
           async (payload) => {
             console.log('Wallet transaction change detected:', payload);
-            if (refreshBalance) {
-              await refreshBalance();
-              
-              // Show toast for yield transactions
-              if (payload.new && payload.eventType === 'INSERT' && 
-                  (payload.new as any).type === 'yield' && 
-                  (payload.new as any).status === 'completed') {
-                toast.success("Rendement reçu !", {
-                  description: `Votre portefeuille a été crédité de ${(payload.new as any).amount}€.`
-                });
-              }
+            handleRefresh();
+            
+            // Show toast for yield transactions
+            if (payload.new && payload.eventType === 'INSERT' && 
+                (payload.new as any).type === 'yield' && 
+                (payload.new as any).status === 'completed') {
+              toast.success("Rendement reçu !", {
+                description: `Votre portefeuille a été crédité de ${(payload.new as any).amount}€.`
+              });
             }
           }
         )
@@ -53,7 +74,7 @@ export default function WalletBalance({
           console.log("Wallet balance changes display channel status:", status);
         });
         
-      // Also listen to profile updates (wallet_balance field)
+      // Also listen to profile updates (wallet_balance field) with debounce
       const profileChannel = supabase
         .channel('profile-balance-changes')
         .on('postgres_changes', 
@@ -63,9 +84,7 @@ export default function WalletBalance({
             if ((payload.new as any).wallet_balance !== (payload.old as any).wallet_balance) {
               console.log('Wallet balance changed from:', (payload.old as any).wallet_balance, 
                           'to:', (payload.new as any).wallet_balance);
-              if (refreshBalance) {
-                await refreshBalance();
-              }
+              handleRefresh();
             }
           }
         )
@@ -73,7 +92,7 @@ export default function WalletBalance({
           console.log("Profile balance changes channel status:", status);
         });
         
-      // Listen to scheduled payments with better logging
+      // Listen to scheduled payments with better logging and debounce
       const scheduledPaymentsChannel = supabase
         .channel('scheduled-payments-wallet-changes')
         .on('postgres_changes', 
@@ -83,14 +102,12 @@ export default function WalletBalance({
             // If a payment was marked as paid
             if ((payload.new as any).status === 'paid' && (payload.old as any).status !== 'paid') {
               console.log('Payment marked as paid, refreshing wallet balance');
-              if (refreshBalance) {
-                await refreshBalance();
-                
-                // Show toast for successful payment
-                toast.success("Paiement programmé reçu", {
-                  description: "Votre solde a été mis à jour avec le montant du paiement programmé"
-                });
-              }
+              handleRefresh();
+              
+              // Show toast for successful payment
+              toast.success("Paiement programmé reçu", {
+                description: "Votre solde a été mis à jour avec le montant du paiement programmé"
+              });
             }
           }
         )
@@ -109,13 +126,16 @@ export default function WalletBalance({
     return () => {
       cleanup.then(fn => fn && fn());
     };
-  }, [refreshBalance]);
+  }, []);
   
-  // Initial fetch only on mount - removing periodic refresh completely
+  // Initial fetch only on mount - do it once and don't set up recurring refreshes
   useEffect(() => {
-    if (refreshBalance) {
-      // Single refresh on mount
-      refreshBalance();
+    if (refreshBalance && !refreshInProgress.current) {
+      refreshInProgress.current = true;
+      refreshBalance().finally(() => {
+        refreshInProgress.current = false;
+        lastRefreshTime.current = Date.now();
+      });
     }
   }, [refreshBalance]);
   

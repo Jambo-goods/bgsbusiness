@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,10 +16,30 @@ interface WalletCardProps {
 
 export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardProps) {
   const navigate = useNavigate();
+  const refreshTimeoutRef = useRef<number | null>(null);
+  const lastRefreshTime = useRef<number>(Date.now());
+  const MIN_REFRESH_INTERVAL = 3000; // Minimum 3 seconds between refreshes
   
   useEffect(() => {
     console.log("WalletCard rendered with balance:", balance, "isLoading:", isLoading);
   }, [balance, isLoading]);
+  
+  // Debounced refresh function to prevent multiple rapid updates
+  const debouncedRefresh = () => {
+    const now = Date.now();
+    if (refreshTimeoutRef.current !== null) {
+      window.clearTimeout(refreshTimeoutRef.current);
+    }
+    
+    // Only schedule refresh if enough time has passed since last refresh
+    if (now - lastRefreshTime.current > MIN_REFRESH_INTERVAL) {
+      refreshTimeoutRef.current = window.setTimeout(() => {
+        onManualRefresh();
+        lastRefreshTime.current = Date.now();
+        refreshTimeoutRef.current = null;
+      }, 100); // Small delay to batch potential multiple updates
+    }
+  };
   
   // Listen to realtime updates for wallet balance
   useEffect(() => {
@@ -51,8 +71,8 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
                 toast.success(`Votre solde a été augmenté de ${difference}€`);
               }
               
-              // Force refresh
-              onManualRefresh();
+              // Force refresh with debounce
+              debouncedRefresh();
             }
           }
         )
@@ -79,8 +99,8 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
                   toast.success(`Dépôt de ${transaction.amount}€ crédité sur votre compte`);
                 }
                 
-                // Force refresh
-                onManualRefresh();
+                // Force refresh with debounce
+                debouncedRefresh();
               }
             }
           }
@@ -101,8 +121,8 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
               
               // Force refresh if a transfer is completed
               if (newData.status === 'completed') {
-                // Force refresh
-                onManualRefresh();
+                // Force refresh with debounce
+                debouncedRefresh();
               }
             }
           }
@@ -110,6 +130,9 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
         .subscribe();
       
       return () => {
+        if (refreshTimeoutRef.current !== null) {
+          window.clearTimeout(refreshTimeoutRef.current);
+        }
         supabase.removeChannel(profilesChannel);
         supabase.removeChannel(walletTransactionsChannel);
         supabase.removeChannel(bankTransfersChannel);
@@ -118,6 +141,12 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
     
     setupRealtimeListeners();
   }, [onManualRefresh]);
+  
+  const handleManualRefresh = () => {
+    // Allow manual refresh regardless of debounce timing
+    lastRefreshTime.current = Date.now();
+    onManualRefresh();
+  };
   
   const handleInstructionsClick = () => {
     navigate("/dashboard/wallet", { state: { activeTab: "deposit" } });
@@ -135,7 +164,7 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
           <Button
             variant="ghost"
             size="icon"
-            onClick={onManualRefresh}
+            onClick={handleManualRefresh}
             disabled={isLoading}
             className="h-8 w-8 text-white hover:bg-white/10"
           >
