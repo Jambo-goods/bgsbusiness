@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
@@ -16,7 +17,6 @@ const ScheduledPaymentsSection = () => {
   const { scheduledPayments, isLoading, refetch } = useScheduledPayments();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [projectInvestments, setProjectInvestments] = useState<Record<string, number>>({});
-  const [projectTotalInvestments, setProjectTotalInvestments] = useState<Record<string, number>>({});
 
   // Fetch project-specific investment amounts
   useEffect(() => {
@@ -55,47 +55,6 @@ const ScheduledPaymentsSection = () => {
     
     fetchInvestmentData();
   }, []);
-
-  // Fetch total investments for each project
-  useEffect(() => {
-    const fetchProjectTotalInvestments = async () => {
-      try {
-        // Get all projects that have scheduled payments
-        const projectIds = [...new Set(scheduledPayments.map(payment => payment.project_id))];
-        
-        if (projectIds.length === 0) return;
-        
-        // For each project, get the total investment amount
-        const totalInvestmentsMap: Record<string, number> = {};
-        
-        for (const projectId of projectIds) {
-          // Get total investments for this project
-          const { data, error } = await supabase
-            .from('investments')
-            .select('amount')
-            .eq('project_id', projectId)
-            .eq('status', 'active');
-            
-          if (error) {
-            console.error("Error fetching total investments for project", projectId, error);
-            continue;
-          }
-          
-          // Sum up the total investments
-          const totalAmount = data.reduce((sum, inv) => sum + (inv.amount || 0), 0);
-          totalInvestmentsMap[projectId] = totalAmount;
-        }
-        
-        setProjectTotalInvestments(totalInvestmentsMap);
-      } catch (error) {
-        console.error("Error fetching project total investments:", error);
-      }
-    };
-    
-    if (scheduledPayments.length > 0) {
-      fetchProjectTotalInvestments();
-    }
-  }, [scheduledPayments]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -151,33 +110,59 @@ const ScheduledPaymentsSection = () => {
     return format(date, 'dd/MM/yyyy');
   };
 
-  // Get total investment amount for a project
-  const getProjectTotalInvestment = (projectId: string): number => {
-    // Special case for BGS Poule Pondeuse project
-    const isPouleProject = scheduledPayments.some(payment => 
-      payment.project_id === projectId && 
-      payment.projects?.name?.toLowerCase().includes("poule pondeuse")
-    );
-    
-    if (isPouleProject && scheduledPayments.find(p => p.project_id === projectId)?.total_invested_amount) {
-      return Number(scheduledPayments.find(p => p.project_id === projectId)?.total_invested_amount || 0);
-    }
-    
-    // Otherwise use the calculated total from all investors
-    return projectTotalInvestments[projectId] || 0;
-  };
-
-  // Calculate the payment amount based on percentage and project total investment
+  // Calculate the payment amount based on percentage and project-specific investment amount
   const calculatePaymentAmount = (percentage: number | undefined, projectId: string) => {
     if (!percentage || isNaN(percentage)) {
       return 0;
     }
     
-    // Get investment amount for this specific user's investment
-    const userInvestmentAmount = projectInvestments[projectId] || 0;
+    // Special case for "BGS Poule Pondeuse" project
+    // Check if the project name contains "Poule Pondeuse" (case insensitive)
+    const isPouleProject = scheduledPayments.some(payment => 
+      payment.project_id === projectId && 
+      payment.projects?.name?.toLowerCase().includes("poule pondeuse")
+    );
     
-    // Calculate based on the user's investment amount
-    return (userInvestmentAmount * percentage) / 100;
+    // Get the investment amount for this specific project
+    let investmentAmount = projectInvestments[projectId] || 0;
+    
+    // If it's the Poule Pondeuse project, use the total invested amount for this project
+    // This is a fix specifically for the BGS Poule Pondeuse project
+    if (isPouleProject) {
+      // Get the project from the scheduled payments list
+      const project = scheduledPayments.find(p => p.project_id === projectId);
+      // Use the total_invested_amount from the project if available
+      if (project && project.total_invested_amount) {
+        investmentAmount = Number(project.total_invested_amount);
+      }
+    }
+    
+    // Calculate based on the project-specific investment amount
+    return (investmentAmount * percentage) / 100;
+  };
+
+  // Get the total invested amount for a specific project
+  const getProjectInvestmentAmount = (projectId: string) => {
+    // Special case for "BGS Poule Pondeuse" project
+    const isPouleProject = scheduledPayments.some(payment => 
+      payment.project_id === projectId && 
+      payment.projects?.name?.toLowerCase().includes("poule pondeuse")
+    );
+    
+    // Get the investment amount for this specific project
+    let investmentAmount = projectInvestments[projectId] || 0;
+    
+    // If it's the Poule Pondeuse project, use the total invested amount for this project
+    if (isPouleProject) {
+      // Get the project from the scheduled payments list
+      const project = scheduledPayments.find(p => p.project_id === projectId);
+      // Use the total_invested_amount from the project if available
+      if (project && project.total_invested_amount) {
+        investmentAmount = Number(project.total_invested_amount);
+      }
+    }
+    
+    return investmentAmount;
   };
 
   return (
@@ -256,7 +241,7 @@ const ScheduledPaymentsSection = () => {
                   <TableHead>Projet</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Pourcentage</TableHead>
-                  <TableHead>Montant investi total</TableHead>
+                  <TableHead>Montant investi</TableHead>
                   <TableHead>Montant</TableHead>
                   <TableHead>Statut</TableHead>
                 </TableRow>
@@ -279,7 +264,7 @@ const ScheduledPaymentsSection = () => {
                     <TableCell>{formatDate(payment.payment_date)}</TableCell>
                     <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
                     <TableCell className="font-medium">
-                      {formatCurrency(getProjectTotalInvestment(payment.project_id))}
+                      {formatCurrency(getProjectInvestmentAmount(payment.project_id))}
                     </TableCell>
                     <TableCell className="font-medium">
                       {formatCurrency(calculatePaymentAmount(payment.percentage, payment.project_id))}
