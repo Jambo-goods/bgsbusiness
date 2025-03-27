@@ -8,16 +8,26 @@ export function useWalletBalance() {
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
 
   // Get the current user's ID when the hook loads
   useEffect(() => {
     const getUser = async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.user?.id) {
-        setUserId(data.session.user.id);
-        console.log("useWalletBalance: User ID set to", data.session.user.id);
+      try {
+        const { data } = await supabase.auth.getSession();
+        if (data.session?.user?.id) {
+          setUserId(data.session.user.id);
+          console.log("useWalletBalance: User ID set to", data.session.user.id);
+        } else {
+          console.log("useWalletBalance: No user session found");
+          setIsLoadingBalance(false); // No user, so we're not loading
+        }
+      } catch (err) {
+        console.error("Error getting user session:", err);
+        setIsLoadingBalance(false);
       }
     };
+    
     getUser();
   }, []);
 
@@ -51,6 +61,7 @@ export function useWalletBalance() {
       } else {
         console.log("Fetched wallet balance:", profileData?.wallet_balance);
         setWalletBalance(profileData?.wallet_balance || 0);
+        setLastUpdateTime(Date.now());
       }
     } catch (err) {
       console.error("Error:", err);
@@ -111,6 +122,7 @@ export function useWalletBalance() {
             
             console.log(`Balance changed from ${(payload.old as any).wallet_balance} to ${(payload.new as any).wallet_balance}`);
             setWalletBalance((payload.new as any).wallet_balance);
+            setLastUpdateTime(Date.now());
             
             // Show toast when balance increases
             if ((payload.new as any).wallet_balance > (payload.old as any).wallet_balance) {
@@ -196,18 +208,22 @@ export function useWalletBalance() {
   useEffect(() => {
     const pollingInterval = setInterval(() => {
       if (userId) {
-        console.log("Polling wallet balance");
-        fetchWalletBalance(false); // Silent refresh
-        
-        // Also check for any unprocessed payments that should be paid
-        checkUnprocessedPayments();
+        const timeElapsed = Date.now() - lastUpdateTime;
+        // Only refresh if it's been more than 2 seconds since the last update
+        if (timeElapsed > 2000) {
+          console.log("Polling wallet balance");
+          fetchWalletBalance(false); // Silent refresh
+          
+          // Also check for any unprocessed payments that should be paid
+          checkUnprocessedPayments();
+        }
       }
     }, 3000); // Check every 3 seconds
     
     return () => {
       clearInterval(pollingInterval);
     };
-  }, [userId, fetchWalletBalance]);
+  }, [userId, fetchWalletBalance, lastUpdateTime]);
   
   // Function to check for any unprocessed payments (new)
   const checkUnprocessedPayments = async () => {

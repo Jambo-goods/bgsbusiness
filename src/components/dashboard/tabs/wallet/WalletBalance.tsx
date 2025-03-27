@@ -139,13 +139,15 @@ export default function WalletBalance({
         </div>
       </div>
       
-      {isLoading ? (
-        <Skeleton className="h-9 w-32 mb-4" />
-      ) : (
-        <div className="flex items-center text-3xl font-bold text-bgs-blue mb-4">
-          {balance.toLocaleString('fr-FR')} €
-        </div>
-      )}
+      <div className="mb-4">
+        {isLoading ? (
+          <Skeleton className="h-9 w-32 bg-gray-200" />
+        ) : (
+          <div className="flex items-center text-3xl font-bold text-bgs-blue">
+            {balance?.toLocaleString('fr-FR')} €
+          </div>
+        )}
+      </div>
       
       <div className="border-t border-gray-100 pt-4">
         <p className="text-sm text-bgs-gray-medium mb-4">

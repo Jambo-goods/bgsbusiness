@@ -18,8 +18,8 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
   const navigate = useNavigate();
   
   useEffect(() => {
-    console.log("WalletCard rendered with balance:", balance);
-  }, [balance]);
+    console.log("WalletCard rendered with balance:", balance, "isLoading:", isLoading);
+  }, [balance, isLoading]);
   
   // Listen to realtime updates for wallet balance
   useEffect(() => {
@@ -149,7 +149,9 @@ export function WalletCard({ balance, isLoading, onManualRefresh }: WalletCardPr
       </CardHeader>
       <CardContent className="pt-6">
         {isLoading ? (
-          <Skeleton className="h-12 w-full" />
+          <div className="flex justify-center items-center h-12">
+            <Skeleton className="h-12 w-40 bg-gray-200" />
+          </div>
         ) : (
           <div className="text-center">
             <div className="text-3xl font-bold text-bgs-blue">{balance.toLocaleString('fr-FR')} €</div>
