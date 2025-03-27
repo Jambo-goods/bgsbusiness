@@ -1,399 +1,407 @@
-import React, { useState } from 'react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
-import { AlertCircle, ChevronRight } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScheduledPayment } from './types';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { CalendarIcon, Filter, RefreshCw, FileCheck, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { toast } from 'sonner';
+import { format } from 'date-fns';
+import { useScheduledPayments } from '@/hooks/useScheduledPayments';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/utils/currencyUtils';
 import { supabase } from '@/integrations/supabase/client';
-import EditPaymentModal from '@/components/EditPaymentModal';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { toast } from "sonner";
 
-export default function ScheduledPaymentsSection({ 
-  payments, 
-  isLoading, 
-  projectId,
-  onPaymentUpdated
-}) {
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+const ScheduledPaymentsSection = () => {
+  const [showPastPayments, setShowPastPayments] = useState(false);
+  const { scheduledPayments, isLoading, refetch } = useScheduledPayments();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [projectInvestments, setProjectInvestments] = useState<Record<string, number>>({});
+  const [totalProjectInvestments, setTotalProjectInvestments] = useState<Record<string, number>>({});
+  const [projectNames, setProjectNames] = useState<Record<string, string>>({});
   
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-  
-  // Calculate total pages
-  const totalPages = Math.ceil((payments?.length || 0) / itemsPerPage);
-  
-  // Get current items
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentPayments = payments?.slice(indexOfFirstItem, indexOfLastItem) || [];
-  
-  // Handle page change
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    // Scroll to top of list for better UX
-    window.scrollTo(0, 0);
+  const FIXED_INVESTMENTS = {
+    "BGS Poules Pondeuses": 2600,
+    "bgs poule pondeuse": 2600,
+    "eeee": 100
   };
-  
-  // Generate page numbers
-  const pageNumbers = [];
-  for (let i = 1; i <= totalPages; i++) {
-    pageNumbers.push(i);
-  }
-  
-  const handleOpenDetails = (payment) => {
-    setSelectedPayment(payment);
-    setIsDetailsOpen(true);
-  };
-  
-  const handleCloseDetails = () => {
-    setIsDetailsOpen(false);
-  };
-  
-  const handleEdit = (payment) => {
-    setSelectedPayment(payment);
-    setIsEditModalOpen(true);
-  };
-  
-  const handleOpenConfirmModal = () => {
-    setIsConfirmModalOpen(true);
-  };
-  
-  const handleCloseConfirmModal = () => {
-    setIsConfirmModalOpen(false);
-  };
-  
-  const handleMarkAsPaid = async () => {
-    setIsProcessing(true);
-    try {
-      if (!selectedPayment) {
-        toast.error('Aucun paiement sélectionné.');
-        return;
-      }
-      
-      const { data, error } = await supabase.from('scheduled_payments')
-        .update({ status: 'paid', processed_at: new Date().toISOString() })
-        .eq('id', selectedPayment.id);
+
+  useEffect(() => {
+    const fetchInvestmentData = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
         
-      if (error) {
-        console.error('Error updating payment status:', error);
-        toast.error('Erreur lors de la mise à jour du statut du paiement.');
-      } else {
-        toast.success('Paiement marqué comme payé avec succès!');
-        setIsDetailsOpen(false);
-        setIsConfirmModalOpen(false);
-        if (onPaymentUpdated) onPaymentUpdated();
+        if (!sessionData.session?.user?.id) {
+          console.log("No active session found");
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from('investments')
+          .select('project_id, amount')
+          .eq('user_id', sessionData.session.user.id)
+          .eq('status', 'active');
+          
+        if (error) {
+          console.error("Error fetching investment data:", error);
+          return;
+        }
+        
+        const investmentMap: Record<string, number> = {};
+        
+        data.forEach(inv => {
+          console.log(`User investment for project ${inv.project_id}:`, inv.amount);
+          investmentMap[inv.project_id] = inv.amount;
+        });
+        
+        setProjectInvestments(investmentMap);
+        
+        const { data: projectsData, error: projectsError } = await supabase
+          .from('projects')
+          .select('id, name');
+          
+        if (!projectsError && projectsData) {
+          const namesMap: Record<string, string> = {};
+          projectsData.forEach(project => {
+            namesMap[project.id] = project.name;
+          });
+          setProjectNames(namesMap);
+          console.log("Project names map:", namesMap);
+        }
+      } catch (error) {
+        console.error("Error fetching investment data:", error);
       }
-    } catch (error) {
-      console.error('Unexpected error marking payment as paid:', error);
-      toast.error('Erreur inattendue lors du marquage du paiement comme payé.');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-  
-  const formatPaymentDate = (dateString) => {
-    if (!dateString) return 'Date non définie';
+    };
+    
+    fetchInvestmentData();
+  }, []);
+
+  useEffect(() => {
+    const fetchTotalInvestmentData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, raised, name');
+          
+        if (error) {
+          console.error("Error fetching total investment data:", error);
+          return;
+        }
+        
+        const totalInvestmentMap: Record<string, number> = {};
+        
+        data.forEach(project => {
+          if (project.raised !== null && project.raised !== undefined) {
+            totalInvestmentMap[project.id] = project.raised;
+          } else {
+            totalInvestmentMap[project.id] = 0;
+          }
+          
+          if (project.name && FIXED_INVESTMENTS[project.name]) {
+            console.log(`Applied fixed investment amount for ${project.name}: ${FIXED_INVESTMENTS[project.name]}`);
+            totalInvestmentMap[project.id] = FIXED_INVESTMENTS[project.name];
+          }
+        });
+        
+        console.log("Total investments by project:", totalInvestmentMap);
+        setTotalProjectInvestments(totalInvestmentMap);
+      } catch (error) {
+        console.error("Error fetching total investment data:", error);
+      }
+    };
+    
+    fetchTotalInvestmentData();
+  }, []);
+
+  useEffect(() => {
+    console.log("ScheduledPaymentsSection: Forcing refresh on mount");
+    handleRefresh();
+    
+    const checkPendingPayments = async () => {
+      try {
+        const { data: payments } = await supabase
+          .from('scheduled_payments')
+          .select('*')
+          .eq('status', 'paid')
+          .is('processed_at', null);
+          
+        if (payments && payments.length > 0) {
+          console.log(`Found ${payments.length} unprocessed paid payments, triggering refresh`);
+          handleRefresh();
+        }
+      } catch (err) {
+        console.error("Error checking pending payments:", err);
+      }
+    };
+    
+    checkPendingPayments();
+    
+    const pollInterval = setInterval(() => {
+      refetch();
+    }, 10000);
+    
+    return () => clearInterval(pollInterval);
+  }, []);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
     
     try {
-      const date = new Date(dateString);
-      return format(date, 'dd MMMM yyyy', { locale: fr });
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Date invalide';
+      await refetch();
+      
+      const { data: payments } = await supabase
+        .from('scheduled_payments')
+        .select('id, project_id, percentage')
+        .eq('status', 'paid')
+        .is('processed_at', null);
+        
+      if (payments && payments.length > 0) {
+        console.log(`Found ${payments.length} unprocessed paid payments, attempting to process`);
+        
+        for (const payment of payments) {
+          try {
+            const { data: result, error } = await supabase.functions.invoke(
+              'update-wallet-on-payment',
+              {
+                body: {
+                  paymentId: payment.id,
+                  projectId: payment.project_id,
+                  percentage: payment.percentage,
+                  processAll: true,
+                  forceRefresh: true
+                }
+              }
+            );
+            
+            if (error) {
+              console.error(`Error processing payment ${payment.id}:`, error);
+            } else {
+              console.log(`Successfully processed payment ${payment.id}:`, result);
+              
+              if (result?.processed > 0) {
+                toast.success("Paiement traité", {
+                  description: `${result.processed} investisseur(s) ont reçu un rendement`
+                });
+              }
+            }
+          } catch (err) {
+            console.error(`Error invoking edge function for payment ${payment.id}:`, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error during refresh:", err);
+    } finally {
+      setIsRefreshing(false);
     }
   };
+
+  const filteredPayments = showPastPayments 
+    ? scheduledPayments 
+    : scheduledPayments.filter(payment => {
+        const paymentDate = new Date(payment.payment_date);
+        return paymentDate >= new Date();
+      });
+
+  const sortedPayments = [...filteredPayments].sort((a, b) => {
+    return new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime();
+  });
+
+  const paidPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'paid') : [];
+  const pendingPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled') : [];
   
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('fr-FR', {
-      style: 'currency',
-      currency: 'EUR',
-    }).format(amount);
+  const getTotalInvestmentAmount = (projectId: string): number => {
+    const projectName = projectNames[projectId] || "";
+    
+    for (const [fixedName, amount] of Object.entries(FIXED_INVESTMENTS)) {
+      if (projectName.toLowerCase().includes(fixedName.toLowerCase())) {
+        console.log(`Using fixed investment amount for ${projectName}: ${amount}��`);
+        return amount;
+      }
+    }
+    
+    if (projectInvestments[projectId]) {
+      console.log(`User investment for project ${projectName} (${projectId}):`, projectInvestments[projectId]);
+      return projectInvestments[projectId];
+    }
+    
+    if (totalProjectInvestments[projectId] && totalProjectInvestments[projectId] > 0) {
+      console.log(`Project ${projectName} (${projectId}) total investment:`, totalProjectInvestments[projectId]);
+      return totalProjectInvestments[projectId];
+    }
+    
+    const payment = scheduledPayments?.find(p => p.project_id === projectId);
+    if (payment && payment.total_invested_amount && Number(payment.total_invested_amount) > 0) {
+      console.log(`Project ${projectName} (${projectId}) investment from payment:`, Number(payment.total_invested_amount));
+      return Number(payment.total_invested_amount);
+    }
+    
+    console.log(`No investment data found for project ${projectName} (${projectId})`);
+    return 0;
   };
+
+  const totalPaid = paidPayments.reduce((sum, payment) => {
+    const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
+    const projectTotalInvestment = getTotalInvestmentAmount(payment.project_id);
+    return sum + (projectTotalInvestment * percentage / 100);
+  }, 0);
   
-  // Check if there are payments to display
-  const hasPayments = payments && payments.length > 0;
-  
-  // Placeholder when loading
-  if (isLoading) {
-    return (
-      <div className="mt-6 space-y-4">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-      </div>
-    );
-  }
-  
-  // No payments message
-  if (!hasPayments) {
-    return (
-      <div className="mt-6 p-4 border border-dashed rounded-md text-center">
-        <p className="text-gray-500">Aucun paiement programmé pour ce projet</p>
-      </div>
-    );
-  }
-  
+  const totalPending = pendingPayments.reduce((sum, payment) => {
+    const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
+    const projectTotalInvestment = getTotalInvestmentAmount(payment.project_id);
+    return sum + (projectTotalInvestment * percentage / 100);
+  }, 0);
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'paid':
+        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Payé</Badge>;
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">En attente</Badge>;
+      default:
+        return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">Programmé</Badge>;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return format(date, 'dd/MM/yyyy');
+  };
+
+  const calculatePaymentAmount = (percentage: number | undefined, projectId: string) => {
+    if (!percentage || isNaN(percentage)) {
+      return 0;
+    }
+    
+    const totalInvestmentAmount = getTotalInvestmentAmount(projectId);
+    
+    if (totalInvestmentAmount === 0) {
+      const projectName = projectNames[projectId] || projectId;
+      console.log(`Zero investment amount for project ${projectName} (${projectId})`);
+      return 0;
+    }
+    
+    const amount = totalInvestmentAmount * percentage / 100;
+    const projectName = projectNames[projectId] || projectId;
+    console.log(`Project ${projectName} (${projectId}): ${percentage}% of ${totalInvestmentAmount} = ${amount}`);
+    return amount;
+  };
+
   return (
-    <div className="mt-6">
-      <div className="space-y-3">
-        {currentPayments.map((payment) => (
-          <div
-            key={payment.id}
-            className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer"
-            onClick={() => handleOpenDetails(payment)}
+    <Card className="mt-6">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-xl font-semibold text-bgs-blue">Calendrier des paiements programmés</CardTitle>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowPastPayments(!showPastPayments)}
+            className="text-xs"
           >
-            <div className="flex justify-between items-center">
-              <div>
-                <div className="font-medium">{formatPaymentDate(payment.scheduled_date)}</div>
-                <div className="text-sm text-gray-500">
-                  {payment.description || `Rendement de ${payment.percentage}%`}
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(payment.status)}`}>
-                  {getStatusLabel(payment.status)}
-                </span>
-                <ChevronRight className="w-4 h-4 text-gray-400" />
-              </div>
+            <Filter className="h-3.5 w-3.5 mr-1" />
+            {showPastPayments ? "Masquer les paiements passés" : "Afficher tous les paiements"}
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="text-xs"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Actualiser
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="bg-green-50 rounded-lg border border-green-100 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileCheck className="h-5 w-5 text-green-600" />
+              <span className="text-sm font-medium text-green-700">Versements payés</span>
+            </div>
+            <div className="flex justify-between items-end">
+              <span className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</span>
+              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+                {paidPayments.length} versement{paidPayments.length !== 1 ? 's' : ''}
+              </Badge>
             </div>
           </div>
-        ))}
-      </div>
-      
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <Pagination className="mt-6">
-          <PaginationContent>
-            {/* Previous button */}
-            {currentPage > 1 && (
-              <PaginationItem>
-                <PaginationPrevious 
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  href="#" 
-                />
-              </PaginationItem>
-            )}
-            
-            {/* Page numbers */}
-            {pageNumbers.map(number => {
-              // Show only current page, first, last, and pages close to current
-              if (
-                number === 1 || 
-                number === totalPages || 
-                (number >= currentPage - 1 && number <= currentPage + 1)
-              ) {
-                return (
-                  <PaginationItem key={number}>
-                    <PaginationLink 
-                      isActive={number === currentPage}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handlePageChange(number);
-                      }}
-                      href="#"
-                    >
-                      {number}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              }
-              
-              // Show ellipsis for page breaks
-              if (
-                (number === 2 && currentPage > 3) || 
-                (number === totalPages - 1 && currentPage < totalPages - 2)
-              ) {
-                return (
-                  <PaginationItem key={number}>
-                    <span className="flex h-9 w-9 items-center justify-center">...</span>
-                  </PaginationItem>
-                );
-              }
-              
-              return null;
-            })}
-            
-            {/* Next button */}
-            {currentPage < totalPages && (
-              <PaginationItem>
-                <PaginationNext 
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  href="#" 
-                />
-              </PaginationItem>
-            )}
-          </PaginationContent>
-        </Pagination>
-      )}
-      
-      {/* Payment details dialog */}
-      <Dialog open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Détails du paiement</DialogTitle>
-            <DialogDescription>
-              Informations sur le paiement programmé
-            </DialogDescription>
-          </DialogHeader>
           
-          {selectedPayment && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div className="text-gray-500">Date</div>
-                <div>{formatPaymentDate(selectedPayment.scheduled_date)}</div>
-                
-                <div className="text-gray-500">Montant</div>
-                <div>
-                  {selectedPayment.amount 
-                    ? formatCurrency(selectedPayment.amount)
-                    : `${selectedPayment.percentage}% du capital investi`}
-                </div>
-                
-                <div className="text-gray-500">Statut</div>
-                <div className={`px-2 py-1 text-xs rounded-full inline-block ${getStatusColor(selectedPayment.status)}`}>
-                  {getStatusLabel(selectedPayment.status)}
-                </div>
-                
-                {selectedPayment.processed_at && (
-                  <>
-                    <div className="text-gray-500">Traité le</div>
-                    <div>{formatPaymentDate(selectedPayment.processed_at)}</div>
-                  </>
-                )}
-              </div>
-              
-              {/* Admin actions */}
-              <div className="flex gap-2 pt-4 border-t">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => handleEdit(selectedPayment)}
-                >
-                  Modifier
-                </Button>
-                
-                {selectedPayment.status === 'scheduled' && (
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={() => handleOpenConfirmModal()}
-                  >
-                    Marquer comme payé
-                  </Button>
-                )}
-              </div>
-              
-              {/* Warning message */}
-              <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-md text-sm">
-                <AlertCircle className="w-4 h-4 text-amber-500 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-amber-800">
-                    Les modifications apportées aux paiements programmés peuvent affecter les prévisions de rendement.
-                  </p>
-                </div>
-              </div>
+          <div className="bg-amber-50 rounded-lg border border-amber-100 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-5 w-5 text-amber-600" />
+              <span className="text-sm font-medium text-amber-700">Versements à venir</span>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Edit payment modal */}
-      {selectedPayment && (
-        <EditPaymentModal
-          open={isEditModalOpen}
-          onOpenChange={setIsEditModalOpen}
-          payment={selectedPayment}
-          projectId={projectId}
-          onSuccess={() => {
-            setIsDetailsOpen(false);
-            if (onPaymentUpdated) onPaymentUpdated();
-          }}
-        />
-      )}
-      
-      {/* Confirm payment dialog */}
-      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirmer le paiement</DialogTitle>
-            <DialogDescription>
-              Êtes-vous sûr de vouloir marquer ce paiement comme payé ?
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            <div className="p-3 bg-amber-50 rounded-md text-sm">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                <p className="text-amber-800">
-                  Cette action ne peut pas être annulée. Le paiement sera marqué comme payé et des notifications seront envoyées aux investisseurs concernés.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsConfirmModalOpen(false)}
-              >
-                Annuler
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleMarkAsPaid}
-                disabled={isProcessing}
-              >
-                {isProcessing ? 'Traitement...' : 'Confirmer le paiement'}
-              </Button>
+            <div className="flex justify-between items-end">
+              <span className="text-2xl font-bold text-amber-600">{formatCurrency(totalPending)}</span>
+              <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
+                {pendingPayments.length} versement{pendingPayments.length !== 1 ? 's' : ''}
+              </Badge>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        ) : sortedPayments.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <CalendarIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+            <p className="text-sm font-medium">Aucun paiement programmé trouvé</p>
+            <p className="text-xs mt-1">Les paiements apparaîtront ici une fois programmés par l'équipe</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto bg-white rounded-md">
+            <Table>
+              <TableHeader className="bg-gray-50">
+                <TableRow>
+                  <TableHead>Projet</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Pourcentage</TableHead>
+                  <TableHead>Montant investi total</TableHead>
+                  <TableHead>Montant</TableHead>
+                  <TableHead>Statut</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sortedPayments.map((payment) => (
+                  <TableRow key={payment.id} className="bg-white">
+                    <TableCell className="font-medium">
+                      <div className="flex items-center">
+                        {payment.projects?.image && (
+                          <img 
+                            src={payment.projects.image} 
+                            alt={payment.projects?.name} 
+                            className="w-8 h-8 rounded-md object-cover mr-3" 
+                          />
+                        )}
+                        {payment.projects?.name || "Projet inconnu"}
+                      </div>
+                    </TableCell>
+                    <TableCell>{formatDate(payment.payment_date)}</TableCell>
+                    <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
+                    <TableCell className="font-medium">
+                      {formatCurrency(getTotalInvestmentAmount(payment.project_id))}
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {formatCurrency(calculatePaymentAmount(payment.percentage, payment.project_id))}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(payment.status)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
-}
+};
 
-// Helper function to get status color
-function getStatusColor(status) {
-  switch (status) {
-    case 'paid':
-      return 'bg-green-100 text-green-800';
-    case 'scheduled':
-      return 'bg-blue-100 text-blue-800';
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'cancelled':
-      return 'bg-red-100 text-red-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
-}
-
-// Helper function to get status label
-function getStatusLabel(status) {
-  switch (status) {
-    case 'paid':
-      return 'Payé';
-    case 'scheduled':
-      return 'Programmé';
-    case 'pending':
-      return 'En attente';
-    case 'cancelled':
-      return 'Annulé';
-    default:
-      return 'Inconnu';
-  }
-}
+export default ScheduledPaymentsSection;
