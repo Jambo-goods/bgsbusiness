@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
@@ -19,7 +18,6 @@ const ScheduledPaymentsSection = () => {
   const [projectInvestments, setProjectInvestments] = useState<Record<string, number>>({});
   const [totalProjectInvestments, setTotalProjectInvestments] = useState<Record<string, number>>({});
 
-  // Fetch project-specific investment amounts for the current user
   useEffect(() => {
     const fetchInvestmentData = async () => {
       try {
@@ -41,7 +39,6 @@ const ScheduledPaymentsSection = () => {
           return;
         }
         
-        // Create a map of project_id to investment amount
         const investmentMap: Record<string, number> = {};
         
         data.forEach(inv => {
@@ -57,11 +54,9 @@ const ScheduledPaymentsSection = () => {
     fetchInvestmentData();
   }, []);
 
-  // Fetch total investments per project (for all users)
   useEffect(() => {
     const fetchTotalInvestmentData = async () => {
       try {
-        // Get the total investment amount for each project from the database
         const { data, error } = await supabase
           .from('projects')
           .select('id, raised');
@@ -71,7 +66,6 @@ const ScheduledPaymentsSection = () => {
           return;
         }
         
-        // Create a map of project_id to total investment amount
         const totalInvestmentMap: Record<string, number> = {};
         
         data.forEach(project => {
@@ -95,7 +89,6 @@ const ScheduledPaymentsSection = () => {
     setIsRefreshing(false);
   };
 
-  // Filter payments based on user preference (show past payments or only future)
   const filteredPayments = showPastPayments 
     ? scheduledPayments 
     : scheduledPayments.filter(payment => {
@@ -103,16 +96,13 @@ const ScheduledPaymentsSection = () => {
         return paymentDate >= new Date();
       });
 
-  // Sort payments by date (earliest first)
   const sortedPayments = [...filteredPayments].sort((a, b) => {
     return new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime();
   });
 
-  // Calculate summary stats
   const paidPayments = scheduledPayments.filter(payment => payment.status === 'paid');
   const pendingPayments = scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled');
   
-  // Calculate totals with proper number handling and project-specific investment amounts
   const totalPaid = paidPayments.reduce((sum, payment) => {
     const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
     const investmentAmount = projectInvestments[payment.project_id] || 0;
@@ -125,7 +115,6 @@ const ScheduledPaymentsSection = () => {
     return sum + (investmentAmount * percentage / 100);
   }, 0);
 
-  // Get status badge color and text
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
@@ -137,20 +126,16 @@ const ScheduledPaymentsSection = () => {
     }
   };
 
-  // Format date in French format
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return format(date, 'dd/MM/yyyy');
   };
 
-  // Get total investment amount for a project
   const getTotalInvestmentAmount = (projectId: string): number => {
-    // Use raised amount from projects table if available
     if (totalProjectInvestments[projectId]) {
       return totalProjectInvestments[projectId];
     }
     
-    // Fallback to the payment's total_invested_amount if available
     const payment = scheduledPayments.find(p => p.project_id === projectId);
     if (payment && payment.total_invested_amount) {
       return Number(payment.total_invested_amount);
@@ -159,28 +144,18 @@ const ScheduledPaymentsSection = () => {
     return 0;
   };
 
-  // Calculate the payment amount based on percentage and project total investment amount
   const calculatePaymentAmount = (percentage: number | undefined, projectId: string) => {
     if (!percentage || isNaN(percentage)) {
       return 0;
     }
     
-    // Get the total investment amount for this project
     const totalInvestmentAmount = getTotalInvestmentAmount(projectId);
     
-    // Calculate the user's share based on their personal investment
-    const userInvestmentAmount = projectInvestments[projectId] || 0;
-    
-    if (totalInvestmentAmount === 0 || userInvestmentAmount === 0) {
+    if (totalInvestmentAmount === 0) {
       return 0;
     }
     
-    // Calculate the user's portion of the total investment
-    const userPortionRatio = userInvestmentAmount / totalInvestmentAmount;
-    
-    // Calculate the payment amount based on the percentage of the total investment
-    // and the user's portion of that total
-    return (totalInvestmentAmount * percentage / 100) * userPortionRatio;
+    return totalInvestmentAmount * percentage / 100;
   };
 
   return (
@@ -210,7 +185,6 @@ const ScheduledPaymentsSection = () => {
         </div>
       </CardHeader>
       <CardContent>
-        {/* Résumé des versements */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div className="bg-green-50 rounded-lg border border-green-100 p-4">
             <div className="flex items-center gap-2 mb-2">
