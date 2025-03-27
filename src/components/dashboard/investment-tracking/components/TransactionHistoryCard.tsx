@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table,
@@ -311,7 +310,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
                     <span className="text-blue-600 font-medium">{payment.percentage.toFixed(2)}%</span>
                   </TableCell>
                   <TableCell className="font-medium text-green-600">
-                    {formatCurrency(payment.total_scheduled_amount || 0)}
+                    {formatCurrency(investmentAmount * (payment.percentage / 100) || 0)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">
