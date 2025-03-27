@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
@@ -105,14 +106,14 @@ const ScheduledPaymentsSection = () => {
   
   const totalPaid = paidPayments.reduce((sum, payment) => {
     const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
-    const investmentAmount = projectInvestments[payment.project_id] || 0;
-    return sum + (investmentAmount * percentage / 100);
+    const projectTotalInvestment = getTotalInvestmentAmount(payment.project_id);
+    return sum + (projectTotalInvestment * percentage / 100);
   }, 0);
   
   const totalPending = pendingPayments.reduce((sum, payment) => {
     const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
-    const investmentAmount = projectInvestments[payment.project_id] || 0;
-    return sum + (investmentAmount * percentage / 100);
+    const projectTotalInvestment = getTotalInvestmentAmount(payment.project_id);
+    return sum + (projectTotalInvestment * percentage / 100);
   }, 0);
 
   const getStatusBadge = (status: string) => {
@@ -132,15 +133,18 @@ const ScheduledPaymentsSection = () => {
   };
 
   const getTotalInvestmentAmount = (projectId: string): number => {
+    // First check if we have the total raised amount for this project
     if (totalProjectInvestments[projectId]) {
       return totalProjectInvestments[projectId];
     }
     
+    // Fallback to scheduled payment total_invested_amount if available
     const payment = scheduledPayments.find(p => p.project_id === projectId);
     if (payment && payment.total_invested_amount) {
       return Number(payment.total_invested_amount);
     }
     
+    // Return 0 if no data available
     return 0;
   };
 
@@ -149,12 +153,14 @@ const ScheduledPaymentsSection = () => {
       return 0;
     }
     
+    // Get the total investment amount for this project
     const totalInvestmentAmount = getTotalInvestmentAmount(projectId);
     
     if (totalInvestmentAmount === 0) {
       return 0;
     }
     
+    // Calculate payment amount as a percentage of the total investment
     return totalInvestmentAmount * percentage / 100;
   };
 
