@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -38,7 +37,6 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
   
   const { updatePaymentStatus, scheduledPayments, refetch } = useScheduledPayments();
 
-  // When the modal opens or payment changes, reset form state
   useEffect(() => {
     if (payment) {
       setPercentage(payment.percentage || 0);
@@ -47,10 +45,8 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
     }
   }, [payment, isOpen]);
 
-  // Check if payment exists in current list to avoid "payment not found" error
   useEffect(() => {
     if (isOpen && payment) {
-      // Always refresh payments list when modal opens to ensure we have the latest data
       refetch();
     }
   }, [isOpen, payment, refetch]);
@@ -63,8 +59,9 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
     setIsSubmitting(true);
     
     try {
-      // Always refresh data first to make sure we have the latest data
       await refetch();
+      
+      const switchingToPaid = status === 'paid' && payment.status !== 'paid';
       
       await updatePaymentStatus(
         payment.id, 
@@ -73,7 +70,14 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
         percentage
       );
       
-      toast.success("Paiement programmé mis à jour avec succès");
+      if (switchingToPaid) {
+        toast.success("Paiement marqué comme payé", {
+          description: "Les soldes des investisseurs vont être mis à jour"
+        });
+      } else {
+        toast.success("Paiement programmé mis à jour avec succès");
+      }
+      
       onClose();
     } catch (error) {
       console.error("Erreur lors de la mise à jour:", error);

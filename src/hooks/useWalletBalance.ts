@@ -84,6 +84,15 @@ export function useWalletBalance() {
           console.log("Wallet transaction detected:", payload);
           // Force refresh when a transaction affects wallet
           fetchWalletBalance(false);
+          
+          // Show toast for yield transactions
+          if (payload.new && payload.eventType === 'INSERT' && 
+              (payload.new as any).type === 'yield' && 
+              (payload.new as any).status === 'completed') {
+            toast.success("Rendement reçu", {
+              description: `Votre portefeuille a été crédité de ${(payload.new as any).amount}€`
+            });
+          }
         }
       )
       .subscribe();
@@ -102,6 +111,14 @@ export function useWalletBalance() {
             
             console.log(`Balance changed from ${(payload.old as any).wallet_balance} to ${(payload.new as any).wallet_balance}`);
             setWalletBalance((payload.new as any).wallet_balance);
+            
+            // Show toast when balance increases
+            if ((payload.new as any).wallet_balance > (payload.old as any).wallet_balance) {
+              const difference = (payload.new as any).wallet_balance - (payload.old as any).wallet_balance;
+              toast.success("Solde mis à jour", {
+                description: `Votre solde a été augmenté de ${difference}€`
+              });
+            }
           }
         }
       )
@@ -119,7 +136,7 @@ export function useWalletBalance() {
             fetchWalletBalance(false);
             
             // Also show a toast notification about the successful payment
-            toast.success("Paiement reçu", {
+            toast.success("Paiement programmé exécuté", {
               description: "Votre solde a été mis à jour"
             });
           }
@@ -135,13 +152,14 @@ export function useWalletBalance() {
     };
   }, [userId, fetchWalletBalance]);
   
-  // Set up polling to check balance periodically
+  // Set up aggressive polling to check balance frequently
   useEffect(() => {
     const pollingInterval = setInterval(() => {
       if (userId) {
+        console.log("Polling wallet balance");
         fetchWalletBalance(false); // Silent refresh
       }
-    }, 5000); // Check every 5 seconds
+    }, 3000); // Check every 3 seconds
     
     return () => {
       clearInterval(pollingInterval);
@@ -150,6 +168,7 @@ export function useWalletBalance() {
 
   // Function to manually refresh the balance
   const refreshBalance = async (showLoading = true) => {
+    console.log("Manual refresh of wallet balance requested");
     await fetchWalletBalance(showLoading);
   };
 

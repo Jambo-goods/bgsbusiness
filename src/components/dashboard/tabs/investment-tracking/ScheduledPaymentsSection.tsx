@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
@@ -20,7 +19,6 @@ const ScheduledPaymentsSection = () => {
   const [totalProjectInvestments, setTotalProjectInvestments] = useState<Record<string, number>>({});
   const [projectNames, setProjectNames] = useState<Record<string, string>>({});
   
-  // Hardcoded investment amounts for projects with known issues
   const FIXED_INVESTMENTS = {
     "BGS Poules Pondeuses": 2600,
     "bgs poule pondeuse": 2600,
@@ -57,7 +55,6 @@ const ScheduledPaymentsSection = () => {
         
         setProjectInvestments(investmentMap);
         
-        // Also fetch project names for better debugging
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
           .select('id, name');
@@ -81,7 +78,6 @@ const ScheduledPaymentsSection = () => {
   useEffect(() => {
     const fetchTotalInvestmentData = async () => {
       try {
-        // Fetch all projects with their raised amount
         const { data, error } = await supabase
           .from('projects')
           .select('id, raised, name');
@@ -94,14 +90,12 @@ const ScheduledPaymentsSection = () => {
         const totalInvestmentMap: Record<string, number> = {};
         
         data.forEach(project => {
-          // Make sure we have a valid raised amount, default to 0 if not
           if (project.raised !== null && project.raised !== undefined) {
             totalInvestmentMap[project.id] = project.raised;
           } else {
             totalInvestmentMap[project.id] = 0;
           }
           
-          // Apply fixed investment amounts for specific projects by name
           if (project.name && FIXED_INVESTMENTS[project.name]) {
             console.log(`Applied fixed investment amount for ${project.name}: ${FIXED_INVESTMENTS[project.name]}`);
             totalInvestmentMap[project.id] = FIXED_INVESTMENTS[project.name];
@@ -118,10 +112,87 @@ const ScheduledPaymentsSection = () => {
     fetchTotalInvestmentData();
   }, []);
 
+  useEffect(() => {
+    console.log("ScheduledPaymentsSection: Forcing refresh on mount");
+    handleRefresh();
+    
+    const checkPendingPayments = async () => {
+      try {
+        const { data: payments } = await supabase
+          .from('scheduled_payments')
+          .select('*')
+          .eq('status', 'paid')
+          .is('processed_at', null);
+          
+        if (payments && payments.length > 0) {
+          console.log(`Found ${payments.length} unprocessed paid payments, triggering refresh`);
+          handleRefresh();
+        }
+      } catch (err) {
+        console.error("Error checking pending payments:", err);
+      }
+    };
+    
+    checkPendingPayments();
+    
+    const pollInterval = setInterval(() => {
+      refetch();
+    }, 10000);
+    
+    return () => clearInterval(pollInterval);
+  }, []);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await refetch();
-    setIsRefreshing(false);
+    
+    try {
+      await refetch();
+      
+      const { data: payments } = await supabase
+        .from('scheduled_payments')
+        .select('id, project_id, percentage')
+        .eq('status', 'paid')
+        .is('processed_at', null);
+        
+      if (payments && payments.length > 0) {
+        console.log(`Found ${payments.length} unprocessed paid payments, attempting to process`);
+        
+        for (const payment of payments) {
+          try {
+            const { data: result, error } = await supabase.functions.invoke(
+              'update-wallet-on-payment',
+              {
+                body: {
+                  paymentId: payment.id,
+                  projectId: payment.project_id,
+                  percentage: payment.percentage,
+                  processAll: true,
+                  forceRefresh: true
+                }
+              }
+            );
+            
+            if (error) {
+              console.error(`Error processing payment ${payment.id}:`, error);
+            } else {
+              console.log(`Successfully processed payment ${payment.id}:`, result);
+              
+              if (result?.processed > 0) {
+                toast.success("Paiement traité", {
+                  description: `${result.processed} investisseur(s) ont reçu un rendement`
+                });
+              }
+            }
+          } catch (err) {
+            console.error(`Error invoking edge function for payment ${payment.id}:`, err);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error during refresh:", err);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const filteredPayments = showPastPayments 
@@ -135,14 +206,12 @@ const ScheduledPaymentsSection = () => {
     return new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime();
   });
 
-  // Initialize arrays to prevent accessing uninitialized variables
   const paidPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'paid') : [];
   const pendingPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled') : [];
   
   const getTotalInvestmentAmount = (projectId: string): number => {
     const projectName = projectNames[projectId] || "";
     
-    // Check for fixed investment amounts by project name
     for (const [fixedName, amount] of Object.entries(FIXED_INVESTMENTS)) {
       if (projectName.toLowerCase().includes(fixedName.toLowerCase())) {
         console.log(`Using fixed investment amount for ${projectName}: ${amount}€`);
@@ -150,26 +219,22 @@ const ScheduledPaymentsSection = () => {
       }
     }
     
-    // First check if the user has directly invested in this project
     if (projectInvestments[projectId]) {
       console.log(`User investment for project ${projectName} (${projectId}):`, projectInvestments[projectId]);
       return projectInvestments[projectId];
     }
     
-    // Next check if we have the total raised amount for this project
     if (totalProjectInvestments[projectId] && totalProjectInvestments[projectId] > 0) {
       console.log(`Project ${projectName} (${projectId}) total investment:`, totalProjectInvestments[projectId]);
       return totalProjectInvestments[projectId];
     }
     
-    // Fallback to scheduled payment total_invested_amount if available
     const payment = scheduledPayments?.find(p => p.project_id === projectId);
     if (payment && payment.total_invested_amount && Number(payment.total_invested_amount) > 0) {
       console.log(`Project ${projectName} (${projectId}) investment from payment:`, Number(payment.total_invested_amount));
       return Number(payment.total_invested_amount);
     }
     
-    // Return 0 if no data available
     console.log(`No investment data found for project ${projectName} (${projectId})`);
     return 0;
   };
@@ -207,7 +272,6 @@ const ScheduledPaymentsSection = () => {
       return 0;
     }
     
-    // Get the total investment amount for this project
     const totalInvestmentAmount = getTotalInvestmentAmount(projectId);
     
     if (totalInvestmentAmount === 0) {
@@ -216,7 +280,6 @@ const ScheduledPaymentsSection = () => {
       return 0;
     }
     
-    // Calculate payment amount as a percentage of the total investment
     const amount = totalInvestmentAmount * percentage / 100;
     const projectName = projectNames[projectId] || projectId;
     console.log(`Project ${projectName} (${projectId}): ${percentage}% of ${totalInvestmentAmount} = ${amount}`);
