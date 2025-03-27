@@ -39,8 +39,16 @@ const ScheduledPaymentsSection = () => {
   const paidPayments = scheduledPayments.filter(payment => payment.status === 'paid');
   const pendingPayments = scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled');
   
-  const totalPaid = paidPayments.reduce((sum, payment) => sum + (payment.total_scheduled_amount || 0), 0);
-  const totalPending = pendingPayments.reduce((sum, payment) => sum + (payment.total_scheduled_amount || 0), 0);
+  // Calculate totals with proper number handling
+  const totalPaid = paidPayments.reduce((sum, payment) => {
+    const amount = typeof payment.total_scheduled_amount === 'number' ? payment.total_scheduled_amount : 0;
+    return sum + amount;
+  }, 0);
+  
+  const totalPending = pendingPayments.reduce((sum, payment) => {
+    const amount = typeof payment.total_scheduled_amount === 'number' ? payment.total_scheduled_amount : 0;
+    return sum + amount;
+  }, 0);
 
   // Get status badge color and text
   const getStatusBadge = (status: string) => {
@@ -156,12 +164,9 @@ const ScheduledPaymentsSection = () => {
                       </div>
                     </TableCell>
                     <TableCell>{formatDate(payment.payment_date)}</TableCell>
-                    <TableCell>{payment.percentage.toFixed(2)}%</TableCell>
+                    <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
                     <TableCell className="font-medium">
-                      {payment.total_scheduled_amount
-                        ? `${payment.total_scheduled_amount.toFixed(2)} €`
-                        : "—"
-                      }
+                      {formatCurrency(payment.total_scheduled_amount || 0)}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(payment.status)}
