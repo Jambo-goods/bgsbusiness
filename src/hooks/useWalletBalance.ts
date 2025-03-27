@@ -117,6 +117,11 @@ export function useWalletBalance() {
           if ((payload.new as any).status === 'paid' && (payload.old as any).status !== 'paid') {
             console.log("Payment status changed to paid, refreshing balance");
             fetchWalletBalance(false);
+            
+            // Also show a toast notification about the successful payment
+            toast.success("Paiement reçu", {
+              description: "Votre solde a été mis à jour"
+            });
           }
         }
       )
@@ -133,13 +138,15 @@ export function useWalletBalance() {
   // Set up polling to check balance periodically
   useEffect(() => {
     const pollingInterval = setInterval(() => {
-      fetchWalletBalance(false); // Silent refresh
+      if (userId) {
+        fetchWalletBalance(false); // Silent refresh
+      }
     }, 5000); // Check every 5 seconds
     
     return () => {
       clearInterval(pollingInterval);
     };
-  }, [fetchWalletBalance]);
+  }, [userId, fetchWalletBalance]);
 
   // Function to manually refresh the balance
   const refreshBalance = async (showLoading = true) => {
