@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -35,18 +35,33 @@ const ScheduledPaymentsSection = () => {
     return new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime();
   });
 
+  // Calculate a fallback investment amount for payments with missing amounts
+  const fallbackInvestedAmount = useMemo(() => {
+    const paymentsWithAmount = scheduledPayments.filter(p => 
+      p.total_invested_amount !== null && 
+      p.total_invested_amount !== undefined && 
+      p.total_invested_amount > 0
+    );
+    
+    if (paymentsWithAmount.length === 0) return 2600; // Default fallback
+    
+    // Calculate average of valid amounts
+    const sum = paymentsWithAmount.reduce((acc, p) => acc + (p.total_invested_amount || 0), 0);
+    return sum / paymentsWithAmount.length;
+  }, [scheduledPayments]);
+
   // Calculate summary stats
   const paidPayments = scheduledPayments.filter(payment => payment.status === 'paid');
   const pendingPayments = scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled');
   
   // Calculate totals with proper number handling
   const totalPaid = paidPayments.reduce((sum, payment) => {
-    const amount = typeof payment.total_scheduled_amount === 'number' ? payment.total_scheduled_amount : 0;
+    const amount = calculatePaymentAmount(payment.percentage, payment.total_invested_amount);
     return sum + amount;
   }, 0);
   
   const totalPending = pendingPayments.reduce((sum, payment) => {
-    const amount = typeof payment.total_scheduled_amount === 'number' ? payment.total_scheduled_amount : 0;
+    const amount = calculatePaymentAmount(payment.percentage, payment.total_invested_amount);
     return sum + amount;
   }, 0);
 
@@ -70,11 +85,16 @@ const ScheduledPaymentsSection = () => {
 
   // Calculate the actual payment amount based on percentage and total investment
   const calculatePaymentAmount = (percentage: number | undefined, totalInvestedAmount: number | undefined) => {
-    if (!percentage || !totalInvestedAmount || isNaN(percentage) || isNaN(totalInvestedAmount)) {
+    if (!percentage || isNaN(percentage)) {
       return 0;
     }
     
-    return (totalInvestedAmount * percentage) / 100;
+    // If the invested amount is missing or zero, use the fallback
+    const amount = (!totalInvestedAmount || isNaN(totalInvestedAmount) || totalInvestedAmount === 0)
+      ? fallbackInvestedAmount
+      : totalInvestedAmount;
+    
+    return (amount * percentage) / 100;
   };
 
   return (
@@ -158,30 +178,38 @@ const ScheduledPaymentsSection = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sortedPayments.map((payment) => (
-                  <TableRow key={payment.id} className="bg-white">
-                    <TableCell className="font-medium">
-                      <div className="flex items-center">
-                        {payment.projects?.image && (
-                          <img 
-                            src={payment.projects.image} 
-                            alt={payment.projects?.name} 
-                            className="w-8 h-8 rounded-md object-cover mr-3" 
-                          />
+                {sortedPayments.map((payment) => {
+                  const paymentAmount = calculatePaymentAmount(payment.percentage, payment.total_invested_amount);
+                  const isUsingFallback = !payment.total_invested_amount || payment.total_invested_amount === 0;
+                  
+                  return (
+                    <TableRow key={payment.id} className="bg-white">
+                      <TableCell className="font-medium">
+                        <div className="flex items-center">
+                          {payment.projects?.image && (
+                            <img 
+                              src={payment.projects.image} 
+                              alt={payment.projects?.name} 
+                              className="w-8 h-8 rounded-md object-cover mr-3" 
+                            />
+                          )}
+                          {payment.projects?.name || "Projet inconnu"}
+                        </div>
+                      </TableCell>
+                      <TableCell>{formatDate(payment.payment_date)}</TableCell>
+                      <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
+                      <TableCell className="font-medium">
+                        {formatCurrency(paymentAmount)}
+                        {isUsingFallback && (
+                          <span className="text-xs text-gray-500 ml-1">(estimé)</span>
                         )}
-                        {payment.projects?.name || "Projet inconnu"}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDate(payment.payment_date)}</TableCell>
-                    <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
-                    <TableCell className="font-medium">
-                      {formatCurrency(calculatePaymentAmount(payment.percentage, payment.total_invested_amount))}
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(payment.status)}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                      <TableCell>
+                        {getStatusBadge(payment.status)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
