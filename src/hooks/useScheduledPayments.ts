@@ -114,6 +114,9 @@ export const useScheduledPayments = () => {
       if (newDate) updateObject.payment_date = newDate;
       if (newPercentage !== undefined) updateObject.percentage = newPercentage;
       
+      // Check if this is a status change to "paid"
+      const changingToPaid = newStatus === 'paid' && paymentToUpdate.status !== 'paid';
+      
       // Perform the update
       const { error: updateError } = await supabase
         .from('scheduled_payments')
@@ -126,7 +129,7 @@ export const useScheduledPayments = () => {
       }
       
       // If status changed to paid, create wallet transactions for all investors
-      if (newStatus === 'paid' && paymentToUpdate.status !== 'paid') {
+      if (changingToPaid) {
         console.log('Payment marked as paid, processing wallet updates');
         
         try {
@@ -168,30 +171,36 @@ export const useScheduledPayments = () => {
           }
           
           // Call the edge function to update all investors' wallets
-          const { error: functionError } = await supabase.functions.invoke(
+          // Using direct invoke with proper parameters
+          const { data: functionResult, error: functionError } = await supabase.functions.invoke(
             'update-wallet-on-payment',
             {
               body: {
                 paymentId: paymentId,
                 projectId: paymentToUpdate.project_id,
-                percentage: newPercentage || paymentToUpdate.percentage
+                percentage: newPercentage || paymentToUpdate.percentage,
+                processAll: true // Flag to process all investors
               }
             }
           );
           
+          console.log('Edge function response:', functionResult);
+          
           if (functionError) {
             console.error('Error invoking edge function:', functionError);
-            // Continue anyway, the UI will be updated via real-time subscription
+            toast.error("Erreur de mise à jour des soldes", {
+              description: "Veuillez contacter l'administrateur"
+            });
           } else {
             console.log('Edge function called successfully to update wallet balances');
             // Show a toast notification about the successful payment
             toast.success("Paiement traité avec succès", {
-              description: "Le versement a été ajouté à votre solde disponible"
+              description: "Le versement a été ajouté aux soldes disponibles"
             });
           }
         } catch (funcError) {
           console.error('Exception invoking edge function:', funcError);
-          // Continue anyway
+          toast.error("Erreur lors du traitement du paiement");
         }
       }
 

@@ -68,10 +68,29 @@ export default function WalletBalance({
           }
         )
         .subscribe();
+        
+      // Listen to scheduled payments
+      const scheduledPaymentsChannel = supabase
+        .channel('scheduled-payments-wallet-changes')
+        .on('postgres_changes', 
+          { event: 'UPDATE', schema: 'public', table: 'scheduled_payments' },
+          async (payload) => {
+            console.log('Scheduled payment update detected:', payload);
+            // If a payment was marked as paid
+            if ((payload.new as any).status === 'paid' && (payload.old as any).status !== 'paid') {
+              console.log('Payment marked as paid, refreshing wallet balance');
+              if (refreshBalance) {
+                await refreshBalance();
+              }
+            }
+          }
+        )
+        .subscribe();
       
       return () => {
         supabase.removeChannel(walletTxChannel);
         supabase.removeChannel(profileChannel);
+        supabase.removeChannel(scheduledPaymentsChannel);
       };
     };
     

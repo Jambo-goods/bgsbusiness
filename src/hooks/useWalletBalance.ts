@@ -151,7 +151,7 @@ export function useWalletBalance() {
   useEffect(() => {
     const pollingInterval = setInterval(() => {
       fetchWalletBalance(false); // Silent refresh
-    }, 5000); // Check every 5 seconds
+    }, 10000); // Check every 10 seconds
     
     return () => {
       clearInterval(pollingInterval);
