@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,14 +10,51 @@ import { useScheduledPayments } from '@/hooks/useScheduledPayments';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCurrency } from '@/utils/currencyUtils';
+import { supabase } from '@/integrations/supabase/client';
 
 const ScheduledPaymentsSection = () => {
   const [showPastPayments, setShowPastPayments] = useState(false);
   const { scheduledPayments, isLoading, refetch } = useScheduledPayments();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [projectInvestments, setProjectInvestments] = useState<Record<string, number>>({});
 
-  // Montant total investi fixé à 2 600 €
-  const TOTAL_INVESTED_AMOUNT = 2600;
+  // Fetch project-specific investment amounts
+  useEffect(() => {
+    const fetchInvestmentData = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (!sessionData.session?.user?.id) {
+          console.log("No active session found");
+          return;
+        }
+        
+        const { data, error } = await supabase
+          .from('investments')
+          .select('project_id, amount')
+          .eq('user_id', sessionData.session.user.id)
+          .eq('status', 'active');
+          
+        if (error) {
+          console.error("Error fetching investment data:", error);
+          return;
+        }
+        
+        // Create a map of project_id to investment amount
+        const investmentMap: Record<string, number> = {};
+        
+        data.forEach(inv => {
+          investmentMap[inv.project_id] = inv.amount;
+        });
+        
+        setProjectInvestments(investmentMap);
+      } catch (error) {
+        console.error("Error fetching investment data:", error);
+      }
+    };
+    
+    fetchInvestmentData();
+  }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -42,15 +79,17 @@ const ScheduledPaymentsSection = () => {
   const paidPayments = scheduledPayments.filter(payment => payment.status === 'paid');
   const pendingPayments = scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled');
   
-  // Calculate totals with proper number handling
+  // Calculate totals with proper number handling and project-specific investment amounts
   const totalPaid = paidPayments.reduce((sum, payment) => {
     const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
-    return sum + (TOTAL_INVESTED_AMOUNT * percentage / 100);
+    const investmentAmount = projectInvestments[payment.project_id] || 0;
+    return sum + (investmentAmount * percentage / 100);
   }, 0);
   
   const totalPending = pendingPayments.reduce((sum, payment) => {
     const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
-    return sum + (TOTAL_INVESTED_AMOUNT * percentage / 100);
+    const investmentAmount = projectInvestments[payment.project_id] || 0;
+    return sum + (investmentAmount * percentage / 100);
   }, 0);
 
   // Get status badge color and text
@@ -71,14 +110,17 @@ const ScheduledPaymentsSection = () => {
     return format(date, 'dd/MM/yyyy');
   };
 
-  // Calculate the actual payment amount based on percentage and total investment
-  const calculatePaymentAmount = (percentage: number | undefined) => {
+  // Calculate the payment amount based on percentage and project-specific investment amount
+  const calculatePaymentAmount = (percentage: number | undefined, projectId: string) => {
     if (!percentage || isNaN(percentage)) {
       return 0;
     }
     
-    // Calculate based on the fixed total invested amount
-    return (TOTAL_INVESTED_AMOUNT * percentage) / 100;
+    // Get the investment amount for this specific project
+    const investmentAmount = projectInvestments[projectId] || 0;
+    
+    // Calculate based on the project-specific investment amount
+    return (investmentAmount * percentage) / 100;
   };
 
   return (
@@ -179,7 +221,7 @@ const ScheduledPaymentsSection = () => {
                     <TableCell>{formatDate(payment.payment_date)}</TableCell>
                     <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
                     <TableCell className="font-medium">
-                      {formatCurrency(calculatePaymentAmount(payment.percentage))}
+                      {formatCurrency(calculatePaymentAmount(payment.percentage, payment.project_id))}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(payment.status)}
