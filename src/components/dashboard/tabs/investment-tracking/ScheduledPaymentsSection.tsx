@@ -58,6 +58,7 @@ const ScheduledPaymentsSection = () => {
   useEffect(() => {
     const fetchTotalInvestmentData = async () => {
       try {
+        // Fetch all projects with their raised amount
         const { data, error } = await supabase
           .from('projects')
           .select('id, raised');
@@ -70,11 +71,15 @@ const ScheduledPaymentsSection = () => {
         const totalInvestmentMap: Record<string, number> = {};
         
         data.forEach(project => {
-          if (project.raised) {
+          // Make sure we have a valid raised amount, default to 0 if not
+          if (project.raised !== null && project.raised !== undefined) {
             totalInvestmentMap[project.id] = project.raised;
+          } else {
+            totalInvestmentMap[project.id] = 0;
           }
         });
         
+        console.log("Total investments by project:", totalInvestmentMap);
         setTotalProjectInvestments(totalInvestmentMap);
       } catch (error) {
         console.error("Error fetching total investment data:", error);
@@ -108,16 +113,19 @@ const ScheduledPaymentsSection = () => {
   const getTotalInvestmentAmount = (projectId: string): number => {
     // First check if we have the total raised amount for this project
     if (totalProjectInvestments[projectId]) {
+      console.log(`Project ${projectId} total investment:`, totalProjectInvestments[projectId]);
       return totalProjectInvestments[projectId];
     }
     
     // Fallback to scheduled payment total_invested_amount if available
-    const payment = scheduledPayments.find(p => p.project_id === projectId);
+    const payment = scheduledPayments?.find(p => p.project_id === projectId);
     if (payment && payment.total_invested_amount) {
+      console.log(`Project ${projectId} investment from payment:`, Number(payment.total_invested_amount));
       return Number(payment.total_invested_amount);
     }
     
     // Return 0 if no data available
+    console.log(`No investment data found for project ${projectId}`);
     return 0;
   };
 
@@ -158,11 +166,14 @@ const ScheduledPaymentsSection = () => {
     const totalInvestmentAmount = getTotalInvestmentAmount(projectId);
     
     if (totalInvestmentAmount === 0) {
+      console.log(`Zero investment amount for project ${projectId}`);
       return 0;
     }
     
     // Calculate payment amount as a percentage of the total investment
-    return totalInvestmentAmount * percentage / 100;
+    const amount = totalInvestmentAmount * percentage / 100;
+    console.log(`Project ${projectId}: ${percentage}% of ${totalInvestmentAmount} = ${amount}`);
+    return amount;
   };
 
   return (
