@@ -27,6 +27,12 @@ export default function DashboardHeader({
     }
   };
   
+  const handleUserClick = () => {
+    if (setActiveTab) {
+      setActiveTab("profile");
+    }
+  };
+  
   return (
     <header className="bg-gradient-to-r from-bgs-blue to-bgs-blue-light rounded-xl shadow-lg p-5 mb-6 text-white">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -44,9 +50,12 @@ export default function DashboardHeader({
             <Home className="h-4 w-4 text-white/90" />
           </Link>
           
-          <Link to="/dashboard?tab=profile" className="bg-white/10 backdrop-blur-sm rounded-lg p-2 flex items-center transition-all hover:bg-white/20 border border-white/10">
+          <button
+            onClick={handleUserClick}
+            className="bg-white/10 backdrop-blur-sm rounded-lg p-2 flex items-center transition-all hover:bg-white/20 border border-white/10"
+          >
             <User className="h-4 w-4 text-white/90" />
-          </Link>
+          </button>
           
           <div className="flex items-center bg-white/10 backdrop-blur-sm rounded-lg px-3 py-2 border border-white/10">
             <CalendarClock className="h-4 w-4 mr-2 text-white/90" />
