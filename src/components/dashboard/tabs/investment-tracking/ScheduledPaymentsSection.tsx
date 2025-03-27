@@ -16,6 +16,9 @@ const ScheduledPaymentsSection = () => {
   const { scheduledPayments, isLoading, refetch } = useScheduledPayments();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Montant total investi fixé à 2 600 €
+  const TOTAL_INVESTED_AMOUNT = 2600;
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refetch();
@@ -39,21 +42,15 @@ const ScheduledPaymentsSection = () => {
   const paidPayments = scheduledPayments.filter(payment => payment.status === 'paid');
   const pendingPayments = scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled');
   
-  // Calculate the total investment amount across all investments
-  const totalInvestedAmount = scheduledPayments.reduce((sum, payment) => {
-    const amount = typeof payment.total_invested_amount === 'number' ? payment.total_invested_amount : 0;
-    return sum + amount;
-  }, 0);
-  
   // Calculate totals with proper number handling
   const totalPaid = paidPayments.reduce((sum, payment) => {
     const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
-    return sum + (totalInvestedAmount * percentage / 100);
+    return sum + (TOTAL_INVESTED_AMOUNT * percentage / 100);
   }, 0);
   
   const totalPending = pendingPayments.reduce((sum, payment) => {
     const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
-    return sum + (totalInvestedAmount * percentage / 100);
+    return sum + (TOTAL_INVESTED_AMOUNT * percentage / 100);
   }, 0);
 
   // Get status badge color and text
@@ -80,8 +77,8 @@ const ScheduledPaymentsSection = () => {
       return 0;
     }
     
-    // Calculate based on the global total invested amount (for all investments)
-    return (totalInvestedAmount * percentage) / 100;
+    // Calculate based on the fixed total invested amount
+    return (TOTAL_INVESTED_AMOUNT * percentage) / 100;
   };
 
   return (
