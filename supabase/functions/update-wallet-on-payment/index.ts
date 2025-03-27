@@ -121,13 +121,13 @@ serve(async (req) => {
       console.log(`Processing investor ${userId}: ${percentage}% of ${investmentAmount} = ${yieldAmount}`)
 
       try {
-        // Create wallet transaction - MODIFIED: Removed project_id field that doesn't exist
+        // FIXED: Use 'deposit' instead of 'yield' since that's what the schema expects
         const { data: txData, error: txError } = await supabaseClient
           .from('wallet_transactions')
           .insert({
             user_id: userId,
             amount: yieldAmount,
-            type: 'yield',
+            type: 'deposit',  // Changed from 'yield' to 'deposit' to match schema constraint
             status: 'completed',
             description: `Rendement ${percentage}% du projet ${projectName}`
           })

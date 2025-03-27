@@ -85,10 +85,10 @@ export function useWalletBalance() {
           // Force refresh when a transaction affects wallet
           fetchWalletBalance(false);
           
-          // Show toast for yield transactions
+          // Show toast for yield/deposit transactions related to project returns
           if (payload.new && payload.eventType === 'INSERT' && 
-              (payload.new as any).type === 'yield' && 
-              (payload.new as any).status === 'completed') {
+              (payload.new as any).status === 'completed' &&
+              (payload.new as any).description?.includes('Rendement')) {
             toast.success("Rendement reçu", {
               description: `Votre portefeuille a été crédité de ${(payload.new as any).amount}€`
             });
@@ -137,11 +137,6 @@ export function useWalletBalance() {
             
             // Process the payment directly
             processScheduledPayment((payload.new as any).id, (payload.new as any).project_id, (payload.new as any).percentage);
-            
-            // Also show a toast notification about the successful payment
-            toast.success("Paiement programmé exécuté", {
-              description: "Votre solde a été mis à jour"
-            });
           }
         }
       )
@@ -175,6 +170,9 @@ export function useWalletBalance() {
       
       if (error) {
         console.error(`Error processing payment ${paymentId}:`, error);
+        toast.error("Erreur lors du traitement du paiement", {
+          description: "Veuillez réessayer ou contacter l'administrateur"
+        });
       } else {
         console.log(`Successfully processed payment ${paymentId}:`, result);
         
@@ -188,6 +186,9 @@ export function useWalletBalance() {
       }
     } catch (err) {
       console.error(`Error invoking edge function:`, err);
+      toast.error("Erreur lors de la mise à jour des soldes", {
+        description: "Un problème est survenu pendant le traitement"
+      });
     }
   };
   
@@ -197,6 +198,9 @@ export function useWalletBalance() {
       if (userId) {
         console.log("Polling wallet balance");
         fetchWalletBalance(false); // Silent refresh
+        
+        // Also check for any unprocessed payments that should be paid
+        checkUnprocessedPayments();
       }
     }, 3000); // Check every 3 seconds
     
@@ -204,11 +208,42 @@ export function useWalletBalance() {
       clearInterval(pollingInterval);
     };
   }, [userId, fetchWalletBalance]);
+  
+  // Function to check for any unprocessed payments (new)
+  const checkUnprocessedPayments = async () => {
+    try {
+      // Look for paid payments that haven't been processed yet
+      const { data: unprocessedPayments, error } = await supabase
+        .from('scheduled_payments')
+        .select('id, project_id, percentage')
+        .eq('status', 'paid')
+        .is('processed_at', null);
+        
+      if (error) {
+        console.error("Error checking for unprocessed payments:", error);
+        return;
+      }
+      
+      if (unprocessedPayments && unprocessedPayments.length > 0) {
+        console.log(`Found ${unprocessedPayments.length} unprocessed paid payments`);
+        
+        // Process them one by one
+        for (const payment of unprocessedPayments) {
+          await processScheduledPayment(payment.id, payment.project_id, payment.percentage);
+        }
+      }
+    } catch (err) {
+      console.error("Error checking for unprocessed payments:", err);
+    }
+  };
 
   // Function to manually refresh the balance
   const refreshBalance = async (showLoading = true) => {
     console.log("Manual refresh of wallet balance requested");
     await fetchWalletBalance(showLoading);
+    
+    // Also check for unprocessed payments
+    await checkUnprocessedPayments();
   };
 
   return { 

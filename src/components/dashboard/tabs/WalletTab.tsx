@@ -17,12 +17,14 @@ export default function WalletTab() {
   const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
   const [activeTab, setActiveTab] = useState("overview");
   const [hasMissingDeposit, setHasMissingDeposit] = useState(false);
+  const [isVerifyingPayments, setIsVerifyingPayments] = useState(true);
 
   useEffect(() => {
     checkForMissingDeposit();
     
     // Check for unprocessed payments immediately
     checkForUnprocessedPayments();
+    setIsVerifyingPayments(false);
   }, []);
 
   const checkForMissingDeposit = async () => {
@@ -90,6 +92,9 @@ export default function WalletTab() {
         
       if (payments && payments.length > 0) {
         console.log(`Found ${payments.length} unprocessed paid payments in WalletTab`);
+        toast.info("Traitement des paiements en attente", {
+          description: "Veuillez patienter pendant que nous mettons à jour votre solde"
+        });
         
         for (const payment of payments) {
           console.log(`Processing payment ${payment.id} for project ${payment.project_id}`);
@@ -110,6 +115,9 @@ export default function WalletTab() {
             
             if (error) {
               console.error(`Error processing payment ${payment.id}:`, error);
+              toast.error("Erreur lors du traitement d'un paiement", {
+                description: "Veuillez réessayer ultérieurement"
+              });
             } else {
               console.log(`Successfully processed payment ${payment.id}:`, result);
               
@@ -119,14 +127,17 @@ export default function WalletTab() {
                 }
                 
                 toast.success("Paiement traité", {
-                  description: `Votre solde a été mis à jour`
+                  description: `${result.processed} rendements ont été crédités sur votre compte`
                 });
               }
             }
           } catch (err) {
             console.error(`Error invoking edge function for payment ${payment.id}:`, err);
+            toast.error("Erreur lors de la mise à jour des soldes");
           }
         }
+      } else {
+        console.log("No unprocessed payments found");
       }
     } catch (err) {
       console.error("Error checking for unprocessed payments:", err);
@@ -158,6 +169,7 @@ export default function WalletTab() {
             ).then(({data, error}) => {
               if (error) {
                 console.error('Error processing new paid payment:', error);
+                toast.error("Erreur lors du traitement du paiement");
               } else {
                 console.log('Successfully processed new paid payment:', data);
                 if (refreshBalance) {
@@ -179,7 +191,7 @@ export default function WalletTab() {
       .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'wallet_transactions' },
         (payload) => {
-          if ((payload.new as any).type === 'yield') {
+          if ((payload.new as any).description?.includes('Rendement')) {
             console.log('WalletTab: New yield transaction detected, refreshing balance');
             if (refreshBalance) {
               refreshBalance(false); // Silent refresh
@@ -192,15 +204,38 @@ export default function WalletTab() {
         }
       )
       .subscribe();
+
+    // Additional channel to listen for processed_at updates on scheduled_payments
+    const processedPaymentsChannel = supabase
+      .channel('wallet_tab_processed_payments')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'scheduled_payments' },
+        (payload) => {
+          if ((payload.new as any).processed_at && !(payload.old as any).processed_at) {
+            console.log('WalletTab: Payment processed, refreshing balance');
+            if (refreshBalance) {
+              refreshBalance(false);
+            }
+          }
+        }
+      )
+      .subscribe();
       
     return () => {
       supabase.removeChannel(scheduledPaymentChannel);
       supabase.removeChannel(yieldTransactionsChannel);
+      supabase.removeChannel(processedPaymentsChannel);
     };
   }, [refreshBalance]);
 
   return (
     <div className="space-y-6">
+      {isVerifyingPayments && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <p className="text-blue-700">Vérification des paiements en attente...</p>
+        </div>
+      )}
+      
       <WalletBalance 
         balance={walletBalance} 
         isLoading={isLoadingBalance} 
