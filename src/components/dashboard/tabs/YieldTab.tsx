@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { BarChart3, TrendingUp, DollarSign, RefreshCw } from "lucide-react";
+import { BarChart3, TrendingUp, DollarSign, RefreshCw, AlertCircle, Clock, Check } from "lucide-react";
 import { useInvestmentTracking } from "./investment-tracking/useInvestmentTracking";
 import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics";
 import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
 import { Project } from "@/types/project";
+import { calculateExpectedCumulativeReturns } from "./investment-tracking/utils";
 import ScheduledPaymentsSection from "./investment-tracking/ScheduledPaymentsSection";
 
 const YieldTab = () => {
@@ -24,6 +24,63 @@ const YieldTab = () => {
   }[]>([]);
   const [userInvestments, setUserInvestments] = useState<Project[]>([]);
   
+  const mockProjects: Project[] = [
+    {
+      id: '1',
+      name: 'Project Alpha',
+      image: '/placeholder.svg',
+      companyName: 'Alpha Corporation',
+      status: 'active',
+      investedAmount: 5000,
+      yield: 8,
+      description: 'A sustainable energy project',
+      location: 'Paris, France',
+      minInvestment: 1000,
+      maxInvestment: 50000,
+      price: 100000,
+      profitability: 8,
+      duration: '12 months',
+      category: 'energy',
+      fundingProgress: 75
+    },
+    {
+      id: '2',
+      name: 'Project Beta',
+      image: '/placeholder.svg',
+      companyName: 'Beta Corporation',
+      status: 'active',
+      investedAmount: 3000,
+      yield: 6,
+      description: 'A renewable energy project',
+      location: 'London, UK',
+      minInvestment: 500,
+      maxInvestment: 20000,
+      price: 80000,
+      profitability: 6,
+      duration: '24 months',
+      category: 'renewable',
+      fundingProgress: 90
+    },
+    {
+      id: '3',
+      name: 'Project Gamma',
+      image: '/placeholder.svg',
+      companyName: 'Gamma Corporation',
+      status: 'active',
+      investedAmount: 1000,
+      yield: 4,
+      description: 'A green building project',
+      location: 'New York, USA',
+      minInvestment: 200,
+      maxInvestment: 10000,
+      price: 50000,
+      profitability: 4,
+      duration: '36 months',
+      category: 'green',
+      fundingProgress: 50
+    }
+  ];
+
   const {
     sortColumn,
     sortDirection,
@@ -40,6 +97,14 @@ const YieldTab = () => {
   const { statistics, isLoading: statsLoading } = useReturnsStatistics();
   
   useInvestmentSubscriptions(userId, refreshTracking);
+  
+  const isTrackingLoading = trackingLoading || statsLoading;
+  const hasTrackingData = paymentRecords && paymentRecords.length > 0;
+
+  const cumulativeExpectedReturns = React.useMemo(() => {
+    if (!paymentRecords || paymentRecords.length === 0) return [];
+    return calculateExpectedCumulativeReturns(paymentRecords);
+  }, [paymentRecords]);
 
   useEffect(() => {
     fetchInvestmentYields();

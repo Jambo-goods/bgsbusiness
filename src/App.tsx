@@ -64,14 +64,8 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/dashboard" element={<Dashboard />}>
-                  <Route path="yield" element={<Dashboard />} />
-                  <Route path="investments" element={<Dashboard />} />
-                  <Route path="wallet" element={<Dashboard />} />
-                  <Route path="notifications" element={<Dashboard />} />
-                  <Route path="settings" element={<Dashboard />} />
-                  <Route path="profile" element={<Dashboard />} />
-                </Route>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/dashboard/*" element={<Dashboard />} />
                 <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
                 
                 {/* Admin Login */}
