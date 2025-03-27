@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,6 +7,7 @@ import { useReturnsStatistics } from "./investment-tracking/useReturnsStatistics
 import { useInvestmentSubscriptions } from "./investment-tracking/useInvestmentSubscriptions";
 import { Project } from "@/types/project";
 import { calculateExpectedCumulativeReturns } from "./investment-tracking/utils";
+import ScheduledPaymentsSection from "./investment-tracking/ScheduledPaymentsSection";
 
 const YieldTab = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -409,6 +409,8 @@ const YieldTab = () => {
           </>
         )}
       </div>
+      
+      <ScheduledPaymentsSection />
     </div>
   );
 };
