@@ -49,7 +49,6 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     try {
       console.log('Récupération des détails du projet et investissement:', projectId, investmentId);
       
-      // Get investment date and amount first
       const { data: investmentData, error: investmentError } = await supabase
         .from("investments")
         .select("date, amount")
@@ -68,7 +67,6 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
       console.log("Date d'investissement:", investDate);
       console.log("Montant d'investissement:", investAmount);
       
-      // Get project details for first payment delay
       const { data: projectData, error: projectError } = await supabase
         .from("projects")
         .select("first_payment_delay_months")
@@ -80,12 +78,10 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
         throw new Error(projectError.message);
       }
       
-      // Store first payment delay
       const firstPaymentDelayMonths = projectData?.first_payment_delay_months || 1;
       setFirstPaymentDelay(firstPaymentDelayMonths);
       console.log("Délai du premier paiement:", firstPaymentDelayMonths, "mois");
       
-      // Get scheduled payments
       const { data: paymentsData, error: paymentsError } = await supabase
         .from("scheduled_payments")
         .select(`
@@ -108,7 +104,6 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
 
       console.log('Données de paiements programmés récupérées:', paymentsData);
       
-      // Filter payments based on first payment date
       let filteredPayments = paymentsData || [];
       
       if (investDate && firstPaymentDelayMonths > 0) {
@@ -118,7 +113,6 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
         
         console.log("Date du premier paiement calculée:", firstPaymentDate.toISOString());
         
-        // Only include payments that are on or after the first payment date
         filteredPayments = filteredPayments.filter(payment => {
           const paymentDate = new Date(payment.payment_date);
           return paymentDate >= firstPaymentDate;
@@ -127,14 +121,11 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
         console.log(`Filtrés: ${filteredPayments.length} paiements sur ${paymentsData?.length || 0} après application du délai de premier paiement`);
       }
       
-      // Convert to typed payments and calculate the correct amount based on percentage and investment amount
       const typedPayments = filteredPayments.map(payment => {
-        // Calculate the payment amount based on percentage of the investment amount
         const calculatedAmount = investAmount * (payment.percentage / 100);
         
         return {
           ...payment,
-          // Override the total_scheduled_amount with our calculated amount based on percentage
           total_scheduled_amount: calculatedAmount,
           status: (payment.status === 'paid' ? 'paid' : 
                   payment.status === 'pending' ? 'pending' : 'scheduled') as 'scheduled' | 'pending' | 'paid'
@@ -156,13 +147,11 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
       fetchScheduledPayments();
     }
     
-    // Set up real-time listener for scheduled payments table
     const scheduledPaymentsChannel = supabase
       .channel('scheduled_payments_changes')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'scheduled_payments' },
         () => {
-          // Refresh without showing loading indicator
           fetchScheduledPayments();
         }
       )
@@ -173,13 +162,11 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
     };
   }, [projectId, investmentId, fetchScheduledPayments]);
 
-  // Calculate payment statistics
   const paidPayments = scheduledPayments.filter(p => p.status === 'paid');
   const pendingPayments = scheduledPayments.filter(p => p.status === 'pending' || p.status === 'scheduled');
   const totalPaid = paidPayments.reduce((sum, p) => sum + (p.total_scheduled_amount || 0), 0);
   const totalPending = pendingPayments.reduce((sum, p) => sum + (p.total_scheduled_amount || 0), 0);
 
-  // Calculate first payment date to display
   const firstPaymentDateDisplay = investmentDate ? (() => {
     const date = new Date(investmentDate);
     date.setMonth(date.getMonth() + firstPaymentDelay);
@@ -310,7 +297,7 @@ const TransactionHistoryCard: React.FC<TransactionHistoryCardProps> = ({ investm
                     <span className="text-blue-600 font-medium">{payment.percentage.toFixed(2)}%</span>
                   </TableCell>
                   <TableCell className="font-medium text-green-600">
-                    {formatCurrency(investmentAmount * (payment.percentage / 100) || 0)}
+                    {formatCurrency(payment.total_scheduled_amount || 0)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center">
