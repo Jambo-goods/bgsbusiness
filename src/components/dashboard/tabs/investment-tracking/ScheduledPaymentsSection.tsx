@@ -101,9 +101,26 @@ const ScheduledPaymentsSection = () => {
     return new Date(a.payment_date).getTime() - new Date(b.payment_date).getTime();
   });
 
-  const paidPayments = scheduledPayments.filter(payment => payment.status === 'paid');
-  const pendingPayments = scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled');
+  // Initialize arrays to prevent accessing uninitialized variables
+  const paidPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'paid') : [];
+  const pendingPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled') : [];
   
+  const getTotalInvestmentAmount = (projectId: string): number => {
+    // First check if we have the total raised amount for this project
+    if (totalProjectInvestments[projectId]) {
+      return totalProjectInvestments[projectId];
+    }
+    
+    // Fallback to scheduled payment total_invested_amount if available
+    const payment = scheduledPayments.find(p => p.project_id === projectId);
+    if (payment && payment.total_invested_amount) {
+      return Number(payment.total_invested_amount);
+    }
+    
+    // Return 0 if no data available
+    return 0;
+  };
+
   const totalPaid = paidPayments.reduce((sum, payment) => {
     const percentage = typeof payment.percentage === 'number' ? payment.percentage : 0;
     const projectTotalInvestment = getTotalInvestmentAmount(payment.project_id);
@@ -130,22 +147,6 @@ const ScheduledPaymentsSection = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return format(date, 'dd/MM/yyyy');
-  };
-
-  const getTotalInvestmentAmount = (projectId: string): number => {
-    // First check if we have the total raised amount for this project
-    if (totalProjectInvestments[projectId]) {
-      return totalProjectInvestments[projectId];
-    }
-    
-    // Fallback to scheduled payment total_invested_amount if available
-    const payment = scheduledPayments.find(p => p.project_id === projectId);
-    if (payment && payment.total_invested_amount) {
-      return Number(payment.total_invested_amount);
-    }
-    
-    // Return 0 if no data available
-    return 0;
   };
 
   const calculatePaymentAmount = (percentage: number | undefined, projectId: string) => {
