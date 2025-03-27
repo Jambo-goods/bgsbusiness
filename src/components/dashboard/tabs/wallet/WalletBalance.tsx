@@ -111,20 +111,11 @@ export default function WalletBalance({
     };
   }, [refreshBalance]);
   
-  // Force balance refresh on component mount and periodically
+  // Force balance refresh on component mount only, removing periodic refresh
   useEffect(() => {
     if (refreshBalance) {
-      // Initial refresh
+      // Initial refresh only, without periodic check
       refreshBalance();
-      
-      // Set up periodic refresh
-      const refreshInterval = setInterval(() => {
-        refreshBalance();
-      }, 5000); // Check every 5 seconds
-      
-      return () => {
-        clearInterval(refreshInterval);
-      };
     }
   }, [refreshBalance]);
   

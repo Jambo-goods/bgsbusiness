@@ -9,6 +9,7 @@ export function useWalletBalance() {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [lastUpdateTime, setLastUpdateTime] = useState<number>(Date.now());
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Get the current user's ID when the hook loads
   useEffect(() => {
@@ -32,10 +33,14 @@ export function useWalletBalance() {
   }, []);
 
   const fetchWalletBalance = useCallback(async (showLoading = true) => {
+    // Prevent multiple concurrent refreshes
+    if (isRefreshing) return;
+    
     try {
       if (showLoading) {
         setIsLoadingBalance(true);
       }
+      setIsRefreshing(true);
       setError(null);
       
       const { data } = await supabase.auth.getSession();
@@ -43,6 +48,7 @@ export function useWalletBalance() {
       if (!data.session) {
         setWalletBalance(0);
         setIsLoadingBalance(false);
+        setIsRefreshing(false);
         return;
       }
       
@@ -69,8 +75,9 @@ export function useWalletBalance() {
       setWalletBalance(0);
     } finally {
       setIsLoadingBalance(false);
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [isRefreshing]);
 
   // Initial balance fetch
   useEffect(() => {
@@ -204,13 +211,13 @@ export function useWalletBalance() {
     }
   };
   
-  // Set up aggressive polling to check balance frequently
+  // Set up polling with a much lower frequency and respect refresh state
   useEffect(() => {
     const pollingInterval = setInterval(() => {
-      if (userId) {
+      if (userId && !isRefreshing) {
         const timeElapsed = Date.now() - lastUpdateTime;
-        // Only refresh if it's been more than 2 seconds since the last update
-        if (timeElapsed > 2000) {
+        // Only refresh if it's been more than 30 seconds since the last update
+        if (timeElapsed > 30000) {
           console.log("Polling wallet balance");
           fetchWalletBalance(false); // Silent refresh
           
@@ -218,15 +225,17 @@ export function useWalletBalance() {
           checkUnprocessedPayments();
         }
       }
-    }, 3000); // Check every 3 seconds
+    }, 30000); // Check every 30 seconds instead of 3
     
     return () => {
       clearInterval(pollingInterval);
     };
-  }, [userId, fetchWalletBalance, lastUpdateTime]);
+  }, [userId, fetchWalletBalance, lastUpdateTime, isRefreshing]);
   
   // Function to check for any unprocessed payments (new)
   const checkUnprocessedPayments = async () => {
+    if (isRefreshing) return;
+    
     try {
       // Look for paid payments that haven't been processed yet
       const { data: unprocessedPayments, error } = await supabase
@@ -255,6 +264,8 @@ export function useWalletBalance() {
 
   // Function to manually refresh the balance
   const refreshBalance = async (showLoading = true) => {
+    if (isRefreshing) return;
+    
     console.log("Manual refresh of wallet balance requested");
     await fetchWalletBalance(showLoading);
     
