@@ -126,6 +126,7 @@ export default function NotificationsTab() {
   };
 
   const handleFilterChange = (newFilter: 'all' | 'unread') => {
+    console.log("Filter changed to:", newFilter);
     setFilter(newFilter);
   };
 
@@ -165,7 +166,7 @@ export default function NotificationsTab() {
         />
       </div>
 
-      <Tabs defaultValue="all" className="w-full">
+      <Tabs value={filter} className="w-full">
         <NotificationTabs 
           totalCount={notifications.length}
           unreadCount={unreadCount}
@@ -173,7 +174,7 @@ export default function NotificationsTab() {
           onFilterChange={handleFilterChange}
         />
         
-        <TabsContent value="all" className="mt-4">
+        <TabsContent value={filter} className="mt-4">
           <NotificationsList 
             notifications={filteredNotifications}
             onMarkAsRead={handleMarkAsRead}
