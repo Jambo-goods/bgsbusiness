@@ -14,7 +14,7 @@ export interface FormDataType {
   funding_progress: string;
   possible_durations: string;
   profitability: string;
-  // Champs pour le partenaire local
+  // Champs pour le partenaire local - tous optionnels
   partner_description?: string;
   partner_experience?: string;
   partner_employees?: string;
