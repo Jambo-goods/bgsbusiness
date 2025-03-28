@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon, AlertCircle } from "lucide-react";
@@ -12,13 +12,26 @@ import { toast } from "sonner";
 export default function BankTransferInstructions() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  
+  // Generate reference number once when component mounts
+  useEffect(() => {
+    const generatedReference = "DEP-" + Math.floor(100000 + Math.random() * 900000);
+    setReferenceNumber(generatedReference);
+  }, []);
 
   const bankDetails = {
     name: "BGS Invest",
     iban: "FR76 1234 5678 9101 1121 3141 516",
     bic: "BGSFRINVXXX",
     bank: "Banque Générale Française",
-    reference: "DEP-" + Math.floor(100000 + Math.random() * 900000)
+    get reference() { return referenceNumber; }
+  };
+
+  // Format reference number with spaces for better readability
+  const formatReference = (reference) => {
+    if (!reference) return "";
+    return reference.replace(/^(DEP-)?(\d{3})(\d{3})$/, "DEP-$2$3");
   };
 
   const handleTransferAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,7 +168,7 @@ export default function BankTransferInstructions() {
               <p className="text-sm font-medium text-gray-500 mb-1">Référence à indiquer</p>
               <div className="bg-white p-3 rounded-md border border-gray-200">
                 <p className="font-mono font-semibold tracking-wider text-bgs-blue text-center text-lg">
-                  {bankDetails.reference}
+                  {formatReference(bankDetails.reference)}
                 </p>
               </div>
             </div>
@@ -194,7 +207,7 @@ export default function BankTransferInstructions() {
         <div className="flex flex-col items-center">
           <Button 
             onClick={handleConfirmTransfer}
-            disabled={isConfirming || !transferAmount || parseInt(transferAmount) < 100}
+            disabled={isConfirming || !transferAmount || parseInt(transferAmount) < 100 || !referenceNumber}
             className="w-full md:w-auto bg-gradient-to-r from-bgs-blue to-bgs-blue-light text-white"
           >
             {isConfirming ? 
