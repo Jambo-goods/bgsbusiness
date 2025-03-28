@@ -104,29 +104,29 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
             <Building className="h-8 w-8 text-bgs-blue" />
           </div>
           <div>
-            <h3 className="font-medium text-lg text-bgs-blue">{project.companyName} - Partenaire local</h3>
+            <h3 className="font-medium text-lg text-bgs-blue">{project.company_name} - Partenaire local</h3>
             <p className="text-sm text-bgs-blue/70">{project.location}</p>
           </div>
         </div>
         <p className="text-base text-bgs-blue/80 mb-6 leading-relaxed">
-          Notre partenaire local pour ce projet est une entreprise établie depuis plus de 5 ans dans la région, avec une excellente réputation et une connaissance approfondie du marché local. Un contrat solide encadre notre collaboration pour garantir la protection des intérêts des investisseurs.
+          {project.partner_description || 'Notre partenaire local pour ce projet est une entreprise établie depuis plus de 5 ans dans la région, avec une excellente réputation et une connaissance approfondie du marché local. Un contrat solide encadre notre collaboration pour garantir la protection des intérêts des investisseurs.'}
         </p>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gray-50 p-4 rounded-lg text-center hover:bg-gray-100 transition-colors">
-            <p className="text-2xl font-bold text-bgs-blue">5+</p>
+            <p className="text-2xl font-bold text-bgs-blue">{project.partner_experience || '5+'}</p>
             <p className="text-sm text-bgs-blue/70">Années d'expérience</p>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg text-center hover:bg-gray-100 transition-colors">
-            <p className="text-2xl font-bold text-bgs-blue">12</p>
+            <p className="text-2xl font-bold text-bgs-blue">{project.partner_employees || '12'}</p>
             <p className="text-sm text-bgs-blue/70">Employés locaux</p>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg text-center hover:bg-gray-100 transition-colors">
-            <p className="text-2xl font-bold text-bgs-blue">8</p>
+            <p className="text-2xl font-bold text-bgs-blue">{project.partner_projects || '8'}</p>
             <p className="text-sm text-bgs-blue/70">Projets réalisés</p>
           </div>
           <div className="bg-gray-50 p-4 rounded-lg text-center hover:bg-gray-100 transition-colors">
-            <p className="text-2xl font-bold text-bgs-blue">98%</p>
+            <p className="text-2xl font-bold text-bgs-blue">{project.partner_satisfaction || '98'}%</p>
             <p className="text-sm text-bgs-blue/70">Taux de satisfaction</p>
           </div>
         </div>

@@ -1,8 +1,9 @@
+
 import React, { useState } from 'react';
 import { 
   Building, MapPin, Image, Calendar, TrendingUp, 
   Clock, CreditCard, CheckCircle, XCircle,
-  File
+  File, Users
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,12 @@ interface FormDataType {
   funding_progress: string;
   possible_durations: string;
   profitability: string;
+  // Nouveaux champs pour le partenaire local
+  partner_description: string;
+  partner_experience: string;
+  partner_employees: string;
+  partner_projects: string;
+  partner_satisfaction: string;
 }
 
 interface ProjectFormProps {
@@ -55,10 +62,14 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
         </h2>
         
         <Tabs defaultValue="details" value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-2 mb-4">
+          <TabsList className="grid grid-cols-3 mb-4">
             <TabsTrigger value="details" className="flex items-center gap-1">
               <Building className="h-4 w-4" />
               <span>Détails du projet</span>
+            </TabsTrigger>
+            <TabsTrigger value="partner" className="flex items-center gap-1">
+              <Users className="h-4 w-4" />
+              <span>Partenaire local</span>
             </TabsTrigger>
             <TabsTrigger 
               value="documents" 
@@ -362,6 +373,122 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                     <option value="upcoming">À venir</option>
                     <option value="suspended">Suspendu</option>
                   </select>
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2 mt-6">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onCancel}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-bgs-blue hover:bg-bgs-blue-light text-white"
+                >
+                  {editingProject ? 'Mettre à jour' : 'Ajouter le projet'}
+                </Button>
+              </div>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="partner">
+            <form onSubmit={handleSubmitProject} className="space-y-4">
+              <div>
+                <Label htmlFor="partner_description" className="text-sm font-medium text-gray-700">
+                  Description du partenaire local
+                </Label>
+                <textarea
+                  id="partner_description"
+                  name="partner_description"
+                  rows={4}
+                  className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                  placeholder="Description du partenaire local"
+                  value={formData.partner_description || ''}
+                  onChange={handleFormChange}
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Cette description apparaîtra dans la section partenaire local du projet
+                </p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="partner_experience" className="text-sm font-medium text-gray-700">
+                    Années d'expérience
+                  </Label>
+                  <div className="relative mt-1">
+                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <Input
+                      id="partner_experience"
+                      name="partner_experience"
+                      type="text"
+                      className="pl-10"
+                      placeholder="ex: 5+"
+                      value={formData.partner_experience || ''}
+                      onChange={handleFormChange}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="partner_employees" className="text-sm font-medium text-gray-700">
+                    Nombre d'employés
+                  </Label>
+                  <div className="relative mt-1">
+                    <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <Input
+                      id="partner_employees"
+                      name="partner_employees"
+                      type="number"
+                      className="pl-10"
+                      placeholder="ex: 12"
+                      value={formData.partner_employees || ''}
+                      onChange={handleFormChange}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="partner_projects" className="text-sm font-medium text-gray-700">
+                    Projets réalisés
+                  </Label>
+                  <div className="relative mt-1">
+                    <Building className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <Input
+                      id="partner_projects"
+                      name="partner_projects"
+                      type="number"
+                      className="pl-10"
+                      placeholder="ex: 8"
+                      value={formData.partner_projects || ''}
+                      onChange={handleFormChange}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="partner_satisfaction" className="text-sm font-medium text-gray-700">
+                    Taux de satisfaction (%)
+                  </Label>
+                  <div className="relative mt-1">
+                    <CheckCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <Input
+                      id="partner_satisfaction"
+                      name="partner_satisfaction"
+                      type="number"
+                      min="0"
+                      max="100"
+                      className="pl-10"
+                      placeholder="ex: 98"
+                      value={formData.partner_satisfaction || ''}
+                      onChange={handleFormChange}
+                    />
+                  </div>
                 </div>
               </div>
               

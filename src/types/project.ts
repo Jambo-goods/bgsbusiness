@@ -15,5 +15,12 @@ export interface Project {
   location?: string;
   risk_level?: string;
   min_investment?: number;
+  company_name?: string;
+  // Champs pour le partenaire local
+  partner_description?: string;
+  partner_experience?: string;
+  partner_employees?: number;
+  partner_projects?: number;
+  partner_satisfaction?: number;
   [key: string]: any;
 }

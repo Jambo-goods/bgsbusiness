@@ -14,48 +14,95 @@ export interface FormDataType {
   funding_progress: string;
   possible_durations: string;
   profitability: string;
+  // Champs pour le partenaire local
+  partner_description?: string;
+  partner_experience?: string;
+  partner_employees?: string;
+  partner_projects?: string;
+  partner_satisfaction?: string;
 }
 
-export const validateProjectForm = (formData: FormDataType) => {
+export const validateProjectForm = (formData: FormDataType): Record<string, string> => {
   const errors: Record<string, string> = {};
-  const requiredFields = [
-    'name', 'company_name', 'description', 'location', 'image', 
-    'price', 'yield', 'min_investment', 'duration', 'category', 'profitability'
-  ];
-  
-  requiredFields.forEach(field => {
-    if (!formData[field as keyof typeof formData] || formData[field as keyof typeof formData].trim() === '') {
-      errors[field] = 'Ce champ est obligatoire';
-    }
-  });
-  
-  // Validate numeric fields
-  if (formData.price && isNaN(Number(formData.price))) {
-    errors.price = 'Doit être un nombre';
+
+  // Validation des champs obligatoires
+  if (!formData.name.trim()) {
+    errors.name = "Le nom du projet est requis";
   }
   
-  if (formData.yield && isNaN(Number(formData.yield))) {
-    errors.yield = 'Doit être un nombre';
+  if (!formData.company_name.trim()) {
+    errors.company_name = "Le nom de la société est requis";
   }
   
-  if (formData.min_investment && isNaN(Number(formData.min_investment))) {
-    errors.min_investment = 'Doit être un nombre';
+  if (!formData.description.trim()) {
+    errors.description = "La description est requise";
   }
   
-  if (formData.profitability && isNaN(Number(formData.profitability))) {
-    errors.profitability = 'Doit être un nombre';
+  if (!formData.location.trim()) {
+    errors.location = "La localisation est requise";
   }
   
-  // Validate possible_durations format if provided
-  if (formData.possible_durations) {
-    const durationItems = formData.possible_durations.split(',').map(item => item.trim());
-    for (const item of durationItems) {
-      if (isNaN(Number(item))) {
-        errors.possible_durations = 'Doit être une liste de nombres séparés par des virgules';
+  if (!formData.image.trim()) {
+    errors.image = "L'URL de l'image est requise";
+  }
+  
+  if (!formData.price.trim()) {
+    errors.price = "Le prix est requis";
+  } else if (isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
+    errors.price = "Le prix doit être un nombre positif";
+  }
+  
+  if (!formData.yield.trim()) {
+    errors.yield = "Le rendement est requis";
+  } else if (isNaN(Number(formData.yield)) || Number(formData.yield) <= 0) {
+    errors.yield = "Le rendement doit être un nombre positif";
+  }
+  
+  if (!formData.min_investment.trim()) {
+    errors.min_investment = "L'investissement minimum est requis";
+  } else if (isNaN(Number(formData.min_investment)) || Number(formData.min_investment) <= 0) {
+    errors.min_investment = "L'investissement minimum doit être un nombre positif";
+  }
+  
+  if (!formData.duration.trim()) {
+    errors.duration = "La durée est requise";
+  }
+  
+  if (!formData.category.trim()) {
+    errors.category = "La catégorie est requise";
+  }
+  
+  if (!formData.profitability.trim()) {
+    errors.profitability = "La rentabilité est requise";
+  } else if (isNaN(Number(formData.profitability)) || Number(formData.profitability) <= 0) {
+    errors.profitability = "La rentabilité doit être un nombre positif";
+  }
+  
+  // Validation des durées possibles si elles sont fournies
+  if (formData.possible_durations.trim()) {
+    const durations = formData.possible_durations.split(',');
+    for (const duration of durations) {
+      const trimmedDuration = duration.trim();
+      if (isNaN(Number(trimmedDuration)) || Number(trimmedDuration) <= 0) {
+        errors.possible_durations = "Les durées doivent être des nombres positifs séparés par des virgules";
         break;
       }
     }
   }
   
+  // Validation des champs du partenaire si renseignés
+  if (formData.partner_employees && (isNaN(Number(formData.partner_employees)) || Number(formData.partner_employees) < 0)) {
+    errors.partner_employees = "Le nombre d'employés doit être un nombre positif";
+  }
+  
+  if (formData.partner_projects && (isNaN(Number(formData.partner_projects)) || Number(formData.partner_projects) < 0)) {
+    errors.partner_projects = "Le nombre de projets doit être un nombre positif";
+  }
+  
+  if (formData.partner_satisfaction && (isNaN(Number(formData.partner_satisfaction)) || 
+      Number(formData.partner_satisfaction) < 0 || Number(formData.partner_satisfaction) > 100)) {
+    errors.partner_satisfaction = "Le taux de satisfaction doit être un pourcentage entre 0 et 100";
+  }
+
   return errors;
 };

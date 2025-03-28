@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -15,7 +14,6 @@ export const useProjectManagement = (adminUserId?: string) => {
   const [editingProject, setEditingProject] = useState<any>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
-  // Form state
   const [formData, setFormData] = useState<FormDataType>({
     name: '',
     company_name: '',
@@ -30,7 +28,12 @@ export const useProjectManagement = (adminUserId?: string) => {
     status: 'active',
     funding_progress: '0',
     possible_durations: '',
-    profitability: ''
+    profitability: '',
+    partner_description: '',
+    partner_experience: '',
+    partner_employees: '',
+    partner_projects: '',
+    partner_satisfaction: ''
   });
 
   const fetchProjects = async () => {
@@ -59,10 +62,8 @@ export const useProjectManagement = (adminUserId?: string) => {
 
   const handleSort = (field: string) => {
     if (field === sortField) {
-      // Toggle direction if same field
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      // New field, default to desc
       setSortField(field);
       setSortDirection('desc');
     }
@@ -72,7 +73,6 @@ export const useProjectManagement = (adminUserId?: string) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear error for this field if it exists
     if (formErrors[name]) {
       setFormErrors(prev => {
         const newErrors = { ...prev };
@@ -93,14 +93,12 @@ export const useProjectManagement = (adminUserId?: string) => {
     
     console.log("Handling submit project");
     
-    // Validate the form
     if (!validateForm()) {
       toast("Veuillez corriger les erreurs du formulaire");
       return;
     }
     
     try {
-      // Parse numeric values
       const projectData = {
         ...formData,
         price: parseInt(formData.price) || 0,
@@ -110,7 +108,10 @@ export const useProjectManagement = (adminUserId?: string) => {
         funding_progress: parseInt(formData.funding_progress) || 0,
         possible_durations: formData.possible_durations ? 
           formData.possible_durations.split(',').map(d => parseInt(d.trim()) || 0) : 
-          [] // Ensure it's always an array, empty if no values
+          [],
+        partner_employees: formData.partner_employees ? parseInt(formData.partner_employees) : null,
+        partner_projects: formData.partner_projects ? parseInt(formData.partner_projects) : null,
+        partner_satisfaction: formData.partner_satisfaction ? parseInt(formData.partner_satisfaction) : null
       };
       
       console.log("Submitting project data:", projectData);
@@ -118,7 +119,6 @@ export const useProjectManagement = (adminUserId?: string) => {
       let result;
       
       if (editingProject) {
-        // Update existing project
         const { data, error } = await supabase
           .from('projects')
           .update(projectData)
@@ -131,7 +131,6 @@ export const useProjectManagement = (adminUserId?: string) => {
         }
         result = data?.[0];
         
-        // Log admin action if adminUserId is provided
         if (adminUserId) {
           await logAdminAction(
             adminUserId,
@@ -144,7 +143,6 @@ export const useProjectManagement = (adminUserId?: string) => {
         
         toast(`Le projet ${formData.name} a été mis à jour`);
       } else {
-        // Create new project
         const { data, error } = await supabase
           .from('projects')
           .insert(projectData)
@@ -156,7 +154,6 @@ export const useProjectManagement = (adminUserId?: string) => {
         }
         result = data?.[0];
         
-        // Log admin action if adminUserId is provided
         if (adminUserId) {
           await logAdminAction(
             adminUserId,
@@ -170,10 +167,8 @@ export const useProjectManagement = (adminUserId?: string) => {
         toast(`Le projet ${formData.name} a été créé`);
       }
       
-      // Reset form and close modal
       resetForm();
       
-      // Refresh project list
       fetchProjects();
       
     } catch (error) {
@@ -197,7 +192,12 @@ export const useProjectManagement = (adminUserId?: string) => {
       status: 'active',
       funding_progress: '0',
       possible_durations: '',
-      profitability: ''
+      profitability: '',
+      partner_description: '',
+      partner_experience: '',
+      partner_employees: '',
+      partner_projects: '',
+      partner_satisfaction: ''
     });
     setIsAddProjectModalOpen(false);
     setEditingProject(null);
@@ -220,7 +220,12 @@ export const useProjectManagement = (adminUserId?: string) => {
       status: project.status || 'active',
       funding_progress: project.funding_progress?.toString() || '0',
       possible_durations: project.possible_durations ? project.possible_durations.join(', ') : '',
-      profitability: project.profitability?.toString() || ''
+      profitability: project.profitability?.toString() || '',
+      partner_description: project.partner_description || '',
+      partner_experience: project.partner_experience || '',
+      partner_employees: project.partner_employees?.toString() || '',
+      partner_projects: project.partner_projects?.toString() || '',
+      partner_satisfaction: project.partner_satisfaction?.toString() || ''
     });
     setIsAddProjectModalOpen(true);
   };
@@ -238,18 +243,18 @@ export const useProjectManagement = (adminUserId?: string) => {
         
       if (error) throw error;
       
-      // Log admin action
-      await logAdminAction(
-        adminUserId,
-        'project_management',
-        `Suppression du projet "${project.name}"`,
-        undefined,
-        project.id
-      );
+      if (adminUserId) {
+        await logAdminAction(
+          adminUserId,
+          'project_management',
+          `Suppression du projet "${project.name}"`,
+          undefined,
+          project.id
+        );
+      }
       
       toast.success(`Le projet ${project.name} a été supprimé`);
       
-      // Refresh project list
       fetchProjects();
       
     } catch (error) {
