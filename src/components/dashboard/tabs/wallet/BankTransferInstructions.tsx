@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -8,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { formatCurrency } from "@/utils/currencyUtils";
 
 export default function BankTransferInstructions() {
   const [isConfirming, setIsConfirming] = useState(false);
@@ -19,6 +19,10 @@ export default function BankTransferInstructions() {
     bic: "BGSFRINVXXX",
     bank: "Banque Générale Française",
     reference: "DEP-" + Math.floor(100000 + Math.random() * 900000)
+  };
+
+  const formatReference = (ref: string) => {
+    return ref.replace(/(.{3})/g, '$1 ').trim();
   };
 
   const handleTransferAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,7 +159,7 @@ export default function BankTransferInstructions() {
               <p className="text-sm font-medium text-gray-500 mb-1">Référence à indiquer</p>
               <div className="bg-white p-3 rounded-md border border-gray-200">
                 <p className="font-mono font-semibold tracking-wider text-bgs-blue text-center text-lg">
-                  {bankDetails.reference}
+                  {formatReference(bankDetails.reference)}
                 </p>
               </div>
             </div>
