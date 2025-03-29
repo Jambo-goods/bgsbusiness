@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -64,6 +65,10 @@ export default function SecuritySection({
         <div>
           <div className="flex items-center justify-between mb-4">
             <div className="space-y-0.5">
+              <Label className="text-bgs-blue flex items-center gap-2">
+                <Lock size={16} />
+                Mot de passe
+              </Label>
               <p className="text-sm text-bgs-gray-medium">Modifier votre mot de passe actuel</p>
             </div>
             {!showPasswordChange ? (
