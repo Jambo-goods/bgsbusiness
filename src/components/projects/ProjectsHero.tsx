@@ -23,9 +23,7 @@ export default function ProjectsHero() {
           <h3 className="text-lg font-semibold text-bgs-blue mb-2">
             Rendements attractifs
           </h3>
-          <p className="text-bgs-blue/70">
-            Des rendements annuels de 10% à 15% distribués mensuellement.
-          </p>
+          <p className="text-bgs-blue/70">Des rendements annuels élevés  distribués mensuellement.</p>
         </div>
         
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-50 hover:shadow-md transition-all">
