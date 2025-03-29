@@ -382,7 +382,6 @@ const ScheduledPaymentsSection = () => {
                     <TableHead>Projet</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Pourcentage</TableHead>
-                    <TableHead>Montant investi total</TableHead>
                     <TableHead>Montant</TableHead>
                     <TableHead>Statut</TableHead>
                   </TableRow>
@@ -404,9 +403,6 @@ const ScheduledPaymentsSection = () => {
                       </TableCell>
                       <TableCell>{formatDate(payment.payment_date)}</TableCell>
                       <TableCell>{payment.percentage?.toFixed(2)}%</TableCell>
-                      <TableCell className="font-medium">
-                        {formatCurrency(getTotalInvestmentAmount(payment.project_id))}
-                      </TableCell>
                       <TableCell className="font-medium">
                         {formatCurrency(calculatePaymentAmount(payment.percentage, payment.project_id))}
                       </TableCell>
