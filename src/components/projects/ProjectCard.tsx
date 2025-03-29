@@ -51,7 +51,7 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
         
         <div className="flex items-center text-bgs-gray-medium text-sm mb-2">
           <Building className="h-4 w-4 mr-1" />
-          {project.companyName}
+          {project.company_name || project.companyName}
         </div>
         
         <div className="flex items-center text-bgs-gray-medium text-sm mb-4">
