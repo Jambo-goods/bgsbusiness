@@ -3,6 +3,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { Project } from "@/types/project";
 import { ArrowRight, Clock, MapPin, TrendingUp, Building, Calendar } from "lucide-react";
+import { formatCurrency } from "@/utils/currencyUtils";
 
 interface ProjectCardProps {
   project: Project;
@@ -72,7 +73,7 @@ export default function ProjectCard({ project, index }: ProjectCardProps) {
           </div>
           <div className="bg-bgs-gray-light p-3 rounded-lg">
             <p className="text-xs text-bgs-gray-medium mb-1">Min. investissement</p>
-            <p className="font-semibold text-bgs-blue">{project.minInvestment}€</p>
+            <p className="font-semibold text-bgs-blue">{formatCurrency(project.min_investment || 500)}</p>
           </div>
         </div>
         
