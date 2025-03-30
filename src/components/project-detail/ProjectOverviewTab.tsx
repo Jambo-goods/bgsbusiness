@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import { Project } from "@/types/project";
@@ -128,7 +129,7 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
           
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium text-bgs-blue/60">Actif sous-jacent</p>
-            <p className="text-lg font-semibold text-bgs-blue">{project.category || "Équipement industriel"}</p>
+            <p className="text-lg font-semibold text-bgs-blue">{project.underlying_asset || "Non spécifié"}</p>
           </div>
           
           <div className="flex flex-col space-y-1">
