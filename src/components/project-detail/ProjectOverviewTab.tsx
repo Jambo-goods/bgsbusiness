@@ -145,10 +145,6 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
         <h2 className="text-xl font-semibold text-bgs-blue mb-5">Modèle d'Investissement</h2>
         
-        <p className="text-base text-bgs-blue/80 mb-6 leading-relaxed">
-          Notre modèle d'investissement repose sur l'acquisition d'actifs physiques qui génèrent des revenus prévisibles et réguliers. Votre capital est directement investi dans des équipements tangibles, ce qui offre une sécurité supplémentaire par rapport aux investissements traditionnels.
-        </p>
-        
         <div className="space-y-4">
           {investmentSteps.map((step, index) => (
             <div key={index} className="flex items-start space-x-4">
