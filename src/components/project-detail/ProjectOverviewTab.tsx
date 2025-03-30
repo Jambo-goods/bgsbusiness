@@ -8,6 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger
 } from "@/components/ui/accordion";
+import { formatCurrency } from "@/utils/currencyUtils";
 
 interface ProjectOverviewTabProps {
   project: Project;
@@ -50,6 +51,38 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
         <p className="text-base text-bgs-blue/80 leading-relaxed">
           Ce projet vise à acquérir et déployer {project.name} pour répondre aux besoins locaux croissants dans la région. Les équipements seront exploités par notre partenaire local qui possède une solide expérience dans ce secteur. L'accord de partenariat prévoit un partage des revenus qui assure un rendement attractif pour les investisseurs tout en garantissant une maintenance adéquate des équipements.
         </p>
+      </div>
+      
+      {/* Nouvelle section "Détails du Financement" */}
+      <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
+        <h2 className="text-xl font-semibold text-bgs-blue mb-5">Détails du Financement</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium text-bgs-blue/60">Investissement Minimum</p>
+            <p className="text-lg font-semibold text-bgs-blue">{formatCurrency(project.min_investment || 500)}</p>
+          </div>
+          
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium text-bgs-blue/60">Rendement Mensuel</p>
+            <p className="text-lg font-semibold text-green-600">{project.yield_rate || project.yield || 8}%</p>
+          </div>
+          
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium text-bgs-blue/60">Durée de l'Investissement</p>
+            <p className="text-lg font-semibold text-bgs-blue">{project.duration || "12 mois"}</p>
+          </div>
+          
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium text-bgs-blue/60">Actif sous-jacent</p>
+            <p className="text-lg font-semibold text-bgs-blue">{project.category || "Équipement industriel"}</p>
+          </div>
+          
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium text-bgs-blue/60">Premier Versement</p>
+            <p className="text-lg font-semibold text-bgs-blue">Après {project.firstPaymentDelayMonths || 1} mois</p>
+          </div>
+        </div>
       </div>
       
       {/* Section pour le Modèle d'Investissement - sans les visualisations en grille */}
