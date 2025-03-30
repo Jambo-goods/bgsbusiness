@@ -105,10 +105,6 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
         <p className="text-base text-bgs-blue/80 mb-5 leading-relaxed">
           {project.description}
         </p>
-        
-        <p className="text-base text-bgs-blue/80 leading-relaxed">
-          Ce projet vise à acquérir et déployer {project.name} pour répondre aux besoins locaux croissants dans la région. Les équipements seront exploités par notre partenaire local qui possède une solide expérience dans ce secteur. L'accord de partenariat prévoit un partage des revenus qui assure un rendement attractif pour les investisseurs tout en garantissant une maintenance adéquate des équipements.
-        </p>
       </div>
       
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
