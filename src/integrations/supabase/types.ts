@@ -318,6 +318,7 @@ export type Database = {
           funding_progress: number
           id: string
           image: string
+          investment_model: string | null
           location: string
           min_investment: number
           name: string
@@ -343,6 +344,7 @@ export type Database = {
           funding_progress: number
           id?: string
           image: string
+          investment_model?: string | null
           location: string
           min_investment: number
           name: string
@@ -368,6 +370,7 @@ export type Database = {
           funding_progress?: number
           id?: string
           image?: string
+          investment_model?: string | null
           location?: string
           min_investment?: number
           name?: string
