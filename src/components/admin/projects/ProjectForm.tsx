@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   Building, MapPin, Image, Calendar, TrendingUp, 
   Clock, CreditCard, CheckCircle, XCircle,
-  File, Users
+  File, Users, Plus, Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import DocumentUploadTab from './DocumentUploadTab';
 
 interface FormDataType {
@@ -28,7 +29,7 @@ interface FormDataType {
   funding_progress: string;
   possible_durations: string;
   profitability: string;
-  // Nouveaux champs pour le partenaire local
+  // Partner-related fields
   partner_description?: string;
   partner_experience?: string;
   partner_employees?: string;
@@ -54,6 +55,63 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
   onCancel
 }) => {
   const [activeTab, setActiveTab] = useState('details');
+  const [investmentSteps, setInvestmentSteps] = useState<string[]>([]);
+  
+  React.useEffect(() => {
+    if (formData.investment_model) {
+      const stepsRegex = /(\d️⃣[^0-9️⃣]*)/g;
+      const matches = formData.investment_model.match(stepsRegex) || [];
+      
+      if (matches.length > 0) {
+        setInvestmentSteps(matches);
+      } else {
+        setInvestmentSteps(formData.investment_model ? [formData.investment_model] : []);
+      }
+    } else {
+      setInvestmentSteps(['']);
+    }
+  }, [editingProject]);
+  
+  const handleStepChange = (index: number, value: string) => {
+    const newSteps = [...investmentSteps];
+    newSteps[index] = value;
+    setInvestmentSteps(newSteps);
+    
+    const combinedModel = newSteps.join('\n\n');
+    const syntheticEvent = {
+      target: {
+        name: 'investment_model',
+        value: combinedModel
+      }
+    } as React.ChangeEvent<HTMLTextAreaElement>;
+    
+    handleFormChange(syntheticEvent);
+  };
+  
+  const addInvestmentStep = () => {
+    const stepNumber = investmentSteps.length + 1;
+    const numberEmojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+    const prefix = stepNumber <= 10 ? numberEmojis[stepNumber - 1] + ' ' : `${stepNumber}. `;
+    
+    setInvestmentSteps([...investmentSteps, `${prefix}`]);
+  };
+  
+  const removeInvestmentStep = (index: number) => {
+    if (investmentSteps.length <= 1) return;
+    
+    const newSteps = investmentSteps.filter((_, i) => i !== index);
+    setInvestmentSteps(newSteps);
+    
+    const combinedModel = newSteps.join('\n\n');
+    const syntheticEvent = {
+      target: {
+        name: 'investment_model',
+        value: combinedModel
+      }
+    } as React.ChangeEvent<HTMLTextAreaElement>;
+    
+    handleFormChange(syntheticEvent);
+  };
   
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
@@ -129,11 +187,11 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                   <Label htmlFor="description" className="text-sm font-medium text-gray-700">
                     Description *
                   </Label>
-                  <textarea
+                  <Textarea
                     id="description"
                     name="description"
                     rows={3}
-                    className={`mt-1 block w-full rounded-md border ${formErrors.description ? 'border-red-500' : 'border-gray-300'} px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm`}
+                    className={`mt-1 ${formErrors.description ? 'border-red-500' : ''}`}
                     placeholder="Description du projet"
                     value={formData.description}
                     onChange={handleFormChange}
@@ -143,21 +201,48 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                 </div>
                 
                 <div>
-                  <Label htmlFor="investment_model" className="text-sm font-medium text-gray-700">
-                    Modèle d'Investissement
-                  </Label>
-                  <textarea
-                    id="investment_model"
-                    name="investment_model"
-                    rows={5}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
-                    placeholder="Décrivez le modèle d'investissement en 5 étapes numérotées (ex: 1️⃣ Acquisition des Actifs, 2️⃣ Attribution des Parts, etc.)"
-                    value={formData.investment_model || ''}
-                    onChange={handleFormChange}
-                  />
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="investment_model" className="text-sm font-medium text-gray-700">
+                      Modèle d'Investissement
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addInvestmentStep}
+                      className="flex items-center gap-1 text-xs"
+                    >
+                      <Plus className="h-3 w-3" />
+                      Ajouter une étape
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-3 mt-2">
+                    {investmentSteps.map((step, index) => (
+                      <div key={index} className="relative">
+                        <Textarea
+                          value={step}
+                          onChange={(e) => handleStepChange(index, e.target.value)}
+                          rows={3}
+                          placeholder={`Étape ${index + 1} du modèle d'investissement`}
+                          className="pr-10"
+                        />
+                        {investmentSteps.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeInvestmentStep(index)}
+                            className="absolute top-2 right-2 text-gray-400 hover:text-red-500"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
                   <p className="text-xs text-gray-500 mt-1">
-                    Ce champ apparaîtra dans la section "Modèle d'Investissement" de la page détaillée du projet. 
-                    Utilisez le format : "1️⃣ Titre étape 1 : Description. 2️⃣ Titre étape 2 : Description..." etc.
+                    Ces étapes apparaîtront dans la section "Modèle d'Investissement" de la page détaillée du projet.
+                    Chaque champ représente une étape du processus d'investissement.
                   </p>
                 </div>
                 
@@ -421,7 +506,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                   <Label htmlFor="partner_description" className="text-sm font-medium text-gray-700">
                     Description du partenaire local
                   </Label>
-                  <textarea
+                  <Textarea
                     id="partner_description"
                     name="partner_description"
                     rows={4}
