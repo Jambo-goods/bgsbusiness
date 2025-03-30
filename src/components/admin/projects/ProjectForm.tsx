@@ -268,7 +268,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                   
                   <div>
                     <Label htmlFor="category" className="text-sm font-medium text-gray-700">
-                      Actif sous-jacent *
+                      Catégorie *
                     </Label>
                     <select
                       id="category"
@@ -278,17 +278,12 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                       onChange={handleFormChange}
                       required
                     >
-                      <option value="">Sélectionner un actif</option>
+                      <option value="">Sélectionner une catégorie</option>
                       <option value="immobilier">Immobilier</option>
                       <option value="commerce">Commerce</option>
                       <option value="technologie">Technologie</option>
                       <option value="energie">Énergie</option>
                       <option value="agriculture">Agriculture</option>
-                      <option value="équipement industriel">Équipement industriel</option>
-                      <option value="transport">Transport</option>
-                      <option value="santé">Santé</option>
-                      <option value="éducation">Éducation</option>
-                      <option value="autre">Autre</option>
                     </select>
                     {formErrors.category && <p className="text-red-500 text-xs mt-1">{formErrors.category}</p>}
                   </div>
