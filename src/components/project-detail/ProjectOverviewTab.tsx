@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
+import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle, DollarSign, Wallet, ChartBar, CoinsIcon } from "lucide-react";
 import { Project } from "@/types/project";
 import { 
   Accordion,
@@ -50,6 +50,84 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
         <p className="text-base text-bgs-blue/80 leading-relaxed">
           Ce projet vise à acquérir et déployer {project.name} pour répondre aux besoins locaux croissants dans la région. Les équipements seront exploités par notre partenaire local qui possède une solide expérience dans ce secteur. L'accord de partenariat prévoit un partage des revenus qui assure un rendement attractif pour les investisseurs tout en garantissant une maintenance adéquate des équipements.
         </p>
+      </div>
+      
+      {/* Nouvelle section pour le Modèle d'Investissement */}
+      <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
+        <h2 className="text-xl font-semibold text-bgs-blue mb-5">Modèle d'Investissement</h2>
+        
+        <p className="text-base text-bgs-blue/80 mb-6 leading-relaxed">
+          Notre modèle d'investissement repose sur l'acquisition d'actifs physiques qui génèrent des revenus prévisibles et réguliers. Votre capital est directement investi dans des équipements tangibles, ce qui offre une sécurité supplémentaire par rapport aux investissements traditionnels.
+        </p>
+        
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <div className="flex items-start group hover:bg-gray-50 p-4 rounded-lg transition-colors">
+            <div className="shrink-0 mr-4 p-3 bg-green-50 rounded-lg group-hover:bg-green-100 transition-colors">
+              <DollarSign className="h-6 w-6 text-green-500" />
+            </div>
+            <div>
+              <h3 className="font-medium text-lg text-bgs-blue mb-2">Revenus mensuels</h3>
+              <p className="text-sm text-bgs-blue/70">Les rendements sont distribués mensuellement, créant un flux de revenus régulier et prévisible pour les investisseurs.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start group hover:bg-gray-50 p-4 rounded-lg transition-colors">
+            <div className="shrink-0 mr-4 p-3 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+              <Wallet className="h-6 w-6 text-blue-500" />
+            </div>
+            <div>
+              <h3 className="font-medium text-lg text-bgs-blue mb-2">Propriété des actifs</h3>
+              <p className="text-sm text-bgs-blue/70">Vous êtes propriétaire des équipements financés, ce qui offre une sécurité tangible à votre investissement.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start group hover:bg-gray-50 p-4 rounded-lg transition-colors">
+            <div className="shrink-0 mr-4 p-3 bg-purple-50 rounded-lg group-hover:bg-purple-100 transition-colors">
+              <ChartBar className="h-6 w-6 text-purple-500" />
+            </div>
+            <div>
+              <h3 className="font-medium text-lg text-bgs-blue mb-2">Rendements élevés</h3>
+              <p className="text-sm text-bgs-blue/70">Nos projets génèrent des rendements supérieurs aux investissements traditionnels, avec une moyenne de {project.yield || 12}% par mois.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start group hover:bg-gray-50 p-4 rounded-lg transition-colors">
+            <div className="shrink-0 mr-4 p-3 bg-amber-50 rounded-lg group-hover:bg-amber-100 transition-colors">
+              <CoinsIcon className="h-6 w-6 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="font-medium text-lg text-bgs-blue mb-2">Diversification géographique</h3>
+              <p className="text-sm text-bgs-blue/70">Investissez dans des actifs situés dans des marchés émergents à forte croissance, créant une diversification dans votre portefeuille.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-bgs-blue/5 p-5 rounded-lg">
+          <h3 className="font-medium text-lg text-bgs-blue mb-3">Répartition de votre investissement</h3>
+          <div className="space-y-4">
+            <div className="flex items-center">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: "75%" }}></div>
+              </div>
+              <span className="ml-3 text-sm font-medium text-bgs-blue/80 min-w-20">75% - Actifs</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: "15%" }}></div>
+              </div>
+              <span className="ml-3 text-sm font-medium text-bgs-blue/80 min-w-20">15% - Opérations</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: "10%" }}></div>
+              </div>
+              <span className="ml-3 text-sm font-medium text-bgs-blue/80 min-w-20">10% - Réserve</span>
+            </div>
+          </div>
+          <p className="text-xs text-bgs-blue/60 mt-4">
+            * La majorité de votre investissement est directement allouée à l'acquisition des actifs physiques, garantissant une utilisation optimale de votre capital.
+          </p>
+        </div>
       </div>
       
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
