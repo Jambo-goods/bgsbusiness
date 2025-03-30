@@ -21,6 +21,7 @@ export interface FormDataType {
   partner_employees?: string;
   partner_projects?: string;
   partner_satisfaction?: string;
+  underlying_asset?: string;
 }
 
 export const validateProjectForm = (formData: FormDataType) => {
