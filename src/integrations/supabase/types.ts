@@ -322,6 +322,11 @@ export type Database = {
           location: string
           min_investment: number
           name: string
+          partner_description: string | null
+          partner_employees: number | null
+          partner_experience: string | null
+          partner_projects: number | null
+          partner_satisfaction: number | null
           possible_durations: number[] | null
           price: number
           profitability: number
@@ -348,6 +353,11 @@ export type Database = {
           location: string
           min_investment: number
           name: string
+          partner_description?: string | null
+          partner_employees?: number | null
+          partner_experience?: string | null
+          partner_projects?: number | null
+          partner_satisfaction?: number | null
           possible_durations?: number[] | null
           price: number
           profitability: number
@@ -374,6 +384,11 @@ export type Database = {
           location?: string
           min_investment?: number
           name?: string
+          partner_description?: string | null
+          partner_employees?: number | null
+          partner_experience?: string | null
+          partner_projects?: number | null
+          partner_satisfaction?: number | null
           possible_durations?: number[] | null
           price?: number
           profitability?: number

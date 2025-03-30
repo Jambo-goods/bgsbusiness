@@ -3,7 +3,7 @@ export interface FormDataType {
   name: string;
   company_name: string;
   description: string;
-  investment_model?: string; // Ajout du champ modèle d'investissement
+  investment_model?: string;
   location: string;
   image: string;
   price: string;
@@ -15,7 +15,7 @@ export interface FormDataType {
   funding_progress: string;
   possible_durations: string;
   profitability: string;
-  // Champs pour le partenaire local
+  // Partner-related fields
   partner_description?: string;
   partner_experience?: string;
   partner_employees?: string;

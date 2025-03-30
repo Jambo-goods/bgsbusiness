@@ -19,7 +19,7 @@ export const useProjectManagement = (adminUserId?: string) => {
     name: '',
     company_name: '',
     description: '',
-    investment_model: '', // Ajout du champ modèle d'investissement
+    investment_model: '',
     location: '',
     image: '',
     price: '',
@@ -184,7 +184,7 @@ export const useProjectManagement = (adminUserId?: string) => {
       name: '',
       company_name: '',
       description: '',
-      investment_model: '', // Ajout du champ modèle d'investissement
+      investment_model: '',
       location: '',
       image: '',
       price: '',
@@ -213,7 +213,7 @@ export const useProjectManagement = (adminUserId?: string) => {
       name: project.name || '',
       company_name: project.company_name || '',
       description: project.description || '',
-      investment_model: project.investment_model || '', // Ajout du champ modèle d'investissement
+      investment_model: project.investment_model || '',
       location: project.location || '',
       image: project.image || '',
       price: project.price?.toString() || '',
