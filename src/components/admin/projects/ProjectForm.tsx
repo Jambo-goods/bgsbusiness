@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   Building, MapPin, Image, Calendar, TrendingUp, 
@@ -35,6 +36,8 @@ interface FormDataType {
   partner_employees?: string;
   partner_projects?: string;
   partner_satisfaction?: string;
+  // New field for underlying asset
+  underlying_asset?: string;
 }
 
 interface ProjectFormProps {
@@ -439,7 +442,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <Label htmlFor="profitability" className="text-sm font-medium text-gray-700">
                       Rentabilité (%) *
@@ -478,6 +481,29 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                       <option value="completed">Terminé</option>
                       <option value="upcoming">À venir</option>
                       <option value="suspended">Suspendu</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="underlying_asset" className="text-sm font-medium text-gray-700">
+                      Actif sous-jacent *
+                    </Label>
+                    <select
+                      id="underlying_asset"
+                      name="underlying_asset"
+                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                      value={formData.underlying_asset}
+                      onChange={handleFormChange}
+                    >
+                      <option value="">Sélectionner un actif</option>
+                      <option value="Équipement industriel">Équipement industriel</option>
+                      <option value="Immobilier commercial">Immobilier commercial</option>
+                      <option value="Immobilier résidentiel">Immobilier résidentiel</option>
+                      <option value="Matériel agricole">Matériel agricole</option>
+                      <option value="Infrastructure énergétique">Infrastructure énergétique</option>
+                      <option value="Technologie">Technologie</option>
+                      <option value="Transport">Transport</option>
+                      <option value="Commerce">Commerce</option>
                     </select>
                   </div>
                 </div>

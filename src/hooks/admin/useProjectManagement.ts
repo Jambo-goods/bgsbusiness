@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -35,7 +34,8 @@ export const useProjectManagement = (adminUserId?: string) => {
     partner_experience: '',
     partner_employees: '',
     partner_projects: '',
-    partner_satisfaction: ''
+    partner_satisfaction: '',
+    underlying_asset: ''
   });
 
   const fetchProjects = async () => {
@@ -113,7 +113,8 @@ export const useProjectManagement = (adminUserId?: string) => {
           [],
         partner_employees: formData.partner_employees ? parseInt(formData.partner_employees) : null,
         partner_projects: formData.partner_projects ? parseInt(formData.partner_projects) : null,
-        partner_satisfaction: formData.partner_satisfaction ? parseInt(formData.partner_satisfaction) : null
+        partner_satisfaction: formData.partner_satisfaction ? parseInt(formData.partner_satisfaction) : null,
+        underlying_asset: formData.underlying_asset
       };
       
       console.log("Submitting project data:", projectData);
@@ -200,7 +201,8 @@ export const useProjectManagement = (adminUserId?: string) => {
       partner_experience: '',
       partner_employees: '',
       partner_projects: '',
-      partner_satisfaction: ''
+      partner_satisfaction: '',
+      underlying_asset: ''
     });
     setIsAddProjectModalOpen(false);
     setEditingProject(null);
@@ -229,7 +231,8 @@ export const useProjectManagement = (adminUserId?: string) => {
       partner_experience: project.partner_experience || '',
       partner_employees: project.partner_employees?.toString() || '',
       partner_projects: project.partner_projects?.toString() || '',
-      partner_satisfaction: project.partner_satisfaction?.toString() || ''
+      partner_satisfaction: project.partner_satisfaction?.toString() || '',
+      underlying_asset: project.underlying_asset || ''
     });
     setIsAddProjectModalOpen(true);
   };
