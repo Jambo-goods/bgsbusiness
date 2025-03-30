@@ -334,6 +334,7 @@ export type Database = {
           start_date: string | null
           status: string
           target: number | null
+          underlying_asset: string | null
           updated_at: string | null
           yield: number
         }
@@ -365,6 +366,7 @@ export type Database = {
           start_date?: string | null
           status: string
           target?: number | null
+          underlying_asset?: string | null
           updated_at?: string | null
           yield: number
         }
@@ -396,6 +398,7 @@ export type Database = {
           start_date?: string | null
           status?: string
           target?: number | null
+          underlying_asset?: string | null
           updated_at?: string | null
           yield?: number
         }

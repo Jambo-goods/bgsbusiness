@@ -23,5 +23,6 @@ export interface Project {
   partner_employees?: number;
   partner_projects?: number;
   partner_satisfaction?: number;
+  underlying_asset?: string;
   [key: string]: any;
 }

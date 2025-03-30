@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -176,7 +177,7 @@ export const useProjectManagement = (adminUserId?: string) => {
       
     } catch (error) {
       console.error("Erreur lors de la sauvegarde du projet:", error);
-      toast("Une erreur s'est produite lors de la sauvegarde du projet");
+      toast.error("Une erreur s'est produite lors de la sauvegarde du projet");
     }
   };
 
