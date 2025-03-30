@@ -85,7 +85,7 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
         </div>
       </div>
       
-      {/* Section pour le Modèle d'Investissement - sans les visualisations en grille */}
+      {/* Section pour le Modèle d'Investissement avec étapes numérotées */}
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
         <h2 className="text-xl font-semibold text-bgs-blue mb-5">Modèle d'Investissement</h2>
         
@@ -93,31 +93,46 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
           Notre modèle d'investissement repose sur l'acquisition d'actifs physiques qui génèrent des revenus prévisibles et réguliers. Votre capital est directement investi dans des équipements tangibles, ce qui offre une sécurité supplémentaire par rapport aux investissements traditionnels.
         </p>
         
-        <div className="bg-bgs-blue/5 p-5 rounded-lg">
-          <h3 className="font-medium text-lg text-bgs-blue mb-3">Répartition de votre investissement</h3>
-          <div className="space-y-4">
-            <div className="flex items-center">
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: "75%" }}></div>
-              </div>
-              <span className="ml-3 text-sm font-medium text-bgs-blue/80 min-w-20">75% - Actifs</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: "15%" }}></div>
-              </div>
-              <span className="ml-3 text-sm font-medium text-bgs-blue/80 min-w-20">15% - Opérations</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div className="bg-purple-500 h-2.5 rounded-full" style={{ width: "10%" }}></div>
-              </div>
-              <span className="ml-3 text-sm font-medium text-bgs-blue/80 min-w-20">10% - Réserve</span>
+        <div className="space-y-4">
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">1</div>
+            <div>
+              <h3 className="font-medium text-lg text-bgs-blue mb-1">Acquisition des Actifs</h3>
+              <p className="text-sm text-bgs-blue/80">Les fonds collectés servent à acquérir les équipements et infrastructures nécessaires au projet.</p>
             </div>
           </div>
-          <p className="text-xs text-bgs-blue/60 mt-4">
-            * La majorité de votre investissement est directement allouée à l'acquisition des actifs physiques, garantissant une utilisation optimale de votre capital.
-          </p>
+          
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">2</div>
+            <div>
+              <h3 className="font-medium text-lg text-bgs-blue mb-1">Attribution des Parts</h3>
+              <p className="text-sm text-bgs-blue/80">Chaque investisseur devient propriétaire d'une part des actifs pour la durée de l'investissement.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">3</div>
+            <div>
+              <h3 className="font-medium text-lg text-bgs-blue mb-1">Exploitation par notre Partenaire</h3>
+              <p className="text-sm text-bgs-blue/80">Notre partenaire local exploite les équipements et génère des revenus réguliers.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">4</div>
+            <div>
+              <h3 className="font-medium text-lg text-bgs-blue mb-1">Distribution des Rendements</h3>
+              <p className="text-sm text-bgs-blue/80">Les investisseurs reçoivent un rendement mensuel fixe pendant toute la durée du projet.</p>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-4">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">5</div>
+            <div>
+              <h3 className="font-medium text-lg text-bgs-blue mb-1">Options de Sortie</h3>
+              <p className="text-sm text-bgs-blue/80">À la fin de la période, l'investisseur peut renouveler son engagement ou récupérer son capital initial.</p>
+            </div>
+          </div>
         </div>
       </div>
       
