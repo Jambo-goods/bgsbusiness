@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import { Project } from "@/types/project";
@@ -40,6 +39,65 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
     }
   ];
 
+  const defaultInvestmentSteps = [
+    {
+      number: "1️⃣",
+      title: "Acquisition des Actifs",
+      description: "Les fonds collectés servent à acquérir les équipements et infrastructures nécessaires au projet."
+    },
+    {
+      number: "2️⃣",
+      title: "Attribution des Parts",
+      description: "Chaque investisseur devient propriétaire d'une part des actifs pour la durée de l'investissement."
+    },
+    {
+      number: "3️⃣",
+      title: "Exploitation par notre Partenaire",
+      description: "Notre partenaire local exploite les équipements et génère des revenus réguliers."
+    },
+    {
+      number: "4️⃣",
+      title: "Distribution des Rendements",
+      description: "Les investisseurs reçoivent un rendement mensuel fixe pendant toute la durée du projet."
+    },
+    {
+      number: "5️⃣",
+      title: "Options de Sortie",
+      description: "À la fin de la période, l'investisseur peut renouveler son engagement ou récupérer son capital initial."
+    }
+  ];
+
+  let investmentSteps = defaultInvestmentSteps;
+  
+  if (project.investment_model) {
+    try {
+      const steps = project.investment_model.split(/\d️⃣/).filter(step => step.trim().length > 0);
+      
+      if (steps.length > 0) {
+        investmentSteps = steps.map((step, index) => {
+          const parts = step.split(':');
+          let title = '';
+          let description = '';
+          
+          if (parts.length > 1) {
+            title = parts[0].trim();
+            description = parts.slice(1).join(':').trim();
+          } else {
+            description = step.trim();
+          }
+          
+          return {
+            number: `${index + 1}️⃣`,
+            title,
+            description
+          };
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors du parsing du modèle d'investissement:", error);
+    }
+  }
+
   return (
     <div className="space-y-8 animate-fade-up">
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
@@ -53,7 +111,6 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
         </p>
       </div>
       
-      {/* Nouvelle section "Détails du Financement" */}
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
         <h2 className="text-xl font-semibold text-bgs-blue mb-5">Détails du Financement</h2>
         
@@ -85,7 +142,6 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
         </div>
       </div>
       
-      {/* Section pour le Modèle d'Investissement avec étapes numérotées */}
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
         <h2 className="text-xl font-semibold text-bgs-blue mb-5">Modèle d'Investissement</h2>
         
@@ -94,45 +150,17 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
         </p>
         
         <div className="space-y-4">
-          <div className="flex items-start space-x-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">1</div>
-            <div>
-              <h3 className="font-medium text-lg text-bgs-blue mb-1">Acquisition des Actifs</h3>
-              <p className="text-sm text-bgs-blue/80">Les fonds collectés servent à acquérir les équipements et infrastructures nécessaires au projet.</p>
+          {investmentSteps.map((step, index) => (
+            <div key={index} className="flex items-start space-x-4">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">
+                {index + 1}
+              </div>
+              <div>
+                <h3 className="font-medium text-lg text-bgs-blue mb-1">{step.title}</h3>
+                <p className="text-sm text-bgs-blue/80">{step.description}</p>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex items-start space-x-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">2</div>
-            <div>
-              <h3 className="font-medium text-lg text-bgs-blue mb-1">Attribution des Parts</h3>
-              <p className="text-sm text-bgs-blue/80">Chaque investisseur devient propriétaire d'une part des actifs pour la durée de l'investissement.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">3</div>
-            <div>
-              <h3 className="font-medium text-lg text-bgs-blue mb-1">Exploitation par notre Partenaire</h3>
-              <p className="text-sm text-bgs-blue/80">Notre partenaire local exploite les équipements et génère des revenus réguliers.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">4</div>
-            <div>
-              <h3 className="font-medium text-lg text-bgs-blue mb-1">Distribution des Rendements</h3>
-              <p className="text-sm text-bgs-blue/80">Les investisseurs reçoivent un rendement mensuel fixe pendant toute la durée du projet.</p>
-            </div>
-          </div>
-          
-          <div className="flex items-start space-x-4">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">5</div>
-            <div>
-              <h3 className="font-medium text-lg text-bgs-blue mb-1">Options de Sortie</h3>
-              <p className="text-sm text-bgs-blue/80">À la fin de la période, l'investisseur peut renouveler son engagement ou récupérer son capital initial.</p>
-            </div>
-          </div>
+          ))}
         </div>
       </div>
       

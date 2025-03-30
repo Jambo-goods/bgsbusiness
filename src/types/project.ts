@@ -16,6 +16,7 @@ export interface Project {
   risk_level?: string;
   min_investment?: number;
   company_name?: string;
+  investment_model?: string; // Ajout du champ modèle d'investissement
   // Champs pour le partenaire local
   partner_description?: string;
   partner_experience?: string;

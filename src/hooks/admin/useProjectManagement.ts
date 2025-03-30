@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -18,6 +19,7 @@ export const useProjectManagement = (adminUserId?: string) => {
     name: '',
     company_name: '',
     description: '',
+    investment_model: '', // Ajout du champ modèle d'investissement
     location: '',
     image: '',
     price: '',
@@ -182,6 +184,7 @@ export const useProjectManagement = (adminUserId?: string) => {
       name: '',
       company_name: '',
       description: '',
+      investment_model: '', // Ajout du champ modèle d'investissement
       location: '',
       image: '',
       price: '',
@@ -210,6 +213,7 @@ export const useProjectManagement = (adminUserId?: string) => {
       name: project.name || '',
       company_name: project.company_name || '',
       description: project.description || '',
+      investment_model: project.investment_model || '', // Ajout du champ modèle d'investissement
       location: project.location || '',
       image: project.image || '',
       price: project.price?.toString() || '',

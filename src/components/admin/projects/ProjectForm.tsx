@@ -16,6 +16,7 @@ interface FormDataType {
   name: string;
   company_name: string;
   description: string;
+  investment_model?: string;
   location: string;
   image: string;
   price: string;
@@ -139,6 +140,25 @@ const ProjectForm: React.FC<ProjectFormProps> = ({
                     required
                   />
                   {formErrors.description && <p className="text-red-500 text-xs mt-1">{formErrors.description}</p>}
+                </div>
+                
+                <div>
+                  <Label htmlFor="investment_model" className="text-sm font-medium text-gray-700">
+                    Modèle d'Investissement
+                  </Label>
+                  <textarea
+                    id="investment_model"
+                    name="investment_model"
+                    rows={5}
+                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
+                    placeholder="Décrivez le modèle d'investissement en 5 étapes numérotées (ex: 1️⃣ Acquisition des Actifs, 2️⃣ Attribution des Parts, etc.)"
+                    value={formData.investment_model || ''}
+                    onChange={handleFormChange}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Ce champ apparaîtra dans la section "Modèle d'Investissement" de la page détaillée du projet. 
+                    Utilisez le format : "1️⃣ Titre étape 1 : Description. 2️⃣ Titre étape 2 : Description..." etc.
+                  </p>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
