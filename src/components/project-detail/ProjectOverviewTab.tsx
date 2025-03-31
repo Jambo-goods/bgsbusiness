@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
+import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle, LandPlot, HandCoins, Handshake, ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
 import { 
   Accordion,
@@ -66,6 +66,35 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
       title: "Options de Sortie",
       description: "À la fin de la période, l'investisseur peut renouveler son engagement ou récupérer son capital initial."
     }
+  ];
+
+  // How it works steps
+  const howItWorksSteps = [
+    {
+      icon: <LandPlot className="h-6 w-6" />,
+      title: "Acquisition des Terrains",
+      description: "Les fonds collectés servent à acheter des terrains agricoles."
+    },
+    {
+      icon: <Handshake className="h-6 w-6" />,
+      title: "Location aux Investisseurs",
+      description: "Chaque investisseur loue une parcelle pour 25 mois."
+    },
+    {
+      icon: <Building className="h-6 w-6" />,
+      title: "Sous-location à des Agriculteurs",
+      description: "BGS Agriculture met les terrains à disposition d'exploitants agricoles."
+    },
+    {
+      icon: <HandCoins className="h-6 w-6" />,
+      title: "Versement des Rendements",
+      description: "Les investisseurs reçoivent un rendement mensuel de 5% pendant 25 mois."
+    },
+    {
+      icon: <TrendingUp className="h-6 w-6" />,
+      title: "Options après 25 mois",
+      description: "L'investisseur peut renouveler la location ou récupérer son investissement initial."
+    },
   ];
 
   let investmentSteps = defaultInvestmentSteps;
@@ -151,6 +180,36 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
               <div>
                 <h3 className="font-medium text-lg text-bgs-blue mb-1">{step.title}</h3>
                 <p className="text-sm text-bgs-blue/80">{step.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* New "Comment ça marche" section */}
+      <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
+        <h2 className="text-xl font-semibold text-bgs-blue mb-5">Comment ça marche</h2>
+        
+        <div className="grid grid-cols-1 gap-6">
+          {howItWorksSteps.map((step, index) => (
+            <div key={index} className="flex items-start">
+              <div className="shrink-0 mr-4 p-3 bg-bgs-blue/10 rounded-lg">
+                {step.icon}
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center mb-2">
+                  <div className="flex-shrink-0 w-7 h-7 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold text-sm mr-3">
+                    {index + 1}
+                  </div>
+                  <h3 className="font-medium text-lg text-bgs-blue">{step.title}</h3>
+                </div>
+                <p className="text-sm text-bgs-blue/80 pl-10">{step.description}</p>
+                
+                {index < howItWorksSteps.length - 1 && (
+                  <div className="flex justify-center my-2 pl-10">
+                    <ArrowRight className="h-5 w-5 text-bgs-blue/50" />
+                  </div>
+                )}
               </div>
             </div>
           ))}
