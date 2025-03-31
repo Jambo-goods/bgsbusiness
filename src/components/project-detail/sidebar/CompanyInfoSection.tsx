@@ -22,7 +22,7 @@ export default function CompanyInfoSection({ project }: CompanyInfoSectionProps)
           </div>
           <div>
             <p className="text-xs text-bgs-blue/70">Nom de l'entreprise</p>
-            <p className="text-sm font-semibold text-bgs-blue">{project.companyName}</p>
+            <p className="text-sm font-semibold text-bgs-blue">{project.company_name}</p>
           </div>
         </div>
         
