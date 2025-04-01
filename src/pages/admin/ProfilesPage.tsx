@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdminUsers } from '@/contexts/AdminUsersContext';
 import ProfilesTable from '@/components/admin/profiles/ProfilesTable';
 import ProfileSearch from '@/components/admin/profiles/ProfileSearch';
@@ -23,6 +23,14 @@ export default function ProfilesPage() {
   
   const [isRefreshing, setIsRefreshing] = useState(false);
   
+  useEffect(() => {
+    console.log("ProfilesPage - Current state:", { 
+      isLoading, 
+      profilesCount: profiles.length,
+      filteredProfilesCount: filteredProfiles.length
+    });
+  }, [isLoading, profiles.length, filteredProfiles.length]);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refreshProfiles();
@@ -59,10 +67,6 @@ export default function ProfilesPage() {
     last_active_at: profile.last_active_at,
   }));
 
-  console.log('ProfilesPage: isLoading', isLoading);
-  console.log('ProfilesPage: profiles count', profiles.length);
-  console.log('ProfilesPage: filteredProfiles count', filteredProfiles.length);
-
   return (
     <div className="space-y-6">
       <AdminHeader 
@@ -91,7 +95,7 @@ export default function ProfilesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <LoadingState />
-          ) : mappedFilteredProfiles.length > 0 ? (
+          ) : mappedProfiles.length > 0 ? (
             <ProfilesTable 
               profiles={mappedProfiles}
               filteredProfiles={mappedFilteredProfiles}

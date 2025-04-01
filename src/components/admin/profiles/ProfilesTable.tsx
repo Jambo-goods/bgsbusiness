@@ -36,7 +36,15 @@ export default function ProfilesTable({
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  console.log('ProfilesTable: filteredProfiles count', filteredProfiles.length);
+  console.log('ProfilesTable - Props received:', { 
+    profilesCount: profiles.length, 
+    filteredProfilesCount: filteredProfiles.length,
+    isLoading
+  });
+  
+  if (filteredProfiles.length > 0) {
+    console.log('ProfilesTable - First profile in filteredProfiles:', filteredProfiles[0]);
+  }
 
   const handleAddFunds = (profile: Profile) => {
     setSelectedProfile(profile);
