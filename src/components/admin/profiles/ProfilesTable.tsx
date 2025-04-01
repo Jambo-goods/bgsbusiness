@@ -15,7 +15,6 @@ import { Profile } from './types';
 import AddFundsDialog from './funds/AddFundsDialog';
 import EditProfileDialog from './EditProfileDialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
 
 interface ProfilesTableProps {
   profiles: Profile[];
@@ -150,12 +149,10 @@ export default function ProfilesTable({
                         <Button 
                           variant="outline" 
                           size="sm" 
+                          onClick={() => {/* View profile details would go here */}}
                           title="Voir le profil"
-                          asChild
                         >
-                          <Link to={`/admin/user-profile/${profile.id}`}>
-                            <Eye className="h-4 w-4" />
-                          </Link>
+                          <Eye className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
