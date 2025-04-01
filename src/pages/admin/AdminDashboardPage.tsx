@@ -1,15 +1,14 @@
 
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ChartBar } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import AdminLayout from "@/layouts/AdminLayout";
 import DashboardStats from "@/components/admin/dashboard/DashboardStats";
 import AdminKPIStats from "@/components/admin/dashboard/AdminKPIStats";
-import ActivitySection from "@/components/admin/dashboard/ActivitySection";
 import { useAdminDashboard } from "@/hooks/admin/useAdminDashboard";
 
 export default function AdminDashboardPage() {
-  const { stats, adminLogs, isLoading, isRefreshing, refreshData } = useAdminDashboard();
+  const { stats, isLoading, isRefreshing, refreshData } = useAdminDashboard();
   
   return (
     <>
@@ -41,14 +40,10 @@ export default function AdminDashboardPage() {
             <>
               <AdminKPIStats stats={stats} isLoading={isLoading} />
               
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-                <div className="lg:col-span-2">
+              <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mt-8">
+                <div>
                   <h2 className="text-xl font-semibold mb-4">Statistiques générales</h2>
                   <DashboardStats stats={stats} isLoading={isLoading} />
-                </div>
-                
-                <div className="lg:col-span-1">
-                  <ActivitySection adminLogs={adminLogs} isLoading={isLoading} />
                 </div>
               </div>
             </>
