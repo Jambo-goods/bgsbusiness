@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,10 +23,9 @@ const ScheduledPayments = lazy(() => import("./pages/ScheduledPayments"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const WithdrawalRequestsPage = lazy(() => import("./pages/WithdrawalRequestsPage"));
 const BankTransfersPage = lazy(() => import("./pages/BankTransfersPage"));
-const ProfilesPage = lazy(() => import("./pages/ProfilesPage"));
+const ProfilesPage = lazy(() => import("./pages/admin/ProfilesPage"));
 const AdminApp = lazy(() => import("./pages/admin/AdminApp"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
 const NotificationManagement = lazy(() => import("./pages/admin/NotificationManagement"));
 const ProjectUpdateNotifications = lazy(() => import("./pages/admin/ProjectUpdateNotifications"));
 
@@ -67,22 +67,8 @@ const App = () => (
                 <Route path="/dashboard/*" element={<Dashboard />} />
                 <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
                 
-                {/* Admin Login */}
-                <Route path="/admin/login" element={<AdminApp />} />
-                
-                {/* Protected Admin Routes */}
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<Navigate to="/admin/dashboard" replace />} />
-                  <Route path="dashboard" element={<AdminDashboard />} />
-                  <Route path="projects" element={<AdminProjects />} />
-                  <Route path="scheduled-payments" element={<ScheduledPayments />} />
-                  <Route path="withdrawal-requests" element={<WithdrawalRequestsPage />} />
-                  <Route path="bank-transfers" element={<BankTransfersPage />} />
-                  <Route path="profiles" element={<ProfilesPage />} />
-                  <Route path="notifications" element={<NotificationManagement />} />
-                  <Route path="project-updates" element={<ProjectUpdateNotifications />} />
-                  <Route path="settings" element={<div>Paramètres</div>} />
-                </Route>
+                {/* Admin Routes */}
+                <Route path="/admin/*" element={<AdminApp />} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
