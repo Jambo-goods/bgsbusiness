@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { AdminStats, AdminLog } from "./types";
 import { fetchAdminDashboardData } from "./useAdminDataFetching";
 import { toast } from "sonner";
+import { useAdminRealTimeSubscriptions } from "./useAdminRealTimeSubscriptions";
 
 // Use 'export type' instead of 'export' for type re-exports
 export type { AdminStats, AdminLog } from "./types";
@@ -44,6 +45,9 @@ export function useAdminDashboard() {
       setIsRefreshing(false);
     }
   }, []);
+
+  // Set up real-time subscriptions
+  useAdminRealTimeSubscriptions(fetchDashboardData);
 
   // Initial data fetch
   useEffect(() => {
