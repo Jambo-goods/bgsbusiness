@@ -28,7 +28,7 @@ const AdminLayout = () => {
     { path: '/admin/projects', label: 'Projets', icon: <Icons.package className="h-5 w-5" /> },
     { path: '/admin/scheduled-payments', label: 'Paiements programmés', icon: <Icons.calendar className="h-5 w-5" /> },
     { path: '/admin/withdrawal-requests', label: 'Demandes de retrait', icon: <Icons.creditCard className="h-5 w-5" /> },
-    { path: '/admin/bank-transfers', label: 'Virements bancaires', icon: <Icons.banknote className="h-5 w-5" /> },
+    { path: '/admin/bank-transfers', label: 'Virements bancaires', icon: <Icons.creditCard className="h-5 w-5" /> },
     { path: '/admin/profiles', label: 'Profils utilisateurs', icon: <Icons.user className="h-5 w-5" /> },
     { path: '/admin/notifications', label: 'Notifications', icon: <Icons.bell className="h-5 w-5" /> },
     { path: '/admin/project-updates', label: 'Mises à jour projets', icon: <Icons.info className="h-5 w-5" /> },

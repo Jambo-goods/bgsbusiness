@@ -28,6 +28,8 @@ const AdminApp = lazy(() => import("./pages/admin/AdminApp"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const NotificationManagement = lazy(() => import("./pages/admin/NotificationManagement"));
 const ProjectUpdateNotifications = lazy(() => import("./pages/admin/ProjectUpdateNotifications"));
+const WithdrawalManagement = lazy(() => import("./pages/admin/WithdrawalManagement"));
+const BankTransferManagement = lazy(() => import("./pages/admin/BankTransferManagement"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">

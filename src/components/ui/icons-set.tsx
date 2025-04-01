@@ -6,7 +6,7 @@ import {
   Link, Loader2, LogOut, Mail, Menu, MessageSquare, MoreHorizontal, 
   MoreVertical, Package, Paperclip, Pencil, Plus, RefreshCw, Search, 
   Send, Settings, Share, ShoppingCart, Star, Trash, Trash2, User, 
-  X, AlertCircle
+  X, AlertCircle, BanknoteIcon
 } from 'lucide-react';
 
 export const Icons = {
@@ -63,4 +63,5 @@ export const Icons = {
   trash: Trash,
   trash2: Trash2,
   x: X,
+  banknote: BanknoteIcon,
 };
