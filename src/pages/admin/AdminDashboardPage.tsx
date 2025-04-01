@@ -1,10 +1,11 @@
 
 import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, ChartBar } from "lucide-react";
 import AdminLayout from "@/layouts/AdminLayout";
 import DashboardStats from "@/components/admin/dashboard/DashboardStats";
 import AdminKPIStats from "@/components/admin/dashboard/AdminKPIStats";
+import AdminKPICharts from "@/components/admin/dashboard/AdminKPICharts";
 import { useAdminDashboard } from "@/hooks/admin/useAdminDashboard";
 import ActivitySection from "@/components/admin/dashboard/ActivitySection";
 
@@ -40,6 +41,14 @@ export default function AdminDashboardPage() {
           ) : (
             <>
               <AdminKPIStats stats={stats} isLoading={isLoading} />
+              
+              <div className="mt-8 mb-8">
+                <div className="flex items-center mb-4">
+                  <ChartBar className="h-5 w-5 mr-2 text-bgs-blue" />
+                  <h2 className="text-xl font-semibold">Indicateurs clés de performance</h2>
+                </div>
+                <AdminKPICharts stats={stats} isLoading={isLoading} />
+              </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
                 <div className="lg:col-span-2">
