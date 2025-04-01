@@ -84,7 +84,7 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       
       logDebug('Setting processed profiles', { count: processedProfiles.length });
       setProfiles(processedProfiles);
-      setTotalProfiles(processedProfiles.length);
+      setTotalProfiles(count || processedProfiles.length);
       
       if (processedProfiles.length > 0) {
         toast.success(`${processedProfiles.length} utilisateurs chargés avec succès`);
