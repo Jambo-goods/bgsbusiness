@@ -23,7 +23,7 @@ interface ProfilesTableProps {
 
 export default function ProfilesTable({ 
   profiles, 
-  isLoading
+  isLoading 
 }: ProfilesTableProps) {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);

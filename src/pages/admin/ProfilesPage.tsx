@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAdminUsers } from '@/contexts/AdminUsersContext';
 import ProfilesTable from '@/components/admin/profiles/ProfilesTable';
 import ProfileSearch from '@/components/admin/profiles/ProfileSearch';
@@ -38,6 +38,10 @@ export default function ProfilesPage() {
   };
 
   console.log("ProfilesPage render - isLoading:", isLoading);
+
+  useEffect(() => {
+    console.log("ProfilesPage - profiles updated:", profiles.length);
+  }, [profiles]);
 
   return (
     <div className="space-y-6">

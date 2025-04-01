@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminLogin from './AdminLogin';
@@ -11,6 +11,10 @@ import ProfilesPage from './ProfilesPage';
 
 const AdminApp = () => {
   console.log("AdminApp rendering...");
+  
+  useEffect(() => {
+    console.log("AdminApp mounted");
+  }, []);
   
   return (
     <AdminProvider>
