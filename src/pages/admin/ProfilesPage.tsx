@@ -59,6 +59,10 @@ export default function ProfilesPage() {
     last_active_at: profile.last_active_at,
   }));
 
+  console.log('ProfilesPage: isLoading', isLoading);
+  console.log('ProfilesPage: profiles count', profiles.length);
+  console.log('ProfilesPage: filteredProfiles count', filteredProfiles.length);
+
   return (
     <div className="space-y-6">
       <AdminHeader 

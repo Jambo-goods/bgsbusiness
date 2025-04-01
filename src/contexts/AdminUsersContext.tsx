@@ -77,6 +77,7 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         };
       }) || [];
       
+      console.log('Processed profiles:', processedProfiles);
       setProfiles(processedProfiles);
       setTotalProfiles(processedProfiles.length);
       toast.success('Utilisateurs chargés avec succès');

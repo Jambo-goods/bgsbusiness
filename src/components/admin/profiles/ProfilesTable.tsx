@@ -36,6 +36,8 @@ export default function ProfilesTable({
   const [amount, setAmount] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
+  console.log('ProfilesTable: filteredProfiles count', filteredProfiles.length);
+
   const handleAddFunds = (profile: Profile) => {
     setSelectedProfile(profile);
     setIsAddFundsOpen(true);
