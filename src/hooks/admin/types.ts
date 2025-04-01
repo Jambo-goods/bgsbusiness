@@ -1,21 +1,24 @@
 
-// Types for admin dashboard
 export interface AdminStats {
   userCount: number;
   totalInvestments: number;
   totalProjects: number;
   pendingWithdrawals: number;
   ongoingProjects: number;
+  totalWalletBalance: number;
+  receivedTransfersCount: number;
+  receivedTransfersAmount: number;
+  withdrawalRequestsCount: number;
+  withdrawalRequestsAmount: number;
 }
 
 export interface AdminLog {
   id: string;
-  action_type: string;
+  action: string;
   description: string;
-  created_at: string;
-  admin_id: string;
-  admin_users?: {
-    first_name: string | null;
-    last_name: string | null;
-  };
+  admin: {
+    first_name?: string;
+    last_name?: string;
+  } | null;
+  timestamp: Date;
 }

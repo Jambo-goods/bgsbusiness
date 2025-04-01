@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Users, CreditCard, Database, ArrowLeftRight } from 'lucide-react';
+import { Users, CreditCard, Database, Package } from 'lucide-react';
 
 type StatsProps = {
   stats: {
@@ -8,7 +8,12 @@ type StatsProps = {
     totalInvestments: number;
     totalProjects: number;
     pendingWithdrawals: number;
-    ongoingProjects?: number; // Added for ongoing projects
+    ongoingProjects?: number;
+    totalWalletBalance?: number;
+    receivedTransfersCount?: number;
+    receivedTransfersAmount?: number;
+    withdrawalRequestsCount?: number;
+    withdrawalRequestsAmount?: number;
   };
   isLoading: boolean;
 };
@@ -65,7 +70,7 @@ export default function DashboardStats({ stats, isLoading }: StatsProps) {
       <div className="bg-white p-6 rounded-lg shadow-sm">
         <div className="flex items-center gap-3 mb-4">
           <div className="p-3 bg-amber-100 rounded-full">
-            <Database className="h-6 w-6 text-amber-600" />
+            <Package className="h-6 w-6 text-amber-600" />
           </div>
           <h3 className="text-lg text-gray-700">Projets en cours</h3>
         </div>

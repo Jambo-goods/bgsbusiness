@@ -19,14 +19,15 @@ export async function fetchAdminDashboardData(): Promise<{
     
     console.log("User count from database:", userCount);
     
-    // Log all profiles to verify data
-    const { data: profilesData, error: profilesError } = await supabase
+    // Get total wallet balance
+    const { data: walletData, error: walletError } = await supabase
       .from('profiles')
-      .select('*');
+      .select('wallet_balance');
     
-    if (profilesError) throw profilesError;
+    if (walletError) throw walletError;
     
-    console.log("All profiles from database:", profilesData);
+    const totalWalletBalance = walletData?.reduce((sum, profile) => sum + (profile.wallet_balance || 0), 0) || 0;
+    console.log("Total wallet balance:", totalWalletBalance);
     
     // Get total investments
     const { data: investmentsData, error: investmentsError } = await supabase
@@ -36,6 +37,29 @@ export async function fetchAdminDashboardData(): Promise<{
     if (investmentsError) throw investmentsError;
     
     const totalInvestments = investmentsData?.reduce((sum, inv) => sum + inv.amount, 0) || 0;
+    
+    // Get received bank transfers count and amount
+    const { data: transfersData, error: transfersError } = await supabase
+      .from('bank_transfers')
+      .select('amount')
+      .in('status', ['received', 'reçu']);
+    
+    if (transfersError) throw transfersError;
+    
+    const receivedTransfersCount = transfersData?.length || 0;
+    const receivedTransfersAmount = transfersData?.reduce((sum, transfer) => sum + (transfer.amount || 0), 0) || 0;
+    console.log("Received transfers:", receivedTransfersCount, "Amount:", receivedTransfersAmount);
+    
+    // Get withdrawal requests count and amount
+    const { data: withdrawalsData, error: withdrawalsError } = await supabase
+      .from('withdrawal_requests')
+      .select('amount');
+    
+    if (withdrawalsError) throw withdrawalsError;
+    
+    const withdrawalRequestsCount = withdrawalsData?.length || 0;
+    const withdrawalRequestsAmount = withdrawalsData?.reduce((sum, withdrawal) => sum + (withdrawal.amount || 0), 0) || 0;
+    console.log("Withdrawal requests:", withdrawalRequestsCount, "Amount:", withdrawalRequestsAmount);
     
     // Get total projects
     const { count: totalProjects, error: projectsError } = await supabase
@@ -53,44 +77,27 @@ export async function fetchAdminDashboardData(): Promise<{
     if (ongoingProjectsError) throw ongoingProjectsError;
     
     // Get pending withdrawals
-    const { count: pendingWithdrawals, error: withdrawalsError } = await supabase
+    const { count: pendingWithdrawals, error: pendingWithdrawalsError } = await supabase
       .from('withdrawal_requests')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
     
-    if (withdrawalsError) throw withdrawalsError;
-    
-    // Admin logs functionality is currently disabled as the admin_logs table does not exist
-    // When the admin_logs table is created, this code can be uncommented
-    /*
-    // Get recent admin logs
-    const { data: logsData, error: logsError } = await supabase
-      .from('admin_logs')
-      .select(`
-        *,
-        admin_users(first_name, last_name)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(10);
-    
-    if (logsError) throw logsError;
-    */
+    if (pendingWithdrawalsError) throw pendingWithdrawalsError;
     
     const stats: AdminStats = {
       userCount: userCount || 0,
       totalInvestments,
       totalProjects: totalProjects || 0,
       pendingWithdrawals: pendingWithdrawals || 0,
-      ongoingProjects: ongoingProjects || 0
+      ongoingProjects: ongoingProjects || 0,
+      totalWalletBalance,
+      receivedTransfersCount,
+      receivedTransfersAmount,
+      withdrawalRequestsCount,
+      withdrawalRequestsAmount
     };
     
-    console.log("Admin dashboard data fetched successfully:", {
-      userCount,
-      totalInvestments,
-      totalProjects,
-      pendingWithdrawals,
-      ongoingProjects
-    });
+    console.log("Admin dashboard data fetched successfully:", stats);
     
     // Return an empty array for logs since the table doesn't exist yet
     const emptyLogs: AdminLog[] = [];

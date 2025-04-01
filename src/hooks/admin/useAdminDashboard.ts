@@ -13,7 +13,12 @@ export function useAdminDashboard() {
     totalInvestments: 0,
     totalProjects: 0,
     pendingWithdrawals: 0,
-    ongoingProjects: 0
+    ongoingProjects: 0,
+    totalWalletBalance: 0,
+    receivedTransfersCount: 0,
+    receivedTransfersAmount: 0,
+    withdrawalRequestsCount: 0,
+    withdrawalRequestsAmount: 0
   });
   const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
