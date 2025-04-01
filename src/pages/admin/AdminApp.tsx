@@ -12,6 +12,7 @@ import NotificationManagement from './NotificationManagement';
 import ProjectUpdateNotifications from './ProjectUpdateNotifications';
 import WithdrawalManagement from './WithdrawalManagement';
 import BankTransferManagement from './BankTransferManagement';
+import ScheduledPaymentsManagement from './ScheduledPaymentsManagement';
 
 const AdminApp = () => {
   const location = useLocation();
@@ -34,7 +35,7 @@ const AdminApp = () => {
             <Route path="project-updates" element={<ProjectUpdateNotifications />} />
             <Route path="withdrawal-requests" element={<WithdrawalManagement />} />
             <Route path="bank-transfers" element={<BankTransferManagement />} />
-            <Route path="scheduled-payments" element={<div>Paiements programmés</div>} />
+            <Route path="scheduled-payments" element={<ScheduledPaymentsManagement />} />
             <Route path="settings" element={<div>Paramètres</div>} />
             <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
           </Route>
