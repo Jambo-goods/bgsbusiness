@@ -46,6 +46,14 @@ const SidebarMenu = () => {
         </Link>
         
         <Link 
+          to="/admin/profiles" 
+          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/admin/profiles' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
+        >
+          <Users className="h-5 w-5" />
+          <span>Gestion des Utilisateurs</span>
+        </Link>
+        
+        <Link 
           to="/admin/projects" 
           className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/admin/projects' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
         >
