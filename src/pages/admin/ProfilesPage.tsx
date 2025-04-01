@@ -41,7 +41,11 @@ export default function ProfilesPage() {
 
   useEffect(() => {
     console.log("ProfilesPage - profiles updated:", profiles.length);
-  }, [profiles]);
+    console.log("Filtered profiles:", filteredProfiles.length);
+    if (profiles.length > 0) {
+      console.log("Sample profile:", profiles[0]);
+    }
+  }, [profiles, filteredProfiles]);
 
   return (
     <div className="space-y-6">

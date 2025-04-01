@@ -4,6 +4,8 @@ import { Loader2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const LoadingState: React.FC = () => {
+  console.log("Rendering LoadingState component");
+  
   return (
     <div className="space-y-6 py-8">
       <div className="flex flex-col items-center justify-center py-8">

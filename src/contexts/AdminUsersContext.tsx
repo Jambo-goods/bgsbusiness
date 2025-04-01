@@ -28,6 +28,7 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     console.log(`[AdminUsers] ${message}`, data || '');
   };
 
+  // Fetch profiles on component mount
   useEffect(() => {
     logDebug('Provider mounted, fetching profiles');
     fetchProfiles();
@@ -39,11 +40,10 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setIsLoading(true);
       setError(null);
       
-      // Get all profiles
+      // Get all profiles from Supabase
       const { data, error, count } = await supabase
         .from('profiles')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' });
 
       if (error) {
         logDebug('Error fetching profiles', error);

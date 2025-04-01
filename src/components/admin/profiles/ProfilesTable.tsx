@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -34,9 +34,11 @@ export default function ProfilesTable({
     isLoading
   });
   
-  if (profiles.length > 0) {
-    console.log('ProfilesTable - First profile:', profiles[0]);
-  }
+  useEffect(() => {
+    if (profiles.length > 0) {
+      console.log('ProfilesTable - First profile:', profiles[0]);
+    }
+  }, [profiles]);
 
   const handleAddFunds = (profile: Profile) => {
     setSelectedProfile(profile);
