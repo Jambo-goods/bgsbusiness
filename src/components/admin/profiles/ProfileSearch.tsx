@@ -11,6 +11,12 @@ interface ProfileSearchProps {
 export default function ProfileSearch({ searchTerm, setSearchTerm }: ProfileSearchProps) {
   console.log('ProfileSearch - Current searchTerm:', searchTerm);
   
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    console.log('Setting new searchTerm:', newValue);
+    setSearchTerm(newValue);
+  };
+  
   return (
     <div className="relative w-full max-w-md">
       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -19,11 +25,7 @@ export default function ProfileSearch({ searchTerm, setSearchTerm }: ProfileSear
         placeholder="Rechercher par nom, email..." 
         className="pl-10 w-full" 
         value={searchTerm} 
-        onChange={e => {
-          const newValue = e.target.value;
-          console.log('Setting new searchTerm:', newValue);
-          setSearchTerm(newValue);
-        }} 
+        onChange={handleChange} 
       />
     </div>
   );

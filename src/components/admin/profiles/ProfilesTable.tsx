@@ -9,11 +9,8 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Wallet, Eye, RefreshCw, Pencil } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Wallet, Eye, Pencil } from 'lucide-react';
 import { toast } from "sonner";
-import UserStatusBadge from '@/components/admin/users/UserStatusBadge';
-import { calculateInactivityTime } from '@/utils/inactivityCalculator';
 import { Profile } from './types';
 import AddFundsDialog from './funds/AddFundsDialog';
 import EditProfileDialog from './EditProfileDialog';
@@ -33,8 +30,6 @@ export default function ProfilesTable({
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
   const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
-  const [amount, setAmount] = useState('');
-  const [isProcessing, setIsProcessing] = useState(false);
 
   console.log('ProfilesTable - Props received:', { 
     profilesCount: profiles.length, 
@@ -49,7 +44,6 @@ export default function ProfilesTable({
   const handleAddFunds = (profile: Profile) => {
     setSelectedProfile(profile);
     setIsAddFundsOpen(true);
-    setAmount('');
   };
 
   const handleEditProfile = (profile: Profile) => {
@@ -85,21 +79,6 @@ export default function ProfilesTable({
       });
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="p-4 space-y-4">
-        {[...Array(5)].map((_, index) => (
-          <div key={index} className="flex space-x-4">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-6 w-24" />
-          </div>
-        ))}
-      </div>
-    );
-  }
 
   return (
     <>

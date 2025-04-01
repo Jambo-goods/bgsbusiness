@@ -4,11 +4,11 @@ import { useAdminUsers } from '@/contexts/AdminUsersContext';
 import ProfilesTable from '@/components/admin/profiles/ProfilesTable';
 import ProfileSearch from '@/components/admin/profiles/ProfileSearch';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, AlertCircle } from 'lucide-react';
 import LoadingState from '@/components/admin/profiles/LoadingState';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { Card, CardContent } from '@/components/ui/card';
-import { Profile as AdminProfileType } from '@/components/admin/profiles/types';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function ProfilesPage() {
   const {
@@ -37,35 +37,7 @@ export default function ProfilesPage() {
     setIsRefreshing(false);
   };
 
-  // Map profiles to the format expected by ProfilesTable
-  const mappedProfiles: AdminProfileType[] = profiles.map(profile => ({
-    id: profile.id,
-    first_name: profile.first_name,
-    last_name: profile.last_name,
-    email: profile.email,
-    phone: profile.phone,
-    address: profile.address || null,
-    wallet_balance: profile.wallet_balance,
-    projects_count: profile.projects_count || 0,
-    investment_total: profile.investment_total || 0,
-    created_at: profile.created_at,
-    last_active_at: profile.last_active_at,
-  }));
-
-  // Map filtered profiles as well
-  const mappedFilteredProfiles: AdminProfileType[] = filteredProfiles.map(profile => ({
-    id: profile.id,
-    first_name: profile.first_name,
-    last_name: profile.last_name,
-    email: profile.email,
-    phone: profile.phone,
-    address: profile.address || null,
-    wallet_balance: profile.wallet_balance,
-    projects_count: profile.projects_count || 0,
-    investment_total: profile.investment_total || 0,
-    created_at: profile.created_at,
-    last_active_at: profile.last_active_at,
-  }));
+  console.log("ProfilesPage render - isLoading:", isLoading);
 
   return (
     <div className="space-y-6">
@@ -83,7 +55,7 @@ export default function ProfilesPage() {
         <Button 
           onClick={handleRefresh} 
           variant="outline" 
-          disabled={isRefreshing}
+          disabled={isRefreshing || isLoading}
           className="flex items-center gap-2"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -94,17 +66,27 @@ export default function ProfilesPage() {
       <Card>
         <CardContent className="p-0">
           {isLoading ? (
-            <LoadingState />
-          ) : mappedProfiles.length > 0 ? (
-            <ProfilesTable 
-              profiles={mappedProfiles}
-              filteredProfiles={mappedFilteredProfiles}
-              isLoading={isLoading}
-            />
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              Aucun utilisateur trouvé
+            <div className="p-6">
+              <LoadingState />
             </div>
+          ) : profiles.length === 0 ? (
+            <Alert variant="destructive" className="m-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Aucun profil trouvé</AlertTitle>
+              <AlertDescription>
+                Aucun utilisateur n'a été trouvé dans la base de données.
+              </AlertDescription>
+            </Alert>
+          ) : filteredProfiles.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              Aucun utilisateur ne correspond à votre recherche
+            </div>
+          ) : (
+            <ProfilesTable 
+              profiles={profiles}
+              filteredProfiles={filteredProfiles}
+              isLoading={false}
+            />
           )}
         </CardContent>
       </Card>
