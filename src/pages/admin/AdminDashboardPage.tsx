@@ -6,6 +6,7 @@ import AdminLayout from "@/layouts/AdminLayout";
 import DashboardStats from "@/components/admin/dashboard/DashboardStats";
 import AdminKPIStats from "@/components/admin/dashboard/AdminKPIStats";
 import { useAdminDashboard } from "@/hooks/admin/useAdminDashboard";
+import ActivitySection from "@/components/admin/dashboard/ActivitySection";
 
 export default function AdminDashboardPage() {
   const { stats, adminLogs, isLoading, isRefreshing, refreshData } = useAdminDashboard();
@@ -40,8 +41,16 @@ export default function AdminDashboardPage() {
             <>
               <AdminKPIStats stats={stats} isLoading={isLoading} />
               
-              <h2 className="text-xl font-semibold mb-4 mt-8">Statistiques générales</h2>
-              <DashboardStats stats={stats} isLoading={isLoading} />
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+                <div className="lg:col-span-2">
+                  <h2 className="text-xl font-semibold mb-4">Statistiques générales</h2>
+                  <DashboardStats stats={stats} isLoading={isLoading} />
+                </div>
+                
+                <div className="lg:col-span-1">
+                  <ActivitySection adminLogs={adminLogs} isLoading={isLoading} />
+                </div>
+              </div>
             </>
           )}
         </div>

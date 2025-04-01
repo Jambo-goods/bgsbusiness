@@ -1,17 +1,6 @@
 
 import React from 'react';
-
-type AdminLog = {
-  id: string;
-  action_type: string;
-  description: string;
-  created_at: string;
-  admin_id: string;
-  admin_users?: {
-    first_name: string | null;
-    last_name: string | null;
-  };
-};
+import { AdminLog } from '@/hooks/admin/types';
 
 type AdminLogsListProps = {
   adminLogs: AdminLog[];
@@ -19,8 +8,9 @@ type AdminLogsListProps = {
 
 export default function AdminLogsList({ adminLogs }: AdminLogsListProps) {
   // Format date for admin logs
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString('fr-FR', {
+  const formatDate = (dateString: string | Date) => {
+    const date = dateString instanceof Date ? dateString : new Date(dateString);
+    return date.toLocaleString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -30,7 +20,9 @@ export default function AdminLogsList({ adminLogs }: AdminLogsListProps) {
   };
 
   // Format action type for display
-  const formatActionType = (type: string) => {
+  const formatActionType = (type: string | undefined) => {
+    if (!type) return 'Action';
+    
     const typeMap: Record<string, string> = {
       'login': 'Connexion',
       'user_management': 'Gestion utilisateur',
@@ -52,13 +44,15 @@ export default function AdminLogsList({ adminLogs }: AdminLogsListProps) {
         <div key={log.id} className="py-3">
           <div className="flex justify-between">
             <span className="font-medium text-bgs-blue">
-              {log.admin_users?.first_name} {log.admin_users?.last_name}
+              {log.admin?.first_name} {log.admin?.last_name}
             </span>
-            <span className="text-sm text-gray-500">{formatDate(log.created_at)}</span>
+            <span className="text-sm text-gray-500">
+              {formatDate(log.timestamp || log.created_at || new Date())}
+            </span>
           </div>
           <div className="text-sm mt-1">
             <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full mr-2">
-              {formatActionType(log.action_type)}
+              {formatActionType(log.action_type || log.action)}
             </span>
             {log.description}
           </div>
