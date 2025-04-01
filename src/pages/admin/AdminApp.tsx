@@ -5,7 +5,6 @@ import AdminLayout from '@/components/admin/AdminLayout';
 import AdminLogin from './AdminLogin';
 import AdminDashboard from './AdminDashboard';
 import AdminDashboardPage from './AdminDashboardPage';
-import AdminKPIPage from './AdminKPIPage';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminUsersProvider } from '@/contexts/AdminUsersContext';
 import AdminProjects from './AdminProjects';
@@ -31,7 +30,6 @@ const AdminApp = () => {
           <Route path="/" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboardPage />} />
-            <Route path="kpi" element={<AdminKPIPage />} />
             <Route path="profiles" element={<ProfileManagement />} />
             <Route path="projects" element={<AdminProjects />} />
             <Route path="notifications" element={<NotificationManagement />} />
