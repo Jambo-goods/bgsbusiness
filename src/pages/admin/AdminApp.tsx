@@ -5,6 +5,7 @@ import AdminLogin from './AdminLogin';
 import AdminDashboard from './AdminDashboard';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminUsersProvider } from '@/contexts/AdminUsersContext';
+import ProfilesPage from './ProfilesPage';
 
 const AdminApp = () => {
   console.log("AdminApp rendering...");
@@ -21,6 +22,7 @@ const AdminApp = () => {
           <Route path="/" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/dashboard" element={<AdminDashboard />} />
+            <Route path="/profiles" element={<ProfilesPage />} />
             {/* Other routes go here */}
           </Route>
         </Routes>
