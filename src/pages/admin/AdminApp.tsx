@@ -10,6 +10,8 @@ import ProfilesPage from './ProfilesPage';
 import AdminProjects from './AdminProjects';
 import NotificationManagement from './NotificationManagement';
 import ProjectUpdateNotifications from './ProjectUpdateNotifications';
+import WithdrawalManagement from './WithdrawalManagement';
+import BankTransferManagement from './BankTransferManagement';
 
 const AdminApp = () => {
   console.log("AdminApp rendering...");
@@ -30,10 +32,10 @@ const AdminApp = () => {
             <Route path="/projects" element={<AdminProjects />} />
             <Route path="/notifications" element={<NotificationManagement />} />
             <Route path="/project-updates" element={<ProjectUpdateNotifications />} />
+            <Route path="/withdrawal-requests" element={<WithdrawalManagement />} />
+            <Route path="/bank-transfers" element={<BankTransferManagement />} />
             {/* Add placeholder routes for other admin pages */}
             <Route path="/scheduled-payments" element={<div>Paiements programmés</div>} />
-            <Route path="/withdrawal-requests" element={<div>Demandes de retrait</div>} />
-            <Route path="/bank-transfers" element={<div>Virements bancaires</div>} />
             <Route path="/settings" element={<div>Paramètres</div>} />
           </Route>
         </Routes>
