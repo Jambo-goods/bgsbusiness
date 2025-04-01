@@ -14,32 +14,32 @@ const SidebarMenu = () => {
       
       <nav className="p-4 space-y-1">
         <Link 
-          to="/scheduled-payments" 
-          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/scheduled-payments' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
+          to="/admin/scheduled-payments" 
+          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/admin/scheduled-payments' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
         >
           <BanknoteIcon className="h-5 w-5" />
           <span>Paiements Programmés</span>
         </Link>
         
         <Link 
-          to="/withdrawal-requests" 
-          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/withdrawal-requests' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
+          to="/admin/withdrawal-requests" 
+          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/admin/withdrawal-requests' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
         >
           <Wallet className="h-5 w-5" />
           <span>Demandes de retrait</span>
         </Link>
         
         <Link 
-          to="/bank-transfers" 
-          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/bank-transfers' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
+          to="/admin/bank-transfers" 
+          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/admin/bank-transfers' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
         >
           <BanknoteIcon className="h-5 w-5" />
           <span>Virements Bancaires</span>
         </Link>
         
         <Link 
-          to="/profiles" 
-          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/profiles' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
+          to="/admin/profiles" 
+          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/admin/profiles' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
         >
           <Users className="h-5 w-5" />
           <span>Profils</span>
@@ -54,8 +54,8 @@ const SidebarMenu = () => {
         </Link>
         
         <Link 
-          to="/settings" 
-          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/settings' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
+          to="/admin/settings" 
+          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/admin/settings' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
         >
           <Settings className="h-5 w-5" />
           <span>Paramètres</span>
