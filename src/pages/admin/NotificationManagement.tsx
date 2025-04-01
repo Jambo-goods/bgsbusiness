@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import CreateNotificationForm from "@/components/admin/notifications/CreateNotificationForm";
 
 export default function NotificationManagement() {
+  const [showSystemForm, setShowSystemForm] = useState(false);
   const [showMarketingForm, setShowMarketingForm] = useState(false);
   const [showCustomForm, setShowCustomForm] = useState(false);
 
@@ -34,17 +35,43 @@ export default function NotificationManagement() {
           <TabsContent value="system">
             <Card>
               <CardContent className="pt-6">
-                <div className="space-y-4">
+                {showSystemForm ? (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-lg font-medium">Créer une notification système</h3>
+                      <Button 
+                        variant="ghost" 
+                        onClick={() => setShowSystemForm(false)}
+                      >
+                        Annuler
+                      </Button>
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      Cette notification sera envoyée à tous les utilisateurs de la plateforme.
+                    </p>
+                    <CreateNotificationForm 
+                      notificationType="system" 
+                      onSuccess={() => setShowSystemForm(false)}
+                    />
+                  </div>
+                ) : (
                   <div className="flex flex-col items-center justify-center p-8 text-center">
                     <div className="rounded-full bg-blue-100 p-3 mb-4">
                       <Bell className="h-6 w-6 text-blue-500" />
                     </div>
-                    <h3 className="text-lg font-medium">Gestion des Notifications Système</h3>
-                    <p className="text-sm text-gray-500 mt-2 max-w-md">
-                      Cette section vous permet de gérer les notifications système envoyées aux utilisateurs.
+                    <h3 className="text-lg font-medium">Notifications Système</h3>
+                    <p className="text-sm text-gray-500 mt-2 max-w-md mb-6">
+                      Envoyez des notifications système importantes à tous les utilisateurs.
                     </p>
+                    <Button 
+                      onClick={() => setShowSystemForm(true)}
+                      className="flex items-center gap-2"
+                    >
+                      <Send size={16} />
+                      Créer une notification système
+                    </Button>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

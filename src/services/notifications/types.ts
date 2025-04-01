@@ -7,6 +7,8 @@ export type NotificationType =
   | 'investment'
   | 'security'
   | 'marketing'
+  | 'system'
+  | 'custom'
   | 'info';
 
 export type NotificationCategory = 
@@ -30,6 +32,7 @@ export interface NotificationCreateParams {
   type: string;
   category?: NotificationCategory;
   metadata?: Record<string, any>;
+  userId?: string; // Add userId parameter
 }
 
 export interface DatabaseNotification {

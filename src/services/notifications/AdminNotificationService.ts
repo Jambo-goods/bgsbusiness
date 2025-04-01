@@ -1,4 +1,5 @@
 
+import { supabase } from "@/integrations/supabase/client";
 import { BaseNotificationService } from "./BaseNotificationService";
 
 export class AdminNotificationService extends BaseNotificationService {
@@ -77,11 +78,11 @@ export class AdminNotificationService extends BaseNotificationService {
     type: "system" | "marketing" | "custom" = "marketing",
     category: "info" | "success" | "warning" | "error" = "info"
   ): Promise<void> {
-    const { data: supabase } = await this.supabase.from('profiles').select('id');
+    const { data: users } = await supabase.from('profiles').select('id');
     
-    if (!supabase) return;
+    if (!users) return;
     
-    const promises = supabase.map(user => 
+    const promises = users.map(user => 
       this.createNotification({
         title,
         description: message,
