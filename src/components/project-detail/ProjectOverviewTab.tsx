@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
+import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle, LandPlot, HandCoins, Handshake, ArrowRight } from "lucide-react";
 import { Project } from "@/types/project";
 import { 
   Accordion,
@@ -66,6 +65,34 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
       title: "Options de Sortie",
       description: "À la fin de la période, l'investisseur peut renouveler son engagement ou récupérer son capital initial."
     }
+  ];
+
+  const howItWorksSteps = [
+    {
+      icon: <LandPlot className="h-6 w-6" />,
+      title: "Acquisition des Terrains",
+      description: "Les fonds collectés servent à acheter des terrains agricoles."
+    },
+    {
+      icon: <Handshake className="h-6 w-6" />,
+      title: "Location aux Investisseurs",
+      description: "Chaque investisseur loue une parcelle pour 25 mois."
+    },
+    {
+      icon: <Building className="h-6 w-6" />,
+      title: "Sous-location à des Agriculteurs",
+      description: "BGS Agriculture met les terrains à disposition d'exploitants agricoles."
+    },
+    {
+      icon: <HandCoins className="h-6 w-6" />,
+      title: "Versement des Rendements",
+      description: "Les investisseurs reçoivent un rendement mensuel de 5% pendant 25 mois."
+    },
+    {
+      icon: <TrendingUp className="h-6 w-6" />,
+      title: "Options après 25 mois",
+      description: "L'investisseur peut renouveler la location ou récupérer son investissement initial."
+    },
   ];
 
   let investmentSteps = defaultInvestmentSteps;
@@ -156,6 +183,48 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
           ))}
         </div>
       </div>
+
+      <div className="bg-gradient-to-br from-white to-blue-50 rounded-xl shadow-md p-6 md:p-8 border border-blue-100">
+        <h2 className="text-xl font-semibold text-bgs-blue mb-6 flex items-center">
+          <div className="bg-bgs-blue text-white p-2 rounded-lg mr-3">
+            <LandPlot className="h-5 w-5" />
+          </div>
+          Comment ça marche
+        </h2>
+        
+        <div className="grid grid-cols-1 gap-8">
+          {howItWorksSteps.map((step, index) => (
+            <div key={index} className="relative">
+              <div className="flex items-start bg-white bg-opacity-80 backdrop-blur-sm rounded-xl p-5 border border-blue-100 shadow-sm transition-all duration-300 hover:shadow-md hover:border-blue-200 group">
+                <div className="shrink-0 mr-5 p-3 rounded-full bg-gradient-to-br from-bgs-blue/80 to-blue-600/90 text-white shadow-md group-hover:scale-105 transition-transform duration-300">
+                  {step.icon}
+                </div>
+                
+                <div className="flex-1">
+                  <div className="flex items-center mb-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-bold text-sm mr-3 shadow-sm">
+                      {index + 1}
+                    </div>
+                    <h3 className="font-medium text-lg text-bgs-blue group-hover:text-blue-700 transition-colors duration-300">
+                      {step.title}
+                    </h3>
+                  </div>
+                  
+                  <p className="text-sm text-bgs-blue/80 pl-11 leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+              
+              {index < howItWorksSteps.length - 1 && (
+                <div className="flex justify-center my-2 mx-auto w-10 h-8">
+                  <ArrowRight className="h-6 w-6 text-bgs-blue animate-pulse" />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
       
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
         <h2 className="text-xl font-semibold text-bgs-blue mb-5">Points forts du projet</h2>
@@ -198,41 +267,6 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
               <h3 className="font-medium text-lg text-bgs-blue mb-2">Partenaires fiables</h3>
               <p className="text-sm text-bgs-blue/70">Collaboration avec des entreprises locales établies</p>
             </div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
-        <h2 className="text-xl font-semibold text-bgs-blue mb-5">Partenaire local</h2>
-        <div className="flex items-center mb-5">
-          <div className="w-16 h-16 bg-bgs-blue/10 rounded-full flex items-center justify-center mr-4">
-            <Building className="h-8 w-8 text-bgs-blue" />
-          </div>
-          <div>
-            <h3 className="font-medium text-lg text-bgs-blue">{project.company_name} - Partenaire local</h3>
-            <p className="text-sm text-bgs-blue/70">{project.location}</p>
-          </div>
-        </div>
-        <p className="text-base text-bgs-blue/80 mb-6 leading-relaxed">
-          {project.partner_description || 'Notre partenaire local pour ce projet est une entreprise établie depuis plus de 5 ans dans la région, avec une excellente réputation et une connaissance approfondie du marché local. Un contrat solide encadre notre collaboration pour garantir la protection des intérêts des investisseurs.'}
-        </p>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-50 p-4 rounded-lg text-center hover:bg-gray-100 transition-colors">
-            <p className="text-2xl font-bold text-bgs-blue">{project.partner_experience || '5+'}</p>
-            <p className="text-sm text-bgs-blue/70">Années d'expérience</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-center hover:bg-gray-100 transition-colors">
-            <p className="text-2xl font-bold text-bgs-blue">{project.partner_employees || '12'}</p>
-            <p className="text-sm text-bgs-blue/70">Employés locaux</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-center hover:bg-gray-100 transition-colors">
-            <p className="text-2xl font-bold text-bgs-blue">{project.partner_projects || '8'}</p>
-            <p className="text-sm text-bgs-blue/70">Projets réalisés</p>
-          </div>
-          <div className="bg-gray-50 p-4 rounded-lg text-center hover:bg-gray-100 transition-colors">
-            <p className="text-2xl font-bold text-bgs-blue">{project.partner_satisfaction || '98'}%</p>
-            <p className="text-sm text-bgs-blue/70">Taux de satisfaction</p>
           </div>
         </div>
       </div>

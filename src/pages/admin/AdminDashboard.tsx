@@ -51,7 +51,7 @@ export default function AdminDashboard() {
       </div>
       
       <div className="container mx-auto py-8 px-4">
-        {/* The h2 heading has been removed */}
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Panneau d'administration</h2>
         
         {/* The grid section has been removed as requested */}
       </div>
