@@ -9,6 +9,7 @@ import LoadingState from '@/components/admin/profiles/LoadingState';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { toast } from 'sonner';
 
 export default function ProfilesPage() {
   const {
@@ -32,12 +33,31 @@ export default function ProfilesPage() {
   const handleRefresh = async () => {
     console.log("Starting refresh...");
     setIsRefreshing(true);
-    await refreshProfiles();
-    setIsRefreshing(false);
-    console.log("Refresh complete");
+    try {
+      await refreshProfiles();
+      toast.success("Profils actualisés avec succès");
+    } catch (error) {
+      console.error("Error refreshing profiles:", error);
+      toast.error("Erreur lors de l'actualisation des profils");
+    } finally {
+      setIsRefreshing(false);
+      console.log("Refresh complete");
+    }
   };
 
-  console.log("ProfilesPage render - isLoading:", isLoading);
+  useEffect(() => {
+    // Force initial data load on component mount
+    const loadInitialData = async () => {
+      try {
+        await refreshProfiles();
+        console.log("Initial profiles loaded:", profiles.length);
+      } catch (error) {
+        console.error("Failed to load initial profiles:", error);
+      }
+    };
+    
+    loadInitialData();
+  }, []);
 
   useEffect(() => {
     console.log("ProfilesPage - profiles updated:", profiles.length);

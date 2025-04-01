@@ -28,12 +28,7 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     console.log(`[AdminUsers] ${message}`, data || '');
   };
 
-  // Fetch profiles on component mount
-  useEffect(() => {
-    logDebug('Provider mounted, fetching profiles');
-    fetchProfiles();
-  }, []);
-
+  // Fetch profiles function
   const fetchProfiles = async () => {
     try {
       logDebug('Starting to fetch profiles');
@@ -85,12 +80,6 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       logDebug('Setting processed profiles', { count: processedProfiles.length });
       setProfiles(processedProfiles);
       setTotalProfiles(count || processedProfiles.length);
-      
-      if (processedProfiles.length > 0) {
-        toast.success(`${processedProfiles.length} utilisateurs chargés avec succès`);
-      } else {
-        toast.info('Aucun utilisateur trouvé dans la base de données');
-      }
     } catch (err) {
       const error = err as Error;
       logDebug('Error in fetchProfiles', error);
@@ -101,6 +90,12 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setIsLoading(false);
     }
   };
+
+  // Fetch profiles on component mount
+  useEffect(() => {
+    logDebug('Provider mounted, fetching profiles');
+    fetchProfiles();
+  }, []);
 
   const filteredProfiles = profiles.filter((profile) => {
     if (!searchTerm) return true;
