@@ -21,4 +21,7 @@ export interface AdminLog {
     last_name?: string;
   } | null;
   timestamp: Date;
+  action_type?: string;
+  created_at?: Date;
+  admin_id?: string;
 }

@@ -84,6 +84,31 @@ export async function fetchAdminDashboardData(): Promise<{
     
     if (pendingWithdrawalsError) throw pendingWithdrawalsError;
     
+    // Get admin logs if the table exists
+    let adminLogs: AdminLog[] = [];
+    try {
+      const { data: logsData, error: logsError } = await supabase
+        .from('admin_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+        
+      if (!logsError && logsData) {
+        adminLogs = logsData.map(log => ({
+          id: log.id,
+          action: log.action_type || '',
+          description: log.description || '',
+          admin: null,
+          timestamp: new Date(log.created_at),
+          action_type: log.action_type,
+          created_at: new Date(log.created_at),
+          admin_id: log.admin_id
+        }));
+      }
+    } catch (error) {
+      console.log("Admin logs table might not exist yet:", error);
+    }
+    
     const stats: AdminStats = {
       userCount: userCount || 0,
       totalInvestments,
@@ -99,12 +124,9 @@ export async function fetchAdminDashboardData(): Promise<{
     
     console.log("Admin dashboard data fetched successfully:", stats);
     
-    // Return an empty array for logs since the table doesn't exist yet
-    const emptyLogs: AdminLog[] = [];
-    
     return {
       stats,
-      logs: emptyLogs
+      logs: adminLogs
     };
   } catch (error) {
     console.error("Error fetching admin dashboard data:", error);
