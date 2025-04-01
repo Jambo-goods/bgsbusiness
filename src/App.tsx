@@ -17,13 +17,11 @@ const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const NotFound = lazy(() => import("./pages/NotFound"));
 const InvestmentTrackingPage = lazy(() => import("./components/dashboard/investment-tracking/InvestmentTrackingPage"));
 const ScheduledPayments = lazy(() => import("./pages/ScheduledPayments"));
 const AdminProjects = lazy(() => import("./pages/admin/AdminProjects"));
 const WithdrawalRequestsPage = lazy(() => import("./pages/WithdrawalRequestsPage"));
 const BankTransfersPage = lazy(() => import("./pages/BankTransfersPage"));
-const ProfilesPage = lazy(() => import("./pages/admin/ProfilesPage"));
 const AdminApp = lazy(() => import("./pages/admin/AdminApp"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const NotificationManagement = lazy(() => import("./pages/admin/NotificationManagement"));
@@ -72,7 +70,7 @@ const App = () => (
                 {/* Admin Routes */}
                 <Route path="/admin/*" element={<AdminApp />} />
                 
-                <Route path="*" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Suspense>
           </BrowserRouter>

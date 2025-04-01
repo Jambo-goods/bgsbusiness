@@ -6,7 +6,6 @@ import AdminLogin from './AdminLogin';
 import AdminDashboard from './AdminDashboard';
 import { AdminProvider } from '@/contexts/AdminContext';
 import { AdminUsersProvider } from '@/contexts/AdminUsersContext';
-import ProfilesPage from './ProfilesPage';
 import AdminProjects from './AdminProjects';
 import NotificationManagement from './NotificationManagement';
 import ProjectUpdateNotifications from './ProjectUpdateNotifications';
@@ -29,7 +28,7 @@ const AdminApp = () => {
           <Route path="/" element={<AdminLayout />}>
             <Route index element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="profiles" element={<ProfilesPage />} />
+            <Route path="profiles" element={<AdminDashboard />} /> {/* Redirection vers le dashboard */}
             <Route path="projects" element={<AdminProjects />} />
             <Route path="notifications" element={<NotificationManagement />} />
             <Route path="project-updates" element={<ProjectUpdateNotifications />} />

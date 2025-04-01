@@ -38,11 +38,11 @@ const SidebarMenu = () => {
         </Link>
         
         <Link 
-          to="/admin/profiles" 
-          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/admin/profiles' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
+          to="/admin/dashboard" 
+          className={`flex items-center gap-3 px-4 py-3 ${window.location.pathname === '/admin/dashboard' ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-100'} rounded-lg`}
         >
-          <Users className="h-5 w-5" />
-          <span>Profils</span>
+          <LayoutDashboard className="h-5 w-5" />
+          <span>Tableau de bord</span>
         </Link>
         
         <Link 
