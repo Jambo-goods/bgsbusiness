@@ -4,6 +4,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Icons } from '@/components/ui/icons-set';
 import { useAdmin } from '@/contexts/AdminContext';
+import { BarChart } from 'lucide-react';
 
 const AdminLayout = () => {
   const { pathname } = useLocation();
@@ -27,7 +28,7 @@ const AdminLayout = () => {
 
   const navItems = [
     { path: '/admin/dashboard', label: 'Tableau de bord', icon: <Icons.home className="h-5 w-5" /> },
-    { path: '/admin/kpi', label: 'Analyse KPI', icon: <Icons.barChart className="h-5 w-5" /> },
+    { path: '/admin/kpi', label: 'Analyse KPI', icon: <BarChart className="h-5 w-5" /> },
     { path: '/admin/projects', label: 'Projets', icon: <Icons.package className="h-5 w-5" /> },
     { path: '/admin/scheduled-payments', label: 'Paiements programmés', icon: <Icons.calendar className="h-5 w-5" /> },
     { path: '/admin/withdrawal-requests', label: 'Demandes de retrait', icon: <Icons.creditCard className="h-5 w-5" /> },
