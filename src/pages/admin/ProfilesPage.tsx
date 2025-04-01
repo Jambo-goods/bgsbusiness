@@ -91,12 +91,16 @@ export default function ProfilesPage() {
         <CardContent className="p-0">
           {isLoading ? (
             <LoadingState />
-          ) : (
+          ) : mappedFilteredProfiles.length > 0 ? (
             <ProfilesTable 
               profiles={mappedProfiles}
               filteredProfiles={mappedFilteredProfiles}
               isLoading={isLoading}
             />
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              Aucun utilisateur trouvé
+            </div>
           )}
         </CardContent>
       </Card>

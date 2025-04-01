@@ -54,7 +54,7 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         throw error;
       }
 
-      console.log('Fetched profiles data:', data);
+      console.log('Fetched profiles data:', data?.length || 0);
 
       // Process profiles and determine account status
       const processedProfiles: Profile[] = data?.map(profile => {
@@ -77,15 +77,15 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         };
       }) || [];
       
-      console.log('Processed profiles:', processedProfiles);
+      console.log('Processed profiles:', processedProfiles.length);
       setProfiles(processedProfiles);
       setTotalProfiles(processedProfiles.length);
+      setIsLoading(false); // Make sure to set loading to false here
       toast.success('Utilisateurs chargés avec succès');
     } catch (error) {
       console.error('Error fetching profiles:', error);
       toast.error('Erreur lors du chargement des utilisateurs');
-    } finally {
-      setIsLoading(false);
+      setIsLoading(false); // Make sure to set loading to false here too
     }
   };
 
