@@ -32,9 +32,11 @@ export default function ProfilesPage() {
   }, [isLoading, profiles.length, filteredProfiles.length]);
 
   const handleRefresh = async () => {
+    console.log("Starting refresh...");
     setIsRefreshing(true);
     await refreshProfiles();
     setIsRefreshing(false);
+    console.log("Refresh complete");
   };
 
   console.log("ProfilesPage render - isLoading:", isLoading);
@@ -83,8 +85,7 @@ export default function ProfilesPage() {
             </div>
           ) : (
             <ProfilesTable 
-              profiles={profiles}
-              filteredProfiles={filteredProfiles}
+              profiles={filteredProfiles}
               isLoading={false}
             />
           )}

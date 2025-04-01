@@ -6,9 +6,9 @@ export type Profile = {
   email: string | null;
   phone: string | null;
   address: string | null;
-  wallet_balance: number | null;
-  projects_count: number | null;
-  investment_total: number | null;
+  wallet_balance: number;
+  projects_count: number;
+  investment_total: number;
   created_at: string | null;
   last_active_at?: string | null;
   online_status?: 'online' | 'offline';

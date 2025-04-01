@@ -18,13 +18,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface ProfilesTableProps {
   profiles: Profile[];
-  filteredProfiles: Profile[];
   isLoading: boolean;
 }
 
 export default function ProfilesTable({ 
   profiles, 
-  filteredProfiles, 
   isLoading
 }: ProfilesTableProps) {
   const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
@@ -33,12 +31,11 @@ export default function ProfilesTable({
 
   console.log('ProfilesTable - Props received:', { 
     profilesCount: profiles.length, 
-    filteredProfilesCount: filteredProfiles.length,
     isLoading
   });
   
-  if (filteredProfiles.length > 0) {
-    console.log('ProfilesTable - First profile in filteredProfiles:', filteredProfiles[0]);
+  if (profiles.length > 0) {
+    console.log('ProfilesTable - First profile:', profiles[0]);
   }
 
   const handleAddFunds = (profile: Profile) => {
@@ -97,14 +94,14 @@ export default function ProfilesTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProfiles.length === 0 ? (
+              {profiles.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                     Aucun utilisateur trouvé
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredProfiles.map((profile) => (
+                profiles.map((profile) => (
                   <TableRow key={profile.id}>
                     <TableCell className="max-w-[200px] truncate">{profile.email || '-'}</TableCell>
                     <TableCell>{profile.first_name || '-'}</TableCell>

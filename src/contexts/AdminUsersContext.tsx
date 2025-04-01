@@ -2,21 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-
-export type Profile = {
-  id: string;
-  first_name: string | null;
-  last_name: string | null;
-  email: string | null;
-  phone: string | null;
-  address: string | null;
-  created_at: string | null;
-  last_active_at?: string | null;
-  wallet_balance?: number | null;
-  projects_count?: number | null;
-  investment_total?: number | null;
-  account_status?: 'active' | 'inactive' | 'suspended';
-};
+import { Profile } from '@/components/admin/profiles/types';
 
 interface AdminUsersContextType {
   profiles: Profile[];
@@ -74,21 +60,24 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // Process profiles and determine account status
       const processedProfiles: Profile[] = data?.map(profile => {
         // Determine account status based on last activity
-        let account_status: 'active' | 'inactive' | 'suspended' = 'inactive';
+        let online_status: 'online' | 'offline' = 'offline';
         
         if (profile.last_active_at) {
           const lastActive = new Date(profile.last_active_at);
           const now = new Date();
-          const diffDays = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60 * 60 * 24));
+          const diffMinutes = Math.floor((now.getTime() - lastActive.getTime()) / (1000 * 60));
           
-          if (diffDays < 30) {
-            account_status = 'active';
+          if (diffMinutes < 15) {
+            online_status = 'online';
           }
         }
         
         return {
           ...profile,
-          account_status
+          online_status,
+          wallet_balance: profile.wallet_balance || 0,
+          projects_count: profile.projects_count || 0,
+          investment_total: profile.investment_total || 0
         };
       }) || [];
       
