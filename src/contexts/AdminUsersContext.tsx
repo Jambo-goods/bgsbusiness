@@ -40,9 +40,9 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setError(null);
       
       // Get all profiles
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('profiles')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -51,6 +51,7 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
 
       logDebug('Fetched profiles count', data?.length || 0);
+      
       if (data && data.length > 0) {
         logDebug('First profile sample', data[0]);
       } else {

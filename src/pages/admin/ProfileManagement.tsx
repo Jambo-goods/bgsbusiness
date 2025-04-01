@@ -44,9 +44,8 @@ export default function ProfileManagement() {
           <LoadingState />
         ) : (
           <ProfilesTable 
-            profiles={profiles}
+            profiles={filteredProfiles}
             isLoading={isLoading}
-            filteredProfiles={filteredProfiles}
           />
         )}
       </div>

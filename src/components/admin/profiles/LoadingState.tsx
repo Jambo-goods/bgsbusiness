@@ -15,7 +15,8 @@ const LoadingState: React.FC = () => {
       <div className="space-y-2">
         {Array(5).fill(0).map((_, i) => (
           <div key={i} className="flex gap-4 w-full items-center p-2">
-            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-8 w-8/12" />
+            <Skeleton className="h-8 w-4/12" />
           </div>
         ))}
       </div>
