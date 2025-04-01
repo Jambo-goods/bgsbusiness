@@ -8,6 +8,7 @@ import { RefreshCw } from 'lucide-react';
 import LoadingState from '@/components/admin/profiles/LoadingState';
 import AdminHeader from '@/components/admin/AdminHeader';
 import { Card, CardContent } from '@/components/ui/card';
+import { Profile as AdminProfileType } from '@/components/admin/profiles/types';
 
 export default function ProfilesPage() {
   const {
@@ -27,6 +28,36 @@ export default function ProfilesPage() {
     await refreshProfiles();
     setIsRefreshing(false);
   };
+
+  // Map profiles to the format expected by ProfilesTable
+  const mappedProfiles: AdminProfileType[] = profiles.map(profile => ({
+    id: profile.id,
+    first_name: profile.first_name,
+    last_name: profile.last_name,
+    email: profile.email,
+    phone: profile.phone,
+    address: profile.address || null,
+    wallet_balance: profile.wallet_balance,
+    projects_count: profile.projects_count || 0,
+    investment_total: profile.investment_total || 0,
+    created_at: profile.created_at,
+    last_active_at: profile.last_active_at,
+  }));
+
+  // Map filtered profiles as well
+  const mappedFilteredProfiles: AdminProfileType[] = filteredProfiles.map(profile => ({
+    id: profile.id,
+    first_name: profile.first_name,
+    last_name: profile.last_name,
+    email: profile.email,
+    phone: profile.phone,
+    address: profile.address || null,
+    wallet_balance: profile.wallet_balance,
+    projects_count: profile.projects_count || 0,
+    investment_total: profile.investment_total || 0,
+    created_at: profile.created_at,
+    last_active_at: profile.last_active_at,
+  }));
 
   return (
     <div className="space-y-6">
@@ -58,8 +89,8 @@ export default function ProfilesPage() {
             <LoadingState />
           ) : (
             <ProfilesTable 
-              profiles={profiles}
-              filteredProfiles={filteredProfiles}
+              profiles={mappedProfiles}
+              filteredProfiles={mappedFilteredProfiles}
               isLoading={isLoading}
             />
           )}

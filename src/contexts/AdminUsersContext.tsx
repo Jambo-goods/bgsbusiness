@@ -3,15 +3,18 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-type Profile = {
+export type Profile = {
   id: string;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  address: string | null;
   created_at: string | null;
   last_active_at?: string | null;
   wallet_balance?: number | null;
+  projects_count?: number | null;
+  investment_total?: number | null;
   account_status?: 'active' | 'inactive' | 'suspended';
 };
 
@@ -50,6 +53,8 @@ export const AdminUsersProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (error) {
         throw error;
       }
+
+      console.log('Fetched profiles data:', data);
 
       // Process profiles and determine account status
       const processedProfiles: Profile[] = data?.map(profile => {
