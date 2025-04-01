@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -9,6 +10,8 @@ import ProfileManagement from './ProfileManagement';
 import ProfilesPage from './ProfilesPage';
 
 const AdminApp = () => {
+  console.log("AdminApp rendering...");
+  
   return (
     <AdminProvider>
       <AdminUsersProvider>

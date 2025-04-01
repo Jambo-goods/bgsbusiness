@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAdminUsers } from '@/contexts/AdminUsersContext';
 import ProfilesTable from '@/components/admin/profiles/ProfilesTable';
 import ProfileSearch from '@/components/admin/profiles/ProfileSearch';
@@ -23,13 +23,11 @@ export default function ProfilesPage() {
   
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  useEffect(() => {
-    console.log("ProfilesPage - Current state:", { 
-      isLoading, 
-      profilesCount: profiles.length,
-      filteredProfilesCount: filteredProfiles.length
-    });
-  }, [isLoading, profiles.length, filteredProfiles.length]);
+  console.log("ProfilesPage - Current state:", { 
+    isLoading, 
+    profilesCount: profiles.length,
+    filteredProfilesCount: filteredProfiles.length
+  });
 
   const handleRefresh = async () => {
     console.log("Starting refresh...");

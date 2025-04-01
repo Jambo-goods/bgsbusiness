@@ -77,6 +77,14 @@ export default function ProfilesTable({
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="w-full p-8 flex justify-center">
+        <p>Chargement des profils...</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="w-full overflow-x-auto">
