@@ -23,7 +23,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 interface CreateNotificationFormProps {
-  notificationType: "marketing" | "custom";
+  notificationType: "system" | "marketing" | "custom";
   onSuccess?: () => void;
 }
 
@@ -88,8 +88,8 @@ export default function CreateNotificationForm({ notificationType, onSuccess }: 
     setIsSubmitting(true);
     
     try {
-      // For marketing notifications, send to all users
-      if (notificationType === "marketing") {
+      // For system or marketing notifications, send to all users
+      if (notificationType === "system" || notificationType === "marketing") {
         const { data: users, error: usersError } = await supabase
           .from('profiles')
           .select('id');
@@ -104,7 +104,7 @@ export default function CreateNotificationForm({ notificationType, onSuccess }: 
           });
         }
         
-        toast.success(`Notification marketing envoyée à ${users.length} utilisateurs`);
+        toast.success(`Notification ${notificationType} envoyée à ${users.length} utilisateurs`);
       } 
       // For custom notifications, send to selected user
       else if (values.userId) {
