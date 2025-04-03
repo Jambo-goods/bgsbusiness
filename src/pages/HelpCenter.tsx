@@ -13,85 +13,9 @@ import {
   MessageSquare, 
   Phone, 
   Search, 
-  Mail, 
-  FileText,
-  AlertCircle,
-  CreditCard,
-  Users,
-  Shield,
-  ExternalLink
+  Mail
 } from "lucide-react";
 import { toast } from "sonner";
-
-// Données pour les catégories d'aide
-const helpCategories = [
-  {
-    title: "Premiers pas",
-    icon: <Book className="h-6 w-6 text-bgs-orange" />,
-    description: "Guide pour démarrer avec BGS Invest",
-    articles: [
-      "Comment créer un compte",
-      "Finaliser votre profil",
-      "Comprendre les différents types de projets",
-      "Effectuer votre premier investissement"
-    ]
-  },
-  {
-    title: "Investissements",
-    icon: <CreditCard className="h-6 w-6 text-bgs-orange" />,
-    description: "Tout sur les opportunités d'investissement",
-    articles: [
-      "Comment fonctionnent les rendements",
-      "Comprendre les risques",
-      "Durée des investissements",
-      "Diversification du portefeuille"
-    ]
-  },
-  {
-    title: "Paiements et retraits",
-    icon: <CreditCard className="h-6 w-6 text-bgs-orange" />,
-    description: "Gérer votre portefeuille et vos transactions",
-    articles: [
-      "Ajouter des fonds à votre compte",
-      "Processus de retrait",
-      "Comprendre les frais",
-      "Options de paiement disponibles"
-    ]
-  },
-  {
-    title: "Compte et sécurité",
-    icon: <Shield className="h-6 w-6 text-bgs-orange" />,
-    description: "Protéger votre compte et vos données",
-    articles: [
-      "Authentification à deux facteurs",
-      "Modifier vos informations",
-      "Réinitialiser votre mot de passe",
-      "Protection des données"
-    ]
-  },
-  {
-    title: "Programme de parrainage",
-    icon: <Users className="h-6 w-6 text-bgs-orange" />,
-    description: "Inviter des amis et gagner des bonus",
-    articles: [
-      "Comment fonctionne le parrainage",
-      "Suivre vos parrainages",
-      "Conditions et récompenses",
-      "Questions fréquentes sur le parrainage"
-    ]
-  },
-  {
-    title: "Problèmes techniques",
-    icon: <AlertCircle className="h-6 w-6 text-bgs-orange" />,
-    description: "Résoudre les problèmes techniques",
-    articles: [
-      "Problèmes de connexion",
-      "Erreurs lors des transactions",
-      "Problèmes d'affichage",
-      "Bugs et signalements"
-    ]
-  }
-];
 
 export default function HelpCenter() {
   useEffect(() => {
@@ -130,15 +54,6 @@ export default function HelpCenter() {
     });
   };
 
-  // Filtrer les catégories en fonction de la recherche
-  const filteredCategories = searchTerm 
-    ? helpCategories.filter(category => 
-        category.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        category.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        category.articles.some(article => article.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
-    : helpCategories;
-
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
@@ -168,44 +83,7 @@ export default function HelpCenter() {
             />
           </div>
           
-          {/* Catégories d'aide */}
-          {filteredCategories.length > 0 ? (
-            filteredCategories.map((category, index) => (
-              <Card key={index} className="hover:shadow-md transition-shadow mb-4">
-                <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                  {category.icon}
-                  <CardTitle className="text-lg font-semibold text-bgs-blue">{category.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-bgs-blue/80 text-sm mb-4">{category.description}</p>
-                  <ul className="space-y-2">
-                    {category.articles.map((article, artIndex) => (
-                      <li key={artIndex} className="text-sm">
-                        <a href="#" className="flex items-center text-bgs-blue/90 hover:text-bgs-orange">
-                          <FileText className="h-3.5 w-3.5 mr-2" />
-                          {article}
-                        </a>
-                      </li>
-                    )).slice(0, 4)}
-                  </ul>
-                  {category.articles.length > 4 && (
-                    <a href="#" className="text-xs flex items-center text-bgs-orange mt-2">
-                      Voir tous les articles
-                      <ExternalLink className="h-3 w-3 ml-1" />
-                    </a>
-                  )}
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <HelpCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 mb-2">Aucun résultat trouvé pour "{searchTerm}"</p>
-              <p className="text-sm text-gray-400">Essayez un autre terme ou contactez directement notre support</p>
-            </div>
-          )}
-          
-          {/* Options de contact - Removing container div */}
+          {/* Options de contact */}
           <h2 className="text-2xl font-semibold text-bgs-blue mb-6 text-center mt-12">Besoin d'une assistance personnalisée ?</h2>
           
           <div className="flex flex-col md:flex-row gap-6 mb-8">
