@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { useToast } from "@/hooks/use-toast";
+import { formatCurrency } from "@/utils/currencyUtils";
 
 export default function FeaturedProjects() {
   const [visibleProjects, setVisibleProjects] = useState(3);
@@ -129,7 +130,7 @@ export default function FeaturedProjects() {
                   <div>
                     <p className="text-xs text-bgs-blue/60">Investissement minimum</p>
                     <p className="text-base font-semibold text-bgs-blue">
-                      {project.minInvestment ? project.minInvestment.toLocaleString() : project.price.toLocaleString()} €
+                      {formatCurrency(project.minInvestment || project.price)}
                     </p>
                   </div>
                   <div>
