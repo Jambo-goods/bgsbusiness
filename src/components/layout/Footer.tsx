@@ -89,9 +89,6 @@ export default function Footer() {
                 <Link to="/centre-daide" className="text-white/70 hover:text-white transition-colors">Centre d'aide</Link>
               </li>
               <li>
-                <a href="#" className="text-white/70 hover:text-white transition-colors">Blog</a>
-              </li>
-              <li>
                 <Link to="/mentions-legales" className="text-white/70 hover:text-white transition-colors">Mentions légales</Link>
               </li>
             </ul>
