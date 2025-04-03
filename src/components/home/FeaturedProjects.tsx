@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CircleCheck, Star, MapPin } from "lucide-react";
@@ -11,16 +12,24 @@ export default function FeaturedProjects() {
   const [visibleProjects, setVisibleProjects] = useState(3);
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadFeaturedProjects = async () => {
       try {
         setIsLoading(true);
         const dbProjects = await fetchProjectsFromDatabase();
-        const featured = dbProjects.filter(project => project.featured);
+        
+        // Make sure we have at least 3 projects to display, even if they're not marked as featured
+        let featured = dbProjects.filter(project => project.featured);
+        
+        // If we don't have enough featured projects, add some regular ones
+        if (featured.length < 3 && dbProjects.length > 0) {
+          const nonFeatured = dbProjects.filter(project => !project.featured);
+          featured = [...featured, ...nonFeatured.slice(0, 3 - featured.length)];
+        }
+        
+        console.log("Featured projects loaded:", featured.length);
         setFeaturedProjects(featured || []);
       } catch (error) {
         console.error("Error loading featured projects:", error);
@@ -83,51 +92,61 @@ export default function FeaturedProjects() {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {featuredProjects.slice(0, visibleProjects).map(project => <Link to={`/project/${project.id}`} key={project.id} className="group rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 bg-white border border-gray-100 hover:-translate-y-1">
+          {featuredProjects.slice(0, visibleProjects).map((project, index) => (
+            <Link 
+              to={`/project/${project.id}`} 
+              key={project.id || index} 
+              className="group rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 bg-white border border-gray-100 hover:-translate-y-1"
+            >
               <div className="relative">
-                <img src={project.image} alt={project.name} className="w-full h-52 object-cover transition-transform group-hover:scale-105 duration-500" />
+                <img 
+                  src={project.image || project.image_url || '/placeholder.svg'} 
+                  alt={project.name || project.title || 'Projet d\'investissement'} 
+                  className="w-full h-52 object-cover transition-transform group-hover:scale-105 duration-500" 
+                />
                 <div className="absolute top-3 right-3 bg-bgs-orange text-white text-xs font-medium px-3 py-1 rounded-full flex items-center">
                   <Star size={12} className="mr-1" />
                   Populaire
                 </div>
                 
-                {project.location && <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-bgs-blue text-xs font-medium px-3 py-1 rounded-full flex items-center">
+                {(project.location) && (
+                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-bgs-blue text-xs font-medium px-3 py-1 rounded-full flex items-center">
                     <MapPin size={12} className="mr-1" />
                     {project.location}
-                  </div>}
+                  </div>
+                )}
               </div>
               
               <div className="p-5">
                 <div className="space-y-3 mb-4">
                   <div className="flex items-center justify-between">
                     <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-bgs-orange/10 text-bgs-orange">
-                      {project.category}
+                      {project.category || 'Investissement'}
                     </span>
                     <div className="text-xs text-green-600 font-medium flex items-center bg-green-50 px-2 py-1 rounded-full">
                       <CircleCheck size={12} className="mr-1" />
-                      {project.yield}% mensuel
+                      {project.yield || project.yield_rate || '8'}% mensuel
                     </div>
                   </div>
                   
                   <h3 className="text-lg font-bold text-bgs-blue group-hover:text-bgs-orange transition-colors">
-                    {project.name}
+                    {project.name || project.title || 'Projet d\'investissement'}
                   </h3>
                   
                   <p className="text-sm text-bgs-blue/70 line-clamp-2">
-                    {project.description}
+                    {project.description || 'Opportunité d\'investissement dans un actif physique en Afrique.'}
                   </p>
                 </div>
                 
                 <div className="mb-4">
-                  <Progress value={project.fundingProgress} className="h-1.5 bg-gray-100" />
-                  
+                  <Progress value={project.fundingProgress || 65} className="h-1.5 bg-gray-100" />
                 </div>
                 
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div>
                     <p className="text-xs text-bgs-blue/60">Investissement min.</p>
                     <p className="text-base font-bold text-bgs-blue">
-                      {formatCurrency(project.min_investment)}
+                      {formatCurrency(project.min_investment || 1000)}
                     </p>
                   </div>
                   <div className="flex items-center text-bgs-orange font-medium group-hover:translate-x-1 transition-transform">
@@ -136,15 +155,21 @@ export default function FeaturedProjects() {
                   </div>
                 </div>
               </div>
-            </Link>)}
+            </Link>
+          ))}
         </div>
         
-        {featuredProjects.length > visibleProjects && <div className="text-center mt-10">
-            <button onClick={() => setVisibleProjects(prev => prev + 3)} className="btn-secondary inline-flex items-center">
+        {featuredProjects.length > visibleProjects && (
+          <div className="text-center mt-10">
+            <button 
+              onClick={() => setVisibleProjects(prev => prev + 3)} 
+              className="btn-secondary inline-flex items-center"
+            >
               Voir plus de projets
               <ArrowRight size={16} className="ml-2" />
             </button>
-          </div>}
+          </div>
+        )}
         
         <div className="text-center mt-10">
           <Link to="/projects" className="btn-primary inline-flex items-center">
