@@ -1,4 +1,3 @@
-
 import React, { ReactNode } from 'react';
 import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -50,30 +49,8 @@ export default function DashboardCard({
             {value}
           </div>
           
-          {(changePercentage || changeValue) && (
-            <div className="flex items-center mt-2 text-xs">
-              <span 
-                className={cn(
-                  "flex items-center font-medium",
-                  isPositiveChange && "text-green-600",
-                  isNegativeChange && "text-red-600",
-                  isNeutralChange && "text-yellow-600"
-                )}
-              >
-                {isPositiveChange && <ArrowUpIcon className="h-3 w-3 mr-1" />}
-                {isNegativeChange && <ArrowDownIcon className="h-3 w-3 mr-1" />}
-                {changePercentage}
-                
-                {changeValue && <span className="ml-0.5">({changeValue})</span>}
-              </span>
-              
-              {changeTimeframe && (
-                <span className="text-bgs-gray-medium ml-1.5">
-                  {changeTimeframe}
-                </span>
-              )}
-            </div>
-          )}
+          
+          
         </div>
         
         <div className={cn("p-2 rounded-lg", iconBgColor)}>
