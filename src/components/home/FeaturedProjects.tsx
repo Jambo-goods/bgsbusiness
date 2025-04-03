@@ -127,9 +127,9 @@ export default function FeaturedProjects() {
                 
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-bgs-blue/60">Prix</p>
+                    <p className="text-xs text-bgs-blue/60">Investissement minimum</p>
                     <p className="text-base font-semibold text-bgs-blue">
-                      {project.price.toLocaleString()} €
+                      {project.minInvestment ? project.minInvestment.toLocaleString() : project.price.toLocaleString()} €
                     </p>
                   </div>
                   <div>
