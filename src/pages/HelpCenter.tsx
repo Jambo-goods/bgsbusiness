@@ -3,17 +3,14 @@ import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { 
-  Book, 
-  HelpCircle, 
-  MessageSquare, 
   Phone, 
-  Search, 
-  Mail
+  Mail,
+  MessageSquare
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,17 +19,12 @@ export default function HelpCenter() {
     window.scrollTo(0, 0);
   }, []);
 
-  const [searchTerm, setSearchTerm] = useState("");
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
     subject: "",
     message: ""
   });
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
 
   const handleContactFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -65,26 +57,9 @@ export default function HelpCenter() {
       <main className="flex-grow container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl font-bold text-bgs-blue mb-4 text-center">Centre d'Aide</h1>
-          <p className="text-bgs-blue/80 text-center mb-8">
-            Trouvez rapidement des réponses à vos questions ou contactez notre équipe d'assistance
-          </p>
-          
-          {/* Barre de recherche */}
-          <div className="relative mb-12">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
-            </div>
-            <Input
-              type="text"
-              placeholder="Rechercher un sujet d'aide..."
-              className="pl-10 w-full"
-              value={searchTerm}
-              onChange={handleSearchChange}
-            />
-          </div>
           
           {/* Options de contact */}
-          <h2 className="text-2xl font-semibold text-bgs-blue mb-6 text-center mt-12">Besoin d'une assistance personnalisée ?</h2>
+          <h2 className="text-2xl font-semibold text-bgs-blue mb-6 text-center mt-8">Besoin d'une assistance personnalisée ?</h2>
           
           <div className="flex flex-col md:flex-row gap-6 mb-8">
             <Card className="bg-white flex-1">
