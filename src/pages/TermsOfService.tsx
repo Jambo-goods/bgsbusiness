@@ -12,7 +12,7 @@ export default function TermsOfService() {
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>Conditions d'Utilisation | BGS Invest</title>
+        <title>Conditions d'Utilisation | BGS Business</title>
       </Helmet>
       
       <Navbar />
@@ -27,12 +27,12 @@ export default function TermsOfService() {
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">1. Acceptation des conditions</h2>
           <p>
-            En accédant à la plateforme BGS Invest, vous acceptez d'être lié par ces conditions d'utilisation, toutes les lois et réglementations applicables, et vous acceptez que vous êtes responsable du respect des lois locales applicables. Si vous n'acceptez pas ces conditions, vous n'êtes pas autorisé à utiliser cette plateforme.
+            En accédant à la plateforme BGS Business, vous acceptez d'être lié par ces conditions d'utilisation, toutes les lois et réglementations applicables, et vous acceptez que vous êtes responsable du respect des lois locales applicables. Si vous n'acceptez pas ces conditions, vous n'êtes pas autorisé à utiliser cette plateforme.
           </p>
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">2. Description du service</h2>
           <p>
-            BGS Invest est une plateforme qui permet aux utilisateurs d'investir dans des actifs physiques en Afrique et de percevoir une part des bénéfices générés. Notre service facilite l'achat de machines et d'équipements qui sont ensuite loués à des entreprises africaines.
+            BGS Business est une plateforme qui permet aux utilisateurs d'investir dans des actifs physiques en Afrique et de percevoir une part des bénéfices générés. Notre service facilite l'achat de machines et d'équipements qui sont ensuite loués à des entreprises africaines.
           </p>
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">3. Conditions d'inscription</h2>
@@ -69,17 +69,17 @@ export default function TermsOfService() {
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">6. Propriété intellectuelle</h2>
           <p>
-            Tout le contenu présent sur la plateforme BGS Invest, y compris les textes, graphiques, logos, images, ainsi que leur compilation, sont la propriété de BGS Invest ou de ses fournisseurs de contenu et sont protégés par les lois sur les droits d'auteur.
+            Tout le contenu présent sur la plateforme BGS Business, y compris les textes, graphiques, logos, images, ainsi que leur compilation, sont la propriété de BGS Business ou de ses fournisseurs de contenu et sont protégés par les lois sur les droits d'auteur.
           </p>
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">7. Limitation de responsabilité</h2>
           <p>
-            BGS Invest ne sera pas responsable des dommages directs, indirects, accessoires, spéciaux ou consécutifs résultant de l'utilisation ou de l'impossibilité d'utiliser nos services, ou pour toute autre réclamation liée d'une quelconque manière à votre utilisation des services.
+            BGS Business ne sera pas responsable des dommages directs, indirects, accessoires, spéciaux ou consécutifs résultant de l'utilisation ou de l'impossibilité d'utiliser nos services, ou pour toute autre réclamation liée d'une quelconque manière à votre utilisation des services.
           </p>
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">8. Modification des conditions</h2>
           <p>
-            BGS Invest se réserve le droit de modifier ces conditions à tout moment. Les utilisateurs seront informés des modifications substantielles par e-mail ou par une notification sur la plateforme.
+            BGS Business se réserve le droit de modifier ces conditions à tout moment. Les utilisateurs seront informés des modifications substantielles par e-mail ou par une notification sur la plateforme.
           </p>
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">9. Loi applicable</h2>
@@ -89,7 +89,7 @@ export default function TermsOfService() {
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">10. Contact</h2>
           <p>
-            Pour toute question concernant ces conditions d'utilisation, veuillez nous contacter à l'adresse suivante : <a href="mailto:legal@bgsinvest.com" className="text-bgs-orange">legal@bgsinvest.com</a>
+            Pour toute question concernant ces conditions d'utilisation, veuillez nous contacter à l'adresse suivante : <a href="mailto:legal@bgsbusiness.com" className="text-bgs-orange">legal@bgsbusiness.com</a>
           </p>
         </div>
       </main>

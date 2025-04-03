@@ -12,7 +12,7 @@ export default function PrivacyPolicy() {
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>Politique de Confidentialité | BGS Invest</title>
+        <title>Politique de Confidentialité | BGS Business</title>
       </Helmet>
       
       <Navbar />
@@ -27,7 +27,7 @@ export default function PrivacyPolicy() {
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">1. Introduction</h2>
           <p>
-            BGS Invest ("nous", "notre", "nos") s'engage à protéger votre vie privée. Cette politique de confidentialité explique comment nous collectons, utilisons, partageons et protégeons vos informations personnelles lorsque vous utilisez notre plateforme d'investissement.
+            BGS Business ("nous", "notre", "nos") s'engage à protéger votre vie privée. Cette politique de confidentialité explique comment nous collectons, utilisons, partageons et protégeons vos informations personnelles lorsque vous utilisez notre plateforme d'investissement.
           </p>
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">2. Informations que nous collectons</h2>
@@ -78,7 +78,7 @@ export default function PrivacyPolicy() {
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">7. Contact</h2>
           <p>
-            Pour toute question concernant cette politique de confidentialité ou pour exercer vos droits, veuillez nous contacter à l'adresse suivante : <a href="mailto:privacy@bgsinvest.com" className="text-bgs-orange">privacy@bgsinvest.com</a>
+            Pour toute question concernant cette politique de confidentialité ou pour exercer vos droits, veuillez nous contacter à l'adresse suivante : <a href="mailto:privacy@bgsbusiness.com" className="text-bgs-orange">privacy@bgsbusiness.com</a>
           </p>
         </div>
       </main>

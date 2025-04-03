@@ -12,7 +12,7 @@ export default function CookiePolicy() {
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>Politique de Cookies | BGS Invest</title>
+        <title>Politique de Cookies | BGS Business</title>
       </Helmet>
       
       <Navbar />
@@ -32,7 +32,7 @@ export default function CookiePolicy() {
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">2. Comment nous utilisons les cookies</h2>
           <p>
-            BGS Invest utilise des cookies pour les finalités suivantes :
+            BGS Business utilise des cookies pour les finalités suivantes :
           </p>
           <ul className="list-disc pl-6 my-4">
             <li><strong>Cookies essentiels :</strong> Nécessaires au fonctionnement de notre plateforme, ils vous permettent de vous connecter à votre compte et d'utiliser nos services.</li>
@@ -104,7 +104,7 @@ export default function CookiePolicy() {
           
           <h2 className="text-2xl font-semibold mt-8 mb-4">7. Contact</h2>
           <p>
-            Si vous avez des questions concernant notre utilisation des cookies, veuillez nous contacter à l'adresse suivante : <a href="mailto:privacy@bgsinvest.com" className="text-bgs-orange">privacy@bgsinvest.com</a>
+            Si vous avez des questions concernant notre utilisation des cookies, veuillez nous contacter à l'adresse suivante : <a href="mailto:privacy@bgsbusiness.com" className="text-bgs-orange">privacy@bgsbusiness.com</a>
           </p>
         </div>
       </main>

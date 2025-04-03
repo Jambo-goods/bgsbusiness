@@ -73,18 +73,18 @@ const handler = async (req: Request): Promise<Response> => {
         emailContent = `
           <h1>${subject}</h1>
           <p>Bonjour ${userName},</p>
-          <p>Vous avez reçu une notification de BGS Invest.</p>
+          <p>Vous avez reçu une notification de BGS Business.</p>
         `;
     }
 
     const emailResponse = await resend.emails.send({
-      from: "BGS Invest <notifications@bgsinvest.fr>",
+      from: "BGS Business <notifications@bgsbusiness.fr>",
       to: [userEmail],
       subject: subject,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           ${emailContent}
-          <p style="margin-top: 30px; color: #666;">Cordialement,<br>L'équipe BGS Invest</p>
+          <p style="margin-top: 30px; color: #666;">Cordialement,<br>L'équipe BGS Business</p>
         </div>
       `,
     });

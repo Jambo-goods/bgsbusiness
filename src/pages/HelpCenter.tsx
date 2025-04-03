@@ -49,7 +49,7 @@ export default function HelpCenter() {
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>Centre d'Aide | BGS Invest</title>
+        <title>Centre d'Aide | BGS Business</title>
       </Helmet>
       
       <Navbar />
@@ -76,7 +76,7 @@ export default function HelpCenter() {
                 <Mail className="h-10 w-10 text-bgs-orange mx-auto mb-3" />
                 <h3 className="font-medium text-bgs-blue mb-2">Par email</h3>
                 <p className="text-sm text-bgs-blue/80 mb-3">Réponse sous 24-48h</p>
-                <a href="mailto:support@bgsinvest.com" className="text-bgs-orange font-medium">support@bgsinvest.com</a>
+                <a href="mailto:support@bgsbusiness.com" className="text-bgs-orange font-medium">support@bgsbusiness.com</a>
               </CardContent>
             </Card>
             

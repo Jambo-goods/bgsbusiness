@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { 
   Facebook, 
@@ -42,7 +43,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           {/* About */}
           <div>
-            <h3 className="text-lg font-semibold mb-4 text-white/90">À propos de BGS Invest</h3>
+            <h3 className="text-lg font-semibold mb-4 text-white/90">À propos de BGS Business</h3>
             <p className="text-sm text-white/80 mb-4">
               BGS Business Club vous permet d'investir dans des actifs physiques en Afrique et de percevoir une part des bénéfices générés.
             </p>
@@ -108,8 +109,8 @@ export default function Footer() {
               </li>
               <li className="flex items-center">
                 <Mail size={16} className="mr-2 text-bgs-orange flex-shrink-0" />
-                <a href="mailto:contact@bgsinvest.com" className="text-white/70 hover:text-white transition-colors">
-                  contact@bgsinvest.com
+                <a href="mailto:contact@bgsbusiness.com" className="text-white/70 hover:text-white transition-colors">
+                  contact@bgsbusiness.com
                 </a>
               </li>
             </ul>
@@ -117,7 +118,7 @@ export default function Footer() {
         </div>
         
         <div className="pt-6 mt-6 border-t border-white/10 text-center text-sm text-white/60">
-          <p>© {new Date().getFullYear()} BGS Invest. Tous droits réservés.</p>
+          <p>© {new Date().getFullYear()} BGS Business. Tous droits réservés.</p>
           <p className="mt-2">
             <Link to="/politique-de-confidentialite" className="hover:text-white transition-colors">Politique de confidentialité</Link>
             {" · "}

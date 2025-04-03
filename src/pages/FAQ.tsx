@@ -17,11 +17,11 @@ import { Input } from "@/components/ui/input";
 const faqItems = {
   general: [
     {
-      question: "Qu'est-ce que BGS Invest ?",
-      answer: "BGS Invest est une plateforme d'investissement qui permet à des particuliers d'investir dans des actifs physiques en Afrique et de percevoir une part des bénéfices générés. Nous facilitons l'achat de machines et d'équipements qui sont ensuite loués à des entreprises africaines."
+      question: "Qu'est-ce que BGS Business ?",
+      answer: "BGS Business est une plateforme d'investissement qui permet à des particuliers d'investir dans des actifs physiques en Afrique et de percevoir une part des bénéfices générés. Nous facilitons l'achat de machines et d'équipements qui sont ensuite loués à des entreprises africaines."
     },
     {
-      question: "Comment fonctionne le modèle d'investissement de BGS Invest ?",
+      question: "Comment fonctionne le modèle d'investissement de BGS Business ?",
       answer: "Notre modèle est basé sur l'acquisition d'actifs physiques (machines, équipements) qui sont ensuite mis à disposition d'entreprises africaines sous forme de location. Les revenus générés par ces locations sont partagés avec les investisseurs, créant ainsi un flux de revenus passifs."
     },
     {
@@ -29,8 +29,8 @@ const faqItems = {
       answer: "Le montant minimal d'investissement varie selon les projets, mais commence généralement à partir de 1 000 €. Certains projets peuvent proposer des tickets d'entrée plus accessibles."
     },
     {
-      question: "BGS Invest est-il réglementé ?",
-      answer: "Oui, BGS Invest opère en conformité avec les réglementations financières françaises et européennes. Nous sommes enregistrés auprès des autorités compétentes et respectons les obligations légales en matière d'investissement et de protection des consommateurs."
+      question: "BGS Business est-il réglementé ?",
+      answer: "Oui, BGS Business opère en conformité avec les réglementations financières françaises et européennes. Nous sommes enregistrés auprès des autorités compétentes et respectons les obligations légales en matière d'investissement et de protection des consommateurs."
     }
   ],
   investments: [
@@ -53,7 +53,7 @@ const faqItems = {
   ],
   account: [
     {
-      question: "Comment créer un compte sur BGS Invest ?",
+      question: "Comment créer un compte sur BGS Business ?",
       answer: "Pour créer un compte, cliquez sur 'Inscription' en haut à droite de notre site. Vous devrez fournir quelques informations personnelles et suivre le processus de vérification d'identité conformément aux réglementations en vigueur (KYC)."
     },
     {
@@ -85,7 +85,7 @@ const faqItems = {
       answer: "Les investissements en Afrique comportent des risques spécifiques comme l'instabilité politique dans certaines régions, les fluctuations monétaires, ou les défis logistiques. Cependant, nous sélectionnons soigneusement nos projets et partenaires locaux pour minimiser ces risques."
     },
     {
-      question: "Comment BGS Invest gère-t-il les risques ?",
+      question: "Comment BGS Business gère-t-il les risques ?",
       answer: "Nous mettons en place plusieurs mesures pour gérer les risques : diversification géographique et sectorielle, due diligence approfondie, contrats solides avec les partenaires locaux, assurances spécifiques, et suivi régulier des projets avec des audits périodiques."
     },
     {
@@ -96,7 +96,7 @@ const faqItems = {
   contact: [
     {
       question: "Comment contacter le support client ?",
-      answer: "Vous pouvez contacter notre équipe de support client par email à contact@bgsinvest.com, par téléphone au +33 1 23 45 67 89 du lundi au vendredi de 9h à 18h, ou via le formulaire de contact disponible sur notre site."
+      answer: "Vous pouvez contacter notre équipe de support client par email à contact@bgsbusiness.com, par téléphone au +33 1 23 45 67 89 du lundi au vendredi de 9h à 18h, ou via le formulaire de contact disponible sur notre site."
     },
     {
       question: "Quel est le délai de réponse habituel du support ?",
@@ -153,7 +153,7 @@ export default function FAQ() {
   return (
     <div className="min-h-screen flex flex-col">
       <Helmet>
-        <title>Foire Aux Questions | BGS Invest</title>
+        <title>Foire Aux Questions | BGS Business</title>
       </Helmet>
       
       <Navbar />

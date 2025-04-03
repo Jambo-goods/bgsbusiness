@@ -84,7 +84,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const emailResponse = await resend.emails.send({
-      from: "BGS Invest <notifications@bgsinvest.fr>",
+      from: "BGS Business <notifications@bgsbusiness.fr>",
       to: [adminEmail],
       subject: subject,
       html: `
@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${emailContent}
           <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
           <p style="color: #666; font-size: 12px;">
-            Ceci est une notification automatique du système BGS Invest.
+            Ceci est une notification automatique du système BGS Business.
           </p>
         </div>
       `,
