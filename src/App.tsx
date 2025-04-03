@@ -28,6 +28,9 @@ const NotificationManagement = lazy(() => import("./pages/admin/NotificationMana
 const ProjectUpdateNotifications = lazy(() => import("./pages/admin/ProjectUpdateNotifications"));
 const WithdrawalManagement = lazy(() => import("./pages/admin/WithdrawalManagement"));
 const BankTransferManagement = lazy(() => import("./pages/admin/BankTransferManagement"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const CookiePolicy = lazy(() => import("./pages/CookiePolicy"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -66,6 +69,11 @@ const App = () => (
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/dashboard/*" element={<Dashboard />} />
                 <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
+                
+                {/* Pages légales */}
+                <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
+                <Route path="/conditions-dutilisation" element={<TermsOfService />} />
+                <Route path="/politique-de-cookies" element={<CookiePolicy />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin/*" element={<AdminApp />} />

@@ -1,3 +1,4 @@
+
 import { Link } from "react-router-dom";
 import { 
   Facebook, 
@@ -122,11 +123,11 @@ export default function Footer() {
         <div className="pt-6 mt-6 border-t border-white/10 text-center text-sm text-white/60">
           <p>© {new Date().getFullYear()} BGS Invest. Tous droits réservés.</p>
           <p className="mt-2">
-            <a href="#" className="hover:text-white transition-colors">Politique de confidentialité</a>
+            <Link to="/politique-de-confidentialite" className="hover:text-white transition-colors">Politique de confidentialité</Link>
             {" · "}
-            <a href="#" className="hover:text-white transition-colors">Conditions d'utilisation</a>
+            <Link to="/conditions-dutilisation" className="hover:text-white transition-colors">Conditions d'utilisation</Link>
             {" · "}
-            <a href="#" className="hover:text-white transition-colors">Cookies</a>
+            <Link to="/politique-de-cookies" className="hover:text-white transition-colors">Cookies</Link>
           </p>
         </div>
       </div>
