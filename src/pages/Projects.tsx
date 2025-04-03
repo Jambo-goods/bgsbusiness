@@ -80,20 +80,7 @@ export default function Opportunite() {
                 </p>
               </div>
               
-              <div className="flex flex-wrap gap-3">
-                <button className="px-4 py-2 text-sm bg-bgs-orange text-white rounded-lg hover:bg-bgs-orange-light transition-colors">
-                  Tous les projets
-                </button>
-                <button className="px-4 py-2 text-sm bg-white border border-gray-200 text-bgs-blue rounded-lg hover:bg-bgs-gray-light transition-colors">
-                  Actifs
-                </button>
-                <button className="px-4 py-2 text-sm bg-white border border-gray-200 text-bgs-blue rounded-lg hover:bg-bgs-gray-light transition-colors">
-                  Nouveautés
-                </button>
-                <button className="px-4 py-2 text-sm bg-white border border-gray-200 text-bgs-blue rounded-lg hover:bg-bgs-gray-light transition-colors">
-                  Rendements élevés
-                </button>
-              </div>
+              {/* Removed the filter buttons */}
             </div>
           </div>
         </section>
