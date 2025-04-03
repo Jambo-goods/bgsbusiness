@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import Navbar from "@/components/layout/Navbar";
@@ -204,40 +205,38 @@ export default function HelpCenter() {
             </div>
           )}
           
-          {/* Options de contact */}
-          <div className="bg-gray-50 rounded-lg p-8 mb-12">
-            <h2 className="text-2xl font-semibold text-bgs-blue mb-6 text-center">Besoin d'une assistance personnalisée ?</h2>
+          {/* Options de contact - Removing container div */}
+          <h2 className="text-2xl font-semibold text-bgs-blue mb-6 text-center mt-12">Besoin d'une assistance personnalisée ?</h2>
+          
+          <div className="flex flex-col md:flex-row gap-6 mb-8">
+            <Card className="bg-white flex-1">
+              <CardContent className="p-6 text-center">
+                <Phone className="h-10 w-10 text-bgs-orange mx-auto mb-3" />
+                <h3 className="font-medium text-bgs-blue mb-2">Par téléphone</h3>
+                <p className="text-sm text-bgs-blue/80 mb-3">Disponible lun-ven, 9h-18h</p>
+                <a href="tel:+33123456789" className="text-bgs-orange font-medium">+33 1 23 45 67 89</a>
+              </CardContent>
+            </Card>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card className="bg-white">
-                <CardContent className="p-6 text-center">
-                  <Phone className="h-10 w-10 text-bgs-orange mx-auto mb-3" />
-                  <h3 className="font-medium text-bgs-blue mb-2">Par téléphone</h3>
-                  <p className="text-sm text-bgs-blue/80 mb-3">Disponible lun-ven, 9h-18h</p>
-                  <a href="tel:+33123456789" className="text-bgs-orange font-medium">+33 1 23 45 67 89</a>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-white">
-                <CardContent className="p-6 text-center">
-                  <Mail className="h-10 w-10 text-bgs-orange mx-auto mb-3" />
-                  <h3 className="font-medium text-bgs-blue mb-2">Par email</h3>
-                  <p className="text-sm text-bgs-blue/80 mb-3">Réponse sous 24-48h</p>
-                  <a href="mailto:support@bgsinvest.com" className="text-bgs-orange font-medium">support@bgsinvest.com</a>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-white">
-                <CardContent className="p-6 text-center">
-                  <MessageSquare className="h-10 w-10 text-bgs-orange mx-auto mb-3" />
-                  <h3 className="font-medium text-bgs-blue mb-2">Chat en direct</h3>
-                  <p className="text-sm text-bgs-blue/80 mb-3">Temps d'attente actuel: ~5 min</p>
-                  <Button variant="outline" className="text-bgs-orange border-bgs-orange hover:bg-bgs-orange/10">
-                    Démarrer un chat
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+            <Card className="bg-white flex-1">
+              <CardContent className="p-6 text-center">
+                <Mail className="h-10 w-10 text-bgs-orange mx-auto mb-3" />
+                <h3 className="font-medium text-bgs-blue mb-2">Par email</h3>
+                <p className="text-sm text-bgs-blue/80 mb-3">Réponse sous 24-48h</p>
+                <a href="mailto:support@bgsinvest.com" className="text-bgs-orange font-medium">support@bgsinvest.com</a>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white flex-1">
+              <CardContent className="p-6 text-center">
+                <MessageSquare className="h-10 w-10 text-bgs-orange mx-auto mb-3" />
+                <h3 className="font-medium text-bgs-blue mb-2">Chat en direct</h3>
+                <p className="text-sm text-bgs-blue/80 mb-3">Temps d'attente actuel: ~5 min</p>
+                <Button variant="outline" className="text-bgs-orange border-bgs-orange hover:bg-bgs-orange/10">
+                  Démarrer un chat
+                </Button>
+              </CardContent>
+            </Card>
           </div>
           
           {/* Formulaire de contact */}
