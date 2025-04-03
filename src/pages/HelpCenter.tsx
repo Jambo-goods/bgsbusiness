@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import Navbar from "@/components/layout/Navbar";
@@ -169,43 +168,41 @@ export default function HelpCenter() {
           </div>
           
           {/* Catégories d'aide */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-            {filteredCategories.length > 0 ? (
-              filteredCategories.map((category, index) => (
-                <Card key={index} className="hover:shadow-md transition-shadow">
-                  <CardHeader className="flex flex-row items-center gap-4 pb-2">
-                    {category.icon}
-                    <CardTitle className="text-lg font-semibold text-bgs-blue">{category.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-bgs-blue/80 text-sm mb-4">{category.description}</p>
-                    <ul className="space-y-2">
-                      {category.articles.map((article, artIndex) => (
-                        <li key={artIndex} className="text-sm">
-                          <a href="#" className="flex items-center text-bgs-blue/90 hover:text-bgs-orange">
-                            <FileText className="h-3.5 w-3.5 mr-2" />
-                            {article}
-                          </a>
-                        </li>
-                      )).slice(0, 4)}
-                    </ul>
-                    {category.articles.length > 4 && (
-                      <a href="#" className="text-xs flex items-center text-bgs-orange mt-2">
-                        Voir tous les articles
-                        <ExternalLink className="h-3 w-3 ml-1" />
-                      </a>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
-            ) : (
-              <div className="col-span-3 text-center py-12">
-                <HelpCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 mb-2">Aucun résultat trouvé pour "{searchTerm}"</p>
-                <p className="text-sm text-gray-400">Essayez un autre terme ou contactez directement notre support</p>
-              </div>
-            )}
-          </div>
+          {filteredCategories.length > 0 ? (
+            filteredCategories.map((category, index) => (
+              <Card key={index} className="hover:shadow-md transition-shadow mb-4">
+                <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                  {category.icon}
+                  <CardTitle className="text-lg font-semibold text-bgs-blue">{category.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-bgs-blue/80 text-sm mb-4">{category.description}</p>
+                  <ul className="space-y-2">
+                    {category.articles.map((article, artIndex) => (
+                      <li key={artIndex} className="text-sm">
+                        <a href="#" className="flex items-center text-bgs-blue/90 hover:text-bgs-orange">
+                          <FileText className="h-3.5 w-3.5 mr-2" />
+                          {article}
+                        </a>
+                      </li>
+                    )).slice(0, 4)}
+                  </ul>
+                  {category.articles.length > 4 && (
+                    <a href="#" className="text-xs flex items-center text-bgs-orange mt-2">
+                      Voir tous les articles
+                      <ExternalLink className="h-3 w-3 ml-1" />
+                    </a>
+                  )}
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="text-center py-12">
+              <HelpCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 mb-2">Aucun résultat trouvé pour "{searchTerm}"</p>
+              <p className="text-sm text-gray-400">Essayez un autre terme ou contactez directement notre support</p>
+            </div>
+          )}
           
           {/* Options de contact */}
           <div className="bg-gray-50 rounded-lg p-8 mb-12">
