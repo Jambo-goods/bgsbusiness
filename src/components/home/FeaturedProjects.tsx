@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CircleCheck, Star } from "lucide-react";
@@ -130,7 +129,7 @@ export default function FeaturedProjects() {
                   <div>
                     <p className="text-xs text-bgs-blue/60">Investissement minimum</p>
                     <p className="text-base font-semibold text-bgs-blue">
-                      {formatCurrency(project.minInvestment)}
+                      {formatCurrency(project.min_investment)}
                     </p>
                   </div>
                   <div>
