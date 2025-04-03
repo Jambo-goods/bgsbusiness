@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { 
   Facebook, 
@@ -84,16 +83,16 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4 text-white/90">Ressources</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <a href="#" className="text-white/70 hover:text-white transition-colors">FAQ</a>
+                <Link to="/faq" className="text-white/70 hover:text-white transition-colors">FAQ</Link>
               </li>
               <li>
-                <a href="#" className="text-white/70 hover:text-white transition-colors">Centre d'aide</a>
+                <Link to="/centre-daide" className="text-white/70 hover:text-white transition-colors">Centre d'aide</Link>
               </li>
               <li>
                 <a href="#" className="text-white/70 hover:text-white transition-colors">Blog</a>
               </li>
               <li>
-                <a href="#" className="text-white/70 hover:text-white transition-colors">Mentions légales</a>
+                <Link to="/mentions-legales" className="text-white/70 hover:text-white transition-colors">Mentions légales</Link>
               </li>
             </ul>
           </div>
@@ -128,6 +127,8 @@ export default function Footer() {
             <Link to="/conditions-dutilisation" className="hover:text-white transition-colors">Conditions d'utilisation</Link>
             {" · "}
             <Link to="/politique-de-cookies" className="hover:text-white transition-colors">Cookies</Link>
+            {" · "}
+            <Link to="/mentions-legales" className="hover:text-white transition-colors">Mentions légales</Link>
           </p>
         </div>
       </div>

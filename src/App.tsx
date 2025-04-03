@@ -31,6 +31,9 @@ const BankTransferManagement = lazy(() => import("./pages/admin/BankTransferMana
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const CookiePolicy = lazy(() => import("./pages/CookiePolicy"));
+const LegalNotice = lazy(() => import("./pages/LegalNotice"));
+const FAQ = lazy(() => import("./pages/FAQ"));
+const HelpCenter = lazy(() => import("./pages/HelpCenter"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -74,6 +77,9 @@ const App = () => (
                 <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
                 <Route path="/conditions-dutilisation" element={<TermsOfService />} />
                 <Route path="/politique-de-cookies" element={<CookiePolicy />} />
+                <Route path="/mentions-legales" element={<LegalNotice />} />
+                <Route path="/faq" element={<FAQ />} />
+                <Route path="/centre-daide" element={<HelpCenter />} />
                 
                 {/* Admin Routes */}
                 <Route path="/admin/*" element={<AdminApp />} />
