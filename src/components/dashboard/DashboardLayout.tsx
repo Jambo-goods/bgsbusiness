@@ -8,6 +8,7 @@ import DashboardMain from "@/components/dashboard/DashboardMain";
 import MobileSidebarToggle from "@/components/dashboard/MobileSidebarToggle";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardLayoutProps {
   userData: any;
@@ -25,8 +26,9 @@ export default function DashboardLayout({
   refreshData
 }: DashboardLayoutProps) {
   const [activeTab, setActiveTab] = useState("overview");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -42,14 +44,14 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-bgs-gray-light flex flex-col">
       <Navbar />
       
-      <div className="flex flex-1 pt-20">
+      <div className="flex flex-1 pt-16">
         {/* Mobile sidebar toggle */}
         <MobileSidebarToggle 
           isSidebarOpen={isSidebarOpen} 
           toggleSidebar={toggleSidebar} 
         />
         
-        {/* Real-time status indicator - Always visible now */}
+        {/* Real-time status indicator - Mobile optimized */}
         <div className="fixed bottom-4 right-4 flex items-center bg-white p-2 rounded-lg shadow-md z-50">
           <div className={`h-2 w-2 rounded-full mr-2 animate-pulse ${
             realTimeStatus === 'connected' ? 'bg-green-500' : 

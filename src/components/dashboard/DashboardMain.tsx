@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import DashboardHeader from "./DashboardHeader";
 import TabContent from "./TabContent";
 import { Project } from "@/types/project";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardMainProps {
   isSidebarOpen: boolean;
@@ -31,6 +32,8 @@ export default function DashboardMain({
   setActiveTab,
   refreshData
 }: DashboardMainProps) {
+  const isMobile = useIsMobile();
+
   // Memoized main content to prevent unnecessary re-renders
   const dashboardContent = useMemo(() => (
     <TabContent 
@@ -45,9 +48,9 @@ export default function DashboardMain({
   return (
     <div 
       className={cn(
-        "flex-1 py-4 w-full transition-all duration-300",
+        "flex-1 py-4 px-4 md:px-6 w-full transition-all duration-300",
         "animate-fade-in",
-        isSidebarOpen ? "md:ml-0" : "md:ml-0"
+        isSidebarOpen && isMobile ? "opacity-50 pointer-events-none" : "opacity-100"
       )}
     >
       <div className="max-w-7xl mx-auto space-y-6">
@@ -63,7 +66,7 @@ export default function DashboardMain({
             "bg-white rounded-xl shadow-md overflow-hidden",
             "md:col-span-1"
           )}>
-            <div className="p-5 animate-fade-in">
+            <div className="p-4 md:p-5 animate-fade-in">
               {dashboardContent}
             </div>
           </div>

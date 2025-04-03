@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import SidebarNavItem from "./SidebarNavItem";
 import SidebarSection from "./SidebarSection";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface SidebarProps {
   activeTab: string;
@@ -30,6 +31,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   handleLogout,
   toggleSidebar
 }) => {
+  const isMobile = useIsMobile();
+  
+  const handleItemClick = (tab: string) => {
+    setActiveTab(tab);
+    if (isMobile) {
+      toggleSidebar();
+    }
+  };
+  
   return (
     <div className="h-full flex flex-col justify-between py-2 overflow-y-auto">
       {/* Main Navigation */}
@@ -39,7 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             icon={<Home size={18} />}
             label="Vue d'ensemble"
             isActive={activeTab === "overview"}
-            onClick={() => setActiveTab("overview")}
+            onClick={() => handleItemClick("overview")}
             isOpen={isSidebarOpen}
           />
           
@@ -47,7 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             icon={<Wallet size={18} />}
             label="Portefeuille"
             isActive={activeTab === "wallet"}
-            onClick={() => setActiveTab("wallet")}
+            onClick={() => handleItemClick("wallet")}
             isOpen={isSidebarOpen}
           />
           
@@ -55,7 +65,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             icon={<LineChart size={18} />}
             label="Rendements"
             isActive={activeTab === "yield"}
-            onClick={() => setActiveTab("yield")}
+            onClick={() => handleItemClick("yield")}
             isOpen={isSidebarOpen}
           />
         
@@ -64,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             icon={<BarChart3 size={18} />}
             label="Mes investissements"
             isActive={activeTab === "investments"}
-            onClick={() => setActiveTab("investments")}
+            onClick={() => handleItemClick("investments")}
             isOpen={isSidebarOpen}
           />
           
@@ -72,7 +82,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             icon={<Briefcase size={18} />}
             label="Projets"
             isActive={activeTab === "projects"}
-            onClick={() => setActiveTab("projects")}
+            onClick={() => handleItemClick("projects")}
             isOpen={isSidebarOpen}
             badge="Nouveau"
             badgeColor="bg-green-500"
@@ -83,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             icon={<User size={18} />}
             label="Mon Profil"
             isActive={activeTab === "profile"}
-            onClick={() => setActiveTab("profile")}
+            onClick={() => handleItemClick("profile")}
             isOpen={isSidebarOpen}
           />
           
@@ -91,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             icon={<Bell size={18} />}
             label="Notifications"
             isActive={activeTab === "notifications"}
-            onClick={() => setActiveTab("notifications")}
+            onClick={() => handleItemClick("notifications")}
             isOpen={isSidebarOpen}
           />
           
@@ -99,7 +109,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             icon={<Settings size={18} />}
             label="Paramètres"
             isActive={activeTab === "settings"}
-            onClick={() => setActiveTab("settings")}
+            onClick={() => handleItemClick("settings")}
             isOpen={isSidebarOpen}
           />
         </SidebarSection>
@@ -117,15 +127,17 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
       
       {/* Mobile Sidebar Toggle */}
-      <div className="md:hidden px-2 pt-2 border-t border-gray-100">
-        <button
-          onClick={toggleSidebar}
-          className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-bgs-blue hover:bg-bgs-blue/5 rounded-md transition-colors"
-        >
-          <span>Fermer le menu</span>
-          <ChevronRight size={14} />
-        </button>
-      </div>
+      {isMobile && (
+        <div className="px-2 pt-2 border-t border-gray-100">
+          <button
+            onClick={toggleSidebar}
+            className="w-full flex items-center justify-between px-2 py-1.5 text-xs font-medium text-gray-600 hover:text-bgs-blue hover:bg-bgs-blue/5 rounded-md transition-colors"
+          >
+            <span>Fermer le menu</span>
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

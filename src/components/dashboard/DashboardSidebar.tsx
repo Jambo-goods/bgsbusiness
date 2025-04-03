@@ -2,6 +2,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 import Sidebar from "./Sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardSidebarProps {
   activeTab: string;
@@ -18,10 +19,12 @@ export default function DashboardSidebar({
   toggleSidebar,
   handleLogout
 }: DashboardSidebarProps) {
+  const isMobile = useIsMobile();
+  
   return (
     <>
       {/* Mobile overlay when sidebar is open */}
-      {isSidebarOpen && (
+      {isSidebarOpen && isMobile && (
         <div 
           className="fixed inset-0 bg-black/30 backdrop-blur-sm z-30 md:hidden"
           onClick={toggleSidebar}
@@ -33,8 +36,8 @@ export default function DashboardSidebar({
         className={cn(
           "bg-white shadow-lg fixed md:sticky top-16 md:top-16 z-40 h-[calc(100vh-4rem)] transition-all duration-300 overflow-hidden",
           isSidebarOpen 
-            ? "w-64 translate-x-0" 
-            : "w-16 md:w-16 -translate-x-0 md:translate-x-0",
+            ? "w-72 translate-x-0" 
+            : "w-0 -translate-x-full md:w-16 md:translate-x-0",
           "border-r border-gray-100"
         )}
       >

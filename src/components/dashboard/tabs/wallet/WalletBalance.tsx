@@ -4,6 +4,7 @@ import { WalletCards } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface WalletBalanceProps {
   balance: number;
@@ -18,6 +19,7 @@ export default function WalletBalance({
   onTabChange,
   refreshBalance
 }: WalletBalanceProps) {
+  const isMobile = useIsMobile();
   // Use ref to track if we've already refreshed to prevent multiple refreshes
   const refreshInProgress = useRef(false);
   const lastRefreshTime = useRef(Date.now());
@@ -157,7 +159,7 @@ export default function WalletBalance({
   }, [refreshBalance]);
   
   return (
-    <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100 mb-6 hover:shadow-lg transition-all duration-300">
+    <div className="bg-white p-4 md:p-6 rounded-xl shadow-md border border-gray-100 mb-6 hover:shadow-lg transition-all duration-300">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <div className="bg-blue-50 p-2 rounded-lg">
@@ -171,7 +173,7 @@ export default function WalletBalance({
         {isLoading ? (
           <Skeleton className="h-9 w-32 bg-gray-200" />
         ) : (
-          <div className="flex items-center text-3xl font-bold text-bgs-blue">
+          <div className="flex items-center text-2xl md:text-3xl font-bold text-bgs-blue">
             {balance.toLocaleString('fr-FR')} €
           </div>
         )}
@@ -181,11 +183,11 @@ export default function WalletBalance({
         <p className="text-sm text-bgs-gray-medium mb-4">
           Votre solde disponible peut être utilisé pour investir dans de nouveaux projets ou être retiré sur votre compte bancaire.
         </p>
-        <div className="flex justify-between items-center">
-          <button className="text-bgs-blue hover:text-bgs-blue-light text-sm font-medium transition-colors" onClick={() => onTabChange && onTabChange('deposit')}>
+        <div className={`flex ${isMobile ? 'flex-col space-y-2' : 'justify-between items-center'}`}>
+          <button className="w-full md:w-auto text-center md:text-left bg-bgs-blue text-white py-2 px-4 rounded-lg hover:bg-bgs-blue-light md:bg-transparent md:text-bgs-blue md:p-0 md:hover:bg-transparent transition-colors" onClick={() => onTabChange && onTabChange('deposit')}>
             Ajouter des fonds
           </button>
-          <button className="text-bgs-orange hover:text-bgs-orange-light text-sm font-medium transition-colors" onClick={() => onTabChange && onTabChange('withdraw')}>
+          <button className="w-full md:w-auto text-center md:text-left bg-bgs-orange text-white py-2 px-4 rounded-lg hover:bg-bgs-orange-light md:bg-transparent md:text-bgs-orange md:p-0 md:hover:bg-transparent transition-colors" onClick={() => onTabChange && onTabChange('withdraw')}>
             Effectuer un retrait
           </button>
         </div>
