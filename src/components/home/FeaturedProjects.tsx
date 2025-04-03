@@ -1,6 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, CircleCheck, Star } from "lucide-react";
+import { ArrowRight, CircleCheck, Star, MapPin } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
@@ -86,52 +87,67 @@ export default function FeaturedProjects() {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {featuredProjects.slice(0, visibleProjects).map((project) => (
-            <Link to={`/project/${project.id}`} key={project.id} className="glass-card overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-1">
+            <Link to={`/project/${project.id}`} key={project.id} className="group rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 bg-white border border-gray-100 hover:-translate-y-1">
               <div className="relative">
                 <img 
                   src={project.image} 
                   alt={project.name}
-                  className="w-full h-48 object-cover"
+                  className="w-full h-52 object-cover transition-transform group-hover:scale-105 duration-500"
                 />
-                <div className="absolute top-3 right-3 bg-bgs-orange text-white text-xs font-medium px-2 py-1 rounded-full flex items-center">
+                <div className="absolute top-3 right-3 bg-bgs-orange text-white text-xs font-medium px-3 py-1 rounded-full flex items-center">
                   <Star size={12} className="mr-1" />
                   Populaire
                 </div>
+                
+                {project.location && (
+                  <div className="absolute bottom-3 left-3 bg-white/90 backdrop-blur-sm text-bgs-blue text-xs font-medium px-3 py-1 rounded-full flex items-center">
+                    <MapPin size={12} className="mr-1" />
+                    {project.location}
+                  </div>
+                )}
               </div>
               
               <div className="p-5">
-                <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-bgs-orange/10 text-bgs-orange mb-2">
-                  {project.category}
-                </span>
-                <h3 className="text-lg font-semibold text-bgs-blue mb-1">
-                  {project.name}
-                </h3>
-                <p className="text-sm text-bgs-blue/70 mb-2">
-                  {project.location}
-                </p>
-                <p className="text-sm text-bgs-blue/80 mb-4 line-clamp-2">
-                  {project.description}
-                </p>
-                
-                <div className="mb-4">
-                  <Progress value={project.fundingProgress} className="h-1.5" />
+                <div className="space-y-3 mb-4">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-block px-2 py-1 text-xs font-medium rounded-full bg-bgs-orange/10 text-bgs-orange">
+                      {project.category}
+                    </span>
+                    <div className="text-xs text-green-600 font-medium flex items-center bg-green-50 px-2 py-1 rounded-full">
+                      <CircleCheck size={12} className="mr-1" />
+                      {project.yield}% mensuel
+                    </div>
+                  </div>
+                  
+                  <h3 className="text-lg font-bold text-bgs-blue group-hover:text-bgs-orange transition-colors">
+                    {project.name}
+                  </h3>
+                  
+                  <p className="text-sm text-bgs-blue/70 line-clamp-2">
+                    {project.description}
+                  </p>
                 </div>
                 
-                <div className="flex items-center justify-between">
+                <div className="mb-4">
+                  <Progress value={project.fundingProgress} className="h-1.5 bg-gray-100" />
+                  <div className="flex justify-between mt-1.5 text-xs text-bgs-gray-medium">
+                    <span>{project.fundingProgress}% financé</span>
+                    <span>{project.daysLeft || "30"} jours restants</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div>
-                    <p className="text-xs text-bgs-blue/60">Investissement minimum</p>
-                    <p className="text-base font-semibold text-bgs-blue">
+                    <p className="text-xs text-bgs-blue/60">Investissement min.</p>
+                    <p className="text-base font-bold text-bgs-blue">
                       {formatCurrency(project.min_investment)}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-xs text-bgs-blue/60">Rendement</p>
-                    <p className="text-base font-semibold text-green-500 flex items-center">
-                      <CircleCheck size={14} className="text-green-500 mr-1" />
-                      {project.yield}% mensuel
-                    </p>
+                  <div className="flex items-center text-bgs-orange font-medium group-hover:translate-x-1 transition-transform">
+                    <span className="mr-1">Voir détails</span>
+                    <ArrowRight size={16} />
                   </div>
                 </div>
               </div>
