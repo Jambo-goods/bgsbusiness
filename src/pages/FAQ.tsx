@@ -92,6 +92,20 @@ const faqItems = {
       question: "Mes investissements sont-ils garantis ?",
       answer: "Non, comme pour tout investissement, il n'y a pas de garantie absolue. Cependant, nous investissons dans des actifs physiques qui conservent une valeur intrinsèque et travaillons avec des partenaires fiables pour minimiser les risques."
     }
+  ],
+  contact: [
+    {
+      question: "Comment contacter le support client ?",
+      answer: "Vous pouvez contacter notre équipe de support client par email à contact@bgsinvest.com, par téléphone au +33 1 23 45 67 89 du lundi au vendredi de 9h à 18h, ou via le formulaire de contact disponible sur notre site."
+    },
+    {
+      question: "Quel est le délai de réponse habituel du support ?",
+      answer: "Nous nous efforçons de répondre à toutes les demandes dans un délai de 24 à 48 heures ouvrables. Pour les questions urgentes, nous vous recommandons de nous contacter par téléphone."
+    },
+    {
+      question: "Puis-je prendre rendez-vous pour discuter de mes investissements ?",
+      answer: "Oui, nos conseillers en investissement sont disponibles pour des rendez-vous personnalisés. Vous pouvez prendre rendez-vous via votre espace client ou en contactant directement notre service client."
+    }
   ]
 };
 
@@ -114,14 +128,26 @@ export default function FAQ() {
       );
       setFilteredFAQs(results);
     } else {
-      // Afficher les FAQs de la catégorie sélectionnée
-      setFilteredFAQs(faqItems[activeTab as keyof typeof faqItems]);
+      // Afficher les FAQs de la catégorie sélectionnée ou rediriger vers le centre d'aide si c'est "contact"
+      if (activeTab === "contact") {
+        // Pour éviter l'erreur, on définit un tableau vide pour contact quand il est sélectionné via le tab
+        // mais avant la redirection
+        setFilteredFAQs(faqItems[activeTab as keyof typeof faqItems] || []);
+      } else {
+        setFilteredFAQs(faqItems[activeTab as keyof typeof faqItems] || []);
+      }
     }
   }, [searchTerm, activeTab]);
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    setSearchTerm("");
+    if (value === "contact") {
+      // Si l'onglet "Contact" est sélectionné, nous ne changeons pas l'activeTab 
+      // mais nous redirigeons l'utilisateur
+      window.location.href = '/centre-daide';
+    } else {
+      setActiveTab(value);
+      setSearchTerm("");
+    }
   };
 
   return (
@@ -157,7 +183,7 @@ export default function FAQ() {
             <TabsTrigger value="account">Compte</TabsTrigger>
             <TabsTrigger value="payments">Paiements</TabsTrigger>
             <TabsTrigger value="risks">Risques</TabsTrigger>
-            <TabsTrigger value="contact" onClick={() => window.location.href = '/centre-daide'}>Contact</TabsTrigger>
+            <TabsTrigger value="contact">Contact</TabsTrigger>
           </TabsList>
 
           {/* Contenu des FAQs */}
@@ -169,7 +195,7 @@ export default function FAQ() {
               </div>
             ) : (
               <Accordion type="single" collapsible className="w-full">
-                {filteredFAQs.map((item, index) => (
+                {Array.isArray(filteredFAQs) && filteredFAQs.map((item, index) => (
                   <AccordionItem key={index} value={`item-${index}`}>
                     <AccordionTrigger className="text-left text-bgs-blue font-medium">
                       {item.question}
