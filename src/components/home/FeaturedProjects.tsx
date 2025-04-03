@@ -116,12 +116,6 @@ export default function FeaturedProjects() {
                 </p>
                 
                 <div className="mb-4">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs text-bgs-blue/70">Progression</span>
-                    <span className="text-xs font-medium text-bgs-blue">
-                      {project.fundingProgress}%
-                    </span>
-                  </div>
                   <Progress value={project.fundingProgress} className="h-1.5" />
                 </div>
                 
