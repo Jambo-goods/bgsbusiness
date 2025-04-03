@@ -1,11 +1,11 @@
 
-import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
-import { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import React, { ReactNode } from 'react';
+import { ArrowUpIcon, ArrowDownIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface DashboardCardProps {
   title: string;
-  value: string | number | ReactNode;
+  value: React.ReactNode;
   icon: ReactNode;
   iconBgColor: string;
   iconColor: string;
@@ -13,7 +13,8 @@ interface DashboardCardProps {
   changeValue?: string;
   changeTimeframe?: string;
   description?: string;
-  footer?: ReactNode;
+  valueClassName?: string;
+  onClick?: () => void;
 }
 
 export default function DashboardCard({
@@ -26,51 +27,64 @@ export default function DashboardCard({
   changeValue,
   changeTimeframe,
   description,
-  footer
+  valueClassName,
+  onClick
 }: DashboardCardProps) {
-  // Determine if change is positive based on the actual data
-  const isPositive = changePercentage ? changePercentage.startsWith('+') || changeValue && changeValue.startsWith('↑') : false;
+  const isPositiveChange = changePercentage && changePercentage.startsWith('+');
+  const isNegativeChange = changePercentage && changePercentage.startsWith('-');
+  const isNeutralChange = !isPositiveChange && !isNegativeChange;
   
-  // Don't show the change information if it's "0%", "0", or not provided
-  const showChange = changePercentage && 
-                    changePercentage !== "0%" && 
-                    changePercentage !== "0" &&
-                    changeValue !== "0" &&
-                    changeValue !== "0€";
+  const cardClasses = cn(
+    "bg-white rounded-lg border border-gray-100 p-4 shadow-sm transition-transform duration-200",
+    onClick && "cursor-pointer hover:shadow-md hover:-translate-y-1"
+  );
   
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 transition-all duration-200 hover:shadow-md hover:translate-y-[-2px]">
-      <div className="flex items-center justify-between mb-4">
-        <div className={cn("p-3 rounded-lg", iconBgColor)}>
-          <div className={cn("h-5 w-5", iconColor)}>{icon}</div>
+    <div className={cardClasses} onClick={onClick}>
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-sm text-bgs-gray-medium font-medium mb-1">
+            {title}
+          </h3>
+          <div className={cn("text-xl font-semibold", valueClassName)}>
+            {value}
+          </div>
+          
+          {(changePercentage || changeValue) && (
+            <div className="flex items-center mt-2 text-xs">
+              <span 
+                className={cn(
+                  "flex items-center font-medium",
+                  isPositiveChange && "text-green-600",
+                  isNegativeChange && "text-red-600",
+                  isNeutralChange && "text-yellow-600"
+                )}
+              >
+                {isPositiveChange && <ArrowUpIcon className="h-3 w-3 mr-1" />}
+                {isNegativeChange && <ArrowDownIcon className="h-3 w-3 mr-1" />}
+                {changePercentage}
+                
+                {changeValue && <span className="ml-0.5">({changeValue})</span>}
+              </span>
+              
+              {changeTimeframe && (
+                <span className="text-bgs-gray-medium ml-1.5">
+                  {changeTimeframe}
+                </span>
+              )}
+            </div>
+          )}
         </div>
-        {showChange && (
-          <span className={cn(
-            "text-xs px-2.5 py-1 rounded-full font-medium flex items-center",
-            isPositive ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
-          )}>
-            {isPositive ? (
-              <ArrowUpIcon className="h-3 w-3 mr-1" />
-            ) : (
-              <ArrowDownIcon className="h-3 w-3 mr-1" />
-            )}
-            {changePercentage}
-          </span>
-        )}
+        
+        <div className={cn("p-2 rounded-lg", iconBgColor)}>
+          <div className={cn("w-8 h-8 flex items-center justify-center", iconColor)}>
+            {icon}
+          </div>
+        </div>
       </div>
-      <h3 className="text-sm font-medium text-bgs-gray-medium mb-2">
-        {title}
-      </h3>
-      <div className="text-2xl font-bold text-bgs-blue mb-1">
-        {value}
-      </div>
+      
       {description && (
-        <p className="text-xs text-bgs-gray-medium mt-2">{description}</p>
-      )}
-      {footer && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          {footer}
-        </div>
+        <p className="text-xs text-bgs-gray-medium mt-2"></p>
       )}
     </div>
   );
