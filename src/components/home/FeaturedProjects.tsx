@@ -6,6 +6,7 @@ import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { useToast } from "@/hooks/use-toast";
 import { formatCurrency } from "@/utils/currencyUtils";
+
 export default function FeaturedProjects() {
   const [visibleProjects, setVisibleProjects] = useState(3);
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
@@ -13,6 +14,7 @@ export default function FeaturedProjects() {
   const {
     toast
   } = useToast();
+
   useEffect(() => {
     const loadFeaturedProjects = async () => {
       try {
@@ -34,6 +36,7 @@ export default function FeaturedProjects() {
     };
     loadFeaturedProjects();
   }, [toast]);
+
   if (isLoading) {
     return <section className="py-16 bg-gradient-to-b from-white to-bgs-gray-light">
         <div className="container px-4 md:px-6 mx-auto">
@@ -51,6 +54,7 @@ export default function FeaturedProjects() {
         </div>
       </section>;
   }
+
   if (featuredProjects.length === 0) {
     return <section className="py-16 bg-gradient-to-b from-white to-bgs-gray-light">
         <div className="container px-4 md:px-6 mx-auto">
@@ -65,6 +69,7 @@ export default function FeaturedProjects() {
         </div>
       </section>;
   }
+
   return <section className="py-16 bg-gradient-to-b from-white to-bgs-gray-light">
       <div className="container px-4 md:px-6 mx-auto">
         <div className="text-center mb-12">
