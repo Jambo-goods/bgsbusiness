@@ -171,14 +171,12 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
             <p className="text-xs text-bgs-blue/70 mb-1">
               <TooltipProvider>
                 <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1">
-                      <span>Total des revenus</span>
-                      <Info size={16} className="text-purple-600" />
-                    </div>
+                  <TooltipTrigger className="flex items-center gap-1">
+                    <span>Total des revenus</span>
+                    <Info size={16} className="text-purple-600" />
                   </TooltipTrigger>
                   <TooltipContent className="bg-white p-2 border border-gray-200 shadow-md text-xs">
-                    <p>Uniquement les revenus générés sur la période</p>
+                    Uniquement les revenus générés sur la période
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
