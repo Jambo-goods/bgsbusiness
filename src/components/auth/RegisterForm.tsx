@@ -12,6 +12,7 @@ import NameFields from "./NameFields";
 import PasswordFields from "./PasswordFields";
 import TermsCheckbox from "./TermsCheckbox";
 import { registerUser } from "@/services/authService";
+import { Form } from "@/components/ui/form";
 
 // Form schema with validations
 const registerFormSchema = z
@@ -82,23 +83,25 @@ export default function RegisterForm() {
   };
 
   return (
-    <form
-      className="space-y-6"
-      onSubmit={form.handleSubmit(handleSubmit)}
-      noValidate
-    >
-      <NameFields form={form} />
-      <EmailField form={form} />
-      <PasswordFields form={form} />
-      <TermsCheckbox form={form} />
-      
-      <Button
-        type="submit"
-        className="w-full bg-bgs-orange hover:bg-bgs-orange-dark text-white"
-        disabled={isSubmitting}
+    <Form {...form}>
+      <form
+        className="space-y-6"
+        onSubmit={form.handleSubmit(handleSubmit)}
+        noValidate
       >
-        {isSubmitting ? "Création du compte..." : "Créer un compte"}
-      </Button>
-    </form>
+        <NameFields />
+        <EmailField />
+        <PasswordFields />
+        <TermsCheckbox />
+        
+        <Button
+          type="submit"
+          className="w-full bg-bgs-orange hover:bg-bgs-orange-dark text-white"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Création du compte..." : "Créer un compte"}
+        </Button>
+      </form>
+    </Form>
   );
 }
