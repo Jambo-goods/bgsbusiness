@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -10,7 +9,6 @@ export type UserCredentials = {
 export type UserRegistrationData = UserCredentials & {
   firstName: string;
   lastName: string;
-  referralCode?: string;
 };
 
 export const registerUser = async (userData: UserRegistrationData) => {
@@ -18,12 +16,8 @@ export const registerUser = async (userData: UserRegistrationData) => {
     console.log("Tentative d'inscription avec:", { 
       firstName: userData.firstName, 
       lastName: userData.lastName, 
-      email: userData.email, 
-      referralCode: userData.referralCode 
+      email: userData.email
     });
-    
-    // Clean the referral code if provided
-    const cleanReferralCode = userData.referralCode ? userData.referralCode.trim() : null;
     
     // Vérifier d'abord si l'utilisateur existe déjà
     const { data: existingUser } = await supabase
@@ -47,7 +41,6 @@ export const registerUser = async (userData: UserRegistrationData) => {
         data: {
           first_name: userData.firstName,
           last_name: userData.lastName,
-          referral_code_used: cleanReferralCode,
         },
       },
     });
