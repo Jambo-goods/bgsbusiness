@@ -12,6 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Progress } from "@/components/ui/progress";
 
 interface ProjectInvestmentSimulatorProps {
   project: Project;
@@ -88,6 +89,9 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   
   const annualYieldPercentage = project.yield * 12;
   
+  // Calculate progress percentage
+  const progressPercentage = Math.min(100, Math.max(0, (investmentAmount - minInvestment) / (maxInvestment - minInvestment) * 100));
+  
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-fade-up">
       <h2 className="text-lg font-semibold text-bgs-blue mb-4 flex items-center">
@@ -111,6 +115,11 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
         <div className="flex justify-between text-xs text-bgs-blue/60">
           <span>Min: {formatCurrency(minInvestment)}</span>
           <span>Max: {formatCurrency(maxInvestment)}</span>
+        </div>
+        
+        {/* Add a progress bar to show investment amount visually */}
+        <div className="mt-2">
+          <Progress value={progressPercentage} className="h-1" />
         </div>
       </div>
       
@@ -155,16 +164,16 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-bgs-blue/70 mb-1">Rendement mensuel</p>
-            <div className="flex items-center text-green-600 font-bold">
+            <div className="flex items-center text-green-600 font-bold text-xl">
               <TrendingUp className="h-4 w-4 mr-1" />
-              {project.yield}% par mois
+              {project.yield}% <span className="text-sm font-medium ml-1">par mois</span>
             </div>
           </div>
           <div>
             <p className="text-xs text-bgs-blue/70 mb-1">Rendement annuel</p>
-            <div className="flex items-center text-green-600 font-bold">
+            <div className="flex items-center text-green-600 font-bold text-xl">
               <TrendingUp className="h-4 w-4 mr-1" />
-              {annualYieldPercentage}% par an
+              {annualYieldPercentage}% <span className="text-sm font-medium ml-1">par an</span>
             </div>
           </div>
           <div>
