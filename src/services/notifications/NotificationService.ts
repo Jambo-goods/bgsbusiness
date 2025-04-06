@@ -22,7 +22,7 @@ export class NotificationServiceImpl {
         throw error;
       }
 
-      return (data || []).map((dbNotification: DatabaseNotification) => ({
+      return (data || []).map((dbNotification: any) => ({
         id: dbNotification.id,
         title: dbNotification.title,
         description: dbNotification.message,

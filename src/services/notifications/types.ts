@@ -16,6 +16,7 @@ export interface NotificationData {
   [key: string]: any;
 }
 
+// This will match what comes from the database
 export interface DatabaseNotification {
   id: string;
   user_id: string;
@@ -24,7 +25,7 @@ export interface DatabaseNotification {
   created_at: string;
   seen: boolean;
   type: string;
-  data?: NotificationData;
+  data?: Record<string, any> | null;
 }
 
 export interface NotificationCreateParams {
