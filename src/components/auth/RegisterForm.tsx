@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -11,8 +12,10 @@ import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import NameFields from "./NameFields";
 import TermsCheckbox from "./TermsCheckbox";
+import { Form } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
+import { ArrowRight, Gift } from "lucide-react";
 
 // Schema for form validation
 const registerSchema = z.object({
@@ -94,40 +97,47 @@ export default function RegisterForm() {
   };
 
   return (
-    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-      <NameFields form={form} />
-      
-      <EmailField form={form} />
-      
-      <PasswordFields form={form} />
-      
-      <div className="space-y-1">
-        <label htmlFor="referralCode" className="text-sm font-medium text-bgs-blue">
-          Code de parrainage (optionnel)
-        </label>
-        <Input
-          id="referralCode"
-          {...form.register("referralCode")}
-          placeholder={referralFromLink ? "Code automatiquement appliqué" : "Entrez un code de parrainage si vous en avez un"}
-          className={referralFromLink ? "bg-gray-50 border-green-200" : ""}
-          readOnly={!!referralFromLink}
-        />
-        {referralFromLink && (
-          <p className="text-xs text-green-600">
-            Un code de parrainage a été appliqué depuis votre lien. Vous recevrez 25€ à l'inscription.
-          </p>
-        )}
-      </div>
-      
-      <TermsCheckbox form={form} />
-      
-      <Button 
-        type="submit" 
-        className="w-full bg-bgs-blue hover:bg-bgs-blue-light text-white"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? "Inscription en cours..." : "S'inscrire"}
-      </Button>
-    </form>
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white/50 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-bgs-blue/5">
+        <NameFields />
+        
+        <EmailField />
+        
+        <PasswordFields />
+        
+        <div className="space-y-2">
+          <div className="flex items-center">
+            <Gift className="h-5 w-5 text-bgs-orange mr-2" />
+            <label htmlFor="referralCode" className="text-sm font-semibold text-bgs-blue">
+              Code de parrainage (optionnel)
+            </label>
+          </div>
+          <Input
+            id="referralCode"
+            {...form.register("referralCode")}
+            placeholder={referralFromLink ? "Code automatiquement appliqué" : "Entrez un code de parrainage si vous en avez un"}
+            className={`bg-white border ${referralFromLink ? "border-green-300 bg-green-50" : "border-bgs-blue/20"} rounded-lg text-bgs-blue focus:border-bgs-orange focus:ring-2 focus:ring-bgs-orange/20`}
+            readOnly={!!referralFromLink}
+          />
+          {referralFromLink && (
+            <p className="text-xs text-green-600 flex items-center">
+              <Check className="h-4 w-4 mr-1" />
+              Un code de parrainage a été appliqué depuis votre lien. Vous recevrez 25€ à l'inscription.
+            </p>
+          )}
+        </div>
+        
+        <TermsCheckbox />
+        
+        <Button 
+          type="submit" 
+          className="w-full bg-bgs-blue hover:bg-bgs-blue-light text-white font-medium py-2.5 flex items-center justify-center gap-2 text-base transition-all transform hover:translate-y-[-2px]"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Inscription en cours..." : "S'inscrire"}
+          {!isSubmitting && <ArrowRight className="h-5 w-5" />}
+        </Button>
+      </form>
+    </Form>
   );
 }

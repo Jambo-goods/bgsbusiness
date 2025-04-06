@@ -36,38 +36,34 @@ export default function PasswordFields({
     return (
       <>
         <div>
-          <FormLabel className="block text-sm font-medium text-bgs-blue mb-1" htmlFor="new-password">
+          <FormLabel className="block text-sm font-semibold text-bgs-blue mb-2 flex items-center" htmlFor="new-password">
+            <Lock size={16} className="text-bgs-orange mr-2" />
             Nouveau mot de passe
           </FormLabel>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock size={18} className="text-bgs-blue/50" />
-            </div>
             <Input
               id="new-password"
               type="password"
               value={password}
               onChange={(e) => setPassword && setPassword(e.target.value)}
-              className="bg-white/50 border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full pl-10 p-2.5"
+              className="bg-white border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full p-2.5 focus:border-bgs-orange focus:ring-2 focus:ring-bgs-orange/20"
               placeholder="••••••••"
             />
           </div>
         </div>
         
         <div>
-          <FormLabel className="block text-sm font-medium text-bgs-blue mb-1" htmlFor="confirm-password">
+          <FormLabel className="block text-sm font-semibold text-bgs-blue mb-2 flex items-center" htmlFor="confirm-password">
+            <Lock size={16} className="text-bgs-orange mr-2" />
             Confirmer le mot de passe
           </FormLabel>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock size={18} className="text-bgs-blue/50" />
-            </div>
             <Input
               id="confirm-password"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword && setConfirmPassword(e.target.value)}
-              className="bg-white/50 border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full pl-10 p-2.5"
+              className="bg-white border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full p-2.5 focus:border-bgs-orange focus:ring-2 focus:ring-bgs-orange/20"
               placeholder="••••••••"
             />
           </div>
@@ -84,24 +80,20 @@ export default function PasswordFields({
         name="password"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="block text-sm font-medium text-bgs-blue mb-1">
+            <FormLabel className="block text-sm font-semibold text-bgs-blue mb-2 flex items-center">
+              <Lock size={16} className="text-bgs-orange mr-2" />
               Mot de passe
             </FormLabel>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock size={18} className="text-bgs-blue/50" />
-              </div>
-              <FormControl>
-                <Input
-                  {...field}
-                  id="password"
-                  type="password"
-                  className="bg-white/50 border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full pl-10 p-2.5"
-                  placeholder="••••••••"
-                />
-              </FormControl>
-            </div>
-            <FormMessage />
+            <FormControl>
+              <Input
+                {...field}
+                id="password"
+                type="password"
+                className="bg-white border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full p-2.5 focus:border-bgs-orange focus:ring-2 focus:ring-bgs-orange/20"
+                placeholder="••••••••"
+              />
+            </FormControl>
+            <FormMessage className="text-xs mt-1" />
           </FormItem>
         )}
       />
@@ -111,24 +103,20 @@ export default function PasswordFields({
         name="confirmPassword"
         render={({ field }) => (
           <FormItem>
-            <FormLabel className="block text-sm font-medium text-bgs-blue mb-1">
+            <FormLabel className="block text-sm font-semibold text-bgs-blue mb-2 flex items-center">
+              <Lock size={16} className="text-bgs-orange mr-2" />
               Confirmer le mot de passe
             </FormLabel>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock size={18} className="text-bgs-blue/50" />
-              </div>
-              <FormControl>
-                <Input
-                  {...field}
-                  id="confirmPassword"
-                  type="password"
-                  className="bg-white/50 border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full pl-10 p-2.5"
-                  placeholder="••••••••"
-                />
-              </FormControl>
-            </div>
-            <FormMessage />
+            <FormControl>
+              <Input
+                {...field}
+                id="confirmPassword"
+                type="password"
+                className="bg-white border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full p-2.5 focus:border-bgs-orange focus:ring-2 focus:ring-bgs-orange/20"
+                placeholder="••••••••"
+              />
+            </FormControl>
+            <FormMessage className="text-xs mt-1" />
           </FormItem>
         )}
       />

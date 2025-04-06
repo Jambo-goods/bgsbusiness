@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useFormContext } from "react-hook-form";
 import { FormControl, FormField, FormItem, FormMessage } from "../ui/form";
 import { Checkbox } from "../ui/checkbox";
+import { Check } from "lucide-react";
 
 interface TermsCheckboxProps {
   form?: any; // For backward compatibility
@@ -21,30 +22,30 @@ export default function TermsCheckbox({ form }: TermsCheckboxProps) {
       control={formToUse.control}
       name="terms"
       render={({ field }) => (
-        <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
+        <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-4 p-3 rounded-lg border border-bgs-blue/10 bg-white/80 hover:bg-white/90 transition-colors">
           <FormControl>
             <Checkbox
               checked={field.value}
               onCheckedChange={field.onChange}
               id="terms"
-              className="w-4 h-4 border border-bgs-blue/30 rounded bg-white/50 focus:ring-2 focus:ring-bgs-orange"
+              className="w-5 h-5 border-2 border-bgs-orange rounded bg-white data-[state=checked]:bg-bgs-orange data-[state=checked]:text-white"
             />
           </FormControl>
           <div className="space-y-1 leading-none">
             <label
               htmlFor="terms"
-              className="text-sm text-bgs-blue/70 font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              className="text-sm font-medium leading-none text-bgs-blue/80 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
             >
               J'accepte les{" "}
-              <Link to="/conditions-dutilisation" className="text-bgs-orange hover:text-bgs-orange-light">
+              <Link to="/conditions-dutilisation" className="text-bgs-orange font-semibold hover:text-bgs-orange-light underline">
                 conditions d'utilisation
               </Link>{" "}
               et la{" "}
-              <Link to="/politique-de-confidentialite" className="text-bgs-orange hover:text-bgs-orange-light">
+              <Link to="/politique-de-confidentialite" className="text-bgs-orange font-semibold hover:text-bgs-orange-light underline">
                 politique de confidentialité
               </Link>
             </label>
-            <FormMessage />
+            <FormMessage className="text-xs mt-1" />
           </div>
         </FormItem>
       )}

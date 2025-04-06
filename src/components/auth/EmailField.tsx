@@ -22,24 +22,20 @@ export default function EmailField({ form }: EmailFieldProps) {
       name="email"
       render={({ field }) => (
         <FormItem>
-          <FormLabel className="block text-sm font-medium text-bgs-blue mb-1">
+          <FormLabel className="block text-sm font-semibold text-bgs-blue mb-2 flex items-center">
+            <Mail size={16} className="text-bgs-orange mr-2" />
             Email
           </FormLabel>
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail size={18} className="text-bgs-blue/50" />
-            </div>
-            <FormControl>
-              <Input
-                {...field}
-                id="email"
-                type="email"
-                className="bg-white/50 border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full pl-10 p-2.5"
-                placeholder="votre@email.com"
-              />
-            </FormControl>
-          </div>
-          <FormMessage />
+          <FormControl>
+            <Input
+              {...field}
+              id="email"
+              type="email"
+              className="bg-white border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full p-2.5 focus:border-bgs-orange focus:ring-2 focus:ring-bgs-orange/20"
+              placeholder="votre@email.com"
+            />
+          </FormControl>
+          <FormMessage className="text-xs mt-1" />
         </FormItem>
       )}
     />
