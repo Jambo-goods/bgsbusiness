@@ -2,7 +2,6 @@
 import React from "react";
 import { Building } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Investment } from "../types/investment";
 
 interface GeneralInformationCardProps {
@@ -35,7 +34,12 @@ export default function GeneralInformationCard({ investment }: GeneralInformatio
             </div>
           </div>
           
-          <Progress value={project.funding_progress} className="h-2" />
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div 
+              className="bg-bgs-orange h-full"
+              style={{ width: `${project.funding_progress}%` }}
+            ></div>
+          </div>
           <p className="text-sm text-gray-600">Progression : {project.funding_progress}%</p>
         </div>
       </CardContent>

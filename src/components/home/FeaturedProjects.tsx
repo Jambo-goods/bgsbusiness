@@ -1,8 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, CircleCheck, Star, MapPin } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { Project } from "@/types/project";
 import { fetchProjectsFromDatabase } from "@/utils/projectUtils";
 import { useToast } from "@/hooks/use-toast";
@@ -139,7 +137,12 @@ export default function FeaturedProjects() {
                 </div>
                 
                 <div className="mb-4">
-                  <Progress value={project.fundingProgress || 65} className="h-1.5 bg-gray-100" />
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-bgs-orange h-full"
+                      style={{ width: `${project.fundingProgress || 65}%` }}
+                    ></div>
+                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
