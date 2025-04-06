@@ -78,7 +78,7 @@ export default function RegisterForm() {
         lastName: values.lastName,
         email: values.email,
         password: values.password,
-        referralCode: values.referralCode || referralFromLink || null,
+        referralCode: values.referralCode || referralFromLink || undefined,
       });
       
       if (!result.success) {
@@ -87,7 +87,6 @@ export default function RegisterForm() {
         toast.error("Erreur d'inscription", {
           description: errorMessage,
         });
-        console.error("Registration error details:", result.error);
         return;
       }
       

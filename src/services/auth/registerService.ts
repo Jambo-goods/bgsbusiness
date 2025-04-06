@@ -30,28 +30,29 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
       };
     }
 
-    let referrerData = null;
+    // Variable pour stocker l'ID du parrain si un code valide est fourni
+    let referrerId = null;
     
     // Si un code de parrainage est fourni, vérifier sa validité
     if (userData.referralCode) {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Reformulation complète de la requête pour éliminer toute ambiguïté
+      // Requête simplifiée pour trouver le code de parrainage
       const { data: referralData, error: referralError } = await supabase
         .from('referral_codes')
         .select('user_id')
-        .filter('code', 'eq', userData.referralCode)
+        .eq('code', userData.referralCode)
         .maybeSingle();
         
       if (referralError) {
         console.error("Erreur lors de la vérification du code de parrainage:", referralError);
       }
       
-      if (!referralData) {
-        console.log("Code de parrainage invalide ou introuvable:", userData.referralCode);
-      } else {
+      if (referralData) {
         console.log("Code de parrainage valide trouvé:", referralData);
-        referrerData = referralData;
+        referrerId = referralData.user_id;
+      } else {
+        console.log("Code de parrainage invalide ou introuvable:", userData.referralCode);
       }
     }
     
@@ -63,22 +64,13 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
         data: {
           first_name: userData.firstName,
           last_name: userData.lastName,
-          referred_by: referrerData?.user_id || null,
-          referral_code: userData.referralCode || null,
+          referred_by: referrerId
         },
       },
     });
 
     if (error) {
       console.error("Erreur d'inscription avec Supabase Auth:", error);
-      
-      // If there's a permission error, provide more specific feedback
-      if (error.message.includes("permission denied")) {
-        return { 
-          success: false, 
-          error: "Erreur de permission lors de l'inscription. Veuillez contacter l'administrateur."
-        };
-      }
       
       return {
         success: false,
@@ -90,8 +82,13 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     
     // Si l'utilisateur est créé avec succès et qu'il y avait un code de parrainage valide,
     // créer l'entrée dans la table des parrainages
-    if (data && referrerData) {
-      await handleReferralBonus(data.user?.id, referrerData);
+    if (data?.user && referrerId) {
+      try {
+        await handleReferralBonus(data.user.id, referrerId);
+      } catch (bonusError) {
+        console.error("Erreur lors du traitement du bonus de parrainage:", bonusError);
+        // On continue malgré l'erreur de bonus car l'inscription est réussie
+      }
     }
     
     return { success: true, data };
@@ -109,14 +106,6 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
       return { success: false, error: "Erreur de permission lors de l'inscription" };
     }
 
-    // Add more specific error handling for database errors
-    if (error.message?.includes("Database error saving new user") || 
-        error.message?.includes("code") || 
-        error.message?.includes("ambiguous")) {
-      toast.error("Erreur de base de données lors de l'enregistrement. Veuillez réessayer plus tard.");
-      return { success: false, error: "Erreur de base de données lors de l'enregistrement du nouvel utilisateur" };
-    }
-
     toast.error(error.message || "Erreur lors de l'inscription");
     return { success: false, error: error.message || "Erreur lors de l'inscription" };
   }
@@ -125,15 +114,15 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
 /**
  * Handles the referral bonus when a user registers with a valid referral code
  */
-async function handleReferralBonus(userId: string | undefined, referrerData: any): Promise<void> {
-  if (!userId) return;
+async function handleReferralBonus(userId: string, referrerId: string): Promise<void> {
+  if (!userId || !referrerId) return;
   
   try {
     // Ajouter une entrée dans la table des parrainages
     const { error: referralError } = await supabase
       .from('referrals')
       .insert([{
-        referrer_id: referrerData.user_id,
+        referrer_id: referrerId,
         referred_id: userId,
         status: 'pending'
       }]);
