@@ -16,6 +16,7 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { activeTab, setActiveTab } = useDashboardState();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Add isSidebarOpen state
   
   // Initialize the referral rewards listener
   useReferralRewards();
@@ -168,6 +169,10 @@ export default function Dashboard() {
     }
   };
 
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+
   if (isLoading) {
     return <DashboardLoading />;
   }
@@ -194,12 +199,15 @@ export default function Dashboard() {
       userData={userData}
       activeTab={activeTab}
       setActiveTab={setActiveTab}
+      isSidebarOpen={isSidebarOpen}
+      toggleSidebar={toggleSidebar}
     >
       <Routes>
         <Route 
           path="/:tab" 
           element={
             <DashboardMain 
+              isSidebarOpen={isSidebarOpen} // Add isSidebarOpen prop
               activeTab={activeTab}
               userData={userData}
               userInvestments={userInvestments}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -22,8 +21,8 @@ const registerSchema = z.object({
   email: z.string().email("Veuillez entrer une adresse email valide"),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
   confirmPassword: z.string(),
-  terms: z.literal(true, {
-    errorMap: () => ({ message: "Vous devez accepter les conditions d'utilisation" }),
+  terms: z.boolean().refine(val => val === true, {
+    message: "Vous devez accepter les conditions d'utilisation"
   }),
   referralCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -52,7 +51,6 @@ export default function RegisterForm() {
     },
   });
   
-  // Extract referral code from URL parameters when the component mounts
   useEffect(() => {
     const refCode = searchParams.get("ref");
     if (refCode) {
@@ -80,12 +78,10 @@ export default function RegisterForm() {
         return;
       }
       
-      // Show a success message
       toast.success("Inscription réussie", {
         description: "Connectez-vous pour accéder à votre tableau de bord",
       });
       
-      // Redirect to the login page
       navigate("/login");
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -105,7 +101,6 @@ export default function RegisterForm() {
       
       <PasswordFields form={form} />
       
-      {/* Referral Code Field */}
       <div className="space-y-1">
         <label htmlFor="referralCode" className="text-sm font-medium text-bgs-blue">
           Code de parrainage (optionnel)

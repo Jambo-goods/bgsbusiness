@@ -6,29 +6,29 @@ export function useDashboardState() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Extraire le tab à partir de l'URL
+  // Extract tab from URL path
   const pathParts = location.pathname.split('/');
   const tabFromPath = pathParts.length > 2 ? pathParts[2] : null;
   
-  // Liste des onglets valides
+  // List of valid tabs
   const validTabs = [
     "overview", "wallet", "yield", "investments", 
     "projects", "referrals", "profile", "notifications", "settings"
   ];
   
-  // Initialiser l'état avec l'onglet de l'URL ou "overview" par défaut
+  // Initialize state with tab from URL or "overview" as default
   const [activeTab, setActiveTab] = useState(() => {
     return validTabs.includes(tabFromPath || "") ? tabFromPath : "overview";
   });
 
-  // Mettre à jour l'état activeTab quand l'URL change
+  // Update activeTab when URL changes
   useEffect(() => {
     if (tabFromPath && tabFromPath !== activeTab && validTabs.includes(tabFromPath)) {
       setActiveTab(tabFromPath);
     }
   }, [tabFromPath, activeTab]);
 
-  // Gérer le changement d'onglet avec mise à jour de l'URL
+  // Handle tab change with URL update
   const handleTabChange = (tab: string) => {
     if (validTabs.includes(tab)) {
       setActiveTab(tab);
