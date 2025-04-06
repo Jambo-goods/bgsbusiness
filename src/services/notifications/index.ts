@@ -1,7 +1,13 @@
 
-import { notificationService } from './NotificationService';
-import { adminNotificationService } from './AdminNotificationService';
+import { NotificationServiceImpl } from './NotificationService';
+import { AdminNotificationServiceImpl } from './AdminNotificationService';
+import { NotificationCategories } from './types';
+import type { Notification, NotificationCategory, NotificationData, NotificationService } from './types';
 
-export { notificationService, adminNotificationService };
-export type { Notification, NotificationCategory, NotificationData, NotificationService } from './types';
-export { NotificationCategories } from './types';
+// Create instances
+export const notificationService = new NotificationServiceImpl();
+export const adminNotificationService = new AdminNotificationServiceImpl();
+
+// Export types and constants
+export type { Notification, NotificationCategory, NotificationData, NotificationService };
+export { NotificationCategories };

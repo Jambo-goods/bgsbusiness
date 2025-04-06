@@ -1,51 +1,5 @@
 
-import { Json } from "@/integrations/supabase/types";
-
-export type NotificationType = 
-  | 'deposit'
-  | 'withdrawal'
-  | 'investment'
-  | 'security'
-  | 'marketing'
-  | 'system'
-  | 'custom'
-  | 'info';
-
-export type NotificationCategory = 
-  | 'info' 
-  | 'success' 
-  | 'error' 
-  | 'warning' 
-  | 'transaction';
-
-export const NotificationCategories: Record<NotificationCategory, NotificationCategory> = {
-  info: 'info',
-  success: 'success',
-  error: 'error',
-  warning: 'warning',
-  transaction: 'transaction'
-};
-
-export interface NotificationCreateParams {
-  title: string;
-  description: string;
-  type: string;
-  category?: NotificationCategory;
-  metadata?: Record<string, any>;
-  userId?: string;
-}
-
-export interface DatabaseNotification {
-  id: string;
-  user_id: string;
-  title: string;
-  message: string;
-  type: string;
-  seen: boolean;
-  created_at: string;
-  data: Record<string, any> | null;
-}
-
+// Notification types
 export interface Notification {
   id: string;
   title: string;
@@ -53,30 +7,50 @@ export interface Notification {
   date: Date;
   read: boolean;
   type: string;
-  category?: string;
-  metadata: Record<string, any>;
+  category: NotificationCategory;
+  metadata?: Record<string, any>;
 }
 
-export type NotificationData = Record<string, any>;
+export interface NotificationData {
+  category?: NotificationCategory;
+  [key: string]: any;
+}
+
+export interface DatabaseNotification {
+  id: string;
+  user_id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  seen: boolean;
+  type: string;
+  data?: NotificationData;
+}
+
+export interface NotificationCreateParams {
+  title: string;
+  description: string;
+  type?: string;
+  category?: NotificationCategory;
+  metadata?: Record<string, any>;
+  userId?: string;
+}
+
+export type NotificationCategory = typeof NotificationCategories[keyof typeof NotificationCategories];
+
+export const NotificationCategories = {
+  info: 'info',
+  success: 'success',
+  warning: 'warning',
+  error: 'error',
+} as const;
 
 export interface NotificationService {
   getNotifications(): Promise<Notification[]>;
+  getUnreadCount(): Promise<number>;
   markAsRead(notificationId: string): Promise<boolean>;
   markAllAsRead(): Promise<boolean>;
   deleteNotification(notificationId: string): Promise<boolean>;
   deleteAllNotifications(): Promise<boolean>;
-  getUnreadCount(): Promise<number>;
   createNotification(params: NotificationCreateParams): Promise<boolean>;
-  
-  // Withdrawal notification methods
-  withdrawalScheduled(amount: number): Promise<void>;
-  withdrawalValidated(amount: number): Promise<void>;
-  withdrawalCompleted(amount: number): Promise<void>;
-  withdrawalRejected(amount: number): Promise<void>;
-  withdrawalReceived(amount: number): Promise<void>;
-  withdrawalConfirmed(amount: number): Promise<void>;
-  withdrawalPaid(amount: number): Promise<void>;
-  
-  // Investment notification methods
-  investmentConfirmed(projectName: string, amount: number): Promise<void>;
 }

@@ -1,9 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { Notification, NotificationCreateParams, NotificationCategory, NotificationCategories, DatabaseNotification } from "./types";
 import { toast } from "sonner";
+import type { Notification, NotificationCreateParams, NotificationCategory, NotificationData, DatabaseNotification } from "./types";
+import { NotificationCategories } from "./types";
 
-class NotificationServiceImpl {
+export class NotificationServiceImpl {
   async getNotifications(): Promise<Notification[]> {
     try {
       const { data: session } = await supabase.auth.getSession();
@@ -260,8 +261,4 @@ class NotificationServiceImpl {
       console.error('Error creating investment confirmed notification:', error);
     }
   }
-
-  // Additional notification methods for deposits, investments, etc. can be added here
 }
-
-export const notificationService = new NotificationServiceImpl();

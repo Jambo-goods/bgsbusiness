@@ -13,6 +13,6 @@ import {
 export { notificationService };
 export type { 
   Notification, 
-  NotificationCategory, 
+  NotificationCategory,
 };
 export { NotificationCategories };
