@@ -36,11 +36,11 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (userData.referralCode) {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Utiliser maybeSingle() au lieu de single() pour éviter les erreurs si le code n'existe pas
+      // Résolution de l'ambiguïté en spécifiant explicitement le nom de la table
       const { data: referralCodeData, error: referralError } = await supabase
         .from('referral_codes')
-        .select('user_id, code')
-        .eq('code', userData.referralCode)
+        .select('user_id, referral_codes.code')
+        .eq('referral_codes.code', userData.referralCode)
         .maybeSingle();
         
       if (referralError) {
@@ -48,10 +48,9 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
       }
       
       if (!referralCodeData) {
-        console.log("Code de parrainage invalide:", userData.referralCode);
-        // On peut continuer l'inscription même si le code est invalide
+        console.log("Code de parrainage invalide ou introuvable:", userData.referralCode);
       } else {
-        console.log("Code de parrainage valide:", referralCodeData);
+        console.log("Code de parrainage valide trouvé:", referralCodeData);
         referrerData = referralCodeData;
       }
     }
@@ -71,15 +70,28 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     });
 
     if (error) {
+      console.error("Erreur d'inscription avec Supabase Auth:", error);
+      
       // If there's a permission error, provide more specific feedback
       if (error.message.includes("permission denied")) {
-        console.error("Permission error during signup:", error);
         return { 
           success: false, 
           error: "Erreur de permission lors de l'inscription. Veuillez contacter l'administrateur."
         };
       }
-      throw error;
+      
+      // Détailler les autres types d'erreurs pour un meilleur diagnostic
+      if (error.message.includes("Database error saving new user")) {
+        return {
+          success: false,
+          error: "Erreur de base de données lors de l'enregistrement du nouvel utilisateur. Veuillez réessayer plus tard."
+        };
+      }
+      
+      return {
+        success: false,
+        error: error.message || "Une erreur s'est produite lors de l'inscription"
+      };
     }
     
     console.log("User registration successful:", data);

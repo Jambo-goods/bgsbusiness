@@ -15,7 +15,8 @@ import TermsCheckbox from "./TermsCheckbox";
 import { Form } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
-import { ArrowRight, Gift, Check } from "lucide-react";
+import { ArrowRight, Gift, Check, AlertCircle } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const registerSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
@@ -83,9 +84,10 @@ export default function RegisterForm() {
       });
       
       if (!success) {
-        setRegistrationError(error?.message || "Une erreur s'est produite lors de l'inscription");
+        const errorMessage = error?.message || error || "Une erreur s'est produite lors de l'inscription";
+        setRegistrationError(errorMessage);
         toast.error("Erreur d'inscription", {
-          description: error?.message || "Une erreur s'est produite lors de l'inscription",
+          description: errorMessage,
         });
         return;
       }
@@ -97,9 +99,10 @@ export default function RegisterForm() {
       navigate("/login");
     } catch (error: any) {
       console.error("Registration error:", error);
-      setRegistrationError(error.message || "Une erreur s'est produite lors de l'inscription");
+      const errorMessage = error?.message || "Une erreur s'est produite lors de l'inscription";
+      setRegistrationError(errorMessage);
       toast.error("Erreur d'inscription", {
-        description: error.message || "Une erreur s'est produite lors de l'inscription",
+        description: errorMessage,
       });
     } finally {
       setIsSubmitting(false);
@@ -110,9 +113,13 @@ export default function RegisterForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white/50 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-bgs-blue/5">
         {registrationError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-            {registrationError}
-          </div>
+          <Alert variant="destructive" className="bg-red-50 border border-red-300">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erreur d'inscription</AlertTitle>
+            <AlertDescription className="text-sm">
+              {registrationError}
+            </AlertDescription>
+          </Alert>
         )}
         
         <NameFields />
