@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -34,6 +33,7 @@ const CookiePolicy = lazy(() => import("./pages/CookiePolicy"));
 const LegalNotice = lazy(() => import("./pages/LegalNotice"));
 const FAQ = lazy(() => import("./pages/FAQ"));
 const HelpCenter = lazy(() => import("./pages/HelpCenter"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -51,47 +51,50 @@ const queryClient = new QueryClient({
   }
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AdminProvider>
-      <HelmetProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Suspense fallback={<LoadingFallback />}>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/projects" element={<Opportunite />} />
-                <Route path="/project/:id" element={<ProjectDetail />} />
-                <Route path="/how-it-works" element={<HowItWorks />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/dashboard/*" element={<Dashboard />} />
-                <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
-                
-                {/* Pages légales */}
-                <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
-                <Route path="/conditions-dutilisation" element={<TermsOfService />} />
-                <Route path="/politique-de-cookies" element={<CookiePolicy />} />
-                <Route path="/mentions-legales" element={<LegalNotice />} />
-                <Route path="/faq" element={<FAQ />} />
-                <Route path="/centre-daide" element={<HelpCenter />} />
-                
-                {/* Admin Routes */}
-                <Route path="/admin/*" element={<AdminApp />} />
-                
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-      </HelmetProvider>
-    </AdminProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AdminProvider>
+        <HelmetProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Suspense fallback={<LoadingFallback />}>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/projects" element={<Opportunite />} />
+                  <Route path="/project/:id" element={<ProjectDetail />} />
+                  <Route path="/how-it-works" element={<HowItWorks />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/dashboard/*" element={<Dashboard />} />
+                  <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
+                  
+                  {/* Pages légales */}
+                  <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
+                  <Route path="/conditions-dutilisation" element={<TermsOfService />} />
+                  <Route path="/politique-de-cookies" element={<CookiePolicy />} />
+                  <Route path="/mentions-legales" element={<LegalNotice />} />
+                  <Route path="/faq" element={<FAQ />} />
+                  <Route path="/centre-daide" element={<HelpCenter />} />
+                  
+                  {/* Admin Routes */}
+                  <Route path="/admin/*" element={<AdminApp />} />
+                  
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </HelmetProvider>
+      </AdminProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;

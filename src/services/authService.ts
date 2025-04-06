@@ -7,7 +7,9 @@ export {
   loginUser, 
   logoutUser, 
   getCurrentUser,
-  UserCredentials,
-  UserRegistrationData,
-  AuthResponse
+  resetPassword,
+  updatePassword
 } from './auth';
+
+export type { UserCredentials, UserRegistrationData, AuthResponse } from './auth';
+

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Mail, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import { resetPassword } from "@/services/authService";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -20,16 +21,17 @@ export default function ForgotPassword() {
     setError("");
     setIsLoading(true);
 
-    // Simuler une demande de réinitialisation pour la démonstration
     try {
-      // Simulation d'un délai de réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { success, error } = await resetPassword(email);
       
-      console.log("Password reset request for:", email);
-      setSuccess(true);
-    } catch (err) {
-      setError("Une erreur s'est produite lors de la demande de réinitialisation");
+      if (!success) {
+        setError(error || "Une erreur s'est produite lors de la demande de réinitialisation");
+      } else {
+        setSuccess(true);
+      }
+    } catch (err: any) {
       console.error("Password reset error:", err);
+      setError("Une erreur s'est produite lors de la demande de réinitialisation");
     } finally {
       setIsLoading(false);
     }
