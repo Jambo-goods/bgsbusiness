@@ -3,18 +3,39 @@ import React, { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, CheckCircle, Users, Gift } from "lucide-react";
+import { Copy, CheckCircle, Users, Gift, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Card } from "@/components/ui/card";
 
 export default function ReferralTab() {
   const [loading, setLoading] = useState(true);
   const [referralCode, setReferralCode] = useState("");
   const [referrals, setReferrals] = useState<any[]>([]);
   const [copied, setCopied] = useState(false);
+  const [stats, setStats] = useState({
+    pendingCount: 0,
+    completedCount: 0,
+    totalEarned: 0
+  });
 
   useEffect(() => {
     fetchReferralData();
+    
+    // Set up real-time updates for referrals
+    const channel = supabase
+      .channel('referrals-updates')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'referrals' }, 
+        () => {
+          fetchReferralData();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchReferralData = async () => {
@@ -70,6 +91,17 @@ export default function ReferralTab() {
         console.error("Erreur lors de la récupération des parrainages:", referralsError);
       } else if (referralsData) {
         setReferrals(referralsData);
+        
+        // Calculer les statistiques
+        const pending = referralsData.filter(r => r.status === 'pending').length;
+        const completed = referralsData.filter(r => r.status === 'completed').length;
+        const earned = referralsData.filter(r => r.referrer_rewarded).length * 25;
+        
+        setStats({
+          pendingCount: pending,
+          completedCount: completed,
+          totalEarned: earned
+        });
       }
     } catch (error) {
       console.error("Erreur:", error);
@@ -115,9 +147,48 @@ export default function ReferralTab() {
       <div>
         <h2 className="text-2xl font-semibold text-bgs-blue mb-4">Programme de parrainage</h2>
         <p className="text-gray-600 mb-6">
-          Parrainez vos amis et recevez des récompenses lorsqu'ils commencent à investir avec BGS Invest.
-          Partagez votre lien de parrainage personnalisé ci-dessous.
+          Parrainez vos amis et recevez 25€ lorsqu'ils commencent à investir avec BGS Invest.
+          Votre filleul reçoit également 25€ dès son inscription avec votre code.
         </p>
+      </div>
+      
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="p-5 bg-white border border-gray-100 rounded-lg shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-50 p-2 rounded-full">
+              <Users size={20} className="text-bgs-blue" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Filleuls en attente</p>
+              <p className="text-2xl font-semibold">{stats.pendingCount}</p>
+            </div>
+          </div>
+        </Card>
+        
+        <Card className="p-5 bg-white border border-gray-100 rounded-lg shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="bg-green-50 p-2 rounded-full">
+              <CheckCircle size={20} className="text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Parrainages complétés</p>
+              <p className="text-2xl font-semibold">{stats.completedCount}</p>
+            </div>
+          </div>
+        </Card>
+        
+        <Card className="p-5 bg-white border border-gray-100 rounded-lg shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="bg-amber-50 p-2 rounded-full">
+              <TrendingUp size={20} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-500">Gains totaux</p>
+              <p className="text-2xl font-semibold">{stats.totalEarned} €</p>
+            </div>
+          </div>
+        </Card>
       </div>
       
       {/* Section Code de Parrainage */}
@@ -154,36 +225,39 @@ export default function ReferralTab() {
         </div>
       </div>
       
-      {/* Section Récompenses */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white border border-gray-100 rounded-lg p-6 shadow-sm">
-          <div className="mb-3 text-bgs-orange">
-            <Users size={24} />
+      {/* Section Comment ça marche */}
+      <div className="bg-white border border-gray-100 rounded-lg p-6 shadow-sm">
+        <h3 className="text-xl font-medium text-gray-800 mb-4">Comment ça marche ?</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex flex-col items-center text-center">
+            <div className="bg-blue-50 p-3 rounded-full mb-3">
+              <Users size={24} className="text-bgs-blue" />
+            </div>
+            <h4 className="font-medium mb-2">1. Invitez vos amis</h4>
+            <p className="text-sm text-gray-600">
+              Partagez votre lien ou code de parrainage avec vos amis, famille et collègues.
+            </p>
           </div>
-          <h4 className="text-lg font-medium mb-2">Invitez vos amis</h4>
-          <p className="text-gray-600 text-sm">
-            Partagez votre lien unique avec vos amis, famille et collègues.
-          </p>
-        </div>
-        
-        <div className="bg-white border border-gray-100 rounded-lg p-6 shadow-sm">
-          <div className="mb-3 text-bgs-orange">
-            <Gift size={24} />
+          
+          <div className="flex flex-col items-center text-center">
+            <div className="bg-green-50 p-3 rounded-full mb-3">
+              <CheckCircle size={24} className="text-green-600" />
+            </div>
+            <h4 className="font-medium mb-2">2. Ils s'inscrivent</h4>
+            <p className="text-sm text-gray-600">
+              Votre filleul s'inscrit avec votre lien ou code et reçoit 25€ immédiatement sur son compte.
+            </p>
           </div>
-          <h4 className="text-lg font-medium mb-2">Gagnez des récompenses</h4>
-          <p className="text-gray-600 text-sm">
-            Recevez 50€ pour chaque ami qui investit au moins 1000€.
-          </p>
-        </div>
-        
-        <div className="bg-white border border-gray-100 rounded-lg p-6 shadow-sm">
-          <div className="mb-3 text-bgs-orange">
-            <CheckCircle size={24} />
+          
+          <div className="flex flex-col items-center text-center">
+            <div className="bg-orange-50 p-3 rounded-full mb-3">
+              <Gift size={24} className="text-bgs-orange" />
+            </div>
+            <h4 className="font-medium mb-2">3. Vous recevez 25€</h4>
+            <p className="text-sm text-gray-600">
+              Dès que votre filleul fait son premier investissement, vous recevez 25€ sur votre solde.
+            </p>
           </div>
-          <h4 className="text-lg font-medium mb-2">Sans limite</h4>
-          <p className="text-gray-600 text-sm">
-            Aucune limite au nombre d'amis que vous pouvez parrainer.
-          </p>
         </div>
       </div>
       
@@ -250,7 +324,7 @@ export default function ReferralTab() {
                     </td>
                     <td className="py-3 px-4 text-right">
                       <span className={`font-medium ${referral.referrer_rewarded ? 'text-green-600' : 'text-gray-400'}`}>
-                        {referral.referrer_rewarded ? '+50€' : 'En attente'}
+                        {referral.referrer_rewarded ? '+25€' : 'En attente'}
                       </span>
                     </td>
                   </tr>
