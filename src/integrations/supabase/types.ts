@@ -428,6 +428,30 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_codes_backup: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          id: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          id?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           created_at: string | null
@@ -621,6 +645,10 @@ export type Database = {
           decrement_amount: number
         }
         Returns: number
+      }
+      generate_fixed_referrals: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       generate_unique_referral_code: {
         Args: Record<PropertyKey, never>
