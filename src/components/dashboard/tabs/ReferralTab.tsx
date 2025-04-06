@@ -65,17 +65,27 @@ export default function ReferralTab() {
         try {
           // Vérifier les permissions avec RPC pour contourner RLS
           const { data: insertResult, error: insertError } = await supabase
-            .rpc('create_referral_code', { 
-              user_id: user.id, 
-              referral_code: newCode 
-            });
+            .rpc('generate_unique_referral_code');
             
           if (insertError) {
             console.error("Erreur lors de la création du code via RPC:", insertError);
             // Utiliser un fallback simple
             setReferralCode(`BGS-${user.id.substring(0, 8).toUpperCase()}`);
           } else {
-            setReferralCode(newCode);
+            // Insert the generated code
+            const { error: createError } = await supabase
+              .from('referral_codes')
+              .insert({
+                user_id: user.id,
+                code: insertResult
+              });
+              
+            if (createError) {
+              console.error("Erreur lors de la création du code:", createError);
+              setReferralCode(`BGS-${user.id.substring(0, 8).toUpperCase()}`);
+            } else {
+              setReferralCode(insertResult);
+            }
           }
         } catch (err) {
           console.error("Exception lors de la création du code:", err);
@@ -93,7 +103,7 @@ export default function ReferralTab() {
           .from('referrals')
           .select(`
             *,
-            referred:profiles!referred_id(first_name, last_name, email, created_at)
+            referred:profiles(first_name, last_name, email, created_at)
           `)
           .eq('referrer_id', user.id);
 
