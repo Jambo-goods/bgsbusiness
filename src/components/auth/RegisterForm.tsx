@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -38,6 +39,7 @@ export default function RegisterForm() {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [referralFromLink, setReferralFromLink] = useState("");
+  const [registrationError, setRegistrationError] = useState("");
   
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -63,6 +65,14 @@ export default function RegisterForm() {
   const onSubmit = async (values: RegisterFormValues) => {
     try {
       setIsSubmitting(true);
+      setRegistrationError("");
+      
+      console.log("Attempting registration with values:", {
+        firstName: values.firstName,
+        lastName: values.lastName,
+        email: values.email,
+        referralCode: values.referralCode || referralFromLink || null
+      });
       
       const { success, error, data } = await registerUser({
         firstName: values.firstName,
@@ -73,6 +83,7 @@ export default function RegisterForm() {
       });
       
       if (!success) {
+        setRegistrationError(error?.message || "Une erreur s'est produite lors de l'inscription");
         toast.error("Erreur d'inscription", {
           description: error?.message || "Une erreur s'est produite lors de l'inscription",
         });
@@ -86,6 +97,7 @@ export default function RegisterForm() {
       navigate("/login");
     } catch (error: any) {
       console.error("Registration error:", error);
+      setRegistrationError(error.message || "Une erreur s'est produite lors de l'inscription");
       toast.error("Erreur d'inscription", {
         description: error.message || "Une erreur s'est produite lors de l'inscription",
       });
@@ -97,6 +109,12 @@ export default function RegisterForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white/50 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-bgs-blue/5">
+        {registrationError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+            {registrationError}
+          </div>
+        )}
+        
         <NameFields />
         
         <EmailField />
