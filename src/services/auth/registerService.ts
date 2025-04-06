@@ -37,7 +37,7 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
       // Fix the ambiguous column reference by fully qualifying it
       const { data: referralCodeData, error: referralError } = await supabase
         .from('referral_codes')
-        .select('user_id, referral_codes.code')
+        .select('user_id, code')
         .eq('referral_codes.code', userData.referralCode)
         .single();
         
