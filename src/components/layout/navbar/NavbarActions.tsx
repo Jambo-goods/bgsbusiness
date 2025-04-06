@@ -142,8 +142,10 @@ export default function NavbarActions({
 
   const fetchUnreadCount = async () => {
     try {
-      const count = await notificationService.getUnreadCount();
-      setUnreadNotificationCount(count);
+      // Using the getNotifications method instead of getUnreadCount
+      const notifications = await notificationService.getNotifications();
+      const unreadCount = notifications.filter(n => !n.read).length;
+      setUnreadNotificationCount(unreadCount);
     } catch (error) {
       console.error("Error fetching unread count:", error);
     }

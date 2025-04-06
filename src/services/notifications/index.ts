@@ -48,6 +48,31 @@ export const notificationService = {
     }
   },
   
+  async getUnreadCount(): Promise<number> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        return 0;
+      }
+      
+      const { data, error, count } = await supabase
+        .from('notifications')
+        .select('id', { count: 'exact' })
+        .eq('user_id', session.session.user.id)
+        .eq('seen', false);
+        
+      if (error) {
+        throw error;
+      }
+      
+      return count || 0;
+    } catch (error) {
+      console.error("Error getting unread count:", error);
+      return 0;
+    }
+  },
+  
   async markAsRead(notificationId: string): Promise<boolean> {
     try {
       const { error } = await supabase

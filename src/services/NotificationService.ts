@@ -5,10 +5,11 @@
 import { 
   notificationService, 
   Notification,
+  NotificationCategory,
   NotificationCategories
 } from "./notifications";
 
 // Re-export everything to maintain backward compatibility
 export { notificationService };
-export type { Notification };
+export type { Notification, NotificationCategory };
 export { NotificationCategories };

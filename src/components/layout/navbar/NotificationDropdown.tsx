@@ -100,8 +100,8 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
       console.log("Fetching latest notifications");
       const data = await notificationService.getNotifications();
       console.log("Latest notifications fetched:", data);
-      // Only take the first 5 notifications
-      setNotifications(data.slice(0, 5));
+      // Only take the first 5 notifications and ensure the correct type
+      setNotifications(data.slice(0, 5) as unknown as Notification[]);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     } finally {

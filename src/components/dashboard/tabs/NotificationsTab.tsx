@@ -35,7 +35,9 @@ export default function NotificationsTab() {
       // Get notifications using the service
       const notificationsData = await notificationService.getNotifications();
       console.log("Notifications fetched:", notificationsData.length);
-      setNotifications(notificationsData);
+      
+      // Make sure to convert the types correctly
+      setNotifications(notificationsData as unknown as Notification[]);
     } catch (err) {
       console.error("Error fetching notifications:", err);
       setError("Impossible de charger les notifications. Veuillez réessayer plus tard.");
