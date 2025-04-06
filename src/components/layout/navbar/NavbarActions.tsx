@@ -1,238 +1,99 @@
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { notificationService } from '@/services/notifications';
+import { Bell, CreditCard, Gear, LogOut } from 'lucide-react';
+import NotificationDropdown from './NotificationDropdown';
 
-import { useState, useEffect } from "react";
-import { Bell, Wallet, Home } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import UserMenuDropdown from "./UserMenuDropdown";
-import DashboardMenuDropdown from "./DashboardMenuDropdown";
-import NotificationDropdown from "./NotificationDropdown";
-import { supabase } from "@/integrations/supabase/client";
-import { notificationService } from "@/services/notifications";
-
-interface NavbarActionsProps {
-  isActive: (path: string) => boolean;
-}
-
-export default function NavbarActions({
-  isActive
-}: NavbarActionsProps) {
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isDashboardMenuOpen, setIsDashboardMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
-  const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const location = useLocation();
+export default function NavbarActions() {
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   useEffect(() => {
-    const checkAuth = async () => {
-      setIsLoading(true);
+    const fetchNotificationCount = async () => {
       try {
-        const {
-          data
-        } = await supabase.auth.getSession();
-        const hasSession = !!data.session;
-        setIsAuthenticated(hasSession);
-        
-        if (hasSession) {
-          try {
-            const { data: profileData, error } = await supabase
-              .from('profiles')
-              .select('wallet_balance')
-              .eq('id', data.session.user.id)
-              .maybeSingle();
-              
-            if (!error && profileData) {
-              setWalletBalance(profileData.wallet_balance || 0);
-            } else {
-              console.error("Error fetching wallet balance:", error);
-              setWalletBalance(0);
-            }
-          } catch (err) {
-            console.error("Failed to fetch wallet balance:", err);
-            setWalletBalance(0);
-          }
-        }
+        // Get notifications to count unread ones
+        const notifications = await notificationService.getNotifications();
+        setUnreadNotifications(notifications.filter(n => !n.read).length);
       } catch (error) {
-        console.error("Error checking authentication:", error);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
+        console.error("Error fetching notification count:", error);
       }
     };
-    
-    checkAuth();
 
-    const authCheckInterval = setInterval(checkAuth, 60000);
-    return () => {
-      clearInterval(authCheckInterval);
-    };
-  }, [location.pathname]);
+    fetchNotificationCount();
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchUnreadCount();
-      
-      const notificationCheckInterval = setInterval(fetchUnreadCount, 30000);
-      return () => {
-        clearInterval(notificationCheckInterval);
-      };
-    }
-  }, [isAuthenticated]);
+    const intervalId = setInterval(fetchNotificationCount, 60000); // Refresh every minute
 
-  // Set up real-time listener for wallet balance changes
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    
-    const getWalletBalance = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) return;
-        
-        const userId = data.session.user.id;
-        
-        // Set up subscription for wallet_transactions changes
-        const txChannel = supabase
-          .channel('navbar-wallet-tx-changes')
-          .on('postgres_changes', 
-            { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` },
-            async () => {
-              // Update wallet balance on transaction change
-              const { data: profileData } = await supabase
-                .from('profiles')
-                .select('wallet_balance')
-                .eq('id', userId)
-                .maybeSingle();
-                
-              if (profileData) {
-                setWalletBalance(profileData.wallet_balance || 0);
-              }
-            }
-          )
-          .subscribe();
-          
-        // Set up subscription for profile balance changes
-        const profileChannel = supabase
-          .channel('navbar-profile-changes')
-          .on('postgres_changes', 
-            { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
-            (payload) => {
-              if (payload.new && typeof (payload.new as any).wallet_balance === 'number') {
-                setWalletBalance((payload.new as any).wallet_balance);
-              }
-            }
-          )
-          .subscribe();
-          
-        return () => {
-          supabase.removeChannel(txChannel);
-          supabase.removeChannel(profileChannel);
-        };
-      } catch (error) {
-        console.error("Error setting up wallet balance listener:", error);
-      }
-    };
-    
-    const cleanup = getWalletBalance();
-    return () => {
-      cleanup.then(fn => fn && fn());
-    };
-  }, [isAuthenticated]);
+    return () => clearInterval(intervalId);
+  }, [user]);
 
-  const fetchUnreadCount = async () => {
-    try {
-      // Using the getNotifications method instead of getUnreadCount
-      const notifications = await notificationService.getNotifications();
-      const unreadCount = notifications.filter(n => !n.read).length;
-      setUnreadNotificationCount(unreadCount);
-    } catch (error) {
-      console.error("Error fetching unread count:", error);
-    }
-  };
-
-  useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
-      if (isNotificationOpen || isUserMenuOpen || isDashboardMenuOpen) {
-        const target = event.target as HTMLElement;
-        if (!target.closest('.notification-dropdown') && !target.closest('.user-dropdown') && !target.closest('.dashboard-menu-dropdown')) {
-          setIsNotificationOpen(false);
-          setIsUserMenuOpen(false);
-          setIsDashboardMenuOpen(false);
-        }
-      }
-    };
-    document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isNotificationOpen, isUserMenuOpen, isDashboardMenuOpen]);
-
-  const handleCloseNotifications = () => {
-    setIsNotificationOpen(false);
-  };
-
-  const handleWalletClick = () => {
-    console.log("Wallet button clicked, navigating to wallet tab");
-    if (location.pathname.includes('/dashboard')) {
-      // Already on dashboard, just update the search params
-      const searchParams = new URLSearchParams(location.search);
-      searchParams.set('tab', 'wallet');
-      navigate({
-        pathname: '/dashboard',
-        search: searchParams.toString()
-      }, { replace: true });
-    } else {
-      // Not on dashboard, navigate to dashboard with wallet tab
-      navigate('/dashboard?tab=wallet');
-    }
-  };
-
-  const isDashboardPage = location.pathname.includes('/dashboard');
-
-  if (isLoading) {
-    return null;
-  }
-
-  if (isDashboardPage) {
-    return (
-      <div className="flex items-center space-x-2">
-        <Link to="/" className="p-2 rounded-full hover:bg-gray-100 transition-colors">
-          <Home className="h-5 w-5 text-bgs-blue" />
-        </Link>
-        
-        <button 
-          onClick={handleWalletClick}
-          className="flex items-center p-2 rounded-full hover:bg-gray-100 transition-colors space-x-1"
-          aria-label="Voir le portefeuille"
-          title="Voir le portefeuille"
+  return (
+    <div className="flex items-center space-x-4">
+      {/* Notification Dropdown */}
+      <div className="relative">
+        <button
+          onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+          className="p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors duration-200"
         >
-          <Wallet className="h-5 w-5 text-bgs-blue" />
-          {walletBalance !== null && (
-            <span className="text-xs font-medium text-bgs-blue">
-              {walletBalance.toLocaleString('fr-FR')}€
+          <Bell className="h-5 w-5 text-gray-600" />
+          {unreadNotifications > 0 && (
+            <span className="absolute top-1 right-1 bg-bgs-orange text-white text-xs rounded-full px-2 py-0.5">
+              {unreadNotifications}
             </span>
           )}
         </button>
-
-        <div className="relative notification-dropdown">
-          <button onClick={() => {
-            setIsNotificationOpen(!isNotificationOpen);
-            if (isUserMenuOpen) setIsUserMenuOpen(false);
-            if (isDashboardMenuOpen) setIsDashboardMenuOpen(false);
-          }} className="p-2 rounded-full hover:bg-gray-100 transition-colors relative" aria-label="Notifications">
-            <Bell className="h-5 w-5 text-bgs-blue" />
-            {unreadNotificationCount > 0 && (
-              <span className="absolute top-1 right-1 h-2 w-2 bg-bgs-orange rounded-full"></span>
-            )}
-          </button>
-          
-          <NotificationDropdown 
-            isOpen={isNotificationOpen} 
-            onClose={handleCloseNotifications}
-          />
-        </div>
+        <NotificationDropdown isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
       </div>
-    );
-  }
 
-  return null;
+      {/* User Avatar and Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="outline-none">
+            <Avatar className="h-9 w-9">
+              <AvatarImage src="https://github.com/shadcn.png" alt="User Avatar" />
+              <AvatarFallback>CN</AvatarFallback>
+            </Avatar>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-56" align="end" forceMount>
+          <DropdownMenuLabel>Mon compte</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <Link to="/dashboard" className="block">
+            <DropdownMenuItem>
+              <CreditCard className="mr-2 h-4 w-4" />
+              Tableau de bord
+            </DropdownMenuItem>
+          </Link>
+          <Link to="/settings" className="block">
+            <DropdownMenuItem>
+              <Gear className="mr-2 h-4 w-4" />
+              Paramètres
+            </DropdownMenuItem>
+          </Link>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Déconnexion
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }

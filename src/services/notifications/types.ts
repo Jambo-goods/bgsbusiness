@@ -1,48 +1,16 @@
 
-export type NotificationType = 
-  | 'deposit'
-  | 'withdrawal'
-  | 'investment'
-  | 'security'
-  | 'marketing'
-  | 'system'
-  | 'custom'
-  | 'info'
-  | 'referral';
-
-export type NotificationCategory = 
-  | 'info' 
-  | 'success' 
-  | 'error' 
-  | 'warning' 
-  | 'transaction';
-
-export const NotificationCategories: Record<NotificationCategory, NotificationCategory> = {
-  info: 'info',
-  success: 'success',
-  error: 'error',
-  warning: 'warning',
-  transaction: 'transaction'
-};
-
-export interface NotificationCreateParams {
-  title: string;
-  description: string;
-  type: string;
-  category?: NotificationCategory;
-  metadata?: Record<string, any>;
-  userId?: string;
-}
-
 export interface DatabaseNotification {
   id: string;
-  user_id: string;
   title: string;
   message: string;
   type: string;
   seen: boolean;
   created_at: string;
-  data: Record<string, any> | null;
+  user_id: string;
+  data?: {
+    category?: string;
+    [key: string]: any;
+  };
 }
 
 export interface Notification {
@@ -52,8 +20,15 @@ export interface Notification {
   date: Date;
   read: boolean;
   type: string;
-  category?: string;
+  category: string;
   metadata: Record<string, any>;
 }
 
-export type NotificationData = Record<string, any>;
+export type NotificationCategory = 'info' | 'success' | 'warning' | 'error';
+
+export const NotificationCategories = {
+  INFO: 'info' as NotificationCategory,
+  SUCCESS: 'success' as NotificationCategory,
+  WARNING: 'warning' as NotificationCategory,
+  ERROR: 'error' as NotificationCategory
+};

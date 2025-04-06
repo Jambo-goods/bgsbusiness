@@ -13,15 +13,33 @@ interface Investment {
   amount: number;
   status: string;
   created_at: string;
+  yield_rate: number;
+  project_id: string;
+  user_id: string;
+  duration: number;
+  end_date?: string;
+  date?: string;
 }
 
 interface Project {
   id: string;
   title: string;
+  name: string; // For compatibility, since some places use name and others use title
   min_investment: number;
   available_amount: number;
   yield_rate: number;
+  yield: number; // For compatibility, some places use yield and others use yield_rate
   risk_rating: number;
+  // Additional fields from the database
+  category?: string;
+  company_name?: string;
+  created_at?: string;
+  description?: string;
+  duration?: string;
+  end_date?: string;
+  featured?: boolean;
+  first_payment_delay_months?: number;
+  funding_progress?: number;
 }
 
 export default function useInvestment({ projectId }: UseInvestmentProps) {
@@ -55,8 +73,20 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
           throw new Error('Project not found');
         }
         
-        setProject(projectData);
-        setAmount(projectData.min_investment || 100);
+        // Map database fields to our Project interface
+        const mappedProject: Project = {
+          ...projectData,
+          title: projectData.name || projectData.title, // Ensure title is available
+          name: projectData.name || projectData.title, // Ensure name is available
+          yield_rate: projectData.yield_rate || projectData.yield || 0, // Use yield_rate or fallback to yield
+          yield: projectData.yield || projectData.yield_rate || 0, // Use yield or fallback to yield_rate
+          min_investment: projectData.min_investment || 100,
+          available_amount: projectData.available_amount || 0,
+          risk_rating: projectData.risk_rating || 0
+        };
+        
+        setProject(mappedProject);
+        setAmount(mappedProject.min_investment || 100);
         
         // Get wallet balance
         const { data: session } = await supabase.auth.getSession();
@@ -84,7 +114,11 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
           if (investmentsError) {
             console.error('Failed to load investments:', investmentsError);
           } else if (investmentsData) {
-            setPendingInvestments(investmentsData);
+            const mappedInvestments: Investment[] = investmentsData.map(inv => ({
+              ...inv,
+              created_at: inv.date || inv.created_at || new Date().toISOString()
+            }));
+            setPendingInvestments(mappedInvestments);
           }
         }
       } catch (err) {
@@ -141,8 +175,8 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
       // Start a transaction by decrementing wallet balance
       const { data: walletData, error: walletError } = await supabase
         .rpc('decrement_wallet_balance', {
-          user_id_param: session.session.user.id,
-          amount_param: amount
+          user_id: session.session.user.id,
+          decrement_amount: amount
         });
       
       if (walletError) {
@@ -150,15 +184,18 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
       }
       
       // Create investment record
-      const { data: investmentData, error: investmentError } = await supabase
+      const investmentData = {
+        user_id: session.session.user.id,
+        project_id: projectId,
+        amount: amount,
+        status: 'pending',
+        yield_rate: project.yield_rate || project.yield || 0,
+        duration: parseInt(project.duration || '0', 10) || 12 // Default to 12 months if not specified
+      };
+      
+      const { data: newInvestment, error: investmentError } = await supabase
         .from('investments')
-        .insert({
-          user_id: session.session.user.id,
-          project_id: projectId,
-          amount: amount,
-          status: 'pending',
-          expected_yield: project.yield_rate || 0
-        })
+        .insert(investmentData)
         .select()
         .single();
       
@@ -166,8 +203,8 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
         // Rollback in case of error
         await supabase
           .rpc('increment_wallet_balance', {
-            user_id_param: session.session.user.id,
-            amount_param: amount
+            user_id: session.session.user.id,
+            increment_amount: amount
           });
           
         throw new Error('Erreur lors de la création de l\'investissement');
@@ -175,10 +212,11 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
       
       // Update project available amount (if applicable)
       if (project.available_amount !== null && project.available_amount > 0) {
-        const newAvailableAmount = Math.max(0, project.available_amount - amount);
         await supabase
           .from('projects')
-          .update({ available_amount: newAvailableAmount })
+          .update({ 
+            available_amount: Math.max(0, project.available_amount - amount) 
+          })
           .eq('id', projectId);
       }
       
@@ -189,13 +227,13 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
           user_id: session.session.user.id,
           amount: amount,
           type: 'investment',
-          description: `Investissement dans ${project.title}`,
+          description: `Investissement dans ${project.title || project.name}`,
           status: 'completed'
         });
       
       // Send notification
       try {
-        await notificationService.investmentConfirmed(project.title, amount);
+        await notificationService.investmentConfirmed(project.title || project.name, amount);
       } catch (notificationError) {
         console.error('Failed to send investment notification:', notificationError);
         // Non-blocking, continue with success
@@ -205,8 +243,9 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
       try {
         const { data: referralData } = await supabase
           .rpc('add_referral_reward', {
-            user_param: session.session.user.id,
-            amount_param: amount
+            user_id_param: session.session.user.id,
+            amount_param: amount,
+            description_param: `Investment in ${project.title || project.name}`
           });
           
         if (referralData) {
@@ -219,7 +258,7 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
       
       setIsSuccessful(true);
       toast.success('Investissement réussi', {
-        description: `Vous avez investi ${amount}€ dans ${project.title}`
+        description: `Vous avez investi ${amount}€ dans ${project.title || project.name}`
       });
       
       // Refresh investments list
@@ -231,7 +270,11 @@ export default function useInvestment({ projectId }: UseInvestmentProps) {
         .eq('status', 'pending');
         
       if (updatedInvestments) {
-        setPendingInvestments(updatedInvestments);
+        const mappedInvestments: Investment[] = updatedInvestments.map(inv => ({
+          ...inv,
+          created_at: inv.date || inv.created_at || new Date().toISOString()
+        }));
+        setPendingInvestments(mappedInvestments);
       }
       
       // Refresh wallet balance

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
@@ -21,7 +20,6 @@ import { fr } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
-// Define utility functions directly here instead of importing them from a path that doesn't exist
 const getNotificationTypeIcon = (type: string) => {
   switch (type.toLowerCase()) {
     case 'deposit':
@@ -68,7 +66,6 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
       fetchNotifications();
     }
     
-    // Add real-time notification listener to improve notification visibility
     const notificationChannel = supabase
       .channel('real-time-notifications')
       .on('postgres_changes', {
@@ -100,8 +97,7 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
       console.log("Fetching latest notifications");
       const data = await notificationService.getNotifications();
       console.log("Latest notifications fetched:", data);
-      // Only take the first 5 notifications and ensure the correct type
-      setNotifications(data.slice(0, 5) as unknown as Notification[]);
+      setNotifications(data.slice(0, 5));
     } catch (error) {
       console.error("Error fetching notifications:", error);
     } finally {
@@ -133,7 +129,6 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
 
   const formatDate = (date: Date) => {
     try {
-      // Make sure the date is valid before formatting
       if (!(date instanceof Date) || isNaN(date.getTime())) {
         return "Date invalide";
       }
