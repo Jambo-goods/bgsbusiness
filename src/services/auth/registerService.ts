@@ -44,11 +44,11 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
       
       console.log("Vérification du code de parrainage:", referralCode);
       
-      // Requête explicite pour éviter toute ambiguïté
+      // Correction de la requête pour éviter l'erreur de typage
       const { data, error } = await supabase
         .from('referral_codes')
-        .select('referral_codes.user_id')
-        .eq('referral_codes.code', referralCode)
+        .select('user_id')  // Suppression du prefix 'referral_codes.'
+        .eq('code', referralCode)  // Suppression du prefix 'referral_codes.'
         .limit(1)
         .single();
         
