@@ -36,22 +36,22 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (userData.referralCode) {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Requête claire sans ambiguïté de colonne
-      const { data: referralCodeData, error: referralError } = await supabase
+      // Reformulation complète de la requête pour éliminer toute ambiguïté
+      const { data: referralData, error: referralError } = await supabase
         .from('referral_codes')
-        .select('user_id, referral_codes.code')
-        .eq('referral_codes.code', userData.referralCode)
+        .select('user_id')
+        .filter('code', 'eq', userData.referralCode)
         .maybeSingle();
         
       if (referralError) {
         console.error("Erreur lors de la vérification du code de parrainage:", referralError);
       }
       
-      if (!referralCodeData) {
+      if (!referralData) {
         console.log("Code de parrainage invalide ou introuvable:", userData.referralCode);
       } else {
-        console.log("Code de parrainage valide trouvé:", referralCodeData);
-        referrerData = referralCodeData;
+        console.log("Code de parrainage valide trouvé:", referralData);
+        referrerData = referralData;
       }
     }
     

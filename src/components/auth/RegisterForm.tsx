@@ -13,8 +13,6 @@ import PasswordFields from "./PasswordFields";
 import NameFields from "./NameFields";
 import TermsCheckbox from "./TermsCheckbox";
 import { Form } from "@/components/ui/form";
-import { supabase } from "@/integrations/supabase/client";
-import { notificationService } from "@/services/notifications";
 import { ArrowRight, Gift, Check, AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
