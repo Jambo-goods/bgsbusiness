@@ -37,11 +37,11 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (userData.referralCode) {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Requête simplifiée pour trouver le code de parrainage
+      // Utiliser une requête avec qualification complète de la table et de la colonne
       const { data: referralData, error: referralError } = await supabase
         .from('referral_codes')
         .select('user_id')
-        .eq('code', userData.referralCode)
+        .eq('referral_codes.code', userData.referralCode)
         .maybeSingle();
         
       if (referralError) {
@@ -118,7 +118,7 @@ async function handleReferralBonus(userId: string, referrerId: string): Promise<
   if (!userId || !referrerId) return;
   
   try {
-    // Ajouter une entrée dans la table des parrainages
+    // Ajouter une entrée dans la table des parrainages - Utiliser des noms complets pour éviter toute ambiguïté
     const { error: referralError } = await supabase
       .from('referrals')
       .insert([{

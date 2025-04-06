@@ -70,7 +70,7 @@ export default function RegisterForm() {
         firstName: values.firstName,
         lastName: values.lastName,
         email: values.email,
-        referralCode: values.referralCode || referralFromLink || null
+        referralCode: values.referralCode || referralFromLink || undefined
       });
       
       const result = await registerUser({
