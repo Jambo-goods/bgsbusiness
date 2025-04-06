@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { notificationService } from "@/services/notifications";
-import type { Notification } from "@/services/notifications";
+import type { Notification } from "@/services/notifications/types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import NotificationHeader from "./notifications/NotificationHeader";

@@ -56,7 +56,7 @@ export default function DashboardMain({
           <NotificationsTab />
         )}
         {activeTab === "profile" && (
-          <ProfileTab />
+          <ProfileTab userData={userData} />
         )}
         {activeTab === "settings" && (
           <SettingsTab />

@@ -100,7 +100,8 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
       console.log("Fetching latest notifications");
       const data = await notificationService.getNotifications();
       console.log("Latest notifications fetched:", data);
-      setNotifications(data.slice(0, 5)); // Only take the first 5
+      // Only take the first 5 notifications
+      setNotifications(data.slice(0, 5));
     } catch (error) {
       console.error("Error fetching notifications:", error);
     } finally {
@@ -131,10 +132,19 @@ export default function NotificationDropdown({ isOpen, onClose }: NotificationDr
   };
 
   const formatDate = (date: Date) => {
-    return formatDistanceToNow(date, {
-      addSuffix: true,
-      locale: fr
-    });
+    try {
+      // Make sure the date is valid before formatting
+      if (!(date instanceof Date) || isNaN(date.getTime())) {
+        return "Date invalide";
+      }
+      return formatDistanceToNow(date, {
+        addSuffix: true,
+        locale: fr
+      });
+    } catch (error) {
+      console.error("Error formatting date:", error, date);
+      return "Date invalide";
+    }
   };
 
   if (!isOpen) return null;

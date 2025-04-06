@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Notification } from "@/services/notifications";
+import { Notification } from "@/services/notifications/types";
 import NotificationItem from "./NotificationItem";
 import EmptyNotifications from "./EmptyNotifications";
 import { 

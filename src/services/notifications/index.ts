@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { 
   DatabaseNotification, 
   Notification, 
-  NotificationType, 
   NotificationCategory,
   NotificationCategories
 } from "./types";
@@ -374,5 +373,5 @@ export const notificationService = {
 };
 
 // Export the needed types
-export type { Notification, NotificationType, NotificationCategory };
+export type { Notification, NotificationCategory };
 export { NotificationCategories };
