@@ -15,6 +15,7 @@ import {
 import SidebarNavItem from "./SidebarNavItem";
 import SidebarSection from "./SidebarSection";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useNavigate } from "react-router-dom";
 
 interface SidebarProps {
   activeTab: string;
@@ -32,9 +33,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   toggleSidebar
 }) => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   
   const handleItemClick = (tab: string) => {
     setActiveTab(tab);
+    navigate(`/dashboard/${tab}`);
+    
     if (isMobile) {
       toggleSidebar();
     }

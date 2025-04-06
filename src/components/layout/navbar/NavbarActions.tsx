@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Bell, Wallet, Home } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -81,7 +80,6 @@ export default function NavbarActions({
     }
   }, [isAuthenticated]);
 
-  // Set up real-time listener for wallet balance changes
   useEffect(() => {
     if (!isAuthenticated) return;
     
@@ -92,13 +90,11 @@ export default function NavbarActions({
         
         const userId = data.session.user.id;
         
-        // Set up subscription for wallet_transactions changes
         const txChannel = supabase
           .channel('navbar-wallet-tx-changes')
           .on('postgres_changes', 
             { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${userId}` },
             async () => {
-              // Update wallet balance on transaction change
               const { data: profileData } = await supabase
                 .from('profiles')
                 .select('wallet_balance')
@@ -112,7 +108,6 @@ export default function NavbarActions({
           )
           .subscribe();
           
-        // Set up subscription for profile balance changes
         const profileChannel = supabase
           .channel('navbar-profile-changes')
           .on('postgres_changes', 
@@ -170,18 +165,7 @@ export default function NavbarActions({
 
   const handleWalletClick = () => {
     console.log("Wallet button clicked, navigating to wallet tab");
-    if (location.pathname.includes('/dashboard')) {
-      // Already on dashboard, just update the search params
-      const searchParams = new URLSearchParams(location.search);
-      searchParams.set('tab', 'wallet');
-      navigate({
-        pathname: '/dashboard',
-        search: searchParams.toString()
-      }, { replace: true });
-    } else {
-      // Not on dashboard, navigate to dashboard with wallet tab
-      navigate('/dashboard?tab=wallet');
-    }
+    navigate('/dashboard/wallet');
   };
 
   const isDashboardPage = location.pathname.includes('/dashboard');

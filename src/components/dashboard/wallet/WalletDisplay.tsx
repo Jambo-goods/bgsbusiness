@@ -1,18 +1,27 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { WalletCard } from "./WalletCard";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { useLocation } from "react-router-dom";
 
 export function WalletDisplay() {
   const { walletBalance, isLoadingBalance, refreshBalance } = useWalletBalance();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const location = useLocation();
+
+  // S'assurer que le solde est rafraîchi quand on accède à la page
+  useEffect(() => {
+    if (location.pathname.includes('/wallet')) {
+      refreshBalance(false);
+    }
+  }, [location.pathname, refreshBalance]);
 
   const handleManualRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await refreshBalance(true); // Show loading state for manual refresh
+      await refreshBalance(true); // Afficher l'état de chargement pour les actualisations manuelles
     } finally {
       setIsRefreshing(false);
     }

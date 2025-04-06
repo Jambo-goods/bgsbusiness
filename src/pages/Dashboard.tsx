@@ -12,11 +12,13 @@ import { useUserSession } from "@/hooks/dashboard/useUserSession";
 import { useDataRefresh } from "@/hooks/dashboard/useDataRefresh";
 import DashboardStatusMapper from "@/components/dashboard/DashboardStatusMapper";
 import { useInvestmentData } from "@/hooks/dashboard/useInvestmentData";
+import { useLocation } from "react-router-dom";
 
 export default function Dashboard() {
   const { activeTab, setActiveTab } = useDashboardState();
   const { userId, handleLogout } = useUserSession();
   const { isSidebarOpen, setIsSidebarOpen, toggleSidebar } = useSidebarState();
+  const location = useLocation();
   
   const { 
     userData, 
@@ -63,6 +65,7 @@ export default function Dashboard() {
   }, [pollingStatus, refreshAllData]);
 
   console.log("Current active tab (Dashboard.tsx):", activeTab);
+  console.log("Current path:", location.pathname);
   
   const mappedStatus = DashboardStatusMapper({ pollingStatus });
 
