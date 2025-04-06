@@ -43,8 +43,8 @@ export const registerUser = async (userData: UserRegistrationData) => {
     if (userData.referralCode) {
       const { data: referralCodeData, error: referralError } = await supabase
         .from('referral_codes')
-        .select('user_id, code')
-        .eq('code', userData.referralCode)
+        .select('user_id, referral_codes.code')  // Spécifier explicitement la table pour la colonne 'code'
+        .eq('referral_codes.code', userData.referralCode)  // Qualifier la colonne 'code' avec le nom de la table
         .single();
         
       if (referralError || !referralCodeData) {
