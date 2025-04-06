@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { registerUser } from "@/services/authService";
+import { registerUser } from "@/services/auth/registerService";
 import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import NameFields from "./NameFields";
@@ -89,6 +89,7 @@ export default function RegisterForm() {
         toast.error("Erreur d'inscription", {
           description: errorMessage,
         });
+        console.error("Registration error details:", result.error);
         return;
       }
       

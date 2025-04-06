@@ -36,7 +36,7 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (userData.referralCode) {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Requête simplifiée sans alias pour éviter l'erreur TypeScript
+      // Properly query referral_codes without using aliases
       const { data: referralCodeData, error: referralError } = await supabase
         .from('referral_codes')
         .select('user_id, code')
@@ -107,6 +107,14 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (error.message?.includes("permission denied")) {
       toast.error("Erreur de permission lors de l'inscription. L'administrateur a été notifié.");
       return { success: false, error: "Erreur de permission lors de l'inscription" };
+    }
+
+    // Add more specific error handling for database errors
+    if (error.message?.includes("Database error saving new user") || 
+        error.message?.includes("code") || 
+        error.message?.includes("ambiguous")) {
+      toast.error("Erreur de base de données lors de l'enregistrement. Veuillez réessayer plus tard.");
+      return { success: false, error: "Erreur de base de données lors de l'enregistrement du nouvel utilisateur" };
     }
 
     toast.error(error.message || "Erreur lors de l'inscription");
