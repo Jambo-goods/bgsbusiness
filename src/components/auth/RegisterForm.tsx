@@ -66,6 +66,9 @@ export default function RegisterForm() {
       setIsSubmitting(true);
       setRegistrationError("");
       
+      // Afficher une toast au début de la tentative d'inscription
+      toast.loading("Inscription en cours...");
+      
       console.log("Attempting registration with values:", {
         firstName: values.firstName,
         lastName: values.lastName,
@@ -80,6 +83,9 @@ export default function RegisterForm() {
         password: values.password,
         referralCode: values.referralCode || referralFromLink || null,
       });
+      
+      // Dismiss the loading toast
+      toast.dismiss();
       
       if (!result.success) {
         const errorMessage = typeof result.error === 'string' ? result.error : "Une erreur s'est produite lors de l'inscription";
@@ -96,6 +102,9 @@ export default function RegisterForm() {
       
       navigate("/login");
     } catch (error: any) {
+      // Dismiss the loading toast
+      toast.dismiss();
+      
       console.error("Registration error:", error);
       const errorMessage = error?.message || "Une erreur s'est produite lors de l'inscription";
       setRegistrationError(errorMessage);
