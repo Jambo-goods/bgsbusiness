@@ -50,16 +50,17 @@ export function useInvestmentTracking(investmentId: string | undefined) {
     
     try {
       setIsRefreshing(true);
-      const refreshedInvestment = await fetchInvestmentDetails(investmentId);
       
-      if (refreshedInvestment) {
-        setInvestment(refreshedInvestment);
+      // Fetch updated investment details
+      const updatedInvestment = await fetchInvestmentDetails(investmentId);
+      
+      if (updatedInvestment) {
+        setInvestment(updatedInvestment);
         
-        // Refresh transactions data
-        const refreshedTransactions = await fetchTransactionHistory(refreshedInvestment.user_id);
+        // Refresh transactions too
+        const updatedTransactions = await fetchTransactionHistory(updatedInvestment.user_id);
         
-        // Convert any string types to the correct union type
-        const typedTransactions = refreshedTransactions.map(tx => ({
+        const typedTransactions = updatedTransactions.map(tx => ({
           ...tx,
           type: tx.type === 'yield' || tx.type === 'investment' 
             ? tx.type as 'yield' | 'investment'
@@ -69,7 +70,7 @@ export function useInvestmentTracking(investmentId: string | undefined) {
         setTransactions(typedTransactions);
       }
     } catch (error) {
-      console.error("Error refreshing investment data:", error);
+      console.error("Error refreshing investment tracking data:", error);
     } finally {
       setIsRefreshing(false);
     }
