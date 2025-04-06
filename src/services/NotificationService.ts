@@ -5,7 +5,6 @@
 import { 
   notificationService, 
   Notification,
-  NotificationType,
   NotificationCategory,
   NotificationCategories
 } from "./notifications";
@@ -14,7 +13,6 @@ import {
 export { notificationService };
 export type { 
   Notification, 
-  NotificationType, 
   NotificationCategory, 
 };
 export { NotificationCategories };

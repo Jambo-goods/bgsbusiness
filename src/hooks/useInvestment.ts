@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Project } from '@/types/project';
 import { toast } from 'sonner';
@@ -28,29 +27,23 @@ interface UseInvestmentReturn {
 }
 
 export const useInvestment = (project: Project, investorCount: number): UseInvestmentReturn => {
-  // Investment amount state
   const [investmentAmount, setInvestmentAmount] = useState<number>(project.min_investment || 500);
-  const [selectedDuration, setSelectedDuration] = useState<number>(12); // Default to 12 months
+  const [selectedDuration, setSelectedDuration] = useState<number>(12);
   const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   
-  // Get wallet balance
   const { walletBalance, refreshBalance } = useWalletBalance();
   
-  // Fetch related state
   const [investmentData, setInvestmentData] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Calculate derived data
   const minInvestment = project.min_investment || 500;
   const maxInvestment = project.maxInvestment || 10000;
-  const projectYield = project.yield || 0.08; // Default to 8%
+  const projectYield = project.yield || 0.08;
   
-  // Default durations if not provided
   const durations = project.possibleDurations || [6, 12, 24, 36];
   
-  // Calculate returns
   const totalReturn = investmentAmount * (projectYield / 12) * selectedDuration;
   const monthlyReturn = totalReturn / selectedDuration;
 
@@ -62,8 +55,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
       setError(null);
 
       try {
-        // In a real app we would query actual data
-        // This is a placeholder that simulates a database query
         const mockData = {
           totalInvested: Math.round(project.price * 0.7),
           investorsCount: investorCount,
@@ -86,7 +77,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
     fetchInvestmentData();
   }, [project.id, investorCount, project.price, project.fundingProgress, project.status, project.startDate, project.endDate]);
 
-  // Handle user investment actions
   const handleInvest = () => {
     if (investmentAmount < minInvestment) {
       toast.error("Montant trop faible", {
@@ -102,7 +92,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
       return;
     }
     
-    // Check if user has sufficient balance
     if (walletBalance < investmentAmount) {
       toast.error("Solde insuffisant", {
         description: `Votre solde disponible est de ${walletBalance}€, vous ne pouvez pas investir ${investmentAmount}€`
@@ -110,7 +99,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
       return;
     }
     
-    // Show confirmation
     setShowConfirmation(true);
   };
   
@@ -122,7 +110,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
     setIsProcessing(true);
     
     try {
-      // Get the current user
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -133,10 +120,8 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         return;
       }
       
-      // Get latest wallet balance to make sure user still has enough funds
       await refreshBalance(false);
       
-      // Verify again that user has sufficient balance
       if (walletBalance < investmentAmount) {
         toast.error("Solde insuffisant", {
           description: `Votre solde actuel est de ${walletBalance}€, vous ne pouvez pas investir ${investmentAmount}€`
@@ -145,7 +130,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         return;
       }
       
-      // 1. Record the investment in the database
       const { data: investmentData, error: investmentError } = await supabase
         .from('investments')
         .insert({
@@ -165,7 +149,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         throw investmentError;
       }
       
-      // 2. Deduct the amount from the user's wallet balance
       const { error: walletError } = await supabase.rpc(
         'decrement_wallet_balance',
         { 
@@ -179,7 +162,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         throw walletError;
       }
       
-      // 3. Record the transaction in wallet_transactions
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
@@ -195,10 +177,8 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         throw transactionError;
       }
       
-      // 4. Create a notification for the investment
-      await notificationService.investmentConfirmed(investmentAmount, project.name);
+      await notificationService.investmentConfirmed(project.name || "Projet", investmentAmount);
       
-      // 5. Update user's profile statistics
       const { error: profileError } = await supabase.rpc(
         'update_user_profile_investment',
         {
@@ -212,8 +192,6 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
         throw profileError;
       }
       
-      // 6. Store investment in local storage to immediately display it
-      // (as a backup in case realtime subscriptions are slow)
       const recentInvestment = {
         projectId: project.id,
         amount: investmentAmount,
@@ -221,15 +199,12 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
       };
       localStorage.setItem("recentInvestment", JSON.stringify(recentInvestment));
       
-      // Refresh wallet balance
       refreshBalance(false);
       
-      // Show success message
       toast.success("Investissement effectué", {
         description: `Votre investissement de ${investmentAmount}€ a été enregistré.`
       });
       
-      // Reset form
       setShowConfirmation(false);
       
     } catch (err) {
@@ -245,11 +220,9 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
   const refreshData = () => {
     if (!project.id) return;
     
-    // In a real app we would refresh the data from the database
     toast.info("Actualisation des données...");
     setIsLoading(true);
     
-    // Simulate a delay
     setTimeout(() => {
       setIsLoading(false);
       toast.success("Données actualisées");
