@@ -37,22 +37,21 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (userData.referralCode) {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Méthode simplifiée pour éviter l'ambiguïté
-      const { data: referralData, error: referralError } = await supabase
+      // Utilisation d'une requête simplifiée avec eq() au lieu de filter()
+      const { data: referrerData, error: referrerError } = await supabase
         .from('referral_codes')
-        .select('user_id, code')
+        .select('user_id')
         .eq('code', userData.referralCode)
-        .maybeSingle();
+        .single();
         
-      if (referralError) {
-        console.error("Erreur lors de la vérification du code de parrainage:", referralError);
-      }
-      
-      if (referralData) {
-        console.log("Code de parrainage valide trouvé:", referralData);
-        referrerId = referralData.user_id;
+      if (referrerError) {
+        console.error("Erreur lors de la vérification du code de parrainage:", referrerError);
+        // On continue l'inscription même si le code est invalide
+      } else if (referrerData) {
+        console.log("Code de parrainage valide trouvé:", referrerData);
+        referrerId = referrerData.user_id;
       } else {
-        console.log("Code de parrainage invalide ou introuvable:", userData.referralCode);
+        console.log("Code de parrainage invalide ou introuvable");
       }
     }
     
