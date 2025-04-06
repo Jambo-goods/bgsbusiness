@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import * as LabelPrimitive from "@radix-ui/react-label"
 import { Slot } from "@radix-ui/react-slot"
@@ -42,15 +43,18 @@ const FormField = <
 const useFormField = () => {
   const fieldContext = React.useContext(FormFieldContext)
   const itemContext = React.useContext(FormItemContext)
-  const { getFieldState, formState } = useFormContext()
-
-  const fieldState = getFieldState(fieldContext.name, formState)
-
+  
+  // Make sure we have a valid form context before trying to use it
+  const formContext = useFormContext();
+  
   if (!fieldContext) {
     throw new Error("useFormField should be used within <FormField>")
   }
 
   const { id } = itemContext
+
+  // Only try to get field state if we have a valid form context
+  const fieldState = formContext ? formContext.getFieldState(fieldContext.name, formContext.formState) : {};
 
   return {
     id,

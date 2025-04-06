@@ -19,7 +19,7 @@ export default function TermsCheckbox({ form }: TermsCheckboxProps) {
   return (
     <FormField
       control={formToUse.control}
-      name="acceptTerms"
+      name="terms"
       render={({ field }) => (
         <FormItem className="flex flex-row items-start space-x-3 space-y-0 mt-2">
           <FormControl>
