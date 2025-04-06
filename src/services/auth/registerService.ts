@@ -33,15 +33,15 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     // Variable pour stocker l'ID du parrain si un code valide est fourni
     let referrerId = null;
     
-    // Si un code de parrainage est fourni ET n'est pas 'undefined' (string), vérifier sa validité
-    if (userData.referralCode && userData.referralCode !== 'undefined') {
+    // Si un code de parrainage est fourni ET n'est pas vide ou 'Aucun', vérifier sa validité
+    if (userData.referralCode && userData.referralCode !== 'undefined' && userData.referralCode !== 'Aucun') {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Requête pour récupérer le user_id associé au code de parrainage
+      // Résoudre l'ambiguïté de la colonne 'code' en utilisant le nom de table qualifié
       const { data: referrerData, error: referrerError } = await supabase
         .from('referral_codes')
         .select('user_id')
-        .eq('code', userData.referralCode)
+        .eq('referral_codes.code', userData.referralCode)
         .maybeSingle();
         
       if (referrerError) {
