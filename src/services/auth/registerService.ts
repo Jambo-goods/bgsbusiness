@@ -37,11 +37,11 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (userData.referralCode) {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Utiliser une requête avec qualification complète de la table et de la colonne
+      // Requête avec un nom de colonne sans ambiguïté
       const { data: referralData, error: referralError } = await supabase
         .from('referral_codes')
         .select('user_id')
-        .eq('referral_codes.code', userData.referralCode)
+        .eq('code', userData.referralCode)
         .maybeSingle();
         
       if (referralError) {
@@ -56,16 +56,21 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
       }
     }
     
+    // Préparation des métadonnées utilisateur
+    const userMetadata = {
+      first_name: userData.firstName,
+      last_name: userData.lastName,
+      referred_by: referrerId
+    };
+
+    console.log("Inscription avec métadonnées:", userMetadata);
+    
     // Inscription avec Supabase Auth
     const { data, error } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
       options: {
-        data: {
-          first_name: userData.firstName,
-          last_name: userData.lastName,
-          referred_by: referrerId
-        },
+        data: userMetadata,
       },
     });
 
@@ -118,7 +123,7 @@ async function handleReferralBonus(userId: string, referrerId: string): Promise<
   if (!userId || !referrerId) return;
   
   try {
-    // Ajouter une entrée dans la table des parrainages - Utiliser des noms complets pour éviter toute ambiguïté
+    // Ajouter une entrée dans la table des parrainages
     const { error: referralError } = await supabase
       .from('referrals')
       .insert([{
