@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +13,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { notificationService } from '@/services/notifications';
-import { Bell, CreditCard, Gear, LogOut } from 'lucide-react';
+import { Bell, CreditCard, Settings, LogOut } from 'lucide-react';
 import NotificationDropdown from './NotificationDropdown';
 
 export default function NavbarActions() {
@@ -83,7 +84,7 @@ export default function NavbarActions() {
           </Link>
           <Link to="/settings" className="block">
             <DropdownMenuItem>
-              <Gear className="mr-2 h-4 w-4" />
+              <Settings className="mr-2 h-4 w-4" />
               Paramètres
             </DropdownMenuItem>
           </Link>
