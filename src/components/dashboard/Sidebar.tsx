@@ -10,7 +10,8 @@ import {
   Wallet,
   LineChart,
   BarChart3,
-  Briefcase
+  Briefcase,
+  Users
 } from "lucide-react";
 import SidebarNavItem from "./SidebarNavItem";
 import SidebarSection from "./SidebarSection";
@@ -90,6 +91,14 @@ const Sidebar: React.FC<SidebarProps> = ({
             isOpen={isSidebarOpen}
             badge="Nouveau"
             badgeColor="bg-green-500"
+          />
+          
+          <SidebarNavItem 
+            icon={<Users size={18} />}
+            label="Parrainage"
+            isActive={activeTab === "referrals"}
+            onClick={() => handleItemClick("referrals")}
+            isOpen={isSidebarOpen}
           />
           
           {/* User navigation items */}

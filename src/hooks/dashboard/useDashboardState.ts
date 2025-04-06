@@ -20,7 +20,7 @@ export function useDashboardState() {
     if (tabFromPath && tabFromPath !== activeTab) {
       setActiveTab(tabFromPath);
     }
-  }, [tabFromPath]);
+  }, [tabFromPath, activeTab]);
 
   // Gérer le changement d'onglet avec mise à jour de l'URL
   const handleTabChange = (tab: string) => {
