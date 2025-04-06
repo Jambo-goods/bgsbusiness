@@ -18,10 +18,8 @@ export default function FeaturedProjects() {
         setIsLoading(true);
         const dbProjects = await fetchProjectsFromDatabase();
         
-        // Make sure we have at least 3 projects to display, even if they're not marked as featured
         let featured = dbProjects.filter(project => project.featured);
         
-        // If we don't have enough featured projects, add some regular ones
         if (featured.length < 3 && dbProjects.length > 0) {
           const nonFeatured = dbProjects.filter(project => !project.featured);
           featured = [...featured, ...nonFeatured.slice(0, 3 - featured.length)];
@@ -134,15 +132,6 @@ export default function FeaturedProjects() {
                   <p className="text-sm text-bgs-blue/70 line-clamp-2">
                     {project.description || 'Opportunité d\'investissement dans un actif physique en Afrique.'}
                   </p>
-                </div>
-                
-                <div className="mb-4">
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div 
-                      className="bg-bgs-orange h-full"
-                      style={{ width: `${project.fundingProgress || 65}%` }}
-                    ></div>
-                  </div>
                 </div>
                 
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
