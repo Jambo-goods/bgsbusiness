@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
@@ -15,9 +14,8 @@ import TermsCheckbox from "./TermsCheckbox";
 import { Form } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
-import { ArrowRight, Gift } from "lucide-react";
+import { ArrowRight, Gift, Check } from "lucide-react";
 
-// Schema for form validation
 const registerSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
   lastName: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
