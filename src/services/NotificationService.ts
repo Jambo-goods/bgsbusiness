@@ -15,6 +15,6 @@ export { notificationService };
 export type { 
   Notification, 
   NotificationType, 
-  NotificationCategory, 
+  NotificationCategory 
 };
 export { NotificationCategories };

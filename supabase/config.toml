@@ -1,1 +1,24 @@
+
 project_id = "ijzegsgylhiofyytkgso"
+
+[api]
+enabled = true
+
+[db]
+enabled = true
+
+[functions]
+enabled = true
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+
+[studio]
+enabled = true
+
+[edge_functions]
+[edge_functions.process-referral-rewards]
+verify_jwt = true

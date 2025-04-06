@@ -1,6 +1,4 @@
 
-import { Json } from "@/integrations/supabase/types";
-
 export type NotificationType = 
   | 'deposit'
   | 'withdrawal'
@@ -9,7 +7,8 @@ export type NotificationType =
   | 'marketing'
   | 'system'
   | 'custom'
-  | 'info';
+  | 'info'
+  | 'referral';
 
 export type NotificationCategory = 
   | 'info' 
@@ -32,7 +31,7 @@ export interface NotificationCreateParams {
   type: string;
   category?: NotificationCategory;
   metadata?: Record<string, any>;
-  userId?: string; // Add userId parameter
+  userId?: string;
 }
 
 export interface DatabaseNotification {
@@ -57,5 +56,4 @@ export interface Notification {
   metadata: Record<string, any>;
 }
 
-// Add this to fix the error
 export type NotificationData = Record<string, any>;

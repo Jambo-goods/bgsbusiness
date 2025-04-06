@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Database } from "@/integrations/supabase/database.types";
 
 export interface ReferralCode {
   id: string;
@@ -33,6 +34,7 @@ export const referralService = {
         return null;
       }
       
+      // Use type-safe table access
       const { data, error } = await supabase
         .from('referral_codes')
         .select('*')
@@ -44,7 +46,7 @@ export const referralService = {
         throw error;
       }
       
-      return data;
+      return data as ReferralCode;
     } catch (error) {
       console.error("Error in getReferralCode:", error);
       return null;
@@ -58,6 +60,7 @@ export const referralService = {
         return [];
       }
       
+      // Use type-safe table access with explicit casting
       const { data, error } = await supabase
         .from('referrals')
         .select(`
@@ -75,7 +78,7 @@ export const referralService = {
         throw error;
       }
       
-      return data || [];
+      return data as unknown as Referral[];
     } catch (error) {
       console.error("Error in getReferrals:", error);
       return [];
@@ -166,7 +169,7 @@ export const referralService = {
         throw txError;
       }
       
-      const totalEarnings = transactions?.reduce((sum, tx) => sum + tx.amount, 0) || 0;
+      const totalEarnings = transactions?.reduce((sum, tx) => sum + (tx.amount || 0), 0) || 0;
       
       return { 
         referralsCount: referralsCount || 0, 

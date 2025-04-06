@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-import { registerUser } from "@/services/authService";
+import { registerUser, UserRegistrationData } from "@/services/authService";
 import { supabase } from "@/integrations/supabase/client";
 
 const registerFormSchema = z.object({
@@ -49,7 +49,16 @@ export default function RegisterForm() {
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
     try {
-      const result = await registerUser(data);
+      // Build the proper registration data
+      const registrationData: UserRegistrationData = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
+        referralCode: data.referralCode
+      };
+
+      const result = await registerUser(registrationData);
       
       if (result.success) {
         toast.success("Inscription réussie ! Bienvenue chez BGS Groupe.");
@@ -61,17 +70,17 @@ export default function RegisterForm() {
             const { data: sessionData } = await supabase.auth.getSession();
             if (sessionData.session?.user) {
               // Look up the referrer ID using the referral code
-              const { data: referralCodeData, error: referralCodeError } = await supabase
+              const { data: referralCodeData } = await supabase
                 .from('referral_codes')
                 .select('user_id')
                 .eq('code', data.referralCode)
                 .single();
               
-              if (referralCodeError || !referralCodeData) {
-                console.error("Error fetching referral code:", referralCodeError);
+              if (!referralCodeData) {
+                console.error("Referral code not found");
               } else {
                 // Create a referral record
-                const { error: referralError } = await supabase
+                await supabase
                   .from('referrals')
                   .insert({
                     referrer_id: referralCodeData.user_id,
@@ -80,20 +89,12 @@ export default function RegisterForm() {
                     referred_rewarded: true // The referred user gets their reward immediately
                   });
                 
-                if (referralError) {
-                  console.error("Error creating referral:", referralError);
-                } else {
-                  // Add the welcome bonus to the new user's wallet
-                  const { error: rewardError } = await supabase.rpc('add_referral_reward', {
-                    user_id_param: sessionData.session.user.id,
-                    amount_param: 25,
-                    description_param: 'Bonus de bienvenue (code parrainage utilisé)'
-                  });
-                  
-                  if (rewardError) {
-                    console.error("Error adding referral reward:", rewardError);
-                  }
-                }
+                // Add the welcome bonus to the new user's wallet
+                await supabase.rpc('add_referral_reward', {
+                  user_id_param: sessionData.session.user.id,
+                  amount_param: 25,
+                  description_param: 'Bonus de bienvenue (code parrainage utilisé)'
+                });
               }
             }
           } catch (error) {

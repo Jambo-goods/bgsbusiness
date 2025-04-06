@@ -1,286 +1,378 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { v4 as uuidv4 } from "uuid";
 import { toast } from "sonner";
 import { 
-  Notification, 
-  NotificationType, 
-  NotificationCategory, 
-  NotificationCreateParams, 
-  DatabaseNotification 
-} from "./types";
-
-export type { 
+  DatabaseNotification, 
   Notification, 
   NotificationType, 
   NotificationCategory,
-  NotificationCreateParams
+  NotificationCategories
+} from "./types";
+
+// Helper function to convert from database to frontend model
+const convertDbNotificationToFrontend = (dbNotification: DatabaseNotification): Notification => {
+  return {
+    id: dbNotification.id,
+    title: dbNotification.title,
+    description: dbNotification.message,
+    date: new Date(dbNotification.created_at),
+    read: dbNotification.seen,
+    type: dbNotification.type,
+    category: dbNotification.data?.category || 'info',
+    metadata: dbNotification.data || {}
+  };
 };
 
-export { NotificationCategories } from "./types";
-
-class NotificationService {
-  private async createNotification(params: NotificationCreateParams): Promise<void> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
-
-    const id = uuidv4();
-    const { title, description, type, category = 'info', metadata = {} } = params;
-
-    await supabase.from('notifications').insert({
-      id,
-      title,
-      message: description,
-      type,
-      user_id: userData.user.id,
-      created_at: new Date().toISOString(),
-      seen: false,
-      data: { category, ...metadata }
-    });
-  }
-
-  async markAsRead(notificationId: string): Promise<void> {
-    await supabase
-      .from('notifications')
-      .update({ seen: true })
-      .eq('id', notificationId);
-  }
-
-  async deleteNotification(notificationId: string): Promise<void> {
-    await supabase
-      .from('notifications')
-      .delete()
-      .eq('id', notificationId);
-  }
-
-  async deleteAllNotifications(): Promise<void> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
-
-    await supabase
-      .from('notifications')
-      .delete()
-      .eq('user_id', userData.user.id);
-  }
-
+export const notificationService = {
   async getNotifications(): Promise<Notification[]> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return [];
-
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userData.user.id)
-      .order('created_at', { ascending: false });
-
-    if (error || !data) return [];
-
-    return data.map(item => this.mapDatabaseToNotification(item as DatabaseNotification));
-  }
-
-  async getUnreadCount(): Promise<number> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return 0;
-
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userData.user.id)
-      .eq('seen', false);
-
-    return count || 0;
-  }
-
-  async markAllAsRead(): Promise<void> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
-
-    await supabase
-      .from('notifications')
-      .update({ seen: true })
-      .eq('user_id', userData.user.id)
-      .eq('seen', false);
-  }
-
-  async setupRealtimeSubscription(callback: () => void): Promise<() => void> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return () => {};
-
-    const channel = supabase
-      .channel('notifications_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userData.user.id}`
-      }, () => {
-        callback();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }
-
-  // Deposit notifications
-  async depositRequested(amount: number, reference?: string): Promise<void> {
-    return this.createNotification({
-      title: "Virement bancaire confirmé",
-      description: `Vous avez confirmé avoir effectué un virement bancaire de ${amount}€${reference ? ` avec la référence ${reference}` : ''}`,
-      type: "deposit",
-      category: "info",
-      metadata: { 
-        amount,
-        reference,
-        timestamp: new Date().toISOString()
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        return [];
       }
-    });
-  }
-
-  async depositSuccess(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Dépôt validé",
-      description: `Votre dépôt de ${amount}€ a été validé et ajouté à votre portefeuille.`,
-      type: "deposit",
-      category: "success",
-      metadata: { amount }
-    });
-  }
-
-  // Withdrawal notifications
-  async withdrawalRequested(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Demande de retrait soumise",
-      description: `Votre demande de retrait de ${amount}€ a été soumise et est en cours de traitement.`,
-      type: "withdrawal",
-      category: "info",
-      metadata: { 
-        amount,
-        status: "submitted"
+      
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.session.user.id)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        throw error;
       }
-    });
-  }
 
-  async withdrawalScheduled(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Retrait planifié",
-      description: `Votre retrait de ${amount}€ a été planifié et sera traité prochainement.`,
-      type: "withdrawal",
-      category: "info",
-      metadata: { amount }
-    });
-  }
-
-  async withdrawalValidated(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Retrait validé",
-      description: `Votre demande de retrait de ${amount}€ a été validée et sera traitée prochainement.`,
-      type: "withdrawal",
-      category: "success",
-      metadata: { amount }
-    });
-  }
-
-  async withdrawalCompleted(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Retrait effectué",
-      description: `Votre retrait de ${amount}€ a été effectué avec succès.`,
-      type: "withdrawal",
-      category: "success",
-      metadata: { amount }
-    });
-  }
-
-  async withdrawalRejected(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Retrait refusé",
-      description: `Votre demande de retrait de ${amount}€ a été refusée.`,
-      type: "withdrawal",
-      category: "error",
-      metadata: { amount }
-    });
-  }
-
-  async withdrawalReceived(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Retrait reçu",
-      description: `Votre demande de retrait de ${amount}€ a été reçue et est en cours d'examen.`,
-      type: "withdrawal",
-      category: "info",
-      metadata: { amount }
-    });
-  }
-
-  async withdrawalConfirmed(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Retrait confirmé",
-      description: `Votre demande de retrait de ${amount}€ a été confirmée et est en cours de traitement.`,
-      type: "withdrawal",
-      category: "success",
-      metadata: { amount }
-    });
-  }
-
-  async withdrawalPaid(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Retrait payé",
-      description: `Votre retrait de ${amount}€ a été payé. Le montant a été transféré sur votre compte bancaire.`,
-      type: "withdrawal",
-      category: "success",
-      metadata: { 
-        amount, 
-        status: 'paid',
-        timestamp: new Date().toISOString()
+      return (data as DatabaseNotification[]).map(convertDbNotificationToFrontend);
+    } catch (error) {
+      console.error("Error getting notifications:", error);
+      return [];
+    }
+  },
+  
+  async markAsRead(notificationId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('id', notificationId);
+        
+      if (error) {
+        throw error;
       }
-    });
-  }
+      
+      return true;
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      return false;
+    }
+  },
+  
+  async markAllAsRead(): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        return false;
+      }
+      
+      const { error } = await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('user_id', session.session.user.id)
+        .eq('seen', false);
+        
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      return false;
+    }
+  },
+  
+  async deleteNotification(notificationId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+        
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      return false;
+    }
+  },
+  
+  async deleteAllNotifications(): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      
+      if (!session.session) {
+        return false;
+      }
+      
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', session.session.user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error deleting all notifications:", error);
+      return false;
+    }
+  },
+  
+  async createReferralWelcomeNotification(userId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          title: '🎁 Bonus de bienvenue',
+          message: 'Vous avez reçu un bonus de 25 € grâce à votre inscription avec un code de parrainage.',
+          type: 'referral',
+          data: {
+            category: 'success',
+            amount: 25
+          }
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error creating referral welcome notification:", error);
+      return false;
+    }
+  },
+  
+  async createReferralRewardNotification(userId: string, referredName: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          title: '🎉 Parrainage réussi !',
+          message: `Votre filleul ${referredName} vient d'investir. Vous avez gagné une récompense de 25 €.`,
+          type: 'referral',
+          data: {
+            category: 'success',
+            amount: 25,
+            referredName
+          }
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error creating referral reward notification:", error);
+      return false;
+    }
+  },
 
-  // Investment notifications
-  async investmentConfirmed(amount: number, projectName: string): Promise<void> {
-    return this.createNotification({
-      title: "Investissement confirmé",
-      description: `Votre investissement de ${amount}€ dans le projet ${projectName} a été confirmé.`,
-      type: "investment",
-      category: "success",
-      metadata: { amount, projectName }
-    });
-  }
+  // Add withdrawal notification methods
+  async withdrawalScheduled(amount: number): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: session.session.user.id,
+          title: 'Retrait planifié',
+          message: `Votre demande de retrait de ${amount}€ a été planifiée.`,
+          type: 'withdrawal',
+          data: { category: 'info', amount }
+        });
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error creating withdrawal scheduled notification:", error);
+      return false;
+    }
+  },
 
-  // Add the new investment opportunity notification
-  async newInvestmentOpportunity(projectName: string, projectId?: string): Promise<void> {
-    return this.createNotification({
-      title: "Nouvelle opportunité d'investissement",
-      description: `Un nouveau projet d'investissement est disponible : ${projectName}`,
-      type: "investment",
-      category: "info",
-      metadata: { projectName, projectId }
-    });
-  }
+  async withdrawalValidated(amount: number): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: session.session.user.id,
+          title: 'Retrait validé',
+          message: `Votre demande de retrait de ${amount}€ a été validée.`,
+          type: 'withdrawal',
+          data: { category: 'success', amount }
+        });
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error creating withdrawal validated notification:", error);
+      return false;
+    }
+  },
 
-  async insufficientFunds(amount: number): Promise<void> {
-    return this.createNotification({
-      title: "Fonds insuffisants",
-      description: `Vous n'avez pas suffisamment de fonds (${amount}€ requis) pour effectuer cette opération.`,
-      type: "info",
-      category: "error",
-      metadata: { amount }
-    });
-  }
+  async withdrawalCompleted(amount: number): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: session.session.user.id,
+          title: 'Retrait effectué',
+          message: `Votre retrait de ${amount}€ a été effectué.`,
+          type: 'withdrawal',
+          data: { category: 'success', amount }
+        });
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error creating withdrawal completed notification:", error);
+      return false;
+    }
+  },
 
-  protected mapDatabaseToNotification(dbNotification: DatabaseNotification): Notification {
-    const data = dbNotification.data || {};
-    return {
-      id: dbNotification.id,
-      title: dbNotification.title,
-      description: dbNotification.message,
-      date: new Date(dbNotification.created_at),
-      read: dbNotification.seen,
-      type: dbNotification.type,
-      category: typeof data === 'object' ? data.category : 'info',
-      metadata: typeof data === 'object' ? data : {}
-    };
-  }
-}
+  async withdrawalRejected(amount: number): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: session.session.user.id,
+          title: 'Retrait rejeté',
+          message: `Votre demande de retrait de ${amount}€ a été rejetée.`,
+          type: 'withdrawal',
+          data: { category: 'error', amount }
+        });
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error creating withdrawal rejected notification:", error);
+      return false;
+    }
+  },
 
-// Export a singleton instance
-export const notificationService = new NotificationService();
+  async withdrawalReceived(amount: number): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: session.session.user.id,
+          title: 'Retrait reçu',
+          message: `Votre retrait de ${amount}€ a été reçu.`,
+          type: 'withdrawal',
+          data: { category: 'success', amount }
+        });
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error creating withdrawal received notification:", error);
+      return false;
+    }
+  },
+
+  async withdrawalConfirmed(amount: number): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: session.session.user.id,
+          title: 'Retrait confirmé',
+          message: `Votre retrait de ${amount}€ a été confirmé.`,
+          type: 'withdrawal',
+          data: { category: 'success', amount }
+        });
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error creating withdrawal confirmed notification:", error);
+      return false;
+    }
+  },
+
+  async withdrawalPaid(amount: number): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: session.session.user.id,
+          title: 'Retrait payé',
+          message: `Votre retrait de ${amount}€ a été payé.`,
+          type: 'withdrawal',
+          data: { category: 'success', amount }
+        });
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error creating withdrawal paid notification:", error);
+      return false;
+    }
+  },
+
+  async investmentConfirmed(projectName: string, amount: number): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
+      
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: session.session.user.id,
+          title: 'Investissement confirmé',
+          message: `Votre investissement de ${amount}€ dans ${projectName} a été confirmé.`,
+          type: 'investment',
+          data: { category: 'success', amount, projectName }
+        });
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error("Error creating investment confirmed notification:", error);
+      return false;
+    }
+  }
+};
+
+// Export the needed types
+export type { Notification, NotificationType, NotificationCategory };
+export { NotificationCategories };
