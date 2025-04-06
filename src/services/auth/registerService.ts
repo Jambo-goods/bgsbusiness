@@ -37,11 +37,11 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (userData.referralCode && userData.referralCode !== 'undefined' && userData.referralCode !== 'Aucun') {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Résoudre l'ambiguïté de la colonne 'code' en utilisant le nom de table qualifié
+      // Résoudre l'ambiguïté de la colonne 'code' en spécifiant clairement la table et la colonne
       const { data: referrerData, error: referrerError } = await supabase
         .from('referral_codes')
         .select('user_id')
-        .eq('referral_codes.code', userData.referralCode)
+        .eq('code', userData.referralCode.trim())
         .maybeSingle();
         
       if (referrerError) {
