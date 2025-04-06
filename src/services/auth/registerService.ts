@@ -36,11 +36,11 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (userData.referralCode) {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Résolution de l'ambiguïté en spécifiant explicitement le nom de la table
+      // Résoudre complètement l'ambiguïté en utilisant un alias pour la colonne code
       const { data: referralCodeData, error: referralError } = await supabase
         .from('referral_codes')
-        .select('user_id, referral_codes.code')
-        .eq('referral_codes.code', userData.referralCode)
+        .select('user_id, code')
+        .eq('code', userData.referralCode)
         .maybeSingle();
         
       if (referralError) {
@@ -107,12 +107,12 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     console.error("Registration error:", error);
     
     // Handle specific registration errors
-    if (error.message.includes("User already registered")) {
+    if (error.message?.includes("User already registered")) {
       toast.error("Cet email est déjà utilisé. Veuillez vous connecter.");
       return { success: false, error: "Cet email est déjà utilisé" };
     }
 
-    if (error.message.includes("permission denied")) {
+    if (error.message?.includes("permission denied")) {
       toast.error("Erreur de permission lors de l'inscription. L'administrateur a été notifié.");
       return { success: false, error: "Erreur de permission lors de l'inscription" };
     }
