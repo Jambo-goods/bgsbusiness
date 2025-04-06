@@ -1,50 +1,40 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-
-import { Button } from "../ui/button";
+import { useForm } from "react-hook-form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-import EmailField from "./EmailField";
-import NameFields from "./NameFields";
-import PasswordFields from "./PasswordFields";
-import TermsCheckbox from "./TermsCheckbox";
 import { registerUser } from "@/services/authService";
-import { Form } from "@/components/ui/form";
+import { supabase } from "@/integrations/supabase/client";
 
-// Form schema with validations
-const registerFormSchema = z
-  .object({
-    firstName: z
-      .string()
-      .min(2, "Le prénom doit contenir au moins 2 caractères")
-      .max(50, "Le prénom ne peut pas dépasser 50 caractères"),
-    lastName: z
-      .string()
-      .min(2, "Le nom doit contenir au moins 2 caractères")
-      .max(50, "Le nom ne peut pas dépasser 50 caractères"),
-    email: z.string().email("Adresse email invalide"),
-    password: z
-      .string()
-      .min(8, "Le mot de passe doit contenir au moins 8 caractères"),
-    confirmPassword: z.string(),
-    acceptTerms: z.boolean().refine((val) => val === true, {
-      message: "Vous devez accepter les conditions d'utilisation",
-    }),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Les mots de passe ne correspondent pas",
-    path: ["confirmPassword"],
-  });
+const registerFormSchema = z.object({
+  firstName: z.string().min(2, {
+    message: "Le prénom doit contenir au moins 2 caractères",
+  }),
+  lastName: z.string().min(2, {
+    message: "Le nom doit contenir au moins 2 caractères",
+  }),
+  email: z.string().email({
+    message: "Veuillez entrer une adresse email valide",
+  }),
+  password: z.string().min(8, {
+    message: "Le mot de passe doit contenir au moins 8 caractères",
+  }),
+  referralCode: z.string().optional(),
+});
 
 type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
 export default function RegisterForm() {
   const navigate = useNavigate();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
+  const [searchParams] = useSearchParams();
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Initialize the form
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
@@ -52,54 +42,168 @@ export default function RegisterForm() {
       lastName: "",
       email: "",
       password: "",
-      confirmPassword: "",
-      acceptTerms: false,
+      referralCode: searchParams.get("ref") || "",
     },
   });
-
-  const handleSubmit = async (values: RegisterFormValues) => {
+  
+  const onSubmit = async (data: RegisterFormValues) => {
+    setIsLoading(true);
     try {
-      setIsSubmitting(true);
+      const result = await registerUser(data);
       
-      const { success, error, data } = await registerUser({
-        firstName: values.firstName,
-        lastName: values.lastName,
-        email: values.email,
-        password: values.password,
-      });
-      
-      if (success) {
-        toast.success("Inscription réussie ! Connexion en cours...");
-        localStorage.setItem("user", JSON.stringify(data?.user));
+      if (result.success) {
+        toast.success("Inscription réussie ! Bienvenue chez BGS Groupe.");
+        
+        // If there's a referral code, process the referral
+        if (data.referralCode) {
+          try {
+            // Get the user session after registration
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData.session?.user) {
+              // Look up the referrer ID using the referral code
+              const { data: referralCodeData, error: referralCodeError } = await supabase
+                .from('referral_codes')
+                .select('user_id')
+                .eq('code', data.referralCode)
+                .single();
+              
+              if (referralCodeError || !referralCodeData) {
+                console.error("Error fetching referral code:", referralCodeError);
+              } else {
+                // Create a referral record
+                const { error: referralError } = await supabase
+                  .from('referrals')
+                  .insert({
+                    referrer_id: referralCodeData.user_id,
+                    referred_id: sessionData.session.user.id,
+                    status: 'pending',
+                    referred_rewarded: true // The referred user gets their reward immediately
+                  });
+                
+                if (referralError) {
+                  console.error("Error creating referral:", referralError);
+                } else {
+                  // Add the welcome bonus to the new user's wallet
+                  const { error: rewardError } = await supabase.rpc('add_referral_reward', {
+                    user_id_param: sessionData.session.user.id,
+                    amount_param: 25,
+                    description_param: 'Bonus de bienvenue (code parrainage utilisé)'
+                  });
+                  
+                  if (rewardError) {
+                    console.error("Error adding referral reward:", rewardError);
+                  }
+                }
+              }
+            }
+          } catch (error) {
+            console.error("Error processing referral:", error);
+          }
+        }
+        
+        // Redirect to dashboard
         navigate("/dashboard");
       } else {
-        toast.error(error || "Une erreur s'est produite lors de l'inscription");
+        toast.error(result.error || "Une erreur est survenue lors de l'inscription");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Une erreur s'est produite");
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast.error("Une erreur est survenue lors de l'inscription");
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
+  
+  // Extract referral code from URL if present
+  useEffect(() => {
+    const refCode = searchParams.get("ref");
+    if (refCode) {
+      form.setValue("referralCode", refCode);
+    }
+  }, [searchParams, form]);
 
   return (
     <Form {...form}>
-      <form
-        className="space-y-6"
-        onSubmit={form.handleSubmit(handleSubmit)}
-        noValidate
-      >
-        <NameFields />
-        <EmailField />
-        <PasswordFields />
-        <TermsCheckbox />
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Prénom</FormLabel>
+                <FormControl>
+                  <Input placeholder="Jean" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nom</FormLabel>
+                <FormControl>
+                  <Input placeholder="Dupont" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input type="email" placeholder="jean.dupont@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mot de passe</FormLabel>
+              <FormControl>
+                <Input type="password" placeholder="********" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
-        <Button
-          type="submit"
-          className="w-full bg-bgs-orange hover:bg-bgs-orange-dark text-white"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Création du compte..." : "Créer un compte"}
+        <FormField
+          control={form.control}
+          name="referralCode"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Code de parrainage (optionnel)</FormLabel>
+              <FormControl>
+                <Input placeholder="BGSREF123" {...field} />
+              </FormControl>
+              <FormMessage />
+              {field.value && (
+                <p className="text-xs text-green-600">
+                  Vous recevrez 25€ de bonus à l'inscription
+                </p>
+              )}
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? "Création du compte..." : "S'inscrire"}
         </Button>
       </form>
     </Form>
