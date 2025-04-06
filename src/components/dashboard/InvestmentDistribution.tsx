@@ -1,5 +1,4 @@
 
-import { Progress } from "@/components/ui/progress";
 import { ChevronRightIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -102,14 +101,17 @@ export default function InvestmentDistribution({ setActiveTab }: InvestmentDistr
                 <span className="text-bgs-gray-medium">{item.project.name} ({item.project.yield}% par mois)</span>
                 <span className="font-medium text-bgs-blue">{item.totalAmount} €</span>
               </div>
-              <Progress 
-                value={totalInvested > 0 ? (item.totalAmount / totalInvested) * 100 : 0} 
-                className="h-1 bg-gray-100" 
-                indicatorClassName={
-                  index % 3 === 0 ? "bg-bgs-orange" : 
-                  index % 3 === 1 ? "bg-blue-500" : "bg-green-500"
-                } 
-              />
+              <div 
+                className={`h-1 bg-gray-100 rounded-full overflow-hidden`}
+              >
+                <div 
+                  className={
+                    index % 3 === 0 ? "bg-bgs-orange h-full" : 
+                    index % 3 === 1 ? "bg-blue-500 h-full" : "bg-green-500 h-full"
+                  }
+                  style={{ width: `${totalInvested > 0 ? (item.totalAmount / totalInvested) * 100 : 0}%` }}
+                ></div>
+              </div>
             </div>
           ))}
         </div>

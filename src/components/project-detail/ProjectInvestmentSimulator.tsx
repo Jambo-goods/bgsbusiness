@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Project } from "@/types/project";
 import { Slider } from "@/components/ui/slider";
@@ -12,7 +11,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Progress } from "@/components/ui/progress";
 
 interface ProjectInvestmentSimulatorProps {
   project: Project;
@@ -76,10 +74,8 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   }, []);
   
   useEffect(() => {
-    // Calculate the monthly return based on monthly yield rate
     const calculatedMonthlyReturn = investmentAmount * (project.yield / 100);
     
-    // The total return includes ONLY the monthly returns, not the principal
     const effectiveDuration = Math.max(0, duration - firstPaymentDelay);
     const calculatedTotalReturn = calculatedMonthlyReturn * effectiveDuration;
     
@@ -88,9 +84,6 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
   }, [investmentAmount, duration, project.yield, firstPaymentDelay]);
   
   const annualYieldPercentage = project.yield * 12;
-  
-  // Calculate progress percentage
-  const progressPercentage = Math.min(100, Math.max(0, (investmentAmount - minInvestment) / (maxInvestment - minInvestment) * 100));
   
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-fade-up">
@@ -115,11 +108,6 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
         <div className="flex justify-between text-xs text-bgs-blue/60">
           <span>Min: {formatCurrency(minInvestment)}</span>
           <span>Max: {formatCurrency(maxInvestment)}</span>
-        </div>
-        
-        {/* Add a progress bar to show investment amount visually */}
-        <div className="mt-2">
-          <Progress value={progressPercentage} className="h-1" />
         </div>
       </div>
       
