@@ -78,7 +78,7 @@ export default function RegisterForm() {
         lastName: values.lastName,
         email: values.email,
         password: values.password,
-        referralCode: values.referralCode || referralFromLink || undefined,
+        referralCode: values.referralCode || referralFromLink,
       });
       
       if (!result.success) {
