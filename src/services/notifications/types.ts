@@ -32,7 +32,7 @@ export interface NotificationCreateParams {
   type: string;
   category?: NotificationCategory;
   metadata?: Record<string, any>;
-  userId?: string; // Add userId parameter
+  userId?: string;
 }
 
 export interface DatabaseNotification {
@@ -57,5 +57,26 @@ export interface Notification {
   metadata: Record<string, any>;
 }
 
-// Add this to fix the error
 export type NotificationData = Record<string, any>;
+
+export interface NotificationService {
+  getNotifications(): Promise<Notification[]>;
+  markAsRead(notificationId: string): Promise<boolean>;
+  markAllAsRead(): Promise<boolean>;
+  deleteNotification(notificationId: string): Promise<boolean>;
+  deleteAllNotifications(): Promise<boolean>;
+  getUnreadCount(): Promise<number>;
+  createNotification(params: NotificationCreateParams): Promise<boolean>;
+  
+  // Withdrawal notification methods
+  withdrawalScheduled(amount: number): Promise<void>;
+  withdrawalValidated(amount: number): Promise<void>;
+  withdrawalCompleted(amount: number): Promise<void>;
+  withdrawalRejected(amount: number): Promise<void>;
+  withdrawalReceived(amount: number): Promise<void>;
+  withdrawalConfirmed(amount: number): Promise<void>;
+  withdrawalPaid(amount: number): Promise<void>;
+  
+  // Investment notification methods
+  investmentConfirmed(projectName: string, amount: number): Promise<void>;
+}

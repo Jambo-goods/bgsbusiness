@@ -1,18 +1,20 @@
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-export const formatDate = (dateString: string) => {
-  return format(new Date(dateString), 'dd MMM yyyy', { locale: fr });
+export const formatDate = (dateString: string): string => {
+  try {
+    return format(new Date(dateString), 'dd MMM yyyy HH:mm', { locale: fr });
+  } catch (e) {
+    console.error("Error formatting date:", e);
+    return "Date invalide";
+  }
 };
 
-export const maskAccountNumber = (accountNumber: string) => {
-  if (!accountNumber) return '';
-  
-  // If it's an IBAN, show only first 4 and last 4 characters
-  if (accountNumber.length > 10) {
-    return `${accountNumber.substring(0, 4)}...${accountNumber.substring(accountNumber.length - 4)}`;
+export const maskAccountNumber = (accountNumber: string): string => {
+  if (!accountNumber || accountNumber.length < 4) {
+    return "****";
   }
   
-  // Otherwise, show only last 4 characters
-  return `...${accountNumber.substring(accountNumber.length - 4)}`;
+  // Keep the last 4 digits visible, mask the rest
+  return "•••• " + accountNumber.slice(-4);
 };

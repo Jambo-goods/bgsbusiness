@@ -1,92 +1,43 @@
 
-import React from "react";
-import { cva } from "class-variance-authority";
+import React from 'react';
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Clock, AlertCircle, ArrowDownCircle, CalendarClock } from "lucide-react";
-
-const statusVariants = cva("font-medium flex items-center text-xs gap-1", {
-  variants: {
-    variant: {
-      pending: "bg-yellow-100 text-yellow-800 hover:bg-yellow-200",
-      received: "bg-blue-100 text-blue-800 hover:bg-blue-200",
-      scheduled: "bg-indigo-100 text-indigo-800 hover:bg-indigo-200",
-      sheduled: "bg-indigo-100 text-indigo-800 hover:bg-indigo-200", // handle typo in status
-      confirmed: "bg-purple-100 text-purple-800 hover:bg-purple-200",
-      approved: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200",
-      completed: "bg-green-100 text-green-800 hover:bg-green-200",
-      paid: "bg-green-500 text-white hover:bg-green-600",
-      rejected: "bg-red-100 text-red-800 hover:bg-red-200",
-    },
-  },
-  defaultVariants: {
-    variant: "pending",
-  },
-});
 
 interface StatusBadgeProps {
   status: string;
-  className?: string;
 }
 
-export default function StatusBadge({ status, className }: StatusBadgeProps) {
-  let variant = status.toLowerCase() as
-    | "pending"
-    | "scheduled"
-    | "sheduled"
-    | "approved"
-    | "paid"
-    | "rejected"
-    | "received"
-    | "confirmed"
-    | "completed";
+export default function StatusBadge({ status }: StatusBadgeProps) {
+  const getStatusConfig = () => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return { label: 'En attente', variant: 'outline', class: 'border-yellow-300 text-yellow-700 bg-yellow-50' };
+      case 'processing':
+        return { label: 'En traitement', variant: 'outline', class: 'border-blue-300 text-blue-700 bg-blue-50' };
+      case 'approved':
+        return { label: 'Approuvée', variant: 'outline', class: 'border-green-300 text-green-700 bg-green-50' };
+      case 'scheduled':
+      case 'sheduled': // Handle typo in status
+        return { label: 'Programmée', variant: 'outline', class: 'border-purple-300 text-purple-700 bg-purple-50' };
+      case 'completed':
+        return { label: 'Complétée', variant: 'outline', class: 'border-green-300 text-green-700 bg-green-50' };
+      case 'rejected':
+        return { label: 'Rejetée', variant: 'outline', class: 'border-red-300 text-red-700 bg-red-50' };
+      case 'paid':
+        return { label: 'Payée', variant: 'outline', class: 'border-green-300 text-green-700 bg-green-50' };
+      case 'cancelled':
+        return { label: 'Annulée', variant: 'outline', class: 'border-gray-300 text-gray-700 bg-gray-50' };
+      case 'received':
+        return { label: 'Reçue', variant: 'outline', class: 'border-blue-300 text-blue-700 bg-blue-50' };
+      default:
+        return { label: status || 'Inconnu', variant: 'outline', class: 'border-gray-300 text-gray-700 bg-gray-50' };
+    }
+  };
 
-  let statusText: string;
-  let StatusIcon: React.ElementType;
-
-  switch (variant) {
-    case "pending":
-      statusText = "En attente";
-      StatusIcon = Clock;
-      break;
-    case "scheduled":
-    case "sheduled":
-      statusText = "Programmé";
-      StatusIcon = CalendarClock;
-      break;
-    case "approved":
-      statusText = "Approuvé";
-      StatusIcon = CheckCircle;
-      break;
-    case "paid":
-      statusText = "Payé";
-      StatusIcon = ArrowDownCircle;
-      break;
-    case "rejected":
-      statusText = "Rejeté";
-      StatusIcon = XCircle;
-      break;
-    case "received":
-      statusText = "Reçu";
-      StatusIcon = AlertCircle;
-      break;
-    case "confirmed":
-      statusText = "Confirmé";
-      StatusIcon = CheckCircle;
-      break;
-    case "completed":
-      statusText = "Terminé";
-      StatusIcon = CheckCircle;
-      break;
-    default:
-      statusText = status;
-      StatusIcon = Clock;
-      variant = "pending";
-  }
+  const config = getStatusConfig();
 
   return (
-    <Badge variant="outline" className={statusVariants({ variant, className })}>
-      <StatusIcon className="h-3 w-3" />
-      <span>{statusText}</span>
+    <Badge variant="outline" className={config.class}>
+      {config.label}
     </Badge>
   );
 }
