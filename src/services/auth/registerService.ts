@@ -34,11 +34,11 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     
     // Si un code de parrainage est fourni, vérifier sa validité
     if (userData.referralCode) {
-      // Fix the ambiguous column reference by fully qualifying it
+      // Correction de la requête SQL pour éviter l'ambiguïté sur la colonne "code"
       const { data: referralCodeData, error: referralError } = await supabase
         .from('referral_codes')
         .select('user_id, code')
-        .eq('referral_codes.code', userData.referralCode)
+        .eq('code', userData.referralCode)
         .single();
         
       if (referralError || !referralCodeData) {
