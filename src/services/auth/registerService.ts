@@ -36,11 +36,11 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     if (userData.referralCode) {
       console.log("Vérification du code de parrainage:", userData.referralCode);
       
-      // Résoudre complètement l'ambiguïté en utilisant un alias pour la colonne code
+      // Utiliser un alias pour la table entière pour éviter toute ambiguïté
       const { data: referralCodeData, error: referralError } = await supabase
-        .from('referral_codes')
-        .select('user_id, code')
-        .eq('code', userData.referralCode)
+        .from('referral_codes AS rc')
+        .select('rc.user_id, rc.code')
+        .eq('rc.code', userData.referralCode)
         .maybeSingle();
         
       if (referralError) {

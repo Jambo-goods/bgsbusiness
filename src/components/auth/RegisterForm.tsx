@@ -75,7 +75,7 @@ export default function RegisterForm() {
         referralCode: values.referralCode || referralFromLink || null
       });
       
-      const { success, error, data } = await registerUser({
+      const result = await registerUser({
         firstName: values.firstName,
         lastName: values.lastName,
         email: values.email,
@@ -83,8 +83,8 @@ export default function RegisterForm() {
         referralCode: values.referralCode || referralFromLink || null,
       });
       
-      if (!success) {
-        const errorMessage = error?.message || error || "Une erreur s'est produite lors de l'inscription";
+      if (!result.success) {
+        const errorMessage = typeof result.error === 'string' ? result.error : "Une erreur s'est produite lors de l'inscription";
         setRegistrationError(errorMessage);
         toast.error("Erreur d'inscription", {
           description: errorMessage,
