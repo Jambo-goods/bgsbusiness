@@ -33,31 +33,33 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     // Variable pour stocker l'ID du parrain si un code valide est fourni
     let referrerId = null;
     
-    // Vérification du code de parrainage seulement si un code valide est fourni
-    if (userData.referralCode && 
-        userData.referralCode !== 'undefined' && 
-        userData.referralCode !== 'null' &&
-        userData.referralCode !== 'Aucun' &&
-        userData.referralCode.trim() !== '') {
+    // Traiter le code de parrainage s'il existe et n'est pas vide
+    const referralCode = userData.referralCode ? userData.referralCode.trim() : null;
+    
+    if (referralCode && 
+        referralCode !== 'undefined' && 
+        referralCode !== 'null' &&
+        referralCode !== 'Aucun' && 
+        referralCode !== '') {
       
-      const cleanCode = userData.referralCode.trim();
-      console.log("Vérification du code de parrainage:", cleanCode);
+      console.log("Vérification du code de parrainage:", referralCode);
       
-      // Utilisation d'une requête simplifiée pour éviter l'ambiguïté
-      const { data: referrerData, error: referrerError } = await supabase
+      // Requête explicite pour éviter toute ambiguïté
+      const { data, error } = await supabase
         .from('referral_codes')
-        .select('user_id')
-        .filter('code', 'eq', cleanCode)
-        .maybeSingle();
+        .select('referral_codes.user_id')
+        .eq('referral_codes.code', referralCode)
+        .limit(1)
+        .single();
         
-      if (referrerError) {
-        console.error("Erreur lors de la vérification du code de parrainage:", referrerError);
+      if (error) {
+        console.error("Erreur lors de la vérification du code de parrainage:", error);
         // On continue l'inscription même si le code est invalide
-      } else if (referrerData) {
-        console.log("Code de parrainage valide trouvé:", referrerData);
-        referrerId = referrerData.user_id;
+      } else if (data) {
+        console.log("Code de parrainage valide trouvé:", data);
+        referrerId = data.user_id;
       } else {
-        console.log("Code de parrainage invalide ou introuvable");
+        console.log("Code de parrainage introuvable");
       }
     }
     

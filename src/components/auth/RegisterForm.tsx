@@ -63,11 +63,12 @@ export default function RegisterForm() {
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
+      // Réinitialiser les états
       setIsSubmitting(true);
       setRegistrationError("");
       
-      // Afficher une toast au début de la tentative d'inscription
-      toast.loading("Inscription en cours...");
+      // Afficher un toast pour indiquer que l'inscription est en cours
+      const loadingToast = toast.loading("Inscription en cours...");
       
       console.log("Attempting registration with values:", {
         firstName: values.firstName,
@@ -84,8 +85,8 @@ export default function RegisterForm() {
         referralCode: values.referralCode || referralFromLink || null,
       });
       
-      // Dismiss the loading toast
-      toast.dismiss();
+      // Fermer le toast de chargement
+      toast.dismiss(loadingToast);
       
       if (!result.success) {
         const errorMessage = typeof result.error === 'string' ? result.error : "Une erreur s'est produite lors de l'inscription";
@@ -102,7 +103,7 @@ export default function RegisterForm() {
       
       navigate("/login");
     } catch (error: any) {
-      // Dismiss the loading toast
+      // Fermer tous les toasts en cours
       toast.dismiss();
       
       console.error("Registration error:", error);
