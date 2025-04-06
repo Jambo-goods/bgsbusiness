@@ -15,7 +15,7 @@ import TermsCheckbox from "./TermsCheckbox";
 import { Form } from "@/components/ui/form";
 import { supabase } from "@/integrations/supabase/client";
 import { notificationService } from "@/services/notifications";
-import { ArrowRight, Gift, Check, AlertCircle } from "lucide-react";
+import { ArrowRight, Gift, Check, AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const registerSchema = z.object({
@@ -157,8 +157,17 @@ export default function RegisterForm() {
           className="w-full bg-bgs-blue hover:bg-bgs-blue-light text-white font-medium py-2.5 flex items-center justify-center gap-2 text-base transition-all transform hover:translate-y-[-2px]"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Inscription en cours..." : "S'inscrire"}
-          {!isSubmitting && <ArrowRight className="h-5 w-5" />}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Inscription en cours...
+            </>
+          ) : (
+            <>
+              S'inscrire
+              <ArrowRight className="h-5 w-5" />
+            </>
+          )}
         </Button>
       </form>
     </Form>

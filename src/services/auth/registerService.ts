@@ -80,14 +80,6 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
         };
       }
       
-      // Détailler les autres types d'erreurs pour un meilleur diagnostic
-      if (error.message.includes("Database error saving new user")) {
-        return {
-          success: false,
-          error: "Erreur de base de données lors de l'enregistrement du nouvel utilisateur. Veuillez réessayer plus tard."
-        };
-      }
-      
       return {
         success: false,
         error: error.message || "Une erreur s'est produite lors de l'inscription"
