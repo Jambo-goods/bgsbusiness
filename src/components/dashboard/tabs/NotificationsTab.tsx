@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { notificationService } from "@/services/notifications";
-import type { Notification } from "@/services/notifications/types";
+import type { Notification } from "@/services/notifications";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import NotificationHeader from "./notifications/NotificationHeader";
@@ -35,9 +35,7 @@ export default function NotificationsTab() {
       // Get notifications using the service
       const notificationsData = await notificationService.getNotifications();
       console.log("Notifications fetched:", notificationsData.length);
-      
-      // Make sure to convert the types correctly
-      setNotifications(notificationsData as unknown as Notification[]);
+      setNotifications(notificationsData);
     } catch (err) {
       console.error("Error fetching notifications:", err);
       setError("Impossible de charger les notifications. Veuillez réessayer plus tard.");

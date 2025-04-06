@@ -1,6 +1,6 @@
 
 import { Wallet, Briefcase, Shield, Megaphone, Bell, Info, CheckCircle, AlertTriangle, XCircle } from "lucide-react";
-import type { NotificationCategory } from "@/services/notifications/types";
+import type { NotificationType, NotificationCategory } from "@/services/notifications/types";
 
 export const getNotificationTypeIcon = (type: string) => {
   switch (type.toLowerCase()) {

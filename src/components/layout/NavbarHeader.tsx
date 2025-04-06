@@ -11,6 +11,10 @@ interface NavbarHeaderProps {
 
 export default function NavbarHeader({ isScrolled, isLoggedIn = false, children }: NavbarHeaderProps) {
   const location = useLocation();
+
+  const isActive = (path: string) => {
+    return location.pathname.includes(path);
+  };
   
   const isDashboardPage = location.pathname.includes('/dashboard');
   
@@ -27,7 +31,7 @@ export default function NavbarHeader({ isScrolled, isLoggedIn = false, children 
         <div className="flex items-center justify-between">
           {children}
           {isLoggedIn && isDashboardPage && (
-            <NavbarActions />
+            <NavbarActions isActive={isActive} />
           )}
         </div>
       </div>

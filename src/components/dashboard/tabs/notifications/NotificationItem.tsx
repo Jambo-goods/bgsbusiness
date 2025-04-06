@@ -39,19 +39,10 @@ export default function NotificationItem({
   };
 
   const formatDate = (date: Date) => {
-    try {
-      // Make sure the date is valid before formatting
-      if (!(date instanceof Date) || isNaN(date.getTime())) {
-        return "Date invalide";
-      }
-      return formatDistanceToNow(date, {
-        addSuffix: true,
-        locale: fr,
-      });
-    } catch (error) {
-      console.error("Error formatting date:", error, date);
-      return "Date invalide";
-    }
+    return formatDistanceToNow(date, {
+      addSuffix: true,
+      locale: fr,
+    });
   };
 
   const category = notification.category || "info";

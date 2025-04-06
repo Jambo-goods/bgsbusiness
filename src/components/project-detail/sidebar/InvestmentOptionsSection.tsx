@@ -5,11 +5,7 @@ import InvestmentConfirmation from "./InvestmentConfirmation";
 import DurationSection from "./DurationSection";
 import InvestmentAmountSection from "./InvestmentAmountSection";
 import InvestmentSummary from "./InvestmentSummary";
-import useInvestment from "@/hooks/useInvestment";
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-import InvestmentFormSkeleton from './InvestmentFormSkeleton';
+import { useInvestment } from "@/hooks/useInvestment";
 
 interface InvestmentOptionsSectionProps {
   project: Project;

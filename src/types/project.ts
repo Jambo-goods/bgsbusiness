@@ -1,21 +1,28 @@
 
-// src/types/project.ts
 export interface Project {
   id: string;
-  title: string;
-  name?: string;
-  min_investment: number;
-  available_amount: number;
-  yield_rate: number;
-  yield?: number;
-  risk_rating: number;
-  category?: string;
-  company_name?: string;
-  created_at?: string;
+  title?: string;
   description?: string;
-  duration?: string;
-  end_date?: string;
-  featured?: boolean;
-  first_payment_delay_months?: number;
-  funding_progress?: number;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  category?: string;
+  amount?: number;
+  duration?: number | string;
+  yield_rate?: number;
+  image_url?: string;
+  owner_id?: string;
+  location?: string;
+  risk_level?: string;
+  min_investment?: number;
+  company_name?: string;
+  investment_model?: string;
+  // Partner-related fields
+  partner_description?: string;
+  partner_experience?: string;
+  partner_employees?: number;
+  partner_projects?: number;
+  partner_satisfaction?: number;
+  underlying_asset?: string;
+  [key: string]: any;
 }

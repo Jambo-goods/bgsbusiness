@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -7,12 +6,9 @@ export type UserCredentials = {
   password: string;
 };
 
-export type UserRegistrationData = {
-  email: string;
-  password: string;
+export type UserRegistrationData = UserCredentials & {
   firstName: string;
   lastName: string;
-  referralCode?: string;
 };
 
 export const registerUser = async (userData: UserRegistrationData) => {
