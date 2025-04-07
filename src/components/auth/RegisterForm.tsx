@@ -14,8 +14,6 @@ import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import NameFields from "./NameFields";
 import TermsCheckbox from "./TermsCheckbox";
-import ReferralCodeField from "./ReferralCodeField";
-import { supabase } from "@/integrations/supabase/client";
 
 const registerSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
@@ -23,7 +21,6 @@ const registerSchema = z.object({
   email: z.string().email("Adresse email invalide"),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
   confirmPassword: z.string(),
-  referralCode: z.string().optional(),
   terms: z.boolean().refine(val => val === true, {
     message: "Vous devez accepter les conditions d'utilisation"
   })
@@ -49,52 +46,9 @@ export default function RegisterForm() {
       email: "",
       password: "",
       confirmPassword: "",
-      referralCode: "",
       terms: false
     }
   });
-
-  const createReferralEntry = async (newUserId: string, referrerCode: string) => {
-    try {
-      // 1. Trouver l'ID du parrain à partir du code
-      const { data: referralCodeData, error: codeError } = await supabase
-        .from('referral_codes')
-        .select('user_id')
-        .eq('code', referrerCode)
-        .single();
-      
-      if (codeError || !referralCodeData) {
-        console.error("Erreur lors de la recherche du code de parrainage:", codeError);
-        return false;
-      }
-      
-      // 2. Créer l'entrée de parrainage dans la table referrals
-      const referrerId = referralCodeData.user_id;
-      console.log(`Création d'un parrainage: parrain ${referrerId} -> filleul ${newUserId}`);
-      
-      const { data: referralData, error: referralError } = await supabase
-        .from('referrals')
-        .insert({
-          referrer_id: referrerId,
-          referred_id: newUserId,
-          status: 'pending',
-          referred_rewarded: false,
-          referrer_rewarded: false
-        })
-        .select();
-      
-      if (referralError) {
-        console.error("Erreur lors de la création du parrainage:", referralError);
-        return false;
-      }
-      
-      console.log("Parrainage créé avec succès:", referralData);
-      return true;
-    } catch (err) {
-      console.error("Exception lors de la création du parrainage:", err);
-      return false;
-    }
-  };
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
@@ -104,17 +58,10 @@ export default function RegisterForm() {
     try {
       console.log("Étape 1: Début de l'inscription avec email:", data.email);
       
-      // Utiliser soit le code de parrainage du formulaire, soit celui de l'URL s'il existe
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlRefCode = urlParams.get('ref');
-      const referralCode = data.referralCode || urlRefCode;
-      
       // Ajout des métadonnées pour l'utilisateur
       const metadata = {
         firstName: data.firstName,
-        lastName: data.lastName,
-        // On utilise le code de parrainage s'il existe
-        referralCode: referralCode || null
+        lastName: data.lastName
       };
       
       console.log("Étape 2: Appel de la fonction signup avec les métadonnées:", metadata);
@@ -134,18 +81,6 @@ export default function RegisterForm() {
       
       if (user) {
         console.log("Étape 4: Inscription réussie pour:", user.email);
-        
-        // Si un code de parrainage a été fourni, créer une entrée dans la table referrals
-        if (referralCode) {
-          console.log("Code de parrainage détecté:", referralCode);
-          const referralSuccess = await createReferralEntry(user.id, referralCode);
-          if (referralSuccess) {
-            console.log("Parrainage enregistré avec succès");
-          } else {
-            console.warn("Le parrainage n'a pas pu être enregistré");
-          }
-        }
-        
         toast.success("Inscription réussie ! Vérifiez votre email pour confirmer votre compte.");
         navigate("/login");
       } else {
@@ -189,7 +124,6 @@ export default function RegisterForm() {
         <NameFields />
         <EmailField />
         <PasswordFields />
-        <ReferralCodeField />
         <TermsCheckbox />
         
         {detailedError && (

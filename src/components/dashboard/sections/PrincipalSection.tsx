@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { HomeIcon, PiggyBank, Activity, LineChart, Wallet, Users, Calendar } from "lucide-react";
+import { HomeIcon, PiggyBank, Activity, LineChart, Wallet, Calendar } from "lucide-react";
 
 export default function PrincipalSection() {
   return (
@@ -50,13 +50,6 @@ export default function PrincipalSection() {
           <Calendar size={18} />
         </span>
         Paiements programmés
-      </Link>
-      
-      <Link to="/dashboard/referrals" className="flex items-center py-2 px-3 text-sm text-gray-600 hover:bg-blue-50 hover:text-bgs-blue rounded-md transition-colors">
-        <span className="mr-3 text-gray-400">
-          <Users size={18} />
-        </span>
-        Parrainage
       </Link>
     </div>
   );
