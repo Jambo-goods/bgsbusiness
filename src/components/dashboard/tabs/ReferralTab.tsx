@@ -63,9 +63,13 @@ export default function ReferralTab() {
   const createReferralCode = async () => {
     try {
       // On préfère laisser la fonction SQL generate_unique_referral_code s'exécuter côté serveur
+      // Fix: We need to provide a code value even though it will be overridden by the server
       const { data, error } = await supabase
         .from('referral_codes')
-        .insert({ user_id: user.id })
+        .insert({ 
+          user_id: user.id,
+          code: 'TEMP' + Math.random().toString(36).substring(2, 10).toUpperCase() // Temporary code that will be replaced
+        })
         .select()
         .single();
         
@@ -317,16 +321,22 @@ export default function ReferralTab() {
                       {new Date(referral.created_at).toLocaleDateString('fr-FR')}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={referral.status === 'completed' ? 'success' : 'default'}>
+                      {/* Fix: Changed success to outline with custom classes */}
+                      <Badge 
+                        variant={referral.status === 'completed' ? 'outline' : 'default'}
+                        className={referral.status === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''}
+                      >
                         {referral.status === 'completed' ? 'Complété' : 'En attente'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {referral.referrer_rewarded ? (
-                        <Badge variant="success">25€ reçus</Badge>
-                      ) : (
-                        <Badge variant="outline">En attente</Badge>
-                      )}
+                      {/* Fix: Changed success to outline with custom classes */}
+                      <Badge 
+                        variant={referral.referrer_rewarded ? 'outline' : 'outline'} 
+                        className={referral.referrer_rewarded ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''}
+                      >
+                        {referral.referrer_rewarded ? '25€ reçus' : 'En attente'}
+                      </Badge>
                     </TableCell>
                   </TableRow>
                 ))}
