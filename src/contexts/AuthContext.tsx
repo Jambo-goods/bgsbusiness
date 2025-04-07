@@ -77,25 +77,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, password: string, metadata?: any) => {
     try {
-      console.log("AuthContext - Étape 1: Début du processus d'inscription");
+      console.log("AuthContext - Étape 1: Début du processus d'inscription avec email", email);
+      console.log("AuthContext - Métadonnées:", metadata);
       
-      // Essayons d'abord d'utiliser une approche directe avec des options minimales
+      const origin = window.location.origin;
+      console.log("AuthContext - Origin URL:", origin);
+      const redirectUrl = `${origin}/login`;
+      console.log("AuthContext - Redirect URL:", redirectUrl);
+      
+      // Utilisons une approche plus directe avec tous les paramètres explicitement définis
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: metadata,
-          emailRedirectTo: `${window.location.origin}/login`,
+          emailRedirectTo: redirectUrl,
         }
       });
 
+      console.log("AuthContext - Réponse brute de signUp:", data);
+      
       if (error) {
         console.error("AuthContext - Étape 2: Erreur Supabase lors de l'inscription:", error);
-        console.error("AuthContext - Détails de l'erreur:", {
+        console.error("AuthContext - Type d'erreur:", typeof error);
+        console.error("AuthContext - Détails supplémentaires:", {
           message: error.message,
           status: error.status,
           name: error.name,
         });
+        
+        if (error.cause) {
+          console.error("AuthContext - Cause de l'erreur:", error.cause);
+        }
+        
         throw error;
       }
 
@@ -104,17 +118,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         console.log("AuthContext - ID utilisateur créé:", data.user.id);
         console.log("AuthContext - Email utilisateur:", data.user.email);
+        console.log("AuthContext - Métadonnées utilisateur:", data.user.user_metadata);
       }
       
       return { user: data.user, error: null };
     } catch (error: any) {
       console.error("AuthContext - Exception lors de l'inscription:", error);
+      console.error("AuthContext - Type d'erreur attrapée:", typeof error);
       console.error("AuthContext - Message d'erreur:", error.message);
       
       // Ajoutons plus d'informations de débogage
       if (error.cause) {
         console.error("AuthContext - Cause de l'erreur:", error.cause);
       }
+      
+      // Essayons d'extraire plus de détails
+      const details = {
+        name: error.name,
+        message: error.message,
+        status: error.status,
+        code: error.code,
+        details: error.details,
+      };
+      
+      console.error("AuthContext - Détails structurés:", details);
+      console.error("AuthContext - JSON stringify:", JSON.stringify(error, null, 2));
       
       return { user: null, error };
     }

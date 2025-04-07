@@ -34,6 +34,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [detailedError, setDetailedError] = useState<any>(null);
   const navigate = useNavigate();
   const { signup } = useAuth();
   
@@ -52,6 +53,7 @@ export default function RegisterForm() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     setError(null);
+    setDetailedError(null);
     
     try {
       console.log("Étape 1: Début de l'inscription avec email:", data.email);
@@ -63,6 +65,7 @@ export default function RegisterForm() {
       };
       
       console.log("Étape 2: Appel de la fonction signup avec les métadonnées:", metadata);
+      console.log("Informations d'inscription:", { email: data.email, password: "***HIDDEN***", metadata });
       
       // Use the AuthContext signup function instead of direct Supabase call
       const { user, error } = await signup(data.email, data.password, metadata);
@@ -73,6 +76,7 @@ export default function RegisterForm() {
         console.error("Étape 3a: Erreur complète:", error);
         console.error("Étape 3b: Message d'erreur:", error.message);
         console.error("Étape 3c: Code d'erreur:", error.code);
+        setDetailedError(error);
         throw error;
       }
       
@@ -87,7 +91,24 @@ export default function RegisterForm() {
       }
     } catch (error: any) {
       console.error("Étape X: Erreur complète lors de l'inscription:", error);
-      console.error("Détails supplémentaires:", JSON.stringify(error, null, 2));
+      
+      if (error.error) {
+        console.error("Erreur interne:", error.error);
+      }
+      
+      if (error.code) {
+        console.error("Code d'erreur:", error.code);
+      }
+      
+      if (error.details) {
+        console.error("Détails de l'erreur:", error.details);
+      }
+      
+      if (error.status) {
+        console.error("Status HTTP:", error.status);
+      }
+      
+      console.error("JSON détaillé de l'erreur:", JSON.stringify(error, null, 2));
       
       if (error.message?.includes("already registered") || error.message?.includes("déjà enregistré")) {
         setError("Cette adresse email est déjà utilisée.");
@@ -125,6 +146,15 @@ export default function RegisterForm() {
         <EmailField />
         <PasswordFields />
         <TermsCheckbox />
+        
+        {detailedError && (
+          <div className="text-xs text-red-600 mt-2 bg-red-50 p-2 rounded">
+            <p>Information technique (pour le support):</p>
+            <pre className="whitespace-pre-wrap overflow-x-auto">
+              {JSON.stringify({ message: detailedError.message, code: detailedError.code }, null, 2)}
+            </pre>
+          </div>
+        )}
         
         <Button 
           type="submit" 
