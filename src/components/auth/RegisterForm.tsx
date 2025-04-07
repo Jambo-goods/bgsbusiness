@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import NameFields from "./NameFields";
@@ -31,6 +33,7 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   
   const form = useForm<RegisterFormData>({
@@ -47,10 +50,11 @@ export default function RegisterForm() {
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
+    setError(null);
     
     try {
       // Register the user with Supabase
-      const { error } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -61,7 +65,7 @@ export default function RegisterForm() {
         }
       });
       
-      if (error) throw error;
+      if (signUpError) throw signUpError;
       
       toast.success("Inscription réussie ! Vérifiez votre email pour confirmer votre compte.");
       navigate("/login");
@@ -69,9 +73,11 @@ export default function RegisterForm() {
       console.error("Registration error:", error);
       
       if (error.message.includes("already registered")) {
-        toast.error("Cette adresse email est déjà utilisée.");
+        setError("Cette adresse email est déjà utilisée.");
+      } else if (error.message.includes("database")) {
+        setError("Une erreur est survenue lors de l'enregistrement de votre compte. Veuillez réessayer plus tard.");
       } else {
-        toast.error("Une erreur est survenue lors de l'inscription.");
+        setError("Une erreur est survenue lors de l'inscription.");
       }
     } finally {
       setIsLoading(false);
@@ -81,6 +87,14 @@ export default function RegisterForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {error && (
+          <Alert variant="destructive" className="bg-red-50 text-red-800 border-red-200">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erreur</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <NameFields />
         <EmailField />
         <PasswordFields />
