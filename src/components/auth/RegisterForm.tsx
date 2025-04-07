@@ -54,15 +54,21 @@ export default function RegisterForm() {
     setError(null);
     
     try {
+      console.log("Début de l'inscription avec email:", data.email);
+      
       // Use the AuthContext signup function instead of direct Supabase call
       const { user, error } = await signup(data.email, data.password, {
         firstName: data.firstName,
         lastName: data.lastName,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("Erreur détaillée:", error);
+        throw error;
+      }
       
       if (user) {
+        console.log("Inscription réussie pour:", user.email);
         toast.success("Inscription réussie ! Vérifiez votre email pour confirmer votre compte.");
         navigate("/login");
       } else {
@@ -70,19 +76,20 @@ export default function RegisterForm() {
         throw new Error("Une erreur inattendue est survenue lors de l'inscription.");
       }
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("Erreur complète lors de l'inscription:", error);
       
       if (error.message?.includes("already registered") || error.message?.includes("déjà enregistré")) {
         setError("Cette adresse email est déjà utilisée.");
       } else if (error.message?.includes("ambiguous")) {
         // Specifically handle the "code is ambiguous" error
-        setError("Une erreur est survenue lors de la création de votre code de parrainage. L'équipe technique a été informée.");
-        console.error("Ambiguous column error during registration:", error);
+        setError("Une erreur est survenue lors de la création de votre compte. Veuillez réessayer.");
+        console.error("Erreur de colonne ambiguë pendant l'inscription:", JSON.stringify(error));
       } else if (error.message?.includes("database") || error.message?.includes("code")) {
-        setError("Une erreur technique est survenue. Nos équipes ont été notifiées et travaillent à résoudre ce problème.");
-        console.error("Technical database error during registration:", error);
+        setError("Une erreur technique est survenue. Veuillez réessayer ultérieurement.");
+        console.error("Erreur technique de base de données pendant l'inscription:", JSON.stringify(error));
       } else {
-        setError(`Une erreur est survenue lors de l'inscription: ${error.message || "Erreur inconnue"}`);
+        setError(`Erreur lors de l'inscription: ${error.message || "Erreur inconnue"}`);
+        console.error("Erreur générique d'inscription:", JSON.stringify(error));
       }
     } finally {
       setIsLoading(false);

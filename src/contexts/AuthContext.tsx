@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -77,6 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, password: string, metadata?: any) => {
     try {
+      console.log("Début du processus d'inscription dans AuthContext");
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -86,12 +86,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
+        console.error("Erreur Supabase lors de l'inscription:", error);
         throw error;
       }
 
+      console.log("Réponse de Supabase signUp:", data.user ? "Utilisateur créé" : "Pas d'utilisateur créé");
       return { user: data.user, error: null };
     } catch (error) {
-      console.error('Error signing up:', error);
+      console.error("Exception lors de l'inscription:", error);
       return { user: null, error };
     }
   };
