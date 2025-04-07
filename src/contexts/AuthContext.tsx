@@ -106,8 +106,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: error.name,
         });
         
-        if (error.cause) {
-          console.error("AuthContext - Cause de l'erreur:", error.cause);
+        // Remove references to error.cause which doesn't exist on AuthError type
+        if (error instanceof Error && 'cause' in error) {
+          console.error("AuthContext - Cause de l'erreur:", (error as any).cause);
         }
         
         throw error;
@@ -127,9 +128,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("AuthContext - Type d'erreur attrapée:", typeof error);
       console.error("AuthContext - Message d'erreur:", error.message);
       
+      // Use type check with optional properties instead of direct access
       // Ajoutons plus d'informations de débogage
-      if (error.cause) {
-        console.error("AuthContext - Cause de l'erreur:", error.cause);
+      if (error instanceof Error) {
+        if ('cause' in error) {
+          console.error("AuthContext - Cause de l'erreur:", (error as any).cause);
+        }
       }
       
       // Essayons d'extraire plus de détails
