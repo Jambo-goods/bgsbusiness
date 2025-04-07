@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +7,6 @@ import DashboardLayout from "./DashboardLayout";
 import DashboardMain from "./DashboardMain";
 import DashboardLoading from "./DashboardLoading";
 import { useDashboardState } from "@/hooks/dashboard/useDashboardState";
-import { useReferralRewards } from "@/hooks/useReferralRewards";
 
 export default function Dashboard() {
   const [userData, setUserData] = useState<any>(null);
@@ -18,9 +16,6 @@ export default function Dashboard() {
   const { activeTab, setActiveTab } = useDashboardState();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Add isSidebarOpen state
   
-  // Initialize the referral rewards listener
-  useReferralRewards();
-
   useEffect(() => {
     const fetchUserData = async () => {
       try {
