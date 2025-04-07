@@ -8,6 +8,9 @@ interface User {
   email?: string;
   user_metadata?: {
     fullName?: string;
+    firstName?: string;
+    lastName?: string;
+    referralCode?: string;
   };
 }
 
@@ -85,12 +88,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const redirectUrl = `${origin}/login`;
       console.log("AuthContext - Redirect URL:", redirectUrl);
       
-      // Utilisons une approche plus directe avec tous les paramètres explicitement définis
+      // Version simplifiée sans parrainage
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: metadata,
+          data: {
+            firstName: metadata?.firstName,
+            lastName: metadata?.lastName,
+            referralCode: metadata?.referralCode // On garde uniquement le code de référence
+          },
           emailRedirectTo: redirectUrl,
         }
       });

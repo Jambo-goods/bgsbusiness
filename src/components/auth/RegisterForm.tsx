@@ -58,16 +58,21 @@ export default function RegisterForm() {
     try {
       console.log("Étape 1: Début de l'inscription avec email:", data.email);
       
+      // Récupérer le code de parrainage depuis l'URL s'il existe
+      const urlParams = new URLSearchParams(window.location.search);
+      const refCode = urlParams.get('ref');
+      
       // Ajout des métadonnées pour l'utilisateur
       const metadata = {
         firstName: data.firstName,
         lastName: data.lastName,
+        // On garde uniquement la référence au code de parrainage s'il existe
+        referralCode: refCode || null
       };
       
       console.log("Étape 2: Appel de la fonction signup avec les métadonnées:", metadata);
-      console.log("Informations d'inscription:", { email: data.email, password: "***HIDDEN***", metadata });
       
-      // Use the AuthContext signup function instead of direct Supabase call
+      // Use the AuthContext signup function
       const { user, error } = await signup(data.email, data.password, metadata);
       
       console.log("Étape 3: Résultat de l'inscription:", user ? "Succès" : "Échec", error ? "Avec erreur" : "Sans erreur");
@@ -92,39 +97,13 @@ export default function RegisterForm() {
     } catch (error: any) {
       console.error("Étape X: Erreur complète lors de l'inscription:", error);
       
-      if (error.error) {
-        console.error("Erreur interne:", error.error);
-      }
-      
-      if (error.code) {
-        console.error("Code d'erreur:", error.code);
-      }
-      
-      if (error.details) {
-        console.error("Détails de l'erreur:", error.details);
-      }
-      
-      if (error.status) {
-        console.error("Status HTTP:", error.status);
-      }
-      
-      console.error("JSON détaillé de l'erreur:", JSON.stringify(error, null, 2));
-      
+      // Gestion simplifiée des erreurs
       if (error.message?.includes("already registered") || error.message?.includes("déjà enregistré")) {
         setError("Cette adresse email est déjà utilisée.");
       } else if (error.message?.includes("Database error saving new user")) {
-        setError("Une erreur s'est produite lors de la création de votre compte. Nos équipes ont été informées de ce problème.");
-        console.error("Erreur de base de données lors de l'enregistrement:", JSON.stringify(error));
-      } else if (error.message?.includes("ambiguous")) {
-        // Specifically handle the "code is ambiguous" error
-        setError("Une erreur est survenue lors de la création de votre compte. Veuillez réessayer.");
-        console.error("Erreur de colonne ambiguë pendant l'inscription:", JSON.stringify(error));
-      } else if (error.message?.includes("database") || error.message?.includes("code")) {
-        setError("Une erreur technique est survenue. Veuillez réessayer ultérieurement.");
-        console.error("Erreur technique de base de données pendant l'inscription:", JSON.stringify(error));
+        setError("Une erreur s'est produite lors de la création de votre compte.");
       } else {
         setError(`Erreur lors de l'inscription: ${error.message || "Erreur inconnue"}`);
-        console.error("Erreur générique d'inscription:", JSON.stringify(error));
       }
     } finally {
       setIsLoading(false);
