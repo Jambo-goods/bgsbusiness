@@ -1,29 +1,32 @@
 
-export type UserSettings = {
-  language: string;
+export interface UserSettings {
   theme: string;
-  sidebarCollapsed: boolean;
+  language: string;
+  interface: {
+    sidebarCollapsed: boolean;
+  };
+  security: {
+    twoFactorEnabled: boolean;
+  };
   notifications: {
     email: boolean;
     app: boolean;
     marketing: boolean;
   };
-  security: {
-    twoFactorEnabled: boolean;
-  }
-};
+}
 
-// Default settings values
 export const defaultSettings: UserSettings = {
-  language: "fr",
   theme: "light",
-  sidebarCollapsed: false,
+  language: "fr",
+  interface: {
+    sidebarCollapsed: false
+  },
+  security: {
+    twoFactorEnabled: false
+  },
   notifications: {
     email: true,
     app: true,
     marketing: false
-  },
-  security: {
-    twoFactorEnabled: false
   }
 };

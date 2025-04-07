@@ -5,15 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Save, RefreshCw } from "lucide-react";
 
-// Import les sections de paramètres nécessaires
+// Import all settings sections
 import SecuritySection from "./settings/SecuritySection";
 import NotificationsSection from "./settings/NotificationsSection";
+import InterfaceSection from "./settings/InterfaceSection";
+import ThemeSection from "./settings/ThemeSection";
+import LanguageSection from "./settings/LanguageSection";
 import { UserSettings, defaultSettings } from "./settings/types";
+import { useSidebarState } from "@/hooks/useSidebarState";
 
 export default function SettingsTab() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [settings, setSettings] = useState<UserSettings>(defaultSettings);
+  const { isSidebarOpen, setIsSidebarOpen } = useSidebarState();
 
   // Load settings from localStorage on component mount
   useEffect(() => {
@@ -60,6 +65,34 @@ export default function SettingsTab() {
         [key]: !prev[key as keyof typeof prev]
       }));
     }
+  };
+
+  // Theme change handler
+  const handleThemeChange = (theme: string) => {
+    setSettings(prev => ({
+      ...prev,
+      theme
+    }));
+  };
+
+  // Language change handler
+  const handleLanguageChange = (language: string) => {
+    setSettings(prev => ({
+      ...prev,
+      language
+    }));
+  };
+
+  // Sidebar toggle handler
+  const handleSidebarCollapsedToggle = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+    setSettings(prev => ({
+      ...prev,
+      interface: {
+        ...prev.interface,
+        sidebarCollapsed: !isSidebarOpen
+      }
+    }));
   };
 
   // Password change handler
@@ -115,7 +148,29 @@ export default function SettingsTab() {
         <h2 className="text-xl font-semibold text-bgs-blue mb-4">Paramètres</h2>
         
         <div className="space-y-8">
-          {/* Les sections langue et interface ont été supprimées */}
+          {/* Theme Section */}
+          <ThemeSection
+            selectedTheme={settings.theme}
+            onThemeChange={handleThemeChange}
+          />
+
+          <Separator />
+          
+          {/* Language Section */}
+          <LanguageSection
+            selectedLanguage={settings.language}
+            onLanguageChange={handleLanguageChange}
+          />
+
+          <Separator />
+          
+          {/* Interface Section */}
+          <InterfaceSection
+            sidebarCollapsed={!isSidebarOpen}
+            onToggle={handleSidebarCollapsedToggle}
+          />
+
+          <Separator />
           
           {/* Security Section */}
           <SecuritySection 
