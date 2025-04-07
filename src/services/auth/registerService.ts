@@ -31,7 +31,7 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     }
 
     // Variable pour stocker l'ID du parrain si un code valide est fourni
-    let referrerId = null;
+    let referrerId: string | null = null;
     
     // Vérifier le code de parrainage s'il existe
     if (userData.referralCode && typeof userData.referralCode === 'string' && userData.referralCode.trim() !== '') {
@@ -42,7 +42,7 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
         try {
           console.log("Vérification du code de parrainage:", cleanCode);
           
-          // Fix: Use simpler select statement without table alias
+          // Simple query without table alias
           const { data, error } = await supabase
             .from('referral_codes')
             .select('user_id')

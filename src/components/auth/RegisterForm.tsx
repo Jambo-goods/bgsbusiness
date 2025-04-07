@@ -15,6 +15,7 @@ import { Form } from "@/components/ui/form";
 import { ArrowRight, Gift, Check, AlertCircle, Loader2 } from "lucide-react";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
+// Schéma de validation pour le formulaire d'inscription
 const registerSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
   lastName: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
@@ -39,6 +40,7 @@ export default function RegisterForm() {
   const [referralFromLink, setReferralFromLink] = useState("");
   const [registrationError, setRegistrationError] = useState("");
   
+  // Initialiser le formulaire
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -52,6 +54,7 @@ export default function RegisterForm() {
     },
   });
   
+  // Récupérer le code de parrainage de l'URL s'il existe
   useEffect(() => {
     const refCode = searchParams.get("ref");
     if (refCode) {
@@ -60,6 +63,7 @@ export default function RegisterForm() {
     }
   }, [searchParams, form]);
 
+  // Gestion de la soumission du formulaire
   const onSubmit = async (values: RegisterFormValues) => {
     try {
       // Réinitialiser les états et les notifications précédentes
@@ -68,15 +72,16 @@ export default function RegisterForm() {
       setRegistrationError("");
       
       // Afficher un toast pour indiquer que l'inscription est en cours
-      const loadingToast = toast.loading("Inscription en cours...");
+      toast.loading("Inscription en cours...");
       
-      console.log("Attempting registration with values:", {
+      console.log("Tentative d'inscription avec:", {
         firstName: values.firstName,
         lastName: values.lastName,
         email: values.email,
         referralCode: values.referralCode || referralFromLink || 'Aucun'
       });
       
+      // Appel au service d'inscription
       const result = await registerUser({
         firstName: values.firstName,
         lastName: values.lastName,
@@ -85,8 +90,8 @@ export default function RegisterForm() {
         referralCode: values.referralCode || referralFromLink || null,
       });
       
-      // Fermer le toast de chargement
-      toast.dismiss(loadingToast);
+      // Traitement du résultat
+      toast.dismiss();
       
       if (!result.success) {
         const errorMessage = typeof result.error === 'string' ? result.error : "Une erreur s'est produite lors de l'inscription";
@@ -97,13 +102,15 @@ export default function RegisterForm() {
         return;
       }
       
+      // Inscription réussie
       toast.success("Inscription réussie", {
         description: "Connectez-vous pour accéder à votre tableau de bord",
       });
       
+      // Redirection vers la page de connexion
       navigate("/login");
     } catch (error: any) {
-      // Fermer tous les toasts en cours
+      // Gestion des erreurs
       toast.dismiss();
       
       console.error("Registration error:", error);
@@ -120,6 +127,7 @@ export default function RegisterForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 bg-white/50 backdrop-blur-sm p-6 rounded-xl shadow-lg border border-bgs-blue/5">
+        {/* Affichage des erreurs */}
         {registrationError && (
           <Alert variant="destructive" className="bg-red-50 border border-red-300">
             <AlertCircle className="h-4 w-4" />
@@ -130,12 +138,14 @@ export default function RegisterForm() {
           </Alert>
         )}
         
+        {/* Champs du formulaire */}
         <NameFields />
         
         <EmailField />
         
         <PasswordFields />
         
+        {/* Champ pour le code de parrainage */}
         <div className="space-y-2">
           <div className="flex items-center">
             <Gift className="h-5 w-5 text-bgs-orange mr-2" />
@@ -158,8 +168,10 @@ export default function RegisterForm() {
           )}
         </div>
         
+        {/* Case à cocher pour les conditions d'utilisation */}
         <TermsCheckbox />
         
+        {/* Bouton de soumission */}
         <Button 
           type="submit" 
           className="w-full bg-bgs-blue hover:bg-bgs-blue-light text-white font-medium py-2.5 flex items-center justify-center gap-2 text-base transition-all transform hover:translate-y-[-2px]"
