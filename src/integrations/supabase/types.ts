@@ -404,87 +404,6 @@ export type Database = {
         }
         Relationships: []
       }
-      referral_codes: {
-        Row: {
-          code: string
-          created_at: string | null
-          id: string
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          code: string
-          created_at?: string | null
-          id?: string
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          code?: string
-          created_at?: string | null
-          id?: string
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      referral_codes_backup: {
-        Row: {
-          code: string | null
-          created_at: string | null
-          id: string | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          code?: string | null
-          created_at?: string | null
-          id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          code?: string | null
-          created_at?: string | null
-          id?: string | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
-      referrals: {
-        Row: {
-          created_at: string | null
-          id: string
-          referred_id: string
-          referred_rewarded: boolean
-          referrer_id: string
-          referrer_rewarded: boolean
-          status: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          referred_id: string
-          referred_rewarded?: boolean
-          referrer_id: string
-          referrer_rewarded?: boolean
-          status?: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          referred_id?: string
-          referred_rewarded?: boolean
-          referrer_id?: string
-          referrer_rewarded?: boolean
-          status?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
       scheduled_payments: {
         Row: {
           created_at: string
@@ -613,14 +532,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      add_referral_reward: {
-        Args: {
-          user_id_param: string
-          amount_param: number
-          description_param: string
-        }
-        Returns: string
-      }
       admin_mark_bank_transfer: {
         Args: {
           transfer_id: string
@@ -642,14 +553,6 @@ export type Database = {
       decrement_wallet_balance: {
         Args: { user_id: string; decrement_amount: number }
         Returns: number
-      }
-      generate_fixed_referrals: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      generate_unique_referral_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
       }
       increment_wallet_balance: {
         Args: { user_id: string; increment_amount: number }

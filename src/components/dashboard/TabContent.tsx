@@ -1,3 +1,4 @@
+
 import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
@@ -15,6 +16,8 @@ const Investments = lazy(() => import("./Investments"));
 const ProfileTab = lazy(() => import("./tabs/ProfileTab"));
 const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
 const NotificationsTab = lazy(() => import("./tabs/NotificationsTab"));
+const HistoryTab = lazy(() => import("./tabs/HistoryTab"));
+const CapitalTab = lazy(() => import("./tabs/CapitalTab"));
 
 interface TabContentProps {
   activeTab: string;
