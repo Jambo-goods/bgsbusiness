@@ -1,25 +1,134 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, CheckCircle, Users, Gift, TrendingUp } from "lucide-react";
+import { Copy, CheckCircle, Users, Gift, TrendingUp, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/contexts/auth";
+import { Badge } from "@/components/ui/badge";
 
 export default function ReferralTab() {
-  const [loading, setLoading] = useState(false);
-  const [referralCode, setReferralCode] = useState("BGS-" + Math.random().toString(36).substring(2, 10).toUpperCase());
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [referralCode, setReferralCode] = useState("");
   const [copied, setCopied] = useState(false);
-  
-  // Statistiques simplifiées (sans Supabase)
-  const stats = {
+  const [referrals, setReferrals] = useState([]);
+  const [referralStats, setReferralStats] = useState({
     pendingCount: 0,
     completedCount: 0,
     totalEarned: 0
+  });
+  
+  // Charger le code de parrainage de l'utilisateur
+  useEffect(() => {
+    if (user) {
+      fetchReferralCode();
+      fetchReferrals();
+    }
+  }, [user]);
+  
+  // Récupérer le code de parrainage depuis Supabase
+  const fetchReferralCode = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('referral_codes')
+        .select('code')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) {
+        console.error("Erreur lors de la récupération du code de parrainage:", error);
+        return;
+      }
+      
+      if (data) {
+        setReferralCode(data.code);
+      } else {
+        // Générer un code de parrainage s'il n'existe pas déjà
+        await createReferralCode();
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération du code de parrainage:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Créer un nouveau code de parrainage si nécessaire
+  const createReferralCode = async () => {
+    try {
+      // On préfère laisser la fonction SQL generate_unique_referral_code s'exécuter côté serveur
+      const { data, error } = await supabase
+        .from('referral_codes')
+        .insert({ user_id: user.id })
+        .select()
+        .single();
+        
+      if (error) {
+        console.error("Erreur lors de la création du code de parrainage:", error);
+        return;
+      }
+      
+      if (data) {
+        setReferralCode(data.code);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la création du code de parrainage:", error);
+    }
+  };
+  
+  // Récupérer les parrainages de l'utilisateur
+  const fetchReferrals = async () => {
+    try {
+      setLoading(true);
+      
+      // Récupérer les parrainages où l'utilisateur est le parrain
+      const { data: referrerData, error: referrerError } = await supabase
+        .from('referrals')
+        .select(`
+          id, 
+          status, 
+          referrer_rewarded, 
+          referred_rewarded, 
+          created_at,
+          referred_id,
+          profiles:referred_id (first_name, last_name, email)
+        `)
+        .eq('referrer_id', user.id);
+      
+      if (referrerError) {
+        console.error("Erreur lors de la récupération des parrainages:", referrerError);
+        return;
+      }
+      
+      if (referrerData) {
+        setReferrals(referrerData);
+        
+        // Calculer les statistiques
+        const completed = referrerData.filter(r => r.status === 'completed').length;
+        const pending = referrerData.filter(r => r.status === 'pending').length;
+        // Chaque parrainage complété rapporte 25€
+        const totalEarned = completed * 25;
+        
+        setReferralStats({
+          completedCount: completed,
+          pendingCount: pending,
+          totalEarned: totalEarned
+        });
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des parrainages:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Fonction simplifiée pour copier le lien de parrainage
+  // Fonction pour copier le lien de parrainage
   const copyReferralLink = () => {
     const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
     navigator.clipboard.writeText(referralLink);
@@ -31,16 +140,15 @@ export default function ReferralTab() {
     }, 3000);
   };
 
-  // Simuler un chargement bref pour une meilleure expérience utilisateur
-  React.useEffect(() => {
+  // Fonction pour rafraîchir les données
+  const refreshData = async () => {
     setLoading(true);
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+    await fetchReferrals();
+    toast.success("Données actualisées");
+  };
 
-  if (loading) {
+  // Afficher un état de chargement
+  if (loading && !referralCode) {
     return (
       <div className="space-y-6">
         <Skeleton className="w-full h-12" />
@@ -60,7 +168,7 @@ export default function ReferralTab() {
         </p>
       </div>
       
-      {/* Statistiques (version statique) */}
+      {/* Statistiques */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-5 bg-white border border-gray-100 rounded-lg shadow-sm">
           <div className="flex items-center gap-3">
@@ -69,7 +177,7 @@ export default function ReferralTab() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Filleuls en attente</p>
-              <p className="text-2xl font-semibold">{stats.pendingCount}</p>
+              <p className="text-2xl font-semibold">{referralStats.pendingCount}</p>
             </div>
           </div>
         </Card>
@@ -81,7 +189,7 @@ export default function ReferralTab() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Parrainages complétés</p>
-              <p className="text-2xl font-semibold">{stats.completedCount}</p>
+              <p className="text-2xl font-semibold">{referralStats.completedCount}</p>
             </div>
           </div>
         </Card>
@@ -93,7 +201,7 @@ export default function ReferralTab() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Gains totaux</p>
-              <p className="text-2xl font-semibold">{stats.totalEarned} €</p>
+              <p className="text-2xl font-semibold">{referralStats.totalEarned} €</p>
             </div>
           </div>
         </Card>
@@ -101,7 +209,18 @@ export default function ReferralTab() {
       
       {/* Section Code de Parrainage */}
       <div className="bg-white border border-gray-100 rounded-lg p-6 shadow-sm">
-        <h3 className="text-xl font-medium text-gray-800 mb-4">Votre lien de parrainage</h3>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-medium text-gray-800">Votre lien de parrainage</h3>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={refreshData}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            <span>Actualiser</span>
+          </Button>
+        </div>
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <Input 
@@ -169,19 +288,60 @@ export default function ReferralTab() {
         </div>
       </div>
       
-      {/* Section Liste des Parrainages (vide) */}
+      {/* Section Liste des Parrainages */}
       <div className="bg-white border border-gray-100 rounded-lg p-6 shadow-sm">
         <h3 className="text-xl font-medium text-gray-800 mb-4">
           Vos parrainages
         </h3>
         
-        <div className="text-center py-12">
-          <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h4 className="text-lg font-medium text-gray-700">Aucun parrainage pour l'instant</h4>
-          <p className="mt-2 text-gray-500">
-            Commencez à partager votre lien pour voir vos parrainages ici.
-          </p>
-        </div>
+        {referrals.length > 0 ? (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Filleul</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Récompense</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {referrals.map((referral) => (
+                  <TableRow key={referral.id}>
+                    <TableCell>
+                      {referral.profiles ? 
+                        `${referral.profiles.first_name || ''} ${referral.profiles.last_name || ''}`.trim() || 'Utilisateur' 
+                        : 'Utilisateur'}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(referral.created_at).toLocaleDateString('fr-FR')}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={referral.status === 'completed' ? 'success' : 'default'}>
+                        {referral.status === 'completed' ? 'Complété' : 'En attente'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {referral.referrer_rewarded ? (
+                        <Badge variant="success">25€ reçus</Badge>
+                      ) : (
+                        <Badge variant="outline">En attente</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <h4 className="text-lg font-medium text-gray-700">Aucun parrainage pour l'instant</h4>
+            <p className="mt-2 text-gray-500">
+              Commencez à partager votre lien pour voir vos parrainages ici.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
