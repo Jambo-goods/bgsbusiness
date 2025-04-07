@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Form } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
@@ -35,6 +35,7 @@ export default function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { signup } = useAuth();
   
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -53,31 +54,32 @@ export default function RegisterForm() {
     setError(null);
     
     try {
-      // Register the user with Supabase
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            firstName: data.firstName,
-            lastName: data.lastName,
-          }
-        }
+      // Use the AuthContext signup function instead of direct Supabase call
+      const { user, error } = await signup(data.email, data.password, {
+        firstName: data.firstName,
+        lastName: data.lastName,
       });
       
-      if (signUpError) throw signUpError;
+      if (error) throw error;
       
-      toast.success("Inscription réussie ! Vérifiez votre email pour confirmer votre compte.");
-      navigate("/login");
+      if (user) {
+        toast.success("Inscription réussie ! Vérifiez votre email pour confirmer votre compte.");
+        navigate("/login");
+      } else {
+        // If no user but also no error, something unusual happened
+        throw new Error("Une erreur inattendue est survenue lors de l'inscription.");
+      }
     } catch (error: any) {
       console.error("Registration error:", error);
       
-      if (error.message.includes("already registered")) {
+      if (error.message?.includes("already registered") || error.message?.includes("déjà enregistré")) {
         setError("Cette adresse email est déjà utilisée.");
-      } else if (error.message.includes("database")) {
-        setError("Une erreur est survenue lors de l'enregistrement de votre compte. Veuillez réessayer plus tard.");
+      } else if (error.message?.includes("database") || error.message?.includes("code") || error.message?.includes("ambiguous")) {
+        setError("Une erreur technique est survenue. Nos équipes ont été notifiées et travaillent à résoudre ce problème.");
+        // Log for debugging
+        console.error("Technical database error during registration:", error);
       } else {
-        setError("Une erreur est survenue lors de l'inscription.");
+        setError(`Une erreur est survenue lors de l'inscription: ${error.message || "Erreur inconnue"}`);
       }
     } finally {
       setIsLoading(false);
