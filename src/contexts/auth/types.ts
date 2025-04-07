@@ -1,14 +1,17 @@
 
 import { Session, User } from "@supabase/supabase-js";
 
-export interface AuthUser extends User {
-  user_metadata?: {
+// Instead of extending the User interface and making required properties optional,
+// let's create our own AuthUser type that includes the User type
+export type AuthUser = User & {
+  // Override the user_metadata to include our specific properties
+  user_metadata: {
     fullName?: string;
     firstName?: string;
     lastName?: string;
     referralCode?: string;
   };
-}
+};
 
 export interface AuthContextType {
   user: AuthUser | null;
