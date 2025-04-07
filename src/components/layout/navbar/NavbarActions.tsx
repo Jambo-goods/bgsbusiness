@@ -2,9 +2,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { UserMenuDropdown } from "./UserMenuDropdown";
-import { NotificationDropdown } from "./NotificationDropdown";
-import { DashboardMenuDropdown } from "./DashboardMenuDropdown";
+import UserMenuDropdown from "./UserMenuDropdown";
+import NotificationDropdown from "./NotificationDropdown";
+import DashboardMenuDropdown from "./DashboardMenuDropdown";
 
 export default function NavbarActions() {
   const { user } = useAuth();
