@@ -33,33 +33,32 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     // Variable pour stocker l'ID du parrain si un code valide est fourni
     let referrerId = null;
     
-    // Traiter le code de parrainage s'il existe et n'est pas vide
-    if (userData.referralCode) {
-      // Convertir en string et supprimer les espaces
-      const referralCode = String(userData.referralCode).trim();
+    // Vérifier le code de parrainage s'il existe
+    if (userData.referralCode && typeof userData.referralCode === 'string' && userData.referralCode.trim() !== '') {
+      const cleanCode = userData.referralCode.trim();
       
-      if (referralCode && referralCode !== 'undefined' && referralCode !== 'null' && referralCode !== 'Aucun' && referralCode !== '') {
-        console.log("Vérification du code de parrainage:", referralCode);
-        
+      // Ignorer les valeurs spéciales
+      if (!['undefined', 'null', 'Aucun'].includes(cleanCode)) {
         try {
+          console.log("Vérification du code de parrainage:", cleanCode);
+          
           const { data, error } = await supabase
             .from('referral_codes')
             .select('user_id')
-            .eq('code', referralCode)
+            .eq('code', cleanCode)
             .maybeSingle();
-            
+          
           if (error) {
-            console.error("Erreur lors de la vérification du code de parrainage:", error);
-            // On continue l'inscription même si le code est invalide
+            console.error("Erreur lors de la vérification du code:", error);
           } else if (data) {
-            console.log("Code de parrainage valide trouvé:", data);
+            console.log("Code de parrainage valide:", data);
             referrerId = data.user_id;
           } else {
-            console.log("Code de parrainage introuvable");
+            console.log("Aucun code de parrainage correspondant trouvé");
           }
-        } catch (codeError) {
-          console.error("Exception lors de la vérification du code de parrainage:", codeError);
-          // On continue l'inscription même si le code est invalide
+        } catch (e) {
+          console.error("Exception lors de la vérification du code:", e);
+          // Continuer l'inscription même si erreur avec le code
         }
       }
     }
@@ -91,7 +90,7 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
       };
     }
     
-    console.log("User registration successful:", data);
+    console.log("Utilisateur inscrit avec succès:", data);
     
     // Si l'utilisateur est créé avec succès et qu'il y avait un code de parrainage valide,
     // créer l'entrée dans la table des parrainages
@@ -106,7 +105,7 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
     
     return { success: true, data };
   } catch (error: any) {
-    console.error("Registration error:", error);
+    console.error("Erreur d'inscription:", error);
     
     // Handle specific registration errors
     if (error.message?.includes("User already registered")) {
