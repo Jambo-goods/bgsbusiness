@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { Suspense, lazy } from "react";
 import { AdminProvider } from "@/contexts/AdminContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 
 const Opportunite = lazy(() => import("./pages/Projects"));
@@ -55,42 +56,44 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AdminProvider>
-        <HelmetProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Suspense fallback={<LoadingFallback />}>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/projects" element={<Opportunite />} />
-                  <Route path="/project/:id" element={<ProjectDetail />} />
-                  <Route path="/how-it-works" element={<HowItWorks />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/dashboard/*" element={<Dashboard />} />
-                  <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
-                  
-                  {/* Pages légales */}
-                  <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
-                  <Route path="/conditions-dutilisation" element={<TermsOfService />} />
-                  <Route path="/politique-de-cookies" element={<CookiePolicy />} />
-                  <Route path="/mentions-legales" element={<LegalNotice />} />
-                  <Route path="/faq" element={<FAQ />} />
-                  <Route path="/centre-daide" element={<HelpCenter />} />
-                  
-                  {/* Admin Routes */}
-                  <Route path="/admin/*" element={<AdminApp />} />
-                  
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </Suspense>
-            </BrowserRouter>
-          </TooltipProvider>
-        </HelmetProvider>
+        <AuthProvider>
+          <HelmetProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Suspense fallback={<LoadingFallback />}>
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/projects" element={<Opportunite />} />
+                    <Route path="/project/:id" element={<ProjectDetail />} />
+                    <Route path="/how-it-works" element={<HowItWorks />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/dashboard/*" element={<Dashboard />} />
+                    <Route path="/dashboard/investment-tracking/:investmentId" element={<InvestmentTrackingPage />} />
+                    
+                    {/* Pages légales */}
+                    <Route path="/politique-de-confidentialite" element={<PrivacyPolicy />} />
+                    <Route path="/conditions-dutilisation" element={<TermsOfService />} />
+                    <Route path="/politique-de-cookies" element={<CookiePolicy />} />
+                    <Route path="/mentions-legales" element={<LegalNotice />} />
+                    <Route path="/faq" element={<FAQ />} />
+                    <Route path="/centre-daide" element={<HelpCenter />} />
+                    
+                    {/* Admin Routes */}
+                    <Route path="/admin/*" element={<AdminApp />} />
+                    
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
+              </BrowserRouter>
+            </TooltipProvider>
+          </HelmetProvider>
+        </AuthProvider>
       </AdminProvider>
     </QueryClientProvider>
   );

@@ -2,6 +2,7 @@
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 import NavbarActions from "./navbar/NavbarActions";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavbarHeaderProps {
   isScrolled: boolean;
@@ -11,6 +12,7 @@ interface NavbarHeaderProps {
 
 export default function NavbarHeader({ isScrolled, isLoggedIn = false, children }: NavbarHeaderProps) {
   const location = useLocation();
+  const { user } = useAuth();
   
   const isDashboardPage = location.pathname.includes('/dashboard');
   
@@ -26,7 +28,7 @@ export default function NavbarHeader({ isScrolled, isLoggedIn = false, children 
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           {children}
-          {isLoggedIn && isDashboardPage && (
+          {(!!user || isLoggedIn) && isDashboardPage && (
             <NavbarActions />
           )}
         </div>
