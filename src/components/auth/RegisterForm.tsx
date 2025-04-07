@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -96,11 +97,17 @@ export default function RegisterForm() {
     } catch (error: any) {
       console.error("Étape X: Erreur complète lors de l'inscription:", error);
       
-      // Gestion simplifiée des erreurs
+      // Enhanced error handling
       if (error.message?.includes("already registered") || error.message?.includes("déjà enregistré")) {
         setError("Cette adresse email est déjà utilisée.");
-      } else if (error.message?.includes("Database error saving new user")) {
-        setError("Une erreur s'est produite lors de la création de votre compte.");
+      } else if (error.message?.includes("Database error saving new user") || error.code === "unexpected_failure") {
+        setError("Une erreur temporaire est survenue lors de la création de votre compte. Veuillez réessayer.");
+        // Try to show more helpful information for the user
+        toast.error("Problème temporaire de connexion à la base de données", { 
+          description: "Nos équipes ont été notifiées. Veuillez réessayer dans quelques instants." 
+        });
+      } else if (error.message?.includes("Password should be at least")) {
+        setError("Le mot de passe doit contenir au moins 8 caractères.");
       } else {
         setError(`Erreur lors de l'inscription: ${error.message || "Erreur inconnue"}`);
       }
