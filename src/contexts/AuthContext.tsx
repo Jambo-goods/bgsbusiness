@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -76,24 +77,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signup = async (email: string, password: string, metadata?: any) => {
     try {
-      console.log("Début du processus d'inscription dans AuthContext");
+      console.log("AuthContext - Étape 1: Début du processus d'inscription");
+      
+      // Essayons d'abord d'utiliser une approche directe avec des options minimales
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: metadata,
+          emailRedirectTo: `${window.location.origin}/login`,
         }
       });
 
       if (error) {
-        console.error("Erreur Supabase lors de l'inscription:", error);
+        console.error("AuthContext - Étape 2: Erreur Supabase lors de l'inscription:", error);
+        console.error("AuthContext - Détails de l'erreur:", {
+          message: error.message,
+          status: error.status,
+          name: error.name,
+        });
         throw error;
       }
 
-      console.log("Réponse de Supabase signUp:", data.user ? "Utilisateur créé" : "Pas d'utilisateur créé");
+      console.log("AuthContext - Étape 3: Réponse de Supabase signUp:", data.user ? "Utilisateur créé" : "Pas d'utilisateur créé");
+      
+      if (data.user) {
+        console.log("AuthContext - ID utilisateur créé:", data.user.id);
+        console.log("AuthContext - Email utilisateur:", data.user.email);
+      }
+      
       return { user: data.user, error: null };
-    } catch (error) {
-      console.error("Exception lors de l'inscription:", error);
+    } catch (error: any) {
+      console.error("AuthContext - Exception lors de l'inscription:", error);
+      console.error("AuthContext - Message d'erreur:", error.message);
+      
+      // Ajoutons plus d'informations de débogage
+      if (error.cause) {
+        console.error("AuthContext - Cause de l'erreur:", error.cause);
+      }
+      
       return { user: null, error };
     }
   };

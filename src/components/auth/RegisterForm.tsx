@@ -54,32 +54,46 @@ export default function RegisterForm() {
     setError(null);
     
     try {
-      console.log("Début de l'inscription avec email:", data.email);
+      console.log("Étape 1: Début de l'inscription avec email:", data.email);
       
-      // Use the AuthContext signup function instead of direct Supabase call
-      const { user, error } = await signup(data.email, data.password, {
+      // Ajout des métadonnées pour l'utilisateur
+      const metadata = {
         firstName: data.firstName,
         lastName: data.lastName,
-      });
+      };
+      
+      console.log("Étape 2: Appel de la fonction signup avec les métadonnées:", metadata);
+      
+      // Use the AuthContext signup function instead of direct Supabase call
+      const { user, error } = await signup(data.email, data.password, metadata);
+      
+      console.log("Étape 3: Résultat de l'inscription:", user ? "Succès" : "Échec", error ? "Avec erreur" : "Sans erreur");
       
       if (error) {
-        console.error("Erreur détaillée:", error);
+        console.error("Étape 3a: Erreur complète:", error);
+        console.error("Étape 3b: Message d'erreur:", error.message);
+        console.error("Étape 3c: Code d'erreur:", error.code);
         throw error;
       }
       
       if (user) {
-        console.log("Inscription réussie pour:", user.email);
+        console.log("Étape 4: Inscription réussie pour:", user.email);
         toast.success("Inscription réussie ! Vérifiez votre email pour confirmer votre compte.");
         navigate("/login");
       } else {
         // If no user but also no error, something unusual happened
+        console.error("Étape 4a: Cas inattendu - pas d'utilisateur mais pas d'erreur");
         throw new Error("Une erreur inattendue est survenue lors de l'inscription.");
       }
     } catch (error: any) {
-      console.error("Erreur complète lors de l'inscription:", error);
+      console.error("Étape X: Erreur complète lors de l'inscription:", error);
+      console.error("Détails supplémentaires:", JSON.stringify(error, null, 2));
       
       if (error.message?.includes("already registered") || error.message?.includes("déjà enregistré")) {
         setError("Cette adresse email est déjà utilisée.");
+      } else if (error.message?.includes("Database error saving new user")) {
+        setError("Une erreur s'est produite lors de la création de votre compte. Nos équipes ont été informées de ce problème.");
+        console.error("Erreur de base de données lors de l'enregistrement:", JSON.stringify(error));
       } else if (error.message?.includes("ambiguous")) {
         // Specifically handle the "code is ambiguous" error
         setError("Une erreur est survenue lors de la création de votre compte. Veuillez réessayer.");
