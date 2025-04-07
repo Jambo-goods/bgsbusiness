@@ -74,9 +74,12 @@ export default function RegisterForm() {
       
       if (error.message?.includes("already registered") || error.message?.includes("déjà enregistré")) {
         setError("Cette adresse email est déjà utilisée.");
-      } else if (error.message?.includes("database") || error.message?.includes("code") || error.message?.includes("ambiguous")) {
+      } else if (error.message?.includes("ambiguous")) {
+        // Specifically handle the "code is ambiguous" error
+        setError("Une erreur est survenue lors de la création de votre code de parrainage. L'équipe technique a été informée.");
+        console.error("Ambiguous column error during registration:", error);
+      } else if (error.message?.includes("database") || error.message?.includes("code")) {
         setError("Une erreur technique est survenue. Nos équipes ont été notifiées et travaillent à résoudre ce problème.");
-        // Log for debugging
         console.error("Technical database error during registration:", error);
       } else {
         setError(`Une erreur est survenue lors de l'inscription: ${error.message || "Erreur inconnue"}`);
