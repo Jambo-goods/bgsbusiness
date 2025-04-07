@@ -5,7 +5,6 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { registerUser } from "@/services/auth/registerService";
 import EmailField from "./EmailField";
@@ -63,7 +62,8 @@ export default function RegisterForm() {
 
   const onSubmit = async (values: RegisterFormValues) => {
     try {
-      // Réinitialiser les états
+      // Réinitialiser les états et les notifications précédentes
+      toast.dismiss();
       setIsSubmitting(true);
       setRegistrationError("");
       
@@ -143,11 +143,11 @@ export default function RegisterForm() {
               Code de parrainage (optionnel)
             </label>
           </div>
-          <Input
+          <input
             id="referralCode"
             {...form.register("referralCode")}
             placeholder={referralFromLink ? "Code automatiquement appliqué" : "Entrez un code de parrainage si vous en avez un"}
-            className={`bg-white border ${referralFromLink ? "border-green-300 bg-green-50" : "border-bgs-blue/20"} rounded-lg text-bgs-blue focus:border-bgs-orange focus:ring-2 focus:ring-bgs-orange/20`}
+            className={`w-full bg-white border ${referralFromLink ? "border-green-300 bg-green-50" : "border-bgs-blue/20"} rounded-lg text-bgs-blue focus:border-bgs-orange focus:ring-2 focus:ring-bgs-orange/20 p-2.5`}
             readOnly={!!referralFromLink}
           />
           {referralFromLink && (
