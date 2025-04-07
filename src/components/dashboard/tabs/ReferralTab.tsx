@@ -132,7 +132,7 @@ export default function ReferralTab() {
       
       console.log("Fetching referrals where user is referrer:", user.id);
       
-      // Récupérer les parrainages où l'utilisateur est le parrain
+      // Modification de la requête pour ne pas utiliser la jointure qui cause l'erreur
       const { data: referrerData, error: referrerError } = await supabase
         .from('referrals')
         .select(`
@@ -141,8 +141,7 @@ export default function ReferralTab() {
           referrer_rewarded, 
           referred_rewarded, 
           created_at,
-          referred_id,
-          referred:referred_id(first_name, last_name, email)
+          referred_id
         `)
         .eq('referrer_id', user.id);
       
@@ -155,12 +154,39 @@ export default function ReferralTab() {
       
       console.log("Referrals data:", referrerData);
       
-      if (referrerData) {
-        setReferrals(referrerData);
+      // Si nous avons des parrainages, récupérer les informations des utilisateurs référés séparément
+      if (referrerData && referrerData.length > 0) {
+        const referredUserIds = referrerData.map(ref => ref.referred_id);
+        
+        // Récupérer les profils des utilisateurs référés
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, email')
+          .in('id', referredUserIds);
+          
+        if (profilesError) {
+          console.error("Erreur lors de la récupération des profils:", profilesError);
+        }
+        
+        // Créer un mapping des profils pour faciliter l'accès
+        const profilesMap = {};
+        if (profilesData) {
+          profilesData.forEach(profile => {
+            profilesMap[profile.id] = profile;
+          });
+        }
+        
+        // Combiner les données des parrainages avec les profils correspondants
+        const enrichedReferrals = referrerData.map(referral => ({
+          ...referral,
+          referred: profilesMap[referral.referred_id] || null
+        }));
+        
+        setReferrals(enrichedReferrals);
         
         // Calculer les statistiques
-        const completed = referrerData.filter(r => r.status === 'completed').length;
-        const pending = referrerData.filter(r => r.status === 'pending').length;
+        const completed = enrichedReferrals.filter(r => r.status === 'completed').length;
+        const pending = enrichedReferrals.filter(r => r.status === 'pending').length;
         // Chaque parrainage complété rapporte 25€
         const totalEarned = completed * 25;
         
@@ -168,6 +194,13 @@ export default function ReferralTab() {
           completedCount: completed,
           pendingCount: pending,
           totalEarned: totalEarned
+        });
+      } else {
+        setReferrals([]);
+        setReferralStats({
+          completedCount: 0,
+          pendingCount: 0,
+          totalEarned: 0
         });
       }
     } catch (err) {
