@@ -41,62 +41,75 @@ export default function ReferralTab() {
       
       console.log("Fetching referral code for user:", user.id);
       
+      // Vérifier d'abord si un code existe déjà
       const { data, error } = await supabase
         .from('referral_codes')
         .select('code')
         .eq('user_id', user.id)
-        .maybeSingle(); // Use maybeSingle instead of single to handle no results case
+        .maybeSingle();
       
       if (error) {
         console.error("Erreur lors de la récupération du code de parrainage:", error);
         setError("Impossible de récupérer votre code de parrainage");
+        setLoading(false);
         return;
       }
       
       console.log("Referral code data:", data);
       
+      // Si un code existe, l'utiliser
       if (data) {
         setReferralCode(data.code);
+        setLoading(false);
       } else {
+        // Sinon, créer un nouveau code
         console.log("No referral code found, creating a new one");
-        // Générer un code de parrainage s'il n'existe pas déjà
         await createReferralCode();
       }
     } catch (err) {
       console.error("Erreur lors de la récupération du code de parrainage:", err);
       setError("Une erreur est survenue lors de la récupération de votre code de parrainage");
-    } finally {
       setLoading(false);
     }
   };
   
-  // Créer un nouveau code de parrainage si nécessaire
+  // Créer un nouveau code de parrainage
   const createReferralCode = async () => {
     try {
       setError(null);
       
       console.log("Creating a new referral code for user:", user.id);
       
-      // Generate a random code for the user
-      const tempCode = 'TEMP' + Math.random().toString(36).substring(2, 10).toUpperCase();
+      // Générer un code aléatoire pour l'utilisateur
+      const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let tempCode = '';
       
-      // On préfère laisser la fonction SQL generate_unique_referral_code s'exécuter côté serveur
+      // Générer un code de 8 caractères
+      for (let i = 0; i < 8; i++) {
+        tempCode += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+      
+      console.log("Generated temporary code:", tempCode);
+      
+      // Insérer le nouveau code dans la base de données
       const { data, error } = await supabase
         .from('referral_codes')
         .insert({ 
           user_id: user.id,
-          code: tempCode // Temporary code that will be replaced by the server function
+          code: tempCode
         })
         .select()
         .single();
         
       if (error) {
         console.error("Erreur lors de la création du code de parrainage:", error);
+        console.error("Détails de l'erreur:", JSON.stringify(error));
         setError("Impossible de créer votre code de parrainage");
+        setLoading(false);
         return;
       }
       
-      console.log("Created referral code:", data);
+      console.log("Created referral code response:", data);
       
       if (data) {
         setReferralCode(data.code);
@@ -104,7 +117,10 @@ export default function ReferralTab() {
       }
     } catch (err) {
       console.error("Erreur lors de la création du code de parrainage:", err);
+      console.error("Détails de l'exception:", JSON.stringify(err));
       setError("Une erreur est survenue lors de la création de votre code de parrainage");
+    } finally {
+      setLoading(false);
     }
   };
   
@@ -126,13 +142,14 @@ export default function ReferralTab() {
           referred_rewarded, 
           created_at,
           referred_id,
-          referred:profiles(first_name, last_name, email)
+          referred:referred_id(first_name, last_name, email)
         `)
         .eq('referrer_id', user.id);
       
       if (referrerError) {
         console.error("Erreur lors de la récupération des parrainages:", referrerError);
         setError("Impossible de récupérer vos parrainages");
+        setLoading(false);
         return;
       }
       
