@@ -14,6 +14,7 @@ import EmailField from "./EmailField";
 import PasswordFields from "./PasswordFields";
 import NameFields from "./NameFields";
 import TermsCheckbox from "./TermsCheckbox";
+import ReferralCodeField from "./ReferralCodeField";
 
 const registerSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
@@ -21,6 +22,7 @@ const registerSchema = z.object({
   email: z.string().email("Adresse email invalide"),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
   confirmPassword: z.string(),
+  referralCode: z.string().optional(),
   terms: z.boolean().refine(val => val === true, {
     message: "Vous devez accepter les conditions d'utilisation"
   })
@@ -46,6 +48,7 @@ export default function RegisterForm() {
       email: "",
       password: "",
       confirmPassword: "",
+      referralCode: "",
       terms: false
     }
   });
@@ -58,16 +61,17 @@ export default function RegisterForm() {
     try {
       console.log("Étape 1: Début de l'inscription avec email:", data.email);
       
-      // Récupérer le code de parrainage depuis l'URL s'il existe
+      // Utiliser soit le code de parrainage du formulaire, soit celui de l'URL s'il existe
       const urlParams = new URLSearchParams(window.location.search);
-      const refCode = urlParams.get('ref');
+      const urlRefCode = urlParams.get('ref');
+      const referralCode = data.referralCode || urlRefCode;
       
       // Ajout des métadonnées pour l'utilisateur
       const metadata = {
         firstName: data.firstName,
         lastName: data.lastName,
-        // On garde uniquement la référence au code de parrainage s'il existe
-        referralCode: refCode || null
+        // On utilise le code de parrainage s'il existe
+        referralCode: referralCode || null
       };
       
       console.log("Étape 2: Appel de la fonction signup avec les métadonnées:", metadata);
@@ -130,6 +134,7 @@ export default function RegisterForm() {
         <NameFields />
         <EmailField />
         <PasswordFields />
+        <ReferralCodeField />
         <TermsCheckbox />
         
         {detailedError && (
