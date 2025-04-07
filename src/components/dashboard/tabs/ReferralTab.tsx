@@ -3,13 +3,14 @@ import React, { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Copy, CheckCircle, Users, Gift, TrendingUp, RefreshCw } from "lucide-react";
+import { Copy, CheckCircle, Users, Gift, TrendingUp, RefreshCw, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/contexts/auth";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ReferralTab() {
   const { user } = useAuth();
@@ -17,6 +18,7 @@ export default function ReferralTab() {
   const [referralCode, setReferralCode] = useState("");
   const [copied, setCopied] = useState(false);
   const [referrals, setReferrals] = useState([]);
+  const [error, setError] = useState(null);
   const [referralStats, setReferralStats] = useState({
     pendingCount: 0,
     completedCount: 0,
@@ -35,14 +37,17 @@ export default function ReferralTab() {
   const fetchReferralCode = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
       const { data, error } = await supabase
         .from('referral_codes')
         .select('code')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to handle no results case
       
       if (error) {
         console.error("Erreur lors de la récupération du code de parrainage:", error);
+        setError("Impossible de récupérer votre code de parrainage");
         return;
       }
       
@@ -52,8 +57,9 @@ export default function ReferralTab() {
         // Générer un code de parrainage s'il n'existe pas déjà
         await createReferralCode();
       }
-    } catch (error) {
-      console.error("Erreur lors de la récupération du code de parrainage:", error);
+    } catch (err) {
+      console.error("Erreur lors de la récupération du code de parrainage:", err);
+      setError("Une erreur est survenue lors de la récupération de votre code de parrainage");
     } finally {
       setLoading(false);
     }
@@ -62,6 +68,8 @@ export default function ReferralTab() {
   // Créer un nouveau code de parrainage si nécessaire
   const createReferralCode = async () => {
     try {
+      setError(null);
+      
       // On préfère laisser la fonction SQL generate_unique_referral_code s'exécuter côté serveur
       // Fix: We need to provide a code value even though it will be overridden by the server
       const { data, error } = await supabase
@@ -75,14 +83,17 @@ export default function ReferralTab() {
         
       if (error) {
         console.error("Erreur lors de la création du code de parrainage:", error);
+        setError("Impossible de créer votre code de parrainage");
         return;
       }
       
       if (data) {
         setReferralCode(data.code);
+        toast.success("Code de parrainage créé avec succès!");
       }
-    } catch (error) {
-      console.error("Erreur lors de la création du code de parrainage:", error);
+    } catch (err) {
+      console.error("Erreur lors de la création du code de parrainage:", err);
+      setError("Une erreur est survenue lors de la création de votre code de parrainage");
     }
   };
   
@@ -90,6 +101,7 @@ export default function ReferralTab() {
   const fetchReferrals = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Récupérer les parrainages où l'utilisateur est le parrain
       const { data: referrerData, error: referrerError } = await supabase
@@ -101,12 +113,13 @@ export default function ReferralTab() {
           referred_rewarded, 
           created_at,
           referred_id,
-          profiles:referred_id (first_name, last_name, email)
+          referred:profiles(first_name, last_name, email)
         `)
         .eq('referrer_id', user.id);
       
       if (referrerError) {
         console.error("Erreur lors de la récupération des parrainages:", referrerError);
+        setError("Impossible de récupérer vos parrainages");
         return;
       }
       
@@ -125,8 +138,9 @@ export default function ReferralTab() {
           totalEarned: totalEarned
         });
       }
-    } catch (error) {
-      console.error("Erreur lors de la récupération des parrainages:", error);
+    } catch (err) {
+      console.error("Erreur lors de la récupération des parrainages:", err);
+      setError("Une erreur est survenue lors de la récupération de vos parrainages");
     } finally {
       setLoading(false);
     }
@@ -147,6 +161,7 @@ export default function ReferralTab() {
   // Fonction pour rafraîchir les données
   const refreshData = async () => {
     setLoading(true);
+    await fetchReferralCode();
     await fetchReferrals();
     toast.success("Données actualisées");
   };
@@ -171,6 +186,14 @@ export default function ReferralTab() {
           Votre filleul reçoit également 25€ dès son inscription avec votre code.
         </p>
       </div>
+      
+      {/* Afficher les erreurs s'il y en a */}
+      {error && (
+        <Alert variant="destructive" className="bg-red-50 border-red-200">
+          <AlertCircle className="h-4 w-4 text-red-800" />
+          <AlertDescription className="text-red-800">{error}</AlertDescription>
+        </Alert>
+      )}
       
       {/* Statistiques */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -251,8 +274,11 @@ export default function ReferralTab() {
             )}
           </Button>
         </div>
-        <div className="mt-4 text-sm text-gray-500">
-          <p>Votre code: <span className="font-medium text-bgs-blue">{referralCode}</span></p>
+        <div className="mt-4 text-sm bg-blue-50 p-3 rounded-md border border-blue-100">
+          <p className="font-medium text-gray-800">Votre code: 
+            <span className="ml-2 font-bold text-bgs-blue text-lg">{referralCode || "Chargement..."}</span>
+          </p>
+          <p className="text-gray-600 mt-1">Partagez ce code avec vos amis pour qu'ils puissent l'utiliser lors de leur inscription.</p>
         </div>
       </div>
       
@@ -313,8 +339,8 @@ export default function ReferralTab() {
                 {referrals.map((referral) => (
                   <TableRow key={referral.id}>
                     <TableCell>
-                      {referral.profiles ? 
-                        `${referral.profiles.first_name || ''} ${referral.profiles.last_name || ''}`.trim() || 'Utilisateur' 
+                      {referral.referred ? 
+                        `${referral.referred.first_name || ''} ${referral.referred.last_name || ''}`.trim() || 'Utilisateur' 
                         : 'Utilisateur'}
                     </TableCell>
                     <TableCell>
