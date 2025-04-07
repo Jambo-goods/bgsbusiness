@@ -42,10 +42,11 @@ export const registerUser = async (userData: UserRegistrationData): Promise<Auth
         try {
           console.log("Vérification du code de parrainage:", cleanCode);
           
+          // FIXED: Specify column name with table alias to avoid ambiguity
           const { data, error } = await supabase
             .from('referral_codes')
-            .select('user_id')
-            .eq('code', cleanCode)
+            .select('referral_codes.user_id')
+            .eq('referral_codes.code', cleanCode)
             .maybeSingle();
           
           if (error) {
