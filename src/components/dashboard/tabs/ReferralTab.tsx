@@ -39,6 +39,8 @@ export default function ReferralTab() {
       setLoading(true);
       setError(null);
       
+      console.log("Fetching referral code for user:", user.id);
+      
       const { data, error } = await supabase
         .from('referral_codes')
         .select('code')
@@ -51,9 +53,12 @@ export default function ReferralTab() {
         return;
       }
       
+      console.log("Referral code data:", data);
+      
       if (data) {
         setReferralCode(data.code);
       } else {
+        console.log("No referral code found, creating a new one");
         // Générer un code de parrainage s'il n'existe pas déjà
         await createReferralCode();
       }
@@ -70,13 +75,17 @@ export default function ReferralTab() {
     try {
       setError(null);
       
+      console.log("Creating a new referral code for user:", user.id);
+      
+      // Generate a random code for the user
+      const tempCode = 'TEMP' + Math.random().toString(36).substring(2, 10).toUpperCase();
+      
       // On préfère laisser la fonction SQL generate_unique_referral_code s'exécuter côté serveur
-      // Fix: We need to provide a code value even though it will be overridden by the server
       const { data, error } = await supabase
         .from('referral_codes')
         .insert({ 
           user_id: user.id,
-          code: 'TEMP' + Math.random().toString(36).substring(2, 10).toUpperCase() // Temporary code that will be replaced
+          code: tempCode // Temporary code that will be replaced by the server function
         })
         .select()
         .single();
@@ -86,6 +95,8 @@ export default function ReferralTab() {
         setError("Impossible de créer votre code de parrainage");
         return;
       }
+      
+      console.log("Created referral code:", data);
       
       if (data) {
         setReferralCode(data.code);
@@ -102,6 +113,8 @@ export default function ReferralTab() {
     try {
       setLoading(true);
       setError(null);
+      
+      console.log("Fetching referrals where user is referrer:", user.id);
       
       // Récupérer les parrainages où l'utilisateur est le parrain
       const { data: referrerData, error: referrerError } = await supabase
@@ -122,6 +135,8 @@ export default function ReferralTab() {
         setError("Impossible de récupérer vos parrainages");
         return;
       }
+      
+      console.log("Referrals data:", referrerData);
       
       if (referrerData) {
         setReferrals(referrerData);
@@ -148,6 +163,11 @@ export default function ReferralTab() {
 
   // Fonction pour copier le lien de parrainage
   const copyReferralLink = () => {
+    if (!referralCode) {
+      toast.error("Aucun code de parrainage disponible");
+      return;
+    }
+    
     const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
     navigator.clipboard.writeText(referralLink);
     setCopied(true);
@@ -251,7 +271,7 @@ export default function ReferralTab() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <Input 
-              value={`${window.location.origin}/register?ref=${referralCode}`}
+              value={referralCode ? `${window.location.origin}/register?ref=${referralCode}` : "Chargement..."}
               readOnly
               className="bg-gray-50"
             />
@@ -260,6 +280,7 @@ export default function ReferralTab() {
             onClick={copyReferralLink} 
             className="flex items-center gap-2"
             variant={copied ? "outline" : "default"}
+            disabled={!referralCode}
           >
             {copied ? (
               <>
@@ -347,7 +368,6 @@ export default function ReferralTab() {
                       {new Date(referral.created_at).toLocaleDateString('fr-FR')}
                     </TableCell>
                     <TableCell>
-                      {/* Fix: Changed success to outline with custom classes */}
                       <Badge 
                         variant={referral.status === 'completed' ? 'outline' : 'default'}
                         className={referral.status === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''}
@@ -356,7 +376,6 @@ export default function ReferralTab() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {/* Fix: Changed success to outline with custom classes */}
                       <Badge 
                         variant={referral.referrer_rewarded ? 'outline' : 'outline'} 
                         className={referral.referrer_rewarded ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''}
