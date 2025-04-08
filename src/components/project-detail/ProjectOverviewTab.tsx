@@ -1,91 +1,67 @@
 import React, { useState } from "react";
 import { TrendingUp, Shield, Globe, Building, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 import { Project } from "@/types/project";
-import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "@/components/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { formatCurrency } from "@/utils/currencyUtils";
-
 interface ProjectOverviewTabProps {
   project: Project;
 }
-
-export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps) {
+export default function ProjectOverviewTab({
+  project
+}: ProjectOverviewTabProps) {
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
-
   const toggleFaq = (index: number) => {
     setOpenFaqIndex(openFaqIndex === index ? null : index);
   };
-
-  const faqItems = [
-    {
-      question: "Comment puis-je suivre la performance de mon investissement ?",
-      answer: "Vous recevrez des rapports mensuels détaillés dans votre tableau de bord personnel et des alertes par email pour tout événement important. Notre plateforme vous permet également de visualiser en temps réel les statistiques clés de votre investissement."
-    },
-    {
-      question: "Quand serai-je payé pour mon investissement ?",
-      answer: "Les dividendes sont versés mensuellement, généralement dans les 5 premiers jours du mois suivant. Vous pouvez choisir de réinvestir automatiquement ces dividendes ou de les recevoir sur votre compte bancaire."
-    },
-    {
-      question: "Puis-je visiter le projet sur place ?",
-      answer: "Oui, nous organisons des visites pour les investisseurs intéressés. Contactez notre équipe pour plus d'informations et pour planifier une visite adaptée à votre emploi du temps."
-    },
-    {
-      question: "Quelle est la durée minimale d'investissement ?",
-      answer: "La durée minimale recommandée est de 12 mois pour bénéficier pleinement des rendements. Cependant, notre plateforme offre une liquidité facilitée si vous avez besoin de récupérer votre investissement avant terme."
-    }
-  ];
-
-  const defaultInvestmentSteps = [
-    {
-      number: "1️⃣",
-      title: "Acquisition des Actifs",
-      description: "Les fonds collectés servent à acquérir les équipements et infrastructures nécessaires au projet."
-    },
-    {
-      number: "2️⃣",
-      title: "Attribution des Parts",
-      description: "Chaque investisseur devient propriétaire d'une part des actifs pour la durée de l'investissement."
-    },
-    {
-      number: "3️⃣",
-      title: "Exploitation par notre Partenaire",
-      description: "Notre partenaire local exploite les équipements et génère des revenus réguliers."
-    },
-    {
-      number: "4️⃣",
-      title: "Distribution des Rendements",
-      description: "Les investisseurs reçoivent un rendement mensuel fixe pendant toute la durée du projet."
-    },
-    {
-      number: "5️⃣",
-      title: "Options de Sortie",
-      description: "À la fin de la période, l'investisseur peut renouveler son engagement ou récupérer son capital initial."
-    }
-  ];
-
+  const faqItems = [{
+    question: "Comment puis-je suivre la performance de mon investissement ?",
+    answer: "Vous recevrez des rapports mensuels détaillés dans votre tableau de bord personnel et des alertes par email pour tout événement important. Notre plateforme vous permet également de visualiser en temps réel les statistiques clés de votre investissement."
+  }, {
+    question: "Quand serai-je payé pour mon investissement ?",
+    answer: "Les dividendes sont versés mensuellement, généralement dans les 5 premiers jours du mois suivant. Vous pouvez choisir de réinvestir automatiquement ces dividendes ou de les recevoir sur votre compte bancaire."
+  }, {
+    question: "Puis-je visiter le projet sur place ?",
+    answer: "Oui, nous organisons des visites pour les investisseurs intéressés. Contactez notre équipe pour plus d'informations et pour planifier une visite adaptée à votre emploi du temps."
+  }, {
+    question: "Quelle est la durée minimale d'investissement ?",
+    answer: "La durée minimale recommandée est de 12 mois pour bénéficier pleinement des rendements. Cependant, notre plateforme offre une liquidité facilitée si vous avez besoin de récupérer votre investissement avant terme."
+  }];
+  const defaultInvestmentSteps = [{
+    number: "1️⃣",
+    title: "Acquisition des Actifs",
+    description: "Les fonds collectés servent à acquérir les équipements et infrastructures nécessaires au projet."
+  }, {
+    number: "2️⃣",
+    title: "Attribution des Parts",
+    description: "Chaque investisseur devient propriétaire d'une part des actifs pour la durée de l'investissement."
+  }, {
+    number: "3️⃣",
+    title: "Exploitation par notre Partenaire",
+    description: "Notre partenaire local exploite les équipements et génère des revenus réguliers."
+  }, {
+    number: "4️⃣",
+    title: "Distribution des Rendements",
+    description: "Les investisseurs reçoivent un rendement mensuel fixe pendant toute la durée du projet."
+  }, {
+    number: "5️⃣",
+    title: "Options de Sortie",
+    description: "À la fin de la période, l'investisseur peut renouveler son engagement ou récupérer son capital initial."
+  }];
   let investmentSteps = defaultInvestmentSteps;
-  
   if (project.investment_model) {
     try {
       const steps = project.investment_model.split(/\d️⃣/).filter(step => step.trim().length > 0);
-      
       if (steps.length > 0) {
         investmentSteps = steps.map((step, index) => {
           const parts = step.split(':');
           let title = '';
           let description = '';
-          
           if (parts.length > 1) {
             title = parts[0].trim();
             description = parts.slice(1).join(':').trim();
           } else {
             description = step.trim();
           }
-          
           return {
             number: `${index + 1}️⃣`,
             title,
@@ -97,9 +73,7 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
       console.error("Erreur lors du parsing du modèle d'investissement:", error);
     }
   }
-
-  return (
-    <div className="space-y-8 animate-fade-up">
+  return <div className="space-y-8 animate-fade-up">
       <div className="bg-white rounded-xl shadow-sm p-6 md:p-8 border border-gray-100">
         <h2 className="text-xl font-semibold text-bgs-blue mb-4">À propos du projet</h2>
         <p className="text-base text-bgs-blue/80 mb-5 leading-relaxed">
@@ -122,7 +96,7 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
           </div>
           
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium text-bgs-blue/60">Durée de l'Investissement</p>
+            <p className="text-sm font-medium text-bgs-blue/60">Durée Minimum</p>
             <p className="text-lg font-semibold text-bgs-blue">{project.duration || "12 mois"}</p>
           </div>
           
@@ -142,8 +116,7 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
         <h2 className="text-xl font-semibold text-bgs-blue mb-5">Modèle d'Investissement</h2>
         
         <div className="space-y-4">
-          {investmentSteps.map((step, index) => (
-            <div key={index} className="flex items-start space-x-4">
+          {investmentSteps.map((step, index) => <div key={index} className="flex items-start space-x-4">
               <div className="flex-shrink-0 w-8 h-8 rounded-full bg-bgs-blue flex items-center justify-center text-white font-semibold">
                 {index + 1}
               </div>
@@ -151,8 +124,7 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
                 <h3 className="font-medium text-lg text-bgs-blue mb-1">{step.title}</h3>
                 <p className="text-sm text-bgs-blue/80">{step.description}</p>
               </div>
-            </div>
-          ))}
+            </div>)}
         </div>
       </div>
       
@@ -246,19 +218,16 @@ export default function ProjectOverviewTab({ project }: ProjectOverviewTabProps)
         
         <div className="mt-4">
           <Accordion type="single" collapsible className="w-full">
-            {faqItems.map((faq, index) => (
-              <AccordionItem key={index} value={`item-${index}`} className="border-b border-gray-100 last:border-0">
+            {faqItems.map((faq, index) => <AccordionItem key={index} value={`item-${index}`} className="border-b border-gray-100 last:border-0">
                 <AccordionTrigger className="py-4 text-base font-medium text-bgs-blue hover:text-bgs-orange hover:no-underline">
                   {faq.question}
                 </AccordionTrigger>
                 <AccordionContent className="text-sm text-bgs-blue/80 leading-relaxed pb-4">
                   {faq.answer}
                 </AccordionContent>
-              </AccordionItem>
-            ))}
+              </AccordionItem>)}
           </Accordion>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
