@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { corsHeaders, createResponse } from "./corsUtils.ts";
-import { updateUserWalletBalance } from "./walletHelpers.ts";
+import { updateUserWalletBalance, getValidWalletTransactionStatus } from "./walletHelpers.ts";
 import { sendUserNotification } from "./notificationHelpers.ts";
 
 // Create Supabase client
@@ -70,8 +70,8 @@ serve(async (req: Request) => {
       }, 400);
     }
 
-    // Normalize status - convert "reçu" to "completed" if needed
-    const normalizedStatus = status === 'reçu' ? 'completed' : status === 'received' ? 'completed' : status;
+    // Use our helper function to get a valid wallet transaction status
+    const normalizedStatus = getValidWalletTransactionStatus(status);
 
     console.log(`Processing bank transfer update: ID=${transferId}, Status=${normalizedStatus}, Processed=${isProcessed}, CreditWallet=${creditWallet}`);
 
@@ -122,24 +122,13 @@ serve(async (req: Request) => {
           }
         }
         
-        // Map the status to a valid wallet transaction status
-        let safeWalletStatus = normalizedStatus;
-        if (!VALID_WALLET_STATUSES.includes(normalizedStatus)) {
-          // Si le statut n'est pas valide pour les transactions de portefeuille, utiliser un statut de secours approprié
-          if (normalizedStatus === 'rejected') {
-            safeWalletStatus = 'cancelled';
-          } else {
-            safeWalletStatus = 'pending'; // Valeur par défaut sûre
-          }
-        }
-        
         try {
           // Update the wallet transaction with a valid status
           const { data, error } = await supabase
             .from('wallet_transactions')
             .update({
-              status: safeWalletStatus,
-              receipt_confirmed: safeWalletStatus === 'completed',
+              status: normalizedStatus,
+              receipt_confirmed: normalizedStatus === 'completed',
             })
             .eq('id', transferId)
             .select();
@@ -267,8 +256,8 @@ serve(async (req: Request) => {
             
           console.log(`Created new wallet transaction for user ${userIdToUpdate}`);
         }
-      } else if (normalizedStatus === 'rejected') {
-        // Si le virement est rejeté, créer une nouvelle transaction de type cancelled
+      } else if (normalizedStatus === 'cancelled') {
+        // Si le virement est annulé/rejeté, utiliser le status 'cancelled'
         if (existingTx && existingTx.status !== 'cancelled') {
           // Mettre à jour la transaction existante en cancelled
           await supabase
@@ -374,7 +363,7 @@ serve(async (req: Request) => {
             
           console.log(`Created new wallet transaction for user ${userIdToUpdate}`);
         }
-      } else if (normalizedStatus === 'rejected') {
+      } else if (normalizedStatus === 'cancelled') {
         // Si le virement est rejeté et qu'une transaction existe
         if (existingTx && existingTx.status !== 'cancelled') {
           // Mettre à jour la transaction existante en cancelled
