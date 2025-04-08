@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -368,6 +367,8 @@ export default function WithdrawalManagement() {
       return;
     }
     
+    setIsProcessing(withdrawal.id);
+    
     try {
       // Check if funds have already been deducted from the user's wallet
       // This happens when the withdrawal was previously scheduled or approved
@@ -385,15 +386,25 @@ export default function WithdrawalManagement() {
           
         if (userError) throw userError;
         
-        // Update balance - refund the amount
-        const { error: walletError } = await supabase
-          .from('profiles')
-          .update({ 
-            wallet_balance: userData.wallet_balance + withdrawal.amount 
-          })
-          .eq('id', withdrawal.user_id);
+        // Update balance using the RPC function for increment instead of direct update
+        const { error: walletError } = await supabase.rpc('increment_wallet_balance', {
+          user_id: withdrawal.user_id,
+          increment_amount: withdrawal.amount
+        });
         
-        if (walletError) throw walletError;
+        if (walletError) {
+          console.error("Error incrementing wallet balance:", walletError);
+          
+          // Fallback to direct update if RPC fails
+          const { error: directUpdateError } = await supabase
+            .from('profiles')
+            .update({ 
+              wallet_balance: userData.wallet_balance + withdrawal.amount 
+            })
+            .eq('id', withdrawal.user_id);
+            
+          if (directUpdateError) throw directUpdateError;
+        }
         
         // Create a refund transaction
         const { error: transactionError } = await supabase
@@ -464,6 +475,8 @@ export default function WithdrawalManagement() {
     } catch (error) {
       console.error("Erreur lors du rejet du retrait:", error);
       toast.error("Une erreur s'est produite lors du rejet du retrait");
+    } finally {
+      setIsProcessing(null);
     }
   };
 
