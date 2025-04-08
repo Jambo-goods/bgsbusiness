@@ -69,6 +69,7 @@ export default function Dashboard() {
       }
 
       console.log("Données du profil récupérées:", profile);
+      console.log("Téléphone récupéré:", profile.phone);
 
       setUserData({
         ...user,
@@ -159,6 +160,7 @@ export default function Dashboard() {
       }
 
       console.log("Données du profil récupérées:", profile);
+      console.log("Téléphone récupéré lors du refresh:", profile.phone);
 
       setUserData({
         ...userData,

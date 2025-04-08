@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, MapPin, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -44,6 +45,15 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
       
       console.log("Mise à jour du profil avec le téléphone :", phone);
       
+      // Debug log to verify that phone value is correct before update
+      console.log("Données envoyées:", {
+        first_name: firstName,
+        last_name: lastName,
+        email: email,
+        phone: phone, // Vérifie que cette valeur est correcte
+        address: address
+      });
+      
       const { data, error } = await supabase
         .from('profiles')
         .update({
@@ -54,14 +64,16 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
           address: address,
           updated_at: new Date().toISOString()
         })
-        .eq('id', session.user.id);
+        .eq('id', session.user.id)
+        .select(); // Return the updated data for verification
       
       if (error) {
         console.error("Erreur de mise à jour du profil:", error);
         throw error;
       }
       
-      console.log("Profil mis à jour avec succès, téléphone :", phone);
+      console.log("Profil mis à jour avec succès. Données retournées:", data);
+      console.log("Téléphone enregistré:", data?.[0]?.phone);
       
       if (onProfileUpdate) {
         await onProfileUpdate();
