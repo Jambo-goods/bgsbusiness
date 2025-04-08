@@ -19,14 +19,20 @@ interface ProjectInvestmentSimulatorProps {
 export default function ProjectInvestmentSimulator({ project }: ProjectInvestmentSimulatorProps) {
   const minInvestment = project.min_investment || 500;
   const [investmentAmount, setInvestmentAmount] = useState<number>(minInvestment);
+  
+  const availableDurations = project.possible_durations && project.possible_durations.length > 0 
+    ? project.possible_durations 
+    : [6, 12, 24];
+    
   const [duration, setDuration] = useState<number>(
-    project.possibleDurations ? project.possibleDurations[0] : 12
+    availableDurations[0]
   );
+  
   const [totalReturn, setTotalReturn] = useState<number>(0);
   const [monthlyReturn, setMonthlyReturn] = useState<number>(0);
   const [userBalance, setUserBalance] = useState<number>(0);
   const [isLoadingBalance, setIsLoadingBalance] = useState(true);
-  const firstPaymentDelay = project.firstPaymentDelayMonths || 1;
+  const firstPaymentDelay = project.first_payment_delay_months || 1;
   
   const maxInvestment = project.maxInvestment || Math.min(project.price, 20000);
   
@@ -116,23 +122,21 @@ export default function ProjectInvestmentSimulator({ project }: ProjectInvestmen
           <label className="text-sm font-medium text-bgs-blue">Durée d'investissement</label>
           <span className="text-sm font-bold text-bgs-blue">{duration} mois</span>
         </div>
-        {project.possibleDurations && (
-          <div className="flex justify-between gap-2 mb-2">
-            {project.possibleDurations.map((months) => (
-              <button
-                key={months}
-                onClick={() => setDuration(months)}
-                className={`flex-1 py-2 px-1 text-sm rounded-md transition-colors ${
-                  duration === months
-                    ? "bg-bgs-blue text-white"
-                    : "bg-gray-100 text-bgs-blue hover:bg-gray-200"
-                }`}
-              >
-                {months} mois
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex justify-between gap-2 mb-2">
+          {availableDurations.map((months) => (
+            <button
+              key={months}
+              onClick={() => setDuration(months)}
+              className={`flex-1 py-2 px-1 text-sm rounded-md transition-colors ${
+                duration === months
+                  ? "bg-bgs-blue text-white"
+                  : "bg-gray-100 text-bgs-blue hover:bg-gray-200"
+              }`}
+            >
+              {months} mois
+            </button>
+          ))}
+        </div>
       </div>
       
       <div className="bg-amber-50 p-4 rounded-lg mb-4 border border-amber-100">
