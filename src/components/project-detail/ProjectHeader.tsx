@@ -1,23 +1,19 @@
-
 import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ChevronRight, Share2, Download, Calendar, DollarSign, TrendingUp } from "lucide-react";
 import { Project } from "@/types/project";
 import { formatCurrency } from "@/utils/currencyUtils";
-
 interface ProjectHeaderProps {
   project: Project;
 }
-
 export default function ProjectHeader({
   project
 }: ProjectHeaderProps) {
   // Calculate annual yield from monthly yield
   const annualYield = project.yield * 12;
-  
+
   // Get the correct minimum investment amount using min_investment first, then fallback to minInvestment
   const minInvestmentAmount = project.min_investment || project.minInvestment || 500;
-  
   return <>
       {/* Navigation */}
       <div className="mb-6">
@@ -77,7 +73,7 @@ export default function ProjectHeader({
               <div className="h-12 w-0.5 bg-gray-200 hidden md:block"></div>
               
               <div>
-                <p className="text-sm text-bgs-gray-medium mb-1">Durée</p>
+                <p className="text-sm text-bgs-gray-medium mb-1">Durée min.</p>
                 <div className="flex items-center text-bgs-blue font-bold text-xl">
                   <Calendar className="h-5 w-5 mr-1 text-bgs-blue/70" />
                   {project.duration}
