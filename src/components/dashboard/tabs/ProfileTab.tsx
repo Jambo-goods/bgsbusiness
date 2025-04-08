@@ -1,8 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, MapPin, Save, RefreshCw } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileTabProps {
   userData: {
@@ -21,46 +22,57 @@ export default function ProfileTab({ userData }: ProfileTabProps) {
   const [phone, setPhone] = useState(userData.phone || "");
   const [address, setAddress] = useState(userData.address || "");
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+
+  // Update form fields when userData changes
+  useEffect(() => {
+    setFirstName(userData.firstName || "");
+    setLastName(userData.lastName || "");
+    setEmail(userData.email || "");
+    setPhone(userData.phone || "");
+    setAddress(userData.address || "");
+  }, [userData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Simuler un délai réseau
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Get the current user session
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // Dans une application réelle, nous enverrions ces données à un backend
-      const updatedUserData = {
-        firstName,
-        lastName,
-        email,
-        phone,
-        address
-      };
-      
-      console.log("Mise à jour du profil:", updatedUserData);
-      
-      // Mettre à jour les données utilisateur dans localStorage
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        const newUserData = { ...parsedUser, ...updatedUserData };
-        localStorage.setItem("user", JSON.stringify(newUserData));
+      if (!session?.user?.id) {
+        throw new Error("No authenticated user found");
       }
       
-      toast({
-        title: "Profil mis à jour",
-        description: "Vos informations ont été mises à jour avec succès",
+      // Update profile information in Supabase
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          phone: phone,
+          address: address,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', session.user.id);
+      
+      if (error) {
+        throw error;
+      }
+      
+      // Update metadata in auth user
+      await supabase.auth.updateUser({
+        data: {
+          firstName,
+          lastName
+        }
       });
+      
+      toast.success("Profil mis à jour avec succès");
     } catch (error) {
       console.error("Erreur lors de la mise à jour du profil:", error);
-      toast({
-        title: "Erreur",
-        description: "Une erreur est survenue lors de la mise à jour de votre profil",
-        variant: "destructive"
-      });
+      toast.error("Une erreur est survenue lors de la mise à jour de votre profil");
     } finally {
       setIsLoading(false);
     }
