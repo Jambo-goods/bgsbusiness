@@ -23,7 +23,6 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
   const [phone, setPhone] = useState(userData.phone || "");
   const [address, setAddress] = useState(userData.address || "");
   const [isLoading, setIsLoading] = useState(false);
-  const [displayPhone, setDisplayPhone] = useState(userData.phone || "");
 
   useEffect(() => {
     setFirstName(userData.firstName || "");
@@ -31,7 +30,6 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
     setEmail(userData.email || "");
     setPhone(userData.phone || "");
     setAddress(userData.address || "");
-    setDisplayPhone(userData.phone || "");
     
     // Add this debug log to verify the phone is coming through properly
     console.log("Phone number from userData:", userData.phone);
@@ -79,9 +77,6 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
       
       console.log("Profil mis à jour avec succès. Données retournées:", data);
       console.log("Téléphone enregistré:", data?.[0]?.phone);
-      
-      // Update the display phone value with the newly saved phone
-      setDisplayPhone(data?.[0]?.phone || phone);
       
       if (onProfileUpdate) {
         await onProfileUpdate();
@@ -176,13 +171,12 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
                   className="bg-white border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full pl-10 p-2.5"
                 />
               </div>
-              {/* Affichage permanent du numéro de téléphone actuel */}
-              <div className="mt-2 p-2 bg-bgs-blue/5 rounded flex items-center">
-                <Phone size={16} className="text-bgs-blue/60 mr-2" />
-                <span className="text-sm font-medium text-bgs-blue/80">
-                  {displayPhone || "Aucun numéro enregistré"}
-                </span>
-              </div>
+              {/* Add a small display to confirm the current phone number */}
+              {userData.phone && (
+                <p className="text-xs text-bgs-blue/70 mt-1 italic">
+                  Numéro actuel: {userData.phone}
+                </p>
+              )}
             </div>
             
             <div className="md:col-span-2">
