@@ -20,12 +20,22 @@ export const edgeFunctionService = {
       // Only credit wallet if the status is "completed" or "received"
       const shouldCreditWallet = creditWallet && (normalizedStatus === 'completed');
       
+      // Check if it's a wallet transaction before deciding status
+      const { data: walletTx } = await supabase
+        .from('wallet_transactions')
+        .select('id')
+        .eq('id', transferId)
+        .maybeSingle();
+        
+      // If it's a wallet transaction and status is 'rejected', use 'cancelled' instead
+      const safeStatus = walletTx && normalizedStatus === 'rejected' ? 'cancelled' : normalizedStatus;
+      
       const { data, error } = await supabase.functions.invoke('update-bank-transfer', {
         body: {
           transferId,
-          status: normalizedStatus,
+          status: safeStatus,
           isProcessed,
-          notes: `Updated to ${normalizedStatus} via edge function`,
+          notes: `Updated to ${safeStatus} via edge function`,
           userId,
           sendNotification: shouldCreditWallet || normalizedStatus === 'rejected',
           creditWallet: shouldCreditWallet // Only credit if status is appropriate

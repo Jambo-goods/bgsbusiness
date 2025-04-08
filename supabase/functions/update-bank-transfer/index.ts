@@ -163,7 +163,7 @@ serve(async (req: Request) => {
           }
           
           return createResponse({ success: true, data });
-        } catch (walletUpdateError) {
+        } catch (walletUpdateError: any) {
           console.error("Error updating wallet transaction:", walletUpdateError);
           return createResponse({ success: false, error: `Wallet update error: ${walletUpdateError.message}` }, 500);
         }
@@ -297,7 +297,7 @@ serve(async (req: Request) => {
         }
       }
       
-      if (userIdToUpdate && shouldCreditWallet && !existingTx?.status === 'completed') {
+      if (userIdToUpdate && shouldCreditWallet && (!existingTx || existingTx.status !== 'completed')) {
         await updateUserWalletBalance(supabase, userIdToUpdate, transferAmount);
         
         // Send notification if requested and status is appropriate

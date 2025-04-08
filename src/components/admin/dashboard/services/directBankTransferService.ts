@@ -12,8 +12,8 @@ export const directBankTransferService = {
     try {
       console.log(`Mise à jour directe du virement ${transferId} avec statut ${newStatus}, creditWallet=${creditWallet}`);
       
-      // Normalize status - if "reçu" is passed, convert to "received"
-      const normalizedStatus = newStatus === 'reçu' ? 'received' : newStatus;
+      // Normalize status - if "reçu" is passed, convert to "completed"
+      const normalizedStatus = newStatus === 'reçu' ? 'completed' : newStatus === 'received' ? 'completed' : newStatus;
       
       // Check if the transfer has already been processed to avoid double processing
       if (bankTransferData && bankTransferData.status === 'completed' && normalizedStatus === 'completed') {
@@ -25,13 +25,50 @@ export const directBankTransferService = {
         };
       }
       
+      // Vérifier s'il s'agit d'une transaction wallet
+      const { data: walletTransaction } = await supabase
+        .from('wallet_transactions')
+        .select('id')
+        .eq('id', transferId)
+        .maybeSingle();
+        
+      if (walletTransaction) {
+        // Pour les transactions wallet, 'rejected' doit être 'cancelled'
+        const safeStatus = normalizedStatus === 'rejected' ? 'cancelled' : normalizedStatus;
+        
+        const { data: updatedWalletTransaction, error: updateError } = await supabase
+          .from('wallet_transactions')
+          .update({
+            status: safeStatus,
+            receipt_confirmed: safeStatus === 'completed'
+          })
+          .eq('id', transferId)
+          .select()
+          .single();
+          
+        if (updateError) {
+          console.error("Erreur lors de la mise à jour de la transaction wallet:", updateError);
+          return {
+            success: false,
+            message: `Erreur: ${updateError.message}`,
+            error: updateError
+          };
+        }
+        
+        return {
+          success: true,
+          message: `Transaction mise à jour: ${safeStatus}`,
+          data: updatedWalletTransaction
+        };
+      }
+      
       // First update the bank_transfer record
       const { data: updatedBankTransfer, error: updateError } = await supabase
         .from('bank_transfers')
         .update({
           status: normalizedStatus,
-          processed: normalizedStatus === 'completed' || normalizedStatus === 'received' || processedDate !== null,
-          processed_at: processedDate || (normalizedStatus === 'completed' || normalizedStatus === 'received' ? new Date().toISOString() : null),
+          processed: normalizedStatus === 'completed' || normalizedStatus === 'rejected' || processedDate !== null,
+          processed_at: processedDate || (normalizedStatus === 'completed' || normalizedStatus === 'rejected' ? new Date().toISOString() : null),
           notes: `Updated to ${normalizedStatus} via direct method`
         })
         .eq('id', transferId)

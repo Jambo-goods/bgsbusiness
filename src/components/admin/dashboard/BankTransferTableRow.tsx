@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -171,9 +172,15 @@ export default function BankTransferTableRow({
     try {
       console.log(`Rejecting transfer ${item.id}`);
       
+      // Vérifier d'abord le type de l'élément (bank_transfer ou wallet_transaction)
+      const isWalletTransaction = item.source === 'wallet_transactions';
+      
+      // Si c'est une wallet_transaction, utiliser 'cancelled' au lieu de 'rejected'
+      const rejectStatus = isWalletTransaction ? 'cancelled' : 'rejected';
+      
       const { success, data, message, error } = await edgeFunctionService.invokeUpdateTransferEdgeFunction(
         item.id,
-        'rejected',
+        rejectStatus, // Utilisez 'cancelled' pour les transactions wallet, 'rejected' pour les virements bancaires
         item.user_id,
         true,
         false // Don't credit wallet for rejected transfers
@@ -229,12 +236,33 @@ export default function BankTransferTableRow({
             }
           }
           
-          const success = await updateTransferStatus(item, 'rejected');
-          if (success && onStatusUpdate) {
-            toast.success("Virement rejeté");
-            onStatusUpdate();
+          // Pour bank_transfers table
+          if (!isWalletTransaction) {
+            const success = await updateTransferStatus(item, 'rejected');
+            if (success && onStatusUpdate) {
+              toast.success("Virement rejeté");
+              onStatusUpdate();
+            } else {
+              toast.error("Échec du rejet - veuillez réessayer");
+            }
           } else {
-            toast.error("Échec du rejet - veuillez réessayer");
+            // Pour wallet_transactions table, mettre à jour directement
+            const { error: updateError } = await supabase
+              .from('wallet_transactions')
+              .update({
+                status: 'cancelled', // Utilisez cancelled pour respecter la contrainte
+                receipt_confirmed: false
+              })
+              .eq('id', item.id);
+              
+            if (updateError) {
+              toast.error(`Échec de la mise à jour: ${updateError.message}`);
+            } else {
+              toast.success("Transaction rejetée");
+              if (onStatusUpdate) {
+                onStatusUpdate();
+              }
+            }
           }
         } catch (backupError) {
           console.error("Failed to use fallback:", backupError);
@@ -266,10 +294,18 @@ export default function BankTransferTableRow({
     try {
       console.log(`Updating transfer ${item.id} with status ${editStatus} and processed date ${processedDate}`);
       
-      // Convert 'received' to 'completed'
-      const normalizedStatus = editStatus === 'reçu' ? 'completed' : editStatus === 'received' ? 'completed' : editStatus;
+      // Vérifier si c'est une wallet_transaction
+      const isWalletTransaction = item.source === 'wallet_transactions';
       
-      const isProcessed = (normalizedStatus === 'completed' || normalizedStatus === 'rejected') || processedDate !== undefined;
+      // Convert 'received' to 'completed'
+      let normalizedStatus = editStatus === 'reçu' ? 'completed' : editStatus === 'received' ? 'completed' : editStatus;
+      
+      // Si c'est une wallet_transaction et le statut est 'rejected', utilisez 'cancelled'
+      if (isWalletTransaction && normalizedStatus === 'rejected') {
+        normalizedStatus = 'cancelled';
+      }
+      
+      const isProcessed = (normalizedStatus === 'completed' || normalizedStatus === 'rejected' || normalizedStatus === 'cancelled') || processedDate !== undefined;
       const shouldCreditWallet = normalizedStatus === 'completed';
       
       const { success, data, message, error } = await edgeFunctionService.invokeUpdateTransferEdgeFunction(
@@ -329,17 +365,39 @@ export default function BankTransferTableRow({
           }
         }
         
-        const processedDateStr = processedDate ? processedDate.toISOString() : null;
-        const success = await updateTransferStatus(item, normalizedStatus, processedDateStr);
-        
-        if (success && onStatusUpdate) {
-          toast.success(shouldCreditWallet 
-            ? "Virement mis à jour et solde utilisateur crédité"
-            : "Virement mis à jour avec succès");
-          setIsEditModalOpen(false);
-          onStatusUpdate();
+        if (isWalletTransaction) {
+          // Mise à jour directe pour wallet_transaction
+          const { error: updateError } = await supabase
+            .from('wallet_transactions')
+            .update({
+              status: normalizedStatus === 'rejected' ? 'cancelled' : normalizedStatus,
+              receipt_confirmed: normalizedStatus === 'completed'
+            })
+            .eq('id', item.id);
+            
+          if (updateError) {
+            console.error("Direct wallet_transaction update failed:", updateError);
+            toast.error(`Échec de la mise à jour: ${updateError.message}`);
+          } else {
+            toast.success("Transaction mise à jour");
+            setIsEditModalOpen(false);
+            if (onStatusUpdate) {
+              onStatusUpdate();
+            }
+          }
         } else {
-          toast.error("Échec de la mise à jour - veuillez réessayer");
+          const processedDateStr = processedDate ? processedDate.toISOString() : null;
+          const success = await updateTransferStatus(item, normalizedStatus, processedDateStr);
+          
+          if (success && onStatusUpdate) {
+            toast.success(shouldCreditWallet 
+              ? "Virement mis à jour et solde utilisateur crédité"
+              : "Virement mis à jour avec succès");
+            setIsEditModalOpen(false);
+            onStatusUpdate();
+          } else {
+            toast.error("Échec de la mise à jour - veuillez réessayer");
+          }
         }
       }
     } catch (error) {
@@ -494,8 +552,12 @@ export default function BankTransferTableRow({
                   onChange={(e) => setEditStatus(e.target.value)}
                 >
                   <option value="pending">En attente</option>
-                  <option value="received">Reçu</option>
-                  <option value="rejected">Rejeté</option>
+                  <option value="completed">Reçu</option>
+                  {!item.source || item.source === 'bank_transfers' ? (
+                    <option value="rejected">Rejeté</option>
+                  ) : (
+                    <option value="cancelled">Annulé</option>
+                  )}
                   <option value="cancelled">Annulé</option>
                 </select>
               </div>
