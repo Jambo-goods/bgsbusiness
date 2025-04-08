@@ -28,9 +28,8 @@ export default function Settings({ userData }: SettingsProps) {
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({
-      title: "Modifications enregistrées",
-      description: "Vos paramètres ont été mis à jour avec succès.",
+    toast("Modifications enregistrées", {
+      description: "Vos paramètres ont été mis à jour avec succès."
     });
   };
   
@@ -244,9 +243,8 @@ export default function Settings({ userData }: SettingsProps) {
               </div>
               
               <button
-                onClick={() => toast({
-                  title: "Paramètres enregistrés",
-                  description: "Vos préférences de notification ont été mises à jour.",
+                onClick={() => toast("Paramètres enregistrés", {
+                  description: "Vos préférences de notification ont été mises à jour."
                 })}
                 className="bg-bgs-blue text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-bgs-blue/90 transition-colors w-full mt-3"
               >
