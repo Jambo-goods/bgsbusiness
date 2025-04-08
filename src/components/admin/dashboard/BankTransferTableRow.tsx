@@ -389,7 +389,7 @@ export default function BankTransferTableRow({
     
     setIsRestoreDialogOpen(false);
   };
-
+  
   const openRestoreConfirmDialog = () => {
     setIsRestoreDialogOpen(true);
   };
