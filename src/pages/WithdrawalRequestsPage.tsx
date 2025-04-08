@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -169,53 +170,76 @@ export default function WithdrawalRequestsPage() {
           description: "Une notification a été envoyée à l'utilisateur"
         });
       } else if (editStatus === 'rejected' && previousStatus !== 'rejected') {
-        // Refund the user's wallet if we're rejecting a withdrawal
-        // Do this regardless of previous status - always refund on rejection
-        // Get current balance
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('wallet_balance')
-          .eq('id', selectedWithdrawal.user_id)
-          .single();
+        // For rejected withdrawals, IMPORTANT: DO NOT DEDUCT THE AMOUNT FROM WALLET
+        // Instead, we need to make sure the user is refunded if they are coming 
+        // from a status where funds were already deducted (like 'scheduled' or 'approved')
         
-        if (!profileError && profileData) {
-          // Update balance - refund the amount
-          await supabase
+        if (previousStatus === 'scheduled' || previousStatus === 'sheduled' || previousStatus === 'approved') {
+          // Get current balance
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .update({ 
-              wallet_balance: (profileData.wallet_balance || 0) + selectedWithdrawal.amount 
-            })
-            .eq('id', selectedWithdrawal.user_id);
-            
-          console.log(`Refunded ${selectedWithdrawal.amount}€ to user ${selectedWithdrawal.user_id} due to rejected withdrawal`);
+            .select('wallet_balance')
+            .eq('id', selectedWithdrawal.user_id)
+            .single();
+          
+          if (!profileError && profileData) {
+            // Update balance - refund the amount
+            await supabase
+              .from('profiles')
+              .update({ 
+                wallet_balance: (profileData.wallet_balance || 0) + selectedWithdrawal.amount 
+              })
+              .eq('id', selectedWithdrawal.user_id);
+              
+            console.log(`Refunded ${selectedWithdrawal.amount}€ to user ${selectedWithdrawal.user_id} due to rejected withdrawal`);
+          }
+        } else {
+          // If coming from 'pending' or other statuses where balance wasn't deducted, do nothing to the balance
+          console.log(`No balance adjustment needed for rejected withdrawal ${selectedWithdrawal.id} (previous status: ${previousStatus})`);
         }
         
         // Create a notification
         await notificationService.withdrawalRejected(selectedWithdrawal.amount);
         
-        // Create a transaction record for the refund
-        await supabase.from('wallet_transactions').insert([
-          {
+        // Create a transaction record for the refund if coming from a status where funds were deducted
+        if (previousStatus === 'scheduled' || previousStatus === 'sheduled' || previousStatus === 'approved') {
+          await supabase.from('wallet_transactions').insert([
+            {
+              user_id: selectedWithdrawal.user_id,
+              amount: selectedWithdrawal.amount,
+              type: 'withdrawal',
+              description: `Retrait de ${selectedWithdrawal.amount}€ rejeté`,
+              status: 'rejected'
+            },
+            {
+              user_id: selectedWithdrawal.user_id,
+              amount: selectedWithdrawal.amount,
+              type: 'deposit',
+              description: `Remboursement du retrait rejeté de ${selectedWithdrawal.amount}€`,
+              status: 'completed',
+              receipt_confirmed: true
+            }
+          ]);
+          
+          // Show success toast to admin
+          toast.success(`Le retrait de ${selectedWithdrawal.amount}€ a été rejeté et remboursé à l'utilisateur`, {
+            description: "Une notification a été envoyée à l'utilisateur"
+          });
+        } else {
+          // Just create a withdrawal rejected transaction record
+          await supabase.from('wallet_transactions').insert({
             user_id: selectedWithdrawal.user_id,
             amount: selectedWithdrawal.amount,
             type: 'withdrawal',
             description: `Retrait de ${selectedWithdrawal.amount}€ rejeté`,
             status: 'rejected'
-          },
-          {
-            user_id: selectedWithdrawal.user_id,
-            amount: selectedWithdrawal.amount,
-            type: 'deposit',
-            description: `Remboursement du retrait rejeté de ${selectedWithdrawal.amount}€`,
-            status: 'completed',
-            receipt_confirmed: true
-          }
-        ]);
-        
-        // Show success toast to admin
-        toast.success(`Le retrait de ${selectedWithdrawal.amount}€ a été rejeté et remboursé à l'utilisateur`, {
-          description: "Une notification a été envoyée à l'utilisateur"
-        });
+          });
+          
+          // Show success toast to admin
+          toast.success(`Le retrait de ${selectedWithdrawal.amount}€ a été rejeté`, {
+            description: "Une notification a été envoyée à l'utilisateur"
+          });
+        }
       }
       
       fetchWithdrawalRequests();
