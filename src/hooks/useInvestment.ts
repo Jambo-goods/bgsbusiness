@@ -1,100 +1,57 @@
+
 import { useState, useEffect } from 'react';
 import { Project } from '@/types/project';
-import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { notificationService } from '@/services/notifications';
-import { useWalletBalance } from '@/hooks/useWalletBalance';
+import { toast } from 'sonner';
+import { formatCurrency } from '@/utils/currencyUtils';
 
-interface UseInvestmentReturn {
-  investmentAmount: number;
-  setInvestmentAmount: (amount: number) => void;
-  showConfirmation: boolean;
-  isProcessing: boolean;
-  selectedDuration: number;
-  setSelectedDuration: (duration: number) => void;
-  totalReturn: number;
-  monthlyReturn: number;
-  minInvestment: number;
-  maxInvestment: number;
-  durations: number[];
-  handleInvest: () => void;
-  cancelInvestment: () => void;
-  confirmInvestment: () => void;
-  investmentData: any | null;
-  isLoading: boolean;
-  error: string | null;
-  refreshData: () => void;
-}
-
-export const useInvestment = (project: Project, investorCount: number): UseInvestmentReturn => {
-  const [investmentAmount, setInvestmentAmount] = useState<number>(project.min_investment || 500);
-  const [selectedDuration, setSelectedDuration] = useState<number>(12);
-  const [showConfirmation, setShowConfirmation] = useState<boolean>(false);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+export const useInvestment = (project: Project, investorCount: number) => {
+  // Extract possible durations from project, fallback to default if not available
+  const projectDurations = project.possible_durations?.length 
+    ? project.possible_durations 
+    : [6, 12, 24, 36];
+    
+  const [investmentAmount, setInvestmentAmount] = useState(project.min_investment || 500);
+  const [selectedDuration, setSelectedDuration] = useState(projectDurations[0]); // Use first duration as default
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [userBalance, setUserBalance] = useState(0);
   
-  const { walletBalance, refreshBalance } = useWalletBalance();
-  
-  const [investmentData, setInvestmentData] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   const minInvestment = project.min_investment || 500;
   const maxInvestment = project.maxInvestment || 10000;
-  const projectYield = project.yield || 0.08;
+  const yieldRate = project.yield || 8;
   
-  const durations = project.possibleDurations || [6, 12, 24, 36];
+  // Default durations if project doesn't have specific ones
+  const durations = projectDurations;
   
-  const totalReturn = investmentAmount * (projectYield / 12) * selectedDuration;
-  const monthlyReturn = totalReturn / selectedDuration;
-
+  // Calculate returns
+  const monthlyReturn = (investmentAmount * yieldRate) / 100;
+  const totalReturn = monthlyReturn * selectedDuration;
+  
+  // Fetch user balance
   useEffect(() => {
-    if (!project.id) return;
-
-    const fetchInvestmentData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const mockData = {
-          totalInvested: Math.round(project.price * 0.7),
-          investorsCount: investorCount,
-          investmentTarget: project.price || 100000,
-          investmentProgress: project.fundingProgress || 0.7,
-          status: project.status || 'active',
-          startDate: project.startDate || new Date().toISOString(),
-          endDate: project.endDate || new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
-        };
-        
-        setInvestmentData(mockData);
-      } catch (err: any) {
-        console.error("Error fetching investment data:", err);
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
+    const fetchUserBalance = async () => {
+      const { data: session } = await supabase.auth.getSession();
+      if (session.session) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('wallet_balance')
+          .eq('id', session.session.user.id)
+          .single();
+          
+        if (data) {
+          setUserBalance(data.wallet_balance || 0);
+        }
       }
     };
-
-    fetchInvestmentData();
-  }, [project.id, investorCount, project.price, project.fundingProgress, project.status, project.startDate, project.endDate]);
-
+    
+    fetchUserBalance();
+  }, []);
+  
   const handleInvest = () => {
-    if (investmentAmount < minInvestment) {
-      toast.error("Montant trop faible", {
-        description: `L'investissement minimum est de ${minInvestment}€`
-      });
-      return;
-    }
-    
-    if (investmentAmount > maxInvestment) {
-      toast.error("Montant trop élevé", {
-        description: `L'investissement maximum est de ${maxInvestment}€`
-      });
-      return;
-    }
-    
-    if (walletBalance < investmentAmount) {
-      toast.error("Solde insuffisant", {
-        description: `Votre solde disponible est de ${walletBalance}€, vous ne pouvez pas investir ${investmentAmount}€`
+    if (investmentAmount > userBalance) {
+      toast.error("Solde insuffisant", { 
+        description: "Vous n'avez pas assez de fonds dans votre portefeuille."
       });
       return;
     }
@@ -110,143 +67,90 @@ export const useInvestment = (project: Project, investorCount: number): UseInves
     setIsProcessing(true);
     
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast.error("Utilisateur non connecté", {
-          description: "Veuillez vous connecter pour investir."
-        });
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        toast.error("Non connecté", { description: "Vous devez être connecté pour investir." });
         setIsProcessing(false);
         return;
       }
       
-      await refreshBalance(false);
+      const userId = session.session.user.id;
       
-      if (walletBalance < investmentAmount) {
-        toast.error("Solde insuffisant", {
-          description: `Votre solde actuel est de ${walletBalance}€, vous ne pouvez pas investir ${investmentAmount}€`
-        });
-        setIsProcessing(false);
-        return;
-      }
-      
-      const { data: investmentData, error: investmentError } = await supabase
+      // Create investment record
+      const { data: investment, error: investmentError } = await supabase
         .from('investments')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           project_id: project.id,
           amount: investmentAmount,
           duration: selectedDuration,
-          yield_rate: project.yield,
-          status: 'active',
-          date: new Date().toISOString()
+          yield_rate: yieldRate,
+          status: 'active'
         })
-        .select('id')
+        .select()
         .single();
         
       if (investmentError) {
-        console.error("Error recording investment:", investmentError);
         throw investmentError;
       }
       
+      // Update user wallet balance
       const { error: walletError } = await supabase.rpc(
         'decrement_wallet_balance',
-        { 
-          user_id: user.id, 
-          decrement_amount: investmentAmount 
-        }
+        { user_id: userId, decrement_amount: investmentAmount }
       );
       
       if (walletError) {
-        console.error("Error updating wallet balance:", walletError);
         throw walletError;
       }
       
+      // Create wallet transaction record
       const { error: transactionError } = await supabase
         .from('wallet_transactions')
         .insert({
-          user_id: user.id,
-          amount: investmentAmount,
+          user_id: userId,
+          amount: -investmentAmount,
           type: 'investment',
-          description: `Investissement dans ${project.name}`,
-          status: 'completed'
+          description: `Investissement dans ${project.title || project.name}`
         });
         
       if (transactionError) {
-        console.error("Error recording transaction:", transactionError);
         throw transactionError;
       }
       
-      await notificationService.investmentConfirmed(project.name || "Projet", investmentAmount);
-      
-      const { error: profileError } = await supabase.rpc(
-        'update_user_profile_investment',
-        {
-          user_id: user.id,
-          investment_amount: investmentAmount
-        }
-      );
-      
-      if (profileError) {
-        console.error("Error updating profile statistics:", profileError);
-        throw profileError;
-      }
-      
-      const recentInvestment = {
-        projectId: project.id,
-        amount: investmentAmount,
-        date: new Date().toISOString()
-      };
-      localStorage.setItem("recentInvestment", JSON.stringify(recentInvestment));
-      
-      refreshBalance(false);
-      
-      toast.success("Investissement effectué", {
-        description: `Votre investissement de ${investmentAmount}€ a été enregistré.`
+      toast.success("Investissement réussi", {
+        description: `Vous avez investi ${formatCurrency(investmentAmount)} dans ce projet.`
       });
       
-      setShowConfirmation(false);
+      // Redirect to dashboard after short delay
+      setTimeout(() => {
+        window.location.href = '/dashboard/investments';
+      }, 2000);
       
-    } catch (err) {
-      console.error("Error processing investment:", err);
-      toast.error("Erreur", {
-        description: "Une erreur s'est produite lors de l'investissement."
+    } catch (error) {
+      console.error('Erreur lors de l\'investissement:', error);
+      toast.error("Erreur", { 
+        description: "Une erreur s'est produite lors de l'investissement. Veuillez réessayer."
       });
     } finally {
       setIsProcessing(false);
     }
   };
   
-  const refreshData = () => {
-    if (!project.id) return;
-    
-    toast.info("Actualisation des données...");
-    setIsLoading(true);
-    
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Données actualisées");
-    }, 1000);
-  };
-
   return {
     investmentAmount,
     setInvestmentAmount,
-    showConfirmation,
-    isProcessing,
     selectedDuration,
     setSelectedDuration,
+    showConfirmation,
+    isProcessing,
+    durations,
     totalReturn,
     monthlyReturn,
     minInvestment,
     maxInvestment,
-    durations,
     handleInvest,
     cancelInvestment,
-    confirmInvestment,
-    investmentData,
-    isLoading,
-    error,
-    refreshData
+    confirmInvestment
   };
 };

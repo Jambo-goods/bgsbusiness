@@ -25,7 +25,7 @@ export interface Project {
   price?: number;
   profitability?: number;
   yield?: number;
-  possibleDurations?: number[];
+  possible_durations?: number[];
   investedAmount?: number;
   investmentDate?: string;
   fundingProgress?: number;

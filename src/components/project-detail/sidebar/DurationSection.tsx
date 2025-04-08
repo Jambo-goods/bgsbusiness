@@ -12,11 +12,16 @@ export default function DurationSection({
   selectedDuration,
   onChange
 }: DurationSectionProps) {
+  // If no durations are provided, use default values
+  const availableDurations = durations && durations.length > 0 
+    ? durations 
+    : [6, 12, 24];
+    
   return (
     <div className="mb-4">
       <h4 className="text-sm font-medium text-bgs-blue mb-2">Durée</h4>
       <div className="grid grid-cols-3 gap-2">
-        {durations.map((duration) => (
+        {availableDurations.map((duration) => (
           <button
             key={duration}
             type="button"

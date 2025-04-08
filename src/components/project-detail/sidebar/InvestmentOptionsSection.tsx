@@ -40,7 +40,7 @@ export default function InvestmentOptionsSection({
       {!showConfirmation ? (
         <>
           <DurationSection 
-            durations={durations}
+            durations={project.possible_durations || durations}
             selectedDuration={selectedDuration}
             onChange={setSelectedDuration}
           />
