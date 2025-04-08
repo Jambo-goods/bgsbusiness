@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, MapPin, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -78,7 +77,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
       console.log("Profil mis à jour avec succès. Données retournées:", data);
       console.log("Téléphone enregistré:", data?.[0]?.phone);
       
-      setSavedPhone(data?.[0]?.phone || phone);
+      setSavedPhone(phone);
       
       if (onProfileUpdate) {
         await onProfileUpdate();
@@ -176,7 +175,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
               </div>
               <div className="flex items-center text-sm text-bgs-blue/80 bg-blue-50 p-2 rounded-md">
                 <Phone size={16} className="mr-2 text-bgs-blue/70" />
-                <span className="font-medium">Numéro enregistré dans la base de données:</span>
+                <span className="font-medium">Numéro enregistré:</span>
                 <span className="ml-2 font-bold text-bgs-blue">{savedPhone || "Aucun numéro enregistré"}</span>
               </div>
             </div>
