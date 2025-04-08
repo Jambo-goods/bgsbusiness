@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, MapPin, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -33,7 +32,6 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
     setAddress(userData.address || "");
     setSavedPhone(userData.phone || "");
     
-    // Add this debug log to verify the phone is coming through properly
     console.log("Phone number from userData:", userData.phone);
   }, [userData]);
 
@@ -50,12 +48,11 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
       
       console.log("Mise à jour du profil avec le téléphone :", phone);
       
-      // Debug log to verify that phone value is correct before update
       console.log("Données envoyées:", {
         first_name: firstName,
         last_name: lastName,
         email: email,
-        phone: phone, // Vérifie que cette valeur est correcte
+        phone: phone,
         address: address
       });
       
@@ -70,7 +67,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
           updated_at: new Date().toISOString()
         })
         .eq('id', session.user.id)
-        .select(); // Return the updated data for verification
+        .select();
       
       if (error) {
         console.error("Erreur de mise à jour du profil:", error);
@@ -80,7 +77,6 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
       console.log("Profil mis à jour avec succès. Données retournées:", data);
       console.log("Téléphone enregistré:", data?.[0]?.phone);
       
-      // Update the saved phone number after successful update
       setSavedPhone(phone);
       
       if (onProfileUpdate) {
@@ -177,11 +173,10 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
                   placeholder="Saisissez votre numéro de téléphone"
                 />
               </div>
-              {/* Affichage permanent du numéro de téléphone sauvegardé */}
               <div className="flex items-center text-sm text-bgs-blue/80 bg-blue-50 p-2 rounded-md">
                 <Phone size={16} className="mr-2 text-bgs-blue/70" />
                 <span className="font-medium">Numéro enregistré:</span>
-                <span className="ml-2">{savedPhone || "Aucun numéro enregistré"}</span>
+                <span className="ml-2 font-bold text-bgs-blue">{savedPhone || "Aucun numéro enregistré"}</span>
               </div>
             </div>
             
