@@ -121,15 +121,40 @@ export default function EditWithdrawalModal({ isOpen, onClose, withdrawal, onUpd
       const { data: session } = await supabase.auth.getSession();
       
       if (session.session) {
+        // First get the user ID from the withdrawal request if needed
+        let userId = session.session.user.id;
+        
+        // If the current user is canceling their own withdrawal
+        // We need to make sure we're refunding to the correct user account
+        const { data: withdrawalData } = await supabase
+          .from('withdrawal_requests')
+          .select('user_id')
+          .eq('id', withdrawal.id)
+          .single();
+          
+        if (withdrawalData && withdrawalData.user_id) {
+          userId = withdrawalData.user_id;
+        }
+        
         const { error: balanceError } = await supabase.rpc('increment_wallet_balance', { 
-          user_id: session.session.user.id,
+          user_id: userId,
           increment_amount: withdrawal.amount 
         });
         
         if (balanceError) throw balanceError;
+        
+        // Create a transaction record for the refund
+        await supabase.from('wallet_transactions').insert({
+          user_id: userId,
+          amount: withdrawal.amount,
+          type: 'deposit',
+          description: `Remboursement du retrait annulé de ${withdrawal.amount}€`,
+          status: 'completed',
+          receipt_confirmed: true
+        });
       }
       
-      toast.success(`La demande de retrait de ${withdrawal.amount}€ a été annulée`);
+      toast.success(`La demande de retrait de ${withdrawal.amount}€ a été annulée et le montant a été remboursé`);
       onUpdate();
       onClose();
     } catch (error) {
