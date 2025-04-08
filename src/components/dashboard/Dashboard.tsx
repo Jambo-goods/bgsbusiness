@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,7 +58,6 @@ export default function Dashboard() {
         return;
       }
 
-      // Fetch user profile from the profiles table
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -70,9 +68,8 @@ export default function Dashboard() {
         throw profileError;
       }
 
-      console.log("Fetched profile data:", profile);
+      console.log("Données du profil récupérées:", profile);
 
-      // Combine auth user and profile data with proper property mapping
       setUserData({
         ...user,
         ...profile,
@@ -86,7 +83,6 @@ export default function Dashboard() {
         walletBalance: profile.wallet_balance
       });
         
-      // Fetch user's investments
       const { data: investments, error: investmentsError } = await supabase
         .from('investments')
         .select(`
@@ -130,7 +126,6 @@ export default function Dashboard() {
         return;
       }
 
-      // Fetch user's investments
       const { data: investments, error: investmentsError } = await supabase
         .from('investments')
         .select(`
@@ -153,7 +148,6 @@ export default function Dashboard() {
       
       setUserInvestments(investments || []);
       
-      // Refresh profile data
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -164,9 +158,8 @@ export default function Dashboard() {
         throw profileError;
       }
 
-      console.log("Refreshed profile data:", profile);
+      console.log("Données du profil récupérées:", profile);
 
-      // Make sure we properly extract the phone and address from the profile data
       setUserData({
         ...userData,
         ...profile,

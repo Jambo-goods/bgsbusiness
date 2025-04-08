@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, MapPin, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -24,7 +23,6 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
   const [address, setAddress] = useState(userData.address || "");
   const [isLoading, setIsLoading] = useState(false);
 
-  // Update form fields when userData changes
   useEffect(() => {
     setFirstName(userData.firstName || "");
     setLastName(userData.lastName || "");
@@ -38,17 +36,15 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
     setIsLoading(true);
 
     try {
-      // Get the current user session
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session?.user?.id) {
         throw new Error("No authenticated user found");
       }
       
-      console.log("Updating profile with phone:", phone);
+      console.log("Mise à jour du profil avec le téléphone :", phone);
       
-      // Update profile information in Supabase
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .update({
           first_name: firstName,
@@ -61,21 +57,12 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
         .eq('id', session.user.id);
       
       if (error) {
-        console.error("Profile update error:", error);
+        console.error("Erreur de mise à jour du profil:", error);
         throw error;
       }
       
-      console.log("Profile updated successfully with phone:", phone);
+      console.log("Profil mis à jour avec succès, téléphone :", phone);
       
-      // Update metadata in auth user
-      await supabase.auth.updateUser({
-        data: {
-          firstName,
-          lastName
-        }
-      });
-      
-      // Call the parent refresh function if provided
       if (onProfileUpdate) {
         await onProfileUpdate();
       }
