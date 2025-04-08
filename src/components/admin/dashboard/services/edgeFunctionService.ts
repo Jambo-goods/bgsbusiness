@@ -28,7 +28,8 @@ export const edgeFunctionService = {
         .maybeSingle();
         
       // If it's a wallet transaction and status is 'rejected', use 'cancelled' instead
-      const safeStatus = walletTx && normalizedStatus === 'rejected' ? 'cancelled' : normalizedStatus;
+      // This is crucial because wallet_transactions table has a constraint on valid status values
+      const safeStatus = walletTx && (normalizedStatus === 'rejected' || normalizedStatus === 'rejected') ? 'cancelled' : normalizedStatus;
       
       const { data, error } = await supabase.functions.invoke('update-bank-transfer', {
         body: {

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -172,15 +171,16 @@ export default function BankTransferTableRow({
     try {
       console.log(`Rejecting transfer ${item.id}`);
       
-      // Vérifier d'abord le type de l'élément (bank_transfer ou wallet_transaction)
+      // Check if this is a wallet transaction or a bank transfer
       const isWalletTransaction = item.source === 'wallet_transactions';
       
-      // Si c'est une wallet_transaction, utiliser 'cancelled' au lieu de 'rejected'
-      const rejectStatus = isWalletTransaction ? 'cancelled' : 'rejected';
+      // IMPORTANT: For wallet transactions, we must use 'cancelled' instead of 'rejected'
+      // due to the database constraint on wallet_transactions.status
+      const appropriateStatus = isWalletTransaction ? 'cancelled' : 'rejected';
       
       const { success, data, message, error } = await edgeFunctionService.invokeUpdateTransferEdgeFunction(
         item.id,
-        rejectStatus, // Utilisez 'cancelled' pour les transactions wallet, 'rejected' pour les virements bancaires
+        appropriateStatus,
         item.user_id,
         true,
         false // Don't credit wallet for rejected transfers
@@ -199,69 +199,31 @@ export default function BankTransferTableRow({
         
         // Fallback to direct update with explicit cancelled status for wallet transaction
         try {
-          // Vérifier s'il existe déjà une transaction wallet
-          const { data: existingTx } = await supabase
-            .from('wallet_transactions')
-            .select('id, status')
-            .eq('user_id', item.user_id)
-            .ilike('description', `%${item.reference || ''}%`)
-            .maybeSingle();
-          
-          if (existingTx && existingTx.status !== 'cancelled') {
-            // Mettre à jour la transaction existante vers 'cancelled'
-            await supabase
-              .from('wallet_transactions')
-              .update({ 
-                status: 'cancelled',
-                receipt_confirmed: false
-              })
-              .eq('id', existingTx.id);
-            
-            console.log(`Updated existing wallet transaction to cancelled: ${existingTx.id}`);
-          } else if (!existingTx) {
-            // Créer une nouvelle transaction cancelled
-            const { error: newTxError } = await supabase
-              .from('wallet_transactions')
-              .insert({
-                user_id: item.user_id,
-                amount: item.amount,
-                type: 'deposit',
-                description: `Virement bancaire rejeté (${item.reference || ''})`,
-                status: 'cancelled',
-                receipt_confirmed: false
-              });
-              
-            if (newTxError) {
-              console.error("Failed to create cancelled wallet transaction:", newTxError);
-            }
-          }
-          
-          // Pour bank_transfers table
-          if (!isWalletTransaction) {
-            const success = await updateTransferStatus(item, 'rejected');
-            if (success && onStatusUpdate) {
-              toast.success("Virement rejeté");
-              onStatusUpdate();
-            } else {
-              toast.error("Échec du rejet - veuillez réessayer");
-            }
-          } else {
-            // Pour wallet_transactions table, mettre à jour directement
+          if (isWalletTransaction) {
+            // For wallet_transactions table, use 'cancelled' status (not 'rejected')
             const { error: updateError } = await supabase
               .from('wallet_transactions')
               .update({
-                status: 'cancelled', // Utilisez cancelled pour respecter la contrainte
+                status: 'cancelled', // Must use 'cancelled' due to table constraint
                 receipt_confirmed: false
               })
               .eq('id', item.id);
               
             if (updateError) {
+              console.error("Failed to update wallet transaction:", updateError);
               toast.error(`Échec de la mise à jour: ${updateError.message}`);
             } else {
               toast.success("Transaction rejetée");
-              if (onStatusUpdate) {
-                onStatusUpdate();
-              }
+              if (onStatusUpdate) onStatusUpdate();
+            }
+          } else {
+            // For bank transfers, we can use 'rejected'
+            const success = await updateTransferStatus(item, 'rejected');
+            if (success) {
+              toast.success("Virement rejeté");
+              if (onStatusUpdate) onStatusUpdate();
+            } else {
+              toast.error("Échec du rejet - veuillez réessayer");
             }
           }
         } catch (backupError) {
