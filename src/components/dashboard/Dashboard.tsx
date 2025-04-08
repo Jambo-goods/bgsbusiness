@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,71 +15,9 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { activeTab, setActiveTab } = useDashboardState();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Add isSidebarOpen state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          setError("Utilisateur non connecté");
-          return;
-        }
-
-        // Fetch user profile from the profiles table
-        const { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (profileError) {
-          throw profileError;
-        }
-
-        // Combine auth user and profile data
-        setUserData({
-          ...user,
-          ...profile,
-        });
-        
-        // Fetch user's investments
-        const { data: investments, error: investmentsError } = await supabase
-          .from('investments')
-          .select(`
-            *,
-            project:project_id (
-              id,
-              name,
-              image,
-              company_name,
-              description,
-              yield,
-              status
-            )
-          `)
-          .eq('user_id', user.id);
-          
-        if (investmentsError) {
-          throw investmentsError;
-        }
-        
-        setUserInvestments(investments || []);
-      } catch (err: any) {
-        console.error("Error fetching user data:", err);
-        setError(err.message || "Une erreur est survenue lors du chargement des données");
-        toast.error("Erreur de chargement", {
-          description: "Impossible de charger les données utilisateur"
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
     fetchUserData();
     
     // Set up real-time subscription for profile changes
@@ -89,10 +28,14 @@ export default function Dashboard() {
         (payload) => {
           // Update user data when profile changes
           if (payload.new && userData && (payload.new as any).id === userData.id) {
-            setUserData({
-              ...userData,
+            setUserData(prevData => ({
+              ...prevData,
               ...(payload.new as any),
-            });
+              firstName: (payload.new as any).first_name,
+              lastName: (payload.new as any).last_name,
+              phone: (payload.new as any).phone,
+              address: (payload.new as any).address
+            }));
           }
         }
       )
@@ -103,6 +46,76 @@ export default function Dashboard() {
     };
   }, []);
 
+  const fetchUserData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setError("Utilisateur non connecté");
+        return;
+      }
+
+      // Fetch user profile from the profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+          
+      if (profileError) {
+        throw profileError;
+      }
+
+      // Combine auth user and profile data with proper property mapping
+      setUserData({
+        ...user,
+        ...profile,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        email: profile.email,
+        phone: profile.phone,
+        address: profile.address,
+        investmentTotal: profile.investment_total,
+        projectsCount: profile.projects_count,
+        walletBalance: profile.wallet_balance
+      });
+        
+      // Fetch user's investments
+      const { data: investments, error: investmentsError } = await supabase
+        .from('investments')
+        .select(`
+          *,
+          project:project_id (
+            id,
+            name,
+            image,
+            company_name,
+            description,
+            yield,
+            status
+          )
+        `)
+        .eq('user_id', user.id);
+          
+      if (investmentsError) {
+        throw investmentsError;
+      }
+        
+      setUserInvestments(investments || []);
+    } catch (err: any) {
+      console.error("Error fetching user data:", err);
+      setError(err.message || "Une erreur est survenue lors du chargement des données");
+      toast.error("Erreur de chargement", {
+        description: "Impossible de charger les données utilisateur"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+    
   const refreshData = async () => {
     try {
       setIsLoading(true);
@@ -151,6 +164,14 @@ export default function Dashboard() {
       setUserData({
         ...userData,
         ...profile,
+        firstName: profile.first_name,
+        lastName: profile.last_name,
+        email: profile.email,
+        phone: profile.phone,
+        address: profile.address,
+        investmentTotal: profile.investment_total,
+        projectsCount: profile.projects_count,
+        walletBalance: profile.wallet_balance
       });
       
       toast.success("Données actualisées");
@@ -202,7 +223,7 @@ export default function Dashboard() {
           path="/:tab" 
           element={
             <DashboardMain 
-              isSidebarOpen={isSidebarOpen} // Add isSidebarOpen prop
+              isSidebarOpen={isSidebarOpen}
               activeTab={activeTab}
               userData={userData}
               userInvestments={userInvestments}

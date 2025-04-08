@@ -13,9 +13,10 @@ interface ProfileTabProps {
     phone?: string;
     address?: string;
   };
+  onProfileUpdate?: () => Promise<void>;
 }
 
-export default function ProfileTab({ userData }: ProfileTabProps) {
+export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProps) {
   const [firstName, setFirstName] = useState(userData.firstName || "");
   const [lastName, setLastName] = useState(userData.lastName || "");
   const [email, setEmail] = useState(userData.email || "");
@@ -68,6 +69,11 @@ export default function ProfileTab({ userData }: ProfileTabProps) {
           lastName
         }
       });
+      
+      // Call the parent refresh function if provided
+      if (onProfileUpdate) {
+        await onProfileUpdate();
+      }
       
       toast.success("Profil mis à jour avec succès");
     } catch (error) {

@@ -1,3 +1,4 @@
+
 import { lazy, Suspense, useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import Overview from "./Overview";
@@ -17,6 +18,7 @@ const SettingsTab = lazy(() => import("./tabs/SettingsTab"));
 const NotificationsTab = lazy(() => import("./tabs/NotificationsTab"));
 const HistoryTab = lazy(() => import("./tabs/HistoryTab"));
 const CapitalTab = lazy(() => import("./tabs/CapitalTab"));
+
 interface TabContentProps {
   activeTab: string;
   userData: any;
@@ -31,6 +33,7 @@ const TabLoading = () => <div className="w-full space-y-3 p-3">
     <Skeleton className="h-24 w-full" />
     <Skeleton className="h-8 w-3/4" />
   </div>;
+
 export default function TabContent({
   activeTab,
   userData,
@@ -66,6 +69,7 @@ export default function TabContent({
   useEffect(() => {
     console.log(`TabContent mounted/updated with active tab: ${activeTab}`);
   }, [activeTab]);
+
   return <div className="w-full mt-4">
       {activeTab === "overview" && <Overview userData={userData} userInvestments={userInvestments} setActiveTab={setActiveTab} />}
       
@@ -138,7 +142,7 @@ export default function TabContent({
                   </div>}
             </div>}
           
-          {activeTab === "profile" && <ProfileTab userData={userData} />}
+          {activeTab === "profile" && <ProfileTab userData={userData} onProfileUpdate={refreshData} />}
 
           {activeTab === "settings" && <SettingsTab />}
           
