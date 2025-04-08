@@ -164,6 +164,68 @@ export const directBankTransferService = {
             console.log("Notification de dépôt créée avec succès");
           }
         }
+      } else if (normalizedStatus === 'rejected' && bankTransferData?.user_id) {
+        // Pour un virement rejeté, créer une transaction avec le statut 'cancelled'
+        const { data: existingTx } = await supabase
+          .from('wallet_transactions')
+          .select('id, status')
+          .eq('user_id', bankTransferData.user_id)
+          .ilike('description', `%${bankTransferData.reference || ''}%`)
+          .maybeSingle();
+          
+        if (existingTx && existingTx.status !== 'cancelled') {
+          // Mettre à jour la transaction existante
+          await supabase
+            .from('wallet_transactions')
+            .update({
+              status: 'cancelled', // Utiliser 'cancelled' au lieu de 'rejected'
+              receipt_confirmed: false
+            })
+            .eq('id', existingTx.id);
+            
+          console.log(`Transaction existante mise à jour comme annulée: ${existingTx.id}`);
+        } else if (!existingTx) {
+          // Créer une nouvelle transaction annulée
+          const { error: txError } = await supabase
+            .from('wallet_transactions')
+            .insert({
+              user_id: bankTransferData.user_id,
+              amount: bankTransferData.amount,
+              type: 'deposit',
+              description: `Virement bancaire rejeté (${bankTransferData.reference})`,
+              status: 'cancelled', // Utiliser 'cancelled' au lieu de 'rejected'
+              receipt_confirmed: false
+            });
+            
+          if (txError) {
+            console.error("Erreur lors de la création de la transaction annulée:", txError);
+          } else {
+            console.log("Transaction annulée créée avec succès");
+          }
+        }
+        
+        // Envoyer une notification de rejet
+        const { error: notificationError } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: bankTransferData.user_id,
+            title: 'Virement bancaire rejeté',
+            message: `Votre virement bancaire de ${bankTransferData.amount}€ a été rejeté. Veuillez contacter notre service client pour plus d'informations.`,
+            type: 'alert',
+            seen: false,
+            data: {
+              amount: bankTransferData.amount,
+              category: 'error',
+              reference: bankTransferData.reference,
+              timestamp: new Date().toISOString()
+            }
+          });
+        
+        if (notificationError) {
+          console.error("Erreur lors de la création de la notification de rejet:", notificationError);
+        } else {
+          console.log("Notification de rejet créée avec succès");
+        }
       }
       
       return {

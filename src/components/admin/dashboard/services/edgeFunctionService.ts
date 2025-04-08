@@ -27,7 +27,7 @@ export const edgeFunctionService = {
           isProcessed,
           notes: `Updated to ${normalizedStatus} via edge function`,
           userId,
-          sendNotification: shouldCreditWallet,
+          sendNotification: shouldCreditWallet || normalizedStatus === 'rejected',
           creditWallet: shouldCreditWallet // Only credit if status is appropriate
         }
       });
@@ -42,6 +42,7 @@ export const edgeFunctionService = {
       }
       
       if (!data || !data.success) {
+        console.error("Edge function returned an error:", data?.error || "Unknown error");
         return {
           success: false,
           message: data?.error || "Unknown error from edge function",

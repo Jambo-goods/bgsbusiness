@@ -13,6 +13,9 @@ if (!supabaseUrl || !supabaseServiceKey) {
   console.error("Required environment variables SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set");
 }
 
+// Définir les statuts valides pour les transactions de portefeuille
+const VALID_WALLET_STATUSES = ['completed', 'pending', 'cancelled', 'processing'];
+
 serve(async (req: Request) => {
   console.log(`Bank Transfer Edge Function - Method: ${req.method}, URL: ${req.url}`);
   
@@ -119,35 +122,51 @@ serve(async (req: Request) => {
           }
         }
         
-        // Update the wallet transaction
-        const { data, error } = await supabase
-          .from('wallet_transactions')
-          .update({
-            status: normalizedStatus,
-            receipt_confirmed: normalizedStatus === 'completed',
-          })
-          .eq('id', transferId)
-          .select();
-          
-        if (error) {
-          console.error("Error updating wallet transaction:", error.message);
-          return createResponse({ success: false, error: error.message }, 500);
-        }
-        
-        // Update user wallet balance if needed and requested
-        if (shouldCreditWallet && walletTransfer.user_id) {
-          await updateUserWalletBalance(supabase, walletTransfer.user_id, walletTransfer.amount);
-          
-          // Send notification if requested
-          if (sendNotification) {
-            await sendUserNotification(supabase, walletTransfer.user_id, { 
-              amount: walletTransfer.amount,
-              reference: walletTransfer.description
-            });
+        // Map the status to a valid wallet transaction status
+        let safeWalletStatus = normalizedStatus;
+        if (!VALID_WALLET_STATUSES.includes(normalizedStatus)) {
+          // Si le statut n'est pas valide pour les transactions de portefeuille, utiliser un statut de secours approprié
+          if (normalizedStatus === 'rejected') {
+            safeWalletStatus = 'cancelled';
+          } else {
+            safeWalletStatus = 'pending'; // Valeur par défaut sûre
           }
         }
         
-        return createResponse({ success: true, data });
+        try {
+          // Update the wallet transaction with a valid status
+          const { data, error } = await supabase
+            .from('wallet_transactions')
+            .update({
+              status: safeWalletStatus,
+              receipt_confirmed: safeWalletStatus === 'completed',
+            })
+            .eq('id', transferId)
+            .select();
+            
+          if (error) {
+            console.error("Error updating wallet transaction:", error.message);
+            return createResponse({ success: false, error: error.message }, 500);
+          }
+          
+          // Update user wallet balance if needed and requested
+          if (shouldCreditWallet && walletTransfer.user_id) {
+            await updateUserWalletBalance(supabase, walletTransfer.user_id, walletTransfer.amount);
+            
+            // Send notification if requested
+            if (sendNotification) {
+              await sendUserNotification(supabase, walletTransfer.user_id, { 
+                amount: walletTransfer.amount,
+                reference: walletTransfer.description
+              });
+            }
+          }
+          
+          return createResponse({ success: true, data });
+        } catch (walletUpdateError) {
+          console.error("Error updating wallet transaction:", walletUpdateError);
+          return createResponse({ success: false, error: `Wallet update error: ${walletUpdateError.message}` }, 500);
+        }
       }
     }
       
@@ -248,6 +267,34 @@ serve(async (req: Request) => {
             
           console.log(`Created new wallet transaction for user ${userIdToUpdate}`);
         }
+      } else if (normalizedStatus === 'rejected') {
+        // Si le virement est rejeté, créer une nouvelle transaction de type cancelled
+        if (existingTx && existingTx.status !== 'cancelled') {
+          // Mettre à jour la transaction existante en cancelled
+          await supabase
+            .from('wallet_transactions')
+            .update({
+              status: 'cancelled',
+              receipt_confirmed: false
+            })
+            .eq('id', existingTx.id);
+            
+          console.log(`Updated existing wallet transaction to cancelled with ID ${existingTx.id}`);
+        } else if (!existingTx) {
+          // Créer une nouvelle transaction annulée
+          await supabase
+            .from('wallet_transactions')
+            .insert({
+              user_id: userIdToUpdate,
+              amount: transferAmount,
+              type: 'deposit',
+              description: `Virement bancaire rejeté (${existingTransfer.reference})`,
+              status: 'cancelled',
+              receipt_confirmed: false
+            });
+            
+          console.log(`Created new cancelled wallet transaction for user ${userIdToUpdate}`);
+        }
       }
       
       if (userIdToUpdate && shouldCreditWallet && !existingTx?.status === 'completed') {
@@ -326,6 +373,34 @@ serve(async (req: Request) => {
             });
             
           console.log(`Created new wallet transaction for user ${userIdToUpdate}`);
+        }
+      } else if (normalizedStatus === 'rejected') {
+        // Si le virement est rejeté et qu'une transaction existe
+        if (existingTx && existingTx.status !== 'cancelled') {
+          // Mettre à jour la transaction existante en cancelled
+          await supabase
+            .from('wallet_transactions')
+            .update({
+              status: 'cancelled',
+              receipt_confirmed: false
+            })
+            .eq('id', existingTx.id);
+            
+          console.log(`Updated existing wallet transaction to cancelled with ID ${existingTx.id}`);
+        } else if (!existingTx) {
+          // Créer une nouvelle transaction annulée
+          await supabase
+            .from('wallet_transactions')
+            .insert({
+              user_id: userIdToUpdate,
+              amount: transferAmount,
+              type: 'deposit',
+              description: `Virement bancaire rejeté (${existingTransfer.reference})`,
+              status: 'cancelled',
+              receipt_confirmed: false
+            });
+            
+          console.log(`Created new cancelled wallet transaction for user ${userIdToUpdate}`);
         }
       }
       

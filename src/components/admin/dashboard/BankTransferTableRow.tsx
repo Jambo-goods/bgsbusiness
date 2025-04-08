@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
@@ -191,12 +190,55 @@ export default function BankTransferTableRow({
         console.error("Error rejecting transfer:", message || "Unknown error");
         toast.error(`Échec du rejet: ${message || 'Erreur inconnue'}`);
         
-        const success = await updateTransferStatus(item, 'rejected');
-        if (success && onStatusUpdate) {
-          toast.success("Virement rejeté");
-          onStatusUpdate();
-        } else {
-          toast.error("Échec du rejet - veuillez réessayer");
+        // Fallback to direct update with explicit cancelled status for wallet transaction
+        try {
+          // Vérifier s'il existe déjà une transaction wallet
+          const { data: existingTx } = await supabase
+            .from('wallet_transactions')
+            .select('id, status')
+            .eq('user_id', item.user_id)
+            .ilike('description', `%${item.reference || ''}%`)
+            .maybeSingle();
+          
+          if (existingTx && existingTx.status !== 'cancelled') {
+            // Mettre à jour la transaction existante vers 'cancelled'
+            await supabase
+              .from('wallet_transactions')
+              .update({ 
+                status: 'cancelled',
+                receipt_confirmed: false
+              })
+              .eq('id', existingTx.id);
+            
+            console.log(`Updated existing wallet transaction to cancelled: ${existingTx.id}`);
+          } else if (!existingTx) {
+            // Créer une nouvelle transaction cancelled
+            const { error: newTxError } = await supabase
+              .from('wallet_transactions')
+              .insert({
+                user_id: item.user_id,
+                amount: item.amount,
+                type: 'deposit',
+                description: `Virement bancaire rejeté (${item.reference || ''})`,
+                status: 'cancelled',
+                receipt_confirmed: false
+              });
+              
+            if (newTxError) {
+              console.error("Failed to create cancelled wallet transaction:", newTxError);
+            }
+          }
+          
+          const success = await updateTransferStatus(item, 'rejected');
+          if (success && onStatusUpdate) {
+            toast.success("Virement rejeté");
+            onStatusUpdate();
+          } else {
+            toast.error("Échec du rejet - veuillez réessayer");
+          }
+        } catch (backupError) {
+          console.error("Failed to use fallback:", backupError);
+          toast.error("Erreur lors de la mise à jour de secours");
         }
       }
     } catch (error) {
