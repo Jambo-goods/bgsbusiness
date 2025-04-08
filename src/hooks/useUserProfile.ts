@@ -42,7 +42,35 @@ export default function useUserProfile() {
           throw error;
         }
         
-        setProfile(data as UserProfile);
+        // If profile exists, use it directly
+        if (data) {
+          setProfile(data as UserProfile);
+        } else {
+          // If no profile exists, create one with user metadata
+          const userMeta = session.user.user_metadata || {};
+          
+          // Extract firstName and lastName from user metadata
+          const firstName = userMeta.firstName || "Utilisateur";
+          const lastName = userMeta.lastName || "";
+          
+          // Create a new profile with metadata values
+          const { data: newProfile, error: insertError } = await supabase
+            .from("profiles")
+            .insert({
+              id: session.user.id,
+              email: session.user.email,
+              first_name: firstName,
+              last_name: lastName
+            })
+            .select()
+            .single();
+            
+          if (insertError) {
+            throw insertError;
+          }
+          
+          setProfile(newProfile as UserProfile);
+        }
       } catch (err) {
         console.error("Error loading user profile:", err);
         setError(err instanceof Error ? err.message : "Unknown error occurred");

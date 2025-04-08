@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { AuthUser } from './types';
 import { toast } from 'sonner';
@@ -31,7 +30,6 @@ export async function signup(email: string, password: string, metadata?: any) {
     const redirectUrl = `${origin}/login`;
     console.log("AuthService - Redirect URL:", redirectUrl);
     
-    // Version simplifiée sans parrainage
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -39,7 +37,6 @@ export async function signup(email: string, password: string, metadata?: any) {
         data: {
           firstName: metadata?.firstName,
           lastName: metadata?.lastName,
-          referralCode: metadata?.referralCode // On garde uniquement le code de référence
         },
         emailRedirectTo: redirectUrl,
       }
@@ -56,7 +53,6 @@ export async function signup(email: string, password: string, metadata?: any) {
         name: error.name,
       });
       
-      // Use type checking instead of direct property access
       if (error instanceof Error) {
         if ('cause' in error) {
           console.error("AuthService - Cause de l'erreur:", (error as any).cause);
@@ -80,14 +76,12 @@ export async function signup(email: string, password: string, metadata?: any) {
     console.error("AuthService - Type d'erreur attrapée:", typeof error);
     console.error("AuthService - Message d'erreur:", error.message);
     
-    // Use type check with optional properties
     if (error instanceof Error) {
       if ('cause' in error) {
         console.error("AuthService - Cause de l'erreur:", (error as any).cause);
       }
     }
     
-    // Extract more details
     const details = {
       name: error.name,
       message: error.message,

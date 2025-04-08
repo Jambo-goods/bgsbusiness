@@ -35,13 +35,17 @@ export const useProfileData = (userId: string | null): ProfileDataReturn => {
           const { data: sessionData } = await supabase.auth.getSession();
           const userMeta = sessionData.session?.user.user_metadata || {};
           
+          // Fix: Use firstName and lastName from user_metadata directly
+          const firstName = userMeta.firstName || "Utilisateur";
+          const lastName = userMeta.lastName || "";
+          
           // Create a default profile with data from the user metadata
           const { error: insertError } = await supabase
             .from('profiles')
             .insert({
               id: userId,
-              first_name: userMeta.first_name || "Utilisateur",
-              last_name: userMeta.last_name || "",
+              first_name: firstName,
+              last_name: lastName,
               email: sessionData.session?.user.email,
               investment_total: 0,
               projects_count: 0,
@@ -68,10 +72,12 @@ export const useProfileData = (userId: string | null): ProfileDataReturn => {
       
       // Use profile data if available, otherwise use default values
       const { data: sessionData } = await supabase.auth.getSession();
+      const userMeta = sessionData.session?.user.user_metadata || {};
       
+      // Fix: Prioritize profile data, but fall back to user metadata if needed
       setUserData({
-        firstName: profileData?.first_name || sessionData.session?.user.user_metadata?.first_name || "Utilisateur",
-        lastName: profileData?.last_name || sessionData.session?.user.user_metadata?.last_name || "",
+        firstName: profileData?.first_name || userMeta.firstName || "Utilisateur",
+        lastName: profileData?.last_name || userMeta.lastName || "",
         email: profileData?.email || sessionData.session?.user.email || "",
         investmentTotal: profileData?.investment_total || 0,
         projectsCount: profileData?.projects_count || 0,
