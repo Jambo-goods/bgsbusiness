@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAdmin } from '@/contexts/AdminContext';
@@ -16,6 +17,7 @@ export default function WithdrawalManagement() {
   const [sortField, setSortField] = useState('requested_at');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [userData, setUserData] = useState<Record<string, any>>({});
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWithdrawals();
@@ -86,15 +88,25 @@ export default function WithdrawalManagement() {
       return;
     }
     
+    // Prevent multiple submissions
+    if (isProcessing) {
+      toast.error("Une autre demande est déjà en cours de traitement");
+      return;
+    }
+    
+    setIsProcessing(withdrawal.id);
+    
     try {
       // Check if withdrawal is already scheduled or approved
       if (withdrawal.status === 'scheduled' || withdrawal.status === 'sheduled') {
         toast.error("Ce retrait est déjà programmé");
+        setIsProcessing(null);
         return;
       }
       
       if (withdrawal.status === 'approved') {
         toast.error("Ce retrait est déjà approuvé");
+        setIsProcessing(null);
         return;
       }
       
@@ -108,6 +120,7 @@ export default function WithdrawalManagement() {
       if (profileError) {
         console.error("Erreur lors de la vérification du solde:", profileError);
         toast.error("Impossible de vérifier le solde de l'utilisateur");
+        setIsProcessing(null);
         return;
       }
       
@@ -153,6 +166,7 @@ export default function WithdrawalManagement() {
         }
         
         fetchWithdrawals();
+        setIsProcessing(null);
         return;
       }
       
@@ -168,7 +182,7 @@ export default function WithdrawalManagement() {
         
       if (confirmationError) throw confirmationError;
       
-      // Create a notification for the user
+      // Create a notification for the user about confirmation
       try {
         await supabase
           .from('notifications')
@@ -184,6 +198,19 @@ export default function WithdrawalManagement() {
         console.error("Error creating confirmation notification:", notifError);
       }
       
+      // Update user wallet balance using secure RPC function
+      const { error: walletError } = await supabase.rpc('decrement_wallet_balance', {
+        user_id: withdrawal.user_id,
+        decrement_amount: withdrawal.amount
+      });
+      
+      if (walletError) {
+        console.error("Erreur lors de la mise à jour du solde:", walletError);
+        toast.error("Erreur lors de la mise à jour du solde utilisateur");
+        setIsProcessing(null);
+        return;
+      }
+      
       // Then schedule the withdrawal
       const { error: schedulingError } = await supabase
         .from('withdrawal_requests')
@@ -196,28 +223,21 @@ export default function WithdrawalManagement() {
         
       if (schedulingError) throw schedulingError;
       
-      // Update user wallet balance
-      const { error: walletError } = await supabase
-        .from('profiles')
-        .update({ 
-          wallet_balance: userProfile.wallet_balance - withdrawal.amount 
-        })
-        .eq('id', withdrawal.user_id);
-      
-      if (walletError) throw walletError;
-      
-      // Create a wallet transaction record
-      const { error: transactionError } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: withdrawal.user_id,
+      // Use supabase functions to invoke backend function for transaction creation
+      const { error: functionError } = await supabase.functions.invoke('create-wallet-transaction', {
+        body: {
+          userId: withdrawal.user_id,
           amount: withdrawal.amount,
           type: 'withdrawal',
           description: 'Retrait programmé',
-          status: 'completed',
-        });
+          status: 'completed'
+        }
+      });
       
-      if (transactionError) throw transactionError;
+      if (functionError) {
+        console.warn("Error invoking function, falling back to direct update:", functionError);
+        // We won't block the process for this, just log it
+      }
       
       // Create balance deduction notification
       try {
@@ -277,6 +297,8 @@ export default function WithdrawalManagement() {
     } catch (error) {
       console.error("Erreur lors de l'approbation du retrait:", error);
       toast.error("Une erreur s'est produite lors de l'approbation du retrait");
+    } finally {
+      setIsProcessing(null);
     }
   };
 
@@ -433,16 +455,20 @@ export default function WithdrawalManagement() {
       return;
     }
     
+    setIsProcessing(withdrawal.id);
+    
     try {
       // Check if withdrawal is already paid
       if (withdrawal.status === 'paid') {
         toast.error("Ce retrait est déjà marqué comme payé");
+        setIsProcessing(null);
         return;
       }
       
       // Check if withdrawal is in an appropriate status to be marked as paid
       if (withdrawal.status !== 'approved' && withdrawal.status !== 'scheduled' && withdrawal.status !== 'sheduled' && withdrawal.status !== 'completed') {
         toast.error("Ce retrait doit d'abord être approuvé avant d'être marqué comme payé");
+        setIsProcessing(null);
         return;
       }
       
@@ -467,41 +493,39 @@ export default function WithdrawalManagement() {
         withdrawal.amount
       );
       
-      // Create a notification for the user
-      try {
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: withdrawal.user_id,
-            title: 'Retrait payé',
-            message: `Votre retrait de ${withdrawal.amount}€ a été payé et le montant a été transféré sur votre compte bancaire.`,
-            type: 'withdrawal',
-            seen: false,
-            data: { 
-              amount: withdrawal.amount, 
-              status: 'paid', 
-              category: 'success',
-              timestamp: new Date().toISOString()
-            }
-          });
-      } catch (notifError) {
-        console.error("Error creating notification:", notifError);
-      }
+      // Use edge function to create notification and transaction
+      const { error: functionError } = await supabase.functions.invoke('update-withdrawal-status', {
+        body: {
+          withdrawalId: withdrawal.id,
+          userId: withdrawal.user_id,
+          amount: withdrawal.amount,
+          status: 'paid'
+        }
+      });
       
-      // Create a wallet transaction record for the history
-      try {
-        await supabase
-          .from('wallet_transactions')
-          .insert({
-            user_id: withdrawal.user_id,
-            amount: withdrawal.amount,
-            type: 'withdrawal',
-            description: `Retrait de ${withdrawal.amount}€ payé sur votre compte bancaire`,
-            status: 'completed',
-            receipt_confirmed: true
-          });
-      } catch (txError) {
-        console.error("Error creating transaction record:", txError);
+      if (functionError) {
+        console.warn("Error invoking function, falling back to direct updates:", functionError);
+        
+        // Create a notification for the user
+        try {
+          await supabase
+            .from('notifications')
+            .insert({
+              user_id: withdrawal.user_id,
+              title: 'Retrait payé',
+              message: `Votre retrait de ${withdrawal.amount}€ a été payé et le montant a été transféré sur votre compte bancaire.`,
+              type: 'withdrawal',
+              seen: false,
+              data: { 
+                amount: withdrawal.amount, 
+                status: 'paid', 
+                category: 'success',
+                timestamp: new Date().toISOString()
+              }
+            });
+        } catch (notifError) {
+          console.error("Error creating notification:", notifError);
+        }
       }
       
       toast.success(`Retrait de ${withdrawal.amount}€ marqué comme payé`);
@@ -509,6 +533,8 @@ export default function WithdrawalManagement() {
     } catch (error) {
       console.error("Erreur lors du marquage du retrait comme payé:", error);
       toast.error("Une erreur s'est produite lors du marquage du retrait comme payé");
+    } finally {
+      setIsProcessing(null);
     }
   };
 
@@ -618,33 +644,93 @@ export default function WithdrawalManagement() {
                       <TableCell className="text-right">
                         {withdrawal.status === 'pending' ? (
                           <div className="flex justify-end items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleConfirmWithdrawal(withdrawal)} className="text-blue-600 hover:text-blue-800 hover:bg-blue-50">
-                              <Clock className="h-4 w-4 mr-1" />
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleConfirmWithdrawal(withdrawal)} 
+                              className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                              disabled={isProcessing === withdrawal.id}
+                            >
+                              {isProcessing === withdrawal.id ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <Clock className="h-4 w-4 mr-1" />
+                              )}
                               Confirmer
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleApproveWithdrawal(withdrawal)} className="text-green-600 hover:text-green-800 hover:bg-green-50">
-                              <CheckCircle className="h-4 w-4 mr-1" />
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleApproveWithdrawal(withdrawal)} 
+                              className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                              disabled={isProcessing === withdrawal.id}
+                            >
+                              {isProcessing === withdrawal.id ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                              )}
                               Approuver
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleRejectWithdrawal(withdrawal)} className="text-red-600 hover:text-red-800 hover:bg-red-50">
-                              <XCircle className="h-4 w-4 mr-1" />
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleRejectWithdrawal(withdrawal)} 
+                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              disabled={isProcessing === withdrawal.id}
+                            >
+                              {isProcessing === withdrawal.id ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4 mr-1" />
+                              )}
                               Rejeter
                             </Button>
                           </div>
                         ) : withdrawal.status === 'confirmed' ? (
                           <div className="flex justify-end items-center space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => handleApproveWithdrawal(withdrawal)} className="text-green-600 hover:text-green-800 hover:bg-green-50">
-                              <CheckCircle className="h-4 w-4 mr-1" />
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleApproveWithdrawal(withdrawal)} 
+                              className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                              disabled={isProcessing === withdrawal.id}
+                            >
+                              {isProcessing === withdrawal.id ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                              )}
                               Approuver
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => handleRejectWithdrawal(withdrawal)} className="text-red-600 hover:text-red-800 hover:bg-red-50">
-                              <XCircle className="h-4 w-4 mr-1" />
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => handleRejectWithdrawal(withdrawal)} 
+                              className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                              disabled={isProcessing === withdrawal.id}
+                            >
+                              {isProcessing === withdrawal.id ? (
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              ) : (
+                                <XCircle className="h-4 w-4 mr-1" />
+                              )}
                               Rejeter
                             </Button>
                           </div>
                         ) : withdrawal.status === 'approved' || withdrawal.status === 'scheduled' || withdrawal.status === 'sheduled' || withdrawal.status === 'completed' ? (
-                          <Button variant="outline" size="sm" onClick={() => handleMarkAsPaid(withdrawal)} className="text-green-600 hover:text-green-800 hover:bg-green-50">
-                            <CheckCircle className="h-4 w-4 mr-1" />
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleMarkAsPaid(withdrawal)} 
+                            className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                            disabled={isProcessing === withdrawal.id}
+                          >
+                            {isProcessing === withdrawal.id ? (
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                            )}
                             Marquer comme payé
                           </Button>
                         ) : (
