@@ -45,6 +45,8 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
         throw new Error("No authenticated user found");
       }
       
+      console.log("Updating profile with phone:", phone);
+      
       // Update profile information in Supabase
       const { error } = await supabase
         .from('profiles')
@@ -59,8 +61,11 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
         .eq('id', session.user.id);
       
       if (error) {
+        console.error("Profile update error:", error);
         throw error;
       }
+      
+      console.log("Profile updated successfully with phone:", phone);
       
       // Update metadata in auth user
       await supabase.auth.updateUser({

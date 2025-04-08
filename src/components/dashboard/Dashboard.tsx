@@ -28,6 +28,7 @@ export default function Dashboard() {
         (payload) => {
           // Update user data when profile changes
           if (payload.new && userData && (payload.new as any).id === userData.id) {
+            console.log("Real-time profile update:", payload.new);
             setUserData(prevData => ({
               ...prevData,
               ...(payload.new as any),
@@ -44,7 +45,7 @@ export default function Dashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userData]);
 
   const fetchUserData = async () => {
     try {
@@ -68,6 +69,8 @@ export default function Dashboard() {
       if (profileError) {
         throw profileError;
       }
+
+      console.log("Fetched profile data:", profile);
 
       // Combine auth user and profile data with proper property mapping
       setUserData({
@@ -161,6 +164,9 @@ export default function Dashboard() {
         throw profileError;
       }
 
+      console.log("Refreshed profile data:", profile);
+
+      // Make sure we properly extract the phone and address from the profile data
       setUserData({
         ...userData,
         ...profile,
