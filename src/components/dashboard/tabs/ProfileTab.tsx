@@ -23,6 +23,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
   const [phone, setPhone] = useState(userData.phone || "");
   const [address, setAddress] = useState(userData.address || "");
   const [isLoading, setIsLoading] = useState(false);
+  const [savedPhone, setSavedPhone] = useState(userData.phone || "");
 
   useEffect(() => {
     setFirstName(userData.firstName || "");
@@ -30,6 +31,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
     setEmail(userData.email || "");
     setPhone(userData.phone || "");
     setAddress(userData.address || "");
+    setSavedPhone(userData.phone || "");
     
     // Add this debug log to verify the phone is coming through properly
     console.log("Phone number from userData:", userData.phone);
@@ -77,6 +79,9 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
       
       console.log("Profil mis à jour avec succès. Données retournées:", data);
       console.log("Téléphone enregistré:", data?.[0]?.phone);
+      
+      // Update the saved phone number after successful update
+      setSavedPhone(phone);
       
       if (onProfileUpdate) {
         await onProfileUpdate();
@@ -159,7 +164,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
               <label htmlFor="phone" className="block text-sm font-medium text-bgs-blue mb-1">
                 Téléphone
               </label>
-              <div className="relative">
+              <div className="relative mb-2">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Phone size={18} className="text-bgs-blue/50" />
                 </div>
@@ -169,14 +174,15 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   className="bg-white border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full pl-10 p-2.5"
+                  placeholder="Saisissez votre numéro de téléphone"
                 />
               </div>
-              {/* Add a small display to confirm the current phone number */}
-              {userData.phone && (
-                <p className="text-xs text-bgs-blue/70 mt-1 italic">
-                  Numéro actuel: {userData.phone}
-                </p>
-              )}
+              {/* Affichage permanent du numéro de téléphone sauvegardé */}
+              <div className="flex items-center text-sm text-bgs-blue/80 bg-blue-50 p-2 rounded-md">
+                <Phone size={16} className="mr-2 text-bgs-blue/70" />
+                <span className="font-medium">Numéro enregistré:</span>
+                <span className="ml-2">{savedPhone || "Aucun numéro enregistré"}</span>
+              </div>
             </div>
             
             <div className="md:col-span-2">
