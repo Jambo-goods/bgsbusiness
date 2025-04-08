@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { User, Mail, Phone, MapPin, Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +34,35 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
     setSavedPhone(userData.phone || "");
     
     console.log("Phone number from userData:", userData.phone);
+    
+    // Fetch the phone number directly from Supabase
+    async function fetchPhoneFromDatabase() {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user?.id) {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('phone')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (error) {
+            console.error("Erreur lors de la récupération du numéro de téléphone:", error);
+            return;
+          }
+          
+          console.log("Téléphone récupéré directement de la base de données:", data.phone);
+          if (data.phone) {
+            setSavedPhone(data.phone);
+          }
+        }
+      } catch (err) {
+        console.error("Erreur:", err);
+      }
+    }
+    
+    fetchPhoneFromDatabase();
   }, [userData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,7 +107,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
       console.log("Profil mis à jour avec succès. Données retournées:", data);
       console.log("Téléphone enregistré:", data?.[0]?.phone);
       
-      setSavedPhone(phone);
+      setSavedPhone(data?.[0]?.phone || "");
       
       if (onProfileUpdate) {
         await onProfileUpdate();
@@ -175,7 +205,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
               </div>
               <div className="flex items-center text-sm text-bgs-blue/80 bg-blue-50 p-2 rounded-md">
                 <Phone size={16} className="mr-2 text-bgs-blue/70" />
-                <span className="font-medium">Numéro enregistré:</span>
+                <span className="font-medium">Numéro dans la base de données:</span>
                 <span className="ml-2 font-bold text-bgs-blue">{savedPhone || "Aucun numéro enregistré"}</span>
               </div>
             </div>
