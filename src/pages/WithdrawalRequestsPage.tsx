@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -192,7 +191,7 @@ export default function WithdrawalRequestsPage() {
         }
         
         // Create a notification
-        await notificationService.withdrawalRejected(selectedWithdrawal.amount, "Demande de retrait rejetée");
+        await notificationService.withdrawalRejected(selectedWithdrawal.amount);
         
         // Create a transaction record for the refund
         await supabase.from('wallet_transactions').insert([
