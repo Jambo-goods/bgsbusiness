@@ -369,9 +369,14 @@ export default function WithdrawalManagement() {
     }
     
     try {
-      // If the withdrawal was scheduled, return the funds to the user's wallet
-      if (withdrawal.status === 'scheduled' || withdrawal.status === 'sheduled') {
-        // Add the amount back to the user's wallet
+      // Check if funds have already been deducted from the user's wallet
+      // This happens when the withdrawal was previously scheduled or approved
+      const needsRefund = withdrawal.status === 'scheduled' || 
+                          withdrawal.status === 'sheduled' || 
+                          withdrawal.status === 'approved';
+      
+      if (needsRefund) {
+        // Get the current balance
         const { data: userData, error: userError } = await supabase
           .from('profiles')
           .select('wallet_balance')
@@ -380,6 +385,7 @@ export default function WithdrawalManagement() {
           
         if (userError) throw userError;
         
+        // Update balance - refund the amount
         const { error: walletError } = await supabase
           .from('profiles')
           .update({ 
@@ -397,7 +403,8 @@ export default function WithdrawalManagement() {
             amount: withdrawal.amount,
             type: 'deposit',
             description: 'Remboursement de retrait rejeté',
-            status: 'completed'
+            status: 'completed',
+            receipt_confirmed: true
           });
           
         if (transactionError) throw transactionError;
@@ -426,6 +433,11 @@ export default function WithdrawalManagement() {
         withdrawal.amount
       );
       
+      // Create a notification message based on whether a refund was processed
+      const notificationMessage = needsRefund
+        ? `Votre demande de retrait de ${withdrawal.amount}€ a été rejetée. Le montant a été recrédité sur votre solde.`
+        : `Votre demande de retrait de ${withdrawal.amount}€ a été rejetée.`;
+      
       // Create a notification for the user
       try {
         await supabase
@@ -433,16 +445,21 @@ export default function WithdrawalManagement() {
           .insert({
             user_id: withdrawal.user_id,
             title: 'Retrait rejeté',
-            message: `Votre demande de retrait de ${withdrawal.amount}€ a été rejetée. Le montant a été recrédité sur votre solde.`,
+            message: notificationMessage,
             type: 'withdrawal',
             seen: false,
-            data: { amount: withdrawal.amount, status: 'rejected', category: 'error' }
+            data: { 
+              amount: withdrawal.amount, 
+              status: 'rejected', 
+              category: 'error',
+              refunded: needsRefund
+            }
           });
       } catch (notifError) {
         console.error("Error creating notification:", notifError);
       }
       
-      toast.success(`Retrait de ${withdrawal.amount}€ rejeté`);
+      toast.success(`Retrait de ${withdrawal.amount}€ rejeté${needsRefund ? ' et montant remboursé' : ''}`);
       fetchWithdrawals();
     } catch (error) {
       console.error("Erreur lors du rejet du retrait:", error);
