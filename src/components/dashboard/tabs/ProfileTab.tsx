@@ -29,9 +29,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
     setFirstName(userData.firstName || "");
     setLastName(userData.lastName || "");
     setEmail(userData.email || "");
-    setPhone(userData.phone || "");
     setAddress(userData.address || "");
-    setSavedPhone(userData.phone || "");
     
     console.log("Phone number from userData:", userData.phone);
     
@@ -55,6 +53,8 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
           console.log("Téléphone récupéré directement de la base de données:", data.phone);
           if (data.phone) {
             setSavedPhone(data.phone);
+            // Also set the phone input field value
+            setPhone(data.phone);
           }
         }
       } catch (err) {
