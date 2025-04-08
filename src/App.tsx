@@ -1,6 +1,6 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as ShadcnToaster } from "@/components/ui/toaster";
+import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -60,8 +60,8 @@ function App() {
         <AuthProvider>
           <HelmetProvider>
             <TooltipProvider>
-              <Toaster />
-              <Sonner />
+              <ShadcnToaster />
+              <SonnerToaster position="top-right" closeButton />
               <BrowserRouter>
                 <Suspense fallback={<LoadingFallback />}>
                   <Routes>
