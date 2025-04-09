@@ -52,15 +52,15 @@ export default function AdminKPIStats({ stats, isLoading }: AdminKPIStatsProps) 
         </CardContent>
       </Card>
       
-      <Card>
+      <Card className="border-2 border-emerald-200 bg-emerald-50">
         <CardContent className="p-6 flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-500">Virements reçus</p>
-            <h3 className="text-2xl font-bold mt-1">{stats.receivedTransfersCount}</h3>
-            <p className="text-xs text-gray-500 mt-1">{formatCurrency(stats.receivedTransfersAmount)}</p>
+            <p className="text-sm font-medium text-emerald-700">Virements reçus</p>
+            <h3 className="text-3xl font-bold mt-1 text-emerald-800">{stats.receivedTransfersCount}</h3>
+            <p className="text-xs text-emerald-700 mt-1">{formatCurrency(stats.receivedTransfersAmount)}</p>
           </div>
-          <div className="bg-emerald-100 p-3 rounded-full">
-            <ArrowUpRight className="h-6 w-6 text-emerald-600" />
+          <div className="bg-emerald-200 p-3 rounded-full">
+            <ArrowUpRight className="h-6 w-6 text-emerald-700" />
           </div>
         </CardContent>
       </Card>
