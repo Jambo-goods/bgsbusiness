@@ -41,6 +41,11 @@ export function useNotifications() {
     }
   }, []);
 
+  // Function to clear notifications from UI state immediately
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
   useEffect(() => {
     fetchNotifications();
     
@@ -104,6 +109,7 @@ export function useNotifications() {
     isRefreshing,
     isLoading,
     error,
-    fetchNotifications
+    fetchNotifications,
+    clearNotifications
   };
 }

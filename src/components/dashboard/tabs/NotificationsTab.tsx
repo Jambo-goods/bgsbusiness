@@ -17,7 +17,8 @@ export default function NotificationsTab() {
     isRefreshing,
     isLoading,
     error,
-    fetchNotifications
+    fetchNotifications,
+    clearNotifications
   } = useNotifications();
   
   const {
@@ -38,6 +39,15 @@ export default function NotificationsTab() {
     setFilter(newFilter);
   };
 
+  // Wrapper for delete all to ensure UI is updated
+  const handleDeleteAllWithUpdate = async () => {
+    const success = await handleDeleteAll();
+    if (success) {
+      clearNotifications();
+    }
+    return success;
+  };
+
   if (isLoading) {
     return <LoadingState />;
   }
@@ -56,7 +66,7 @@ export default function NotificationsTab() {
           onRefresh={fetchNotifications}
           onMarkAllAsRead={handleMarkAllAsRead}
           totalCount={notifications.length}
-          onDeleteAll={handleDeleteAll}
+          onDeleteAll={handleDeleteAllWithUpdate}
         />
       </div>
 
