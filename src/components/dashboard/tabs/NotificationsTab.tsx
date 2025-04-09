@@ -68,8 +68,8 @@ export default function NotificationsTab() {
             
             if (payload.eventType === 'DELETE') {
               // For delete events, remove from local state
-              const deletedId = payload.old?.id;
-              if (deletedId) {
+              if (payload.old && payload.old.id) {
+                const deletedId = payload.old.id;
                 console.log('Removing deleted notification from state:', deletedId);
                 setNotifications(prev => 
                   prev.filter(notification => notification.id !== deletedId)

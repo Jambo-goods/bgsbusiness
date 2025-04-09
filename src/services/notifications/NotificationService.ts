@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Notification, NotificationCreateParams, NotificationCategory, NotificationData, DatabaseNotification } from "./types";
@@ -97,7 +96,8 @@ export class NotificationServiceImpl {
       const { error, data } = await supabase
         .from('notifications')
         .delete()
-        .eq('id', notificationId);
+        .eq('id', notificationId)
+        .select();
 
       if (error) {
         console.error('Supabase error deleting notification:', error);
@@ -127,7 +127,8 @@ export class NotificationServiceImpl {
       const { error, data } = await supabase
         .from('notifications')
         .delete()
-        .eq('user_id', session.session.user.id);
+        .eq('user_id', session.session.user.id)
+        .select();
 
       if (error) {
         console.error('Supabase error deleting all notifications:', error);
@@ -172,7 +173,6 @@ export class NotificationServiceImpl {
     }
   }
 
-  // Withdrawal notification methods
   async withdrawalScheduled(amount: number): Promise<void> {
     try {
       await this.createNotification({
@@ -274,7 +274,6 @@ export class NotificationServiceImpl {
     }
   }
 
-  // Investment notification methods
   async investmentConfirmed(projectName: string, amount: number): Promise<void> {
     try {
       await this.createNotification({

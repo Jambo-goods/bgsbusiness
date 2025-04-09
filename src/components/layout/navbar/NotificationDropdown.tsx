@@ -47,8 +47,8 @@ export default function NotificationDropdown() {
             
             if (payload.eventType === 'DELETE') {
               // For DELETE events, update local state directly
-              const deletedId = payload.old?.id;
-              if (deletedId) {
+              if (payload.old && payload.old.id) {
+                const deletedId = payload.old.id;
                 console.log("NotificationDropdown: Removing deleted notification:", deletedId);
                 setNotifications(prev => 
                   prev.filter(n => n.id !== deletedId)
