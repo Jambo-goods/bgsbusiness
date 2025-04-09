@@ -22,6 +22,9 @@ const DocumentUploadTab: React.FC<DocumentUploadTabProps> = ({ projectId }) => {
   const [documents, setDocuments] = useState<ProjectDocument[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  // Create a reference to the file input element
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Fetch existing documents for this project
   useEffect(() => {
@@ -115,7 +118,9 @@ const DocumentUploadTab: React.FC<DocumentUploadTabProps> = ({ projectId }) => {
     } finally {
       setUploading(false);
       // Reset file input
-      e.target.value = '';
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -158,6 +163,14 @@ const DocumentUploadTab: React.FC<DocumentUploadTabProps> = ({ projectId }) => {
     }
   };
 
+  // Function to trigger file input when clicking the button
+  const handleButtonClick = () => {
+    // Programmatically click the hidden file input
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h3 className="text-lg font-medium text-bgs-blue">Documents du projet</h3>
@@ -170,6 +183,7 @@ const DocumentUploadTab: React.FC<DocumentUploadTabProps> = ({ projectId }) => {
         </p>
         <input
           type="file"
+          ref={fileInputRef}
           id="document-upload"
           multiple
           accept="application/pdf"
@@ -177,16 +191,15 @@ const DocumentUploadTab: React.FC<DocumentUploadTabProps> = ({ projectId }) => {
           onChange={handleFileUpload}
           disabled={uploading || !projectId}
         />
-        <label htmlFor="document-upload">
-          <Button
-            type="button"
-            variant="outline"
-            disabled={uploading || !projectId}
-            className="cursor-pointer"
-          >
-            {uploading ? 'Chargement...' : 'Ajouter des documents'}
-          </Button>
-        </label>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={uploading || !projectId}
+          className="cursor-pointer"
+          onClick={handleButtonClick}
+        >
+          {uploading ? 'Chargement...' : 'Ajouter des documents'}
+        </Button>
         {!projectId && (
           <p className="text-xs text-amber-500 mt-2 flex items-center">
             <AlertCircle className="h-3 w-3 mr-1" />
