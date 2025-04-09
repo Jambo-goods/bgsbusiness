@@ -29,6 +29,7 @@ const ScheduledPaymentsSection = () => {
   const [projectNames, setProjectNames] = useState<Record<string, string>>({});
   const [currentPage, setCurrentPage] = useState(1);
   const paymentsPerPage = 10;
+  const [userInvestments, setUserInvestments] = useState<any[]>([]);
   
   const FIXED_INVESTMENTS = {
     "BGS Poules Pondeuses": 2600,
@@ -46,22 +47,26 @@ const ScheduledPaymentsSection = () => {
           return;
         }
         
-        const { data, error } = await supabase
+        // Fetch all user investments
+        const { data: investments, error: investmentsError } = await supabase
           .from('investments')
-          .select('project_id, amount')
+          .select('project_id, amount, id')
           .eq('user_id', sessionData.session.user.id)
           .eq('status', 'active');
           
-        if (error) {
-          console.error("Error fetching investment data:", error);
+        if (investmentsError) {
+          console.error("Error fetching investment data:", investmentsError);
           return;
         }
         
+        console.log(`Found ${investments?.length || 0} user investments`);
+        setUserInvestments(investments || []);
+        
         const investmentMap: Record<string, number> = {};
         
-        data.forEach(inv => {
+        investments?.forEach(inv => {
           console.log(`User investment for project ${inv.project_id}:`, inv.amount);
-          investmentMap[inv.project_id] = inv.amount;
+          investmentMap[inv.project_id] = (investmentMap[inv.project_id] || 0) + inv.amount;
         });
         
         setProjectInvestments(investmentMap);
@@ -159,6 +164,64 @@ const ScheduledPaymentsSection = () => {
     try {
       await refetch();
       
+      // Force a refresh to make sure we load all scheduled payments
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (sessionData.session?.user?.id) {
+        // Get all investments for this user
+        const { data: userInvs } = await supabase
+          .from('investments')
+          .select('project_id')
+          .eq('user_id', sessionData.session.user.id);
+
+        if (userInvs && userInvs.length > 0) {
+          console.log(`Found ${userInvs.length} investments, checking for scheduled payments`);
+          
+          // Get all related project ids
+          const projectIds = userInvs.map(inv => inv.project_id);
+          
+          // Find all scheduled payments for these projects
+          const { data: scheduledPmts } = await supabase
+            .from('scheduled_payments')
+            .select('*')
+            .in('project_id', projectIds);
+            
+          console.log(`Found ${scheduledPmts?.length || 0} scheduled payments for user investments`);
+          
+          if (scheduledPmts && scheduledPmts.length > 0) {
+            // Check for unprocessed paid payments and process them
+            const paidPayments = scheduledPmts.filter(p => p.status === 'paid' && !p.processed_at);
+            
+            if (paidPayments.length > 0) {
+              console.log(`Processing ${paidPayments.length} unprocessed paid payments`);
+              for (const payment of paidPayments) {
+                try {
+                  const { data: result, error } = await supabase.functions.invoke(
+                    'update-wallet-on-payment',
+                    {
+                      body: {
+                        paymentId: payment.id,
+                        projectId: payment.project_id,
+                        percentage: payment.percentage,
+                        processAll: true,
+                        forceRefresh: true
+                      }
+                    }
+                  );
+                  
+                  if (!error && result?.processed > 0) {
+                    toast.success("Paiement traité", {
+                      description: `Versement pour le projet traité avec succès`
+                    });
+                  }
+                } catch (err) {
+                  console.error(`Error invoking edge function for payment ${payment.id}:`, err);
+                }
+              }
+            }
+          }
+        }
+      }
+      
       const { data: payments } = await supabase
         .from('scheduled_payments')
         .select('id, project_id, percentage')
@@ -206,9 +269,22 @@ const ScheduledPaymentsSection = () => {
     }
   };
 
+  // Make sure we show all scheduled payments by combining with user investments
+  const enhancedPayments = React.useMemo(() => {
+    if (!scheduledPayments || scheduledPayments.length === 0 || !userInvestments || userInvestments.length === 0) {
+      return scheduledPayments || [];
+    }
+    
+    // Create a map of project IDs that the user has invested in
+    const userProjectIds = new Set(userInvestments.map(inv => inv.project_id));
+    
+    // Filter scheduled payments to only include those for projects the user has invested in
+    return scheduledPayments.filter(payment => userProjectIds.has(payment.project_id));
+  }, [scheduledPayments, userInvestments]);
+
   const filteredPayments = showPastPayments 
-    ? scheduledPayments 
-    : scheduledPayments.filter(payment => {
+    ? enhancedPayments 
+    : enhancedPayments.filter(payment => {
         const paymentDate = new Date(payment.payment_date);
         return paymentDate >= new Date();
       });
@@ -226,15 +302,15 @@ const ScheduledPaymentsSection = () => {
   const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const goToPrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
-  const paidPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'paid') : [];
-  const pendingPayments = scheduledPayments ? scheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled') : [];
+  const paidPayments = enhancedPayments ? enhancedPayments.filter(payment => payment.status === 'paid') : [];
+  const pendingPayments = enhancedPayments ? enhancedPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled') : [];
   
   const getTotalInvestmentAmount = (projectId: string): number => {
     const projectName = projectNames[projectId] || "";
     
     for (const [fixedName, amount] of Object.entries(FIXED_INVESTMENTS)) {
       if (projectName.toLowerCase().includes(fixedName.toLowerCase())) {
-        console.log(`Using fixed investment amount for ${projectName}: ${amount}��`);
+        console.log(`Using fixed investment amount for ${projectName}: ${amount}`);
         return amount;
       }
     }
@@ -309,7 +385,10 @@ const ScheduledPaymentsSection = () => {
   return (
     <Card className="mt-6">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-xl font-semibold text-bgs-blue">Calendrier des paiements programmés</CardTitle>
+        <CardTitle className="text-xl font-semibold text-bgs-blue">
+          Calendrier des paiements programmés 
+          ({userInvestments.length > 0 ? `${userInvestments.length} investissements` : 'Aucun investissement'})
+        </CardTitle>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
@@ -372,6 +451,20 @@ const ScheduledPaymentsSection = () => {
             <CalendarIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
             <p className="text-sm font-medium">Aucun paiement programmé trouvé</p>
             <p className="text-xs mt-1">Les paiements apparaîtront ici une fois programmés par l'équipe</p>
+            {userInvestments.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs text-amber-600">
+                  Vous avez {userInvestments.length} investissement(s) mais aucun paiement programmé n'est encore visible.
+                </p>
+                <Button 
+                  variant="outline" 
+                  className="mt-2"
+                  onClick={handleRefresh}
+                >
+                  Actualiser les données
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <>
