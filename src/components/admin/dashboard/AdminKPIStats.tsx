@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Wallet, ArrowUpRight, ArrowDownRight, Database, Package, BanknotesIcon, CoinsIcon } from 'lucide-react';
+import { Users, Wallet, ArrowUpRight, ArrowDownRight, Database, Package, Banknote, Coins } from 'lucide-react';
 import { AdminStats } from '@/hooks/admin/types';
 import { formatCurrency } from '@/utils/currencyUtils';
 
