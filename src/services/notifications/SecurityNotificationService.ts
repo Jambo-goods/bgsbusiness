@@ -1,69 +1,70 @@
 
 import { BaseNotificationService } from "./BaseNotificationService";
+import { NotificationCategories } from "./types";
 
 export class SecurityNotificationService extends BaseNotificationService {
-  passwordChanged(): Promise<void> {
+  async passwordChanged(): Promise<boolean> {
     return this.createNotification({
       title: "Mot de passe modifié",
       description: "Votre mot de passe a été modifié avec succès.",
       type: 'security',
-      category: 'success'
+      category: NotificationCategories.success
     });
   }
   
-  loginAttemptDetected(device: string, location: string, timestamp: string, success: boolean): Promise<void> {
+  async loginAttemptDetected(device: string, location: string, timestamp: string, success: boolean): Promise<boolean> {
     return this.createNotification({
       title: success ? "Connexion réussie" : "Tentative de connexion",
       description: `${success ? 'Connexion' : 'Tentative de connexion'} détectée depuis ${device} à ${location} le ${timestamp}.`,
       type: 'security',
-      category: success ? 'info' : 'warning',
+      category: success ? NotificationCategories.info : NotificationCategories.warning,
       metadata: { device, location, timestamp, success }
     });
   }
   
-  securityAlert(type: string, details: string): Promise<void> {
+  async securityAlert(type: string, details: string): Promise<boolean> {
     return this.createNotification({
       title: "Alerte de sécurité",
       description: `${type}: ${details}`,
       type: 'security',
-      category: 'warning',
+      category: NotificationCategories.warning,
       metadata: { type, details }
     });
   }
 
-  successfulLogin(): Promise<void> {
+  async successfulLogin(): Promise<boolean> {
     return this.createNotification({
       title: "Connexion réussie",
       description: "Vous vous êtes connecté avec succès à votre compte.",
       type: 'security',
-      category: 'success'
+      category: NotificationCategories.success
     });
   }
 
-  accountLocked(): Promise<void> {
+  async accountLocked(): Promise<boolean> {
     return this.createNotification({
       title: "Compte verrouillé",
       description: "Votre compte a été temporairement verrouillé suite à plusieurs tentatives de connexion échouées.",
       type: 'security',
-      category: 'warning'
+      category: NotificationCategories.warning
     });
   }
 
-  deviceChange(): Promise<void> {
+  async deviceChange(): Promise<boolean> {
     return this.createNotification({
       title: "Nouvel appareil détecté",
       description: "Une connexion a été détectée depuis un nouvel appareil.",
       type: 'security',
-      category: 'warning'
+      category: NotificationCategories.warning
     });
   }
 
-  emailChanged(): Promise<void> {
+  async emailChanged(): Promise<boolean> {
     return this.createNotification({
       title: "Adresse e-mail modifiée",
       description: "Votre adresse e-mail a été modifiée avec succès.",
       type: 'security',
-      category: 'success'
+      category: NotificationCategories.success
     });
   }
 }

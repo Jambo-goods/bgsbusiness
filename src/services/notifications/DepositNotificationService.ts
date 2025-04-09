@@ -1,14 +1,14 @@
 
 import { BaseNotificationService } from "./BaseNotificationService";
-import { NotificationCategory } from "./types";
+import { NotificationCategories } from "./types";
 
 export class DepositNotificationService extends BaseNotificationService {
-  depositRequested(amount: number, reference?: string): Promise<void> {
+  async depositRequested(amount: number, reference?: string): Promise<boolean> {
     return this.createNotification({
       title: "Dépôt demandé",
       description: `Votre demande de dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été enregistrée`,
       type: "deposit",
-      category: "info",
+      category: NotificationCategories.info,
       metadata: { 
         amount,
         reference,
@@ -18,12 +18,12 @@ export class DepositNotificationService extends BaseNotificationService {
     });
   }
   
-  depositReceived(amount: number, reference?: string): Promise<void> {
+  async depositReceived(amount: number, reference?: string): Promise<boolean> {
     return this.createNotification({
       title: "Dépôt reçu",
       description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été reçu et est en cours de vérification.`,
       type: "deposit",
-      category: "info",
+      category: NotificationCategories.info,
       metadata: { 
         amount,
         reference,
@@ -33,12 +33,12 @@ export class DepositNotificationService extends BaseNotificationService {
     });
   }
   
-  depositConfirmed(amount: number, reference?: string): Promise<void> {
+  async depositConfirmed(amount: number, reference?: string): Promise<boolean> {
     return this.createNotification({
       title: "Dépôt confirmé",
       description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été confirmé et ajouté à votre portefeuille.`,
       type: "deposit",
-      category: "success",
+      category: NotificationCategories.success,
       metadata: { 
         amount,
         reference,
@@ -48,12 +48,12 @@ export class DepositNotificationService extends BaseNotificationService {
     });
   }
   
-  depositRejected(amount: number, reason?: string, reference?: string): Promise<void> {
+  async depositRejected(amount: number, reason?: string, reference?: string): Promise<boolean> {
     return this.createNotification({
       title: "Dépôt refusé",
       description: `Votre dépôt de ${amount}€${reference ? ` (réf: ${reference})` : ''} a été refusé${reason ? ` : ${reason}` : '.'}`,
       type: "deposit",
-      category: "error",
+      category: NotificationCategories.error,
       metadata: { 
         amount,
         reference,

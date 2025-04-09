@@ -2,15 +2,14 @@
 import { Button } from "@/components/ui/button";
 import { CheckCircle, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { notificationService } from "@/services/notifications";
 
 interface NotificationActionsProps {
   unreadCount: number;
   isRefreshing: boolean;
   onRefresh: () => void;
-  onMarkAllAsRead: () => void;
+  onMarkAllAsRead: () => Promise<boolean>;
   totalCount: number;
-  onDeleteAll: () => Promise<void>;
+  onDeleteAll: () => Promise<boolean>;
 }
 
 export default function NotificationActions({
@@ -23,8 +22,10 @@ export default function NotificationActions({
 }: NotificationActionsProps) {
   const handleDeleteAll = async () => {
     try {
-      await onDeleteAll();
-      toast.success("Toutes les notifications ont été supprimées");
+      const success = await onDeleteAll();
+      if (success) {
+        toast.success("Toutes les notifications ont été supprimées");
+      }
     } catch (error) {
       console.error("Error deleting all notifications:", error);
       toast.error("Erreur", { description: "Impossible de supprimer toutes les notifications" });
