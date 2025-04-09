@@ -58,10 +58,13 @@ export function useNotificationActions() {
         return false;
       }
       
+      // Assurons-nous que l'utilisateur est connecté avant de supprimer
+      const userId = session.session.user.id;
+      console.log("User ID for deletion:", userId);
+      
       const success = await notificationService.deleteAllNotifications();
       
       if (success) {
-        toast.success("Toutes les notifications ont été supprimées");
         console.log("All notifications deleted successfully from database");
         return true;
       } else {

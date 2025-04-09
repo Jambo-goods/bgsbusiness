@@ -67,7 +67,7 @@ export function useNotifications() {
             console.log("Real-time notification update detected:", payload);
             
             if (payload.eventType === 'DELETE') {
-              // For delete events, remove from local state
+              // Pour les événements de suppression, mettre à jour l'état local
               if (payload.old && payload.old.id) {
                 const deletedId = payload.old.id;
                 console.log('Removing deleted notification from state:', deletedId);
@@ -75,11 +75,14 @@ export function useNotifications() {
                   prev.filter(notification => notification.id !== deletedId)
                 );
               } else {
-                // If can't identify the deleted notification, fetch all
+                // Si on ne peut pas identifier la notification supprimée, recharger toutes les notifications
                 fetchNotifications();
               }
-            } else {
-              // For INSERT or UPDATE, fetch all notifications
+            } else if (payload.eventType === 'INSERT') {
+              // Pour les insertions, mettre à jour l'état local
+              fetchNotifications();
+            } else if (payload.eventType === 'UPDATE') {
+              // Pour les mises à jour, mettre à jour l'état local
               fetchNotifications();
             }
           }

@@ -39,11 +39,13 @@ export default function NotificationsTab() {
     setFilter(newFilter);
   };
 
-  // Wrapper for delete all to ensure UI is updated
+  // Wrapper pour s'assurer que l'UI est mise à jour après la suppression
   const handleDeleteAllWithUpdate = async () => {
     const success = await handleDeleteAll();
     if (success) {
       clearNotifications();
+      // Afficher un message de succès
+      console.log("Notifications cleared from UI state");
     }
     return success;
   };
