@@ -48,7 +48,7 @@ export class BaseNotificationService {
         throw error;
       }
 
-      return (data || []).map(this.mapDatabaseNotification);
+      return (data || []).map((item) => this.mapDatabaseNotification(item as DatabaseNotification));
     } catch (error) {
       console.error('Error fetching notifications:', error);
       return [];

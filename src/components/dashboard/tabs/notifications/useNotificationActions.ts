@@ -7,9 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 export function useNotificationActions() {
   const handleMarkAllAsRead = async () => {
     try {
-      await notificationService.markAllAsRead();
-      toast.success("Toutes les notifications ont été marquées comme lues");
-      return true;
+      const success = await notificationService.markAllAsRead();
+      if (success) {
+        toast.success("Toutes les notifications ont été marquées comme lues");
+      }
+      return success;
     } catch (err) {
       console.error("Error marking all as read:", err);
       toast.error("Erreur", { description: "Impossible de marquer toutes les notifications comme lues" });
@@ -19,8 +21,8 @@ export function useNotificationActions() {
 
   const handleMarkAsRead = async (id: string) => {
     try {
-      await notificationService.markAsRead(id);
-      return true;
+      const success = await notificationService.markAsRead(id);
+      return success;
     } catch (err) {
       console.error("Error marking notification as read:", err);
       toast.error("Erreur", { description: "Impossible de marquer la notification comme lue" });

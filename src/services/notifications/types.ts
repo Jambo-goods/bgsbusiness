@@ -54,4 +54,18 @@ export interface NotificationService {
   deleteNotification(notificationId: string): Promise<boolean>;
   deleteAllNotifications(): Promise<boolean>;
   createNotification(params: NotificationCreateParams): Promise<boolean>;
+  // Update all these methods to return Promise<boolean> instead of Promise<void>
+  withdrawalScheduled(amount: number): Promise<boolean>;
+  withdrawalValidated(amount: number): Promise<boolean>;
+  withdrawalCompleted(amount: number): Promise<boolean>;
+  withdrawalRejected(amount: number): Promise<boolean>;
+  withdrawalReceived(amount: number): Promise<boolean>;
+  withdrawalConfirmed(amount: number): Promise<boolean>;
+  withdrawalPaid(amount: number): Promise<boolean>;
+  depositReceived(amount: number, reference?: string): Promise<boolean>;
+  investmentConfirmed(projectName: string, amount: number): Promise<boolean>;
+  yieldPaid(projectName: string, amount: number): Promise<boolean>;
+  newMessage(sender: string, messagePreview: string): Promise<boolean>;
+  projectUpdated(projectName: string, updateType: string): Promise<boolean>;
+  newInvestmentOpportunity(projectName: string, projectId?: string): Promise<boolean>;
 }
