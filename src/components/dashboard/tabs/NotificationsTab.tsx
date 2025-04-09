@@ -187,6 +187,12 @@ export default function NotificationsTab() {
     }
   };
 
+  // Add the missing handleFilterChange function
+  const handleFilterChange = (newFilter: 'all' | 'unread') => {
+    console.log("Changing filter to:", newFilter);
+    setFilter(newFilter);
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
