@@ -1,8 +1,9 @@
 
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { Users, Wallet, ArrowUpRight, ArrowDownRight, Database, Package } from 'lucide-react';
+import { Users, Wallet, ArrowUpRight, ArrowDownRight, Database, Package, BanknotesIcon, CoinsIcon } from 'lucide-react';
 import { AdminStats } from '@/hooks/admin/types';
+import { formatCurrency } from '@/utils/currencyUtils';
 
 interface AdminKPIStatsProps {
   stats: AdminStats;
@@ -43,7 +44,7 @@ export default function AdminKPIStats({ stats, isLoading }: AdminKPIStatsProps) 
         <CardContent className="p-6 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-500">Total des soldes</p>
-            <h3 className="text-2xl font-bold mt-1">{stats.totalWalletBalance.toLocaleString()} €</h3>
+            <h3 className="text-2xl font-bold mt-1">{formatCurrency(stats.totalWalletBalance)}</h3>
           </div>
           <div className="bg-green-100 p-3 rounded-full">
             <Wallet className="h-6 w-6 text-green-600" />
@@ -56,7 +57,7 @@ export default function AdminKPIStats({ stats, isLoading }: AdminKPIStatsProps) 
           <div>
             <p className="text-sm font-medium text-gray-500">Virements reçus</p>
             <h3 className="text-2xl font-bold mt-1">{stats.receivedTransfersCount}</h3>
-            <p className="text-xs text-gray-500 mt-1">{stats.receivedTransfersAmount.toLocaleString()} €</p>
+            <p className="text-xs text-gray-500 mt-1">{formatCurrency(stats.receivedTransfersAmount)}</p>
           </div>
           <div className="bg-emerald-100 p-3 rounded-full">
             <ArrowUpRight className="h-6 w-6 text-emerald-600" />
@@ -69,7 +70,7 @@ export default function AdminKPIStats({ stats, isLoading }: AdminKPIStatsProps) 
           <div>
             <p className="text-sm font-medium text-gray-500">Demandes de retrait</p>
             <h3 className="text-2xl font-bold mt-1">{stats.withdrawalRequestsCount}</h3>
-            <p className="text-xs text-gray-500 mt-1">{stats.withdrawalRequestsAmount.toLocaleString()} €</p>
+            <p className="text-xs text-gray-500 mt-1">{formatCurrency(stats.withdrawalRequestsAmount)}</p>
           </div>
           <div className="bg-amber-100 p-3 rounded-full">
             <ArrowDownRight className="h-6 w-6 text-amber-600" />
@@ -93,7 +94,7 @@ export default function AdminKPIStats({ stats, isLoading }: AdminKPIStatsProps) 
         <CardContent className="p-6 flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-gray-500">Total des investissements</p>
-            <h3 className="text-2xl font-bold mt-1">{stats.totalInvestments.toLocaleString()} €</h3>
+            <h3 className="text-2xl font-bold mt-1">{formatCurrency(stats.totalInvestments)}</h3>
           </div>
           <div className="bg-purple-100 p-3 rounded-full">
             <Database className="h-6 w-6 text-purple-600" />
