@@ -18,6 +18,7 @@ export default function NotificationDropdown() {
     setLoading(true);
     try {
       const data = await notificationService.getNotifications();
+      console.log("NotificationDropdown: Fetched notifications:", data.length);
       setNotifications(data.slice(0, 5)); // Show only the 5 most recent
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -31,17 +32,36 @@ export default function NotificationDropdown() {
       fetchNotifications();
     }
     
-    // Set up real-time subscription
+    // Set up real-time subscription for more responsive updates
     if (user) {
       const channelId = `notification-dropdown-${user.id}`;
+      
+      console.log(`NotificationDropdown: Setting up realtime channel ${channelId}`);
+      
       const channel = supabase
         .channel(channelId)
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, 
           (payload) => {
             console.log("NotificationDropdown: Realtime update detected:", payload);
-            if (isOpen || payload.eventType === 'DELETE') {
-              fetchNotifications();
+            
+            if (payload.eventType === 'DELETE') {
+              // For DELETE events, update local state directly
+              const deletedId = payload.old?.id;
+              if (deletedId) {
+                console.log("NotificationDropdown: Removing deleted notification:", deletedId);
+                setNotifications(prev => 
+                  prev.filter(n => n.id !== deletedId)
+                );
+              } else {
+                // Fallback to fetching all if we can't identify the deleted item
+                fetchNotifications();
+              }
+            } else {
+              // For INSERT and UPDATE events, refresh notifications if dropdown is open
+              if (isOpen) {
+                fetchNotifications();
+              }
             }
           }
         )

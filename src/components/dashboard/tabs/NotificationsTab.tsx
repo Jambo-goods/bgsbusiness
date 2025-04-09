@@ -49,21 +49,25 @@ export default function NotificationsTab() {
   useEffect(() => {
     fetchNotifications();
     
-    // Set up real-time subscription with proper channel ID
-    const userId = supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) return;
-
-      const channelId = `notifications-${data.user.id}`;
+    // Set up real-time subscription
+    const setupSubscription = async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
+      
+      const userId = userData.user.id;
+      const channelId = `notifications-${userId}`;
+      
+      console.log(`Setting up real-time subscription for notifications (channel: ${channelId})`);
+      
       const channel = supabase
         .channel(channelId)
         .on('postgres_changes', 
-          { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${data.user.id}` }, 
+          { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, 
           (payload) => {
             console.log("Real-time notification update detected:", payload);
             
-            // Refresh notifications only when a change is detected
             if (payload.eventType === 'DELETE') {
-              // For delete events, update local state without fetch
+              // For delete events, remove from local state
               const deletedId = payload.old?.id;
               if (deletedId) {
                 console.log('Removing deleted notification from state:', deletedId);
@@ -71,11 +75,11 @@ export default function NotificationsTab() {
                   prev.filter(notification => notification.id !== deletedId)
                 );
               } else {
-                // If we can't identify the deleted notification, fetch all
+                // If can't identify the deleted notification, fetch all
                 fetchNotifications();
               }
             } else {
-              // For other events (INSERT, UPDATE), fetch all
+              // For INSERT or UPDATE, fetch all notifications
               fetchNotifications();
             }
           }
@@ -88,13 +92,13 @@ export default function NotificationsTab() {
         console.log(`Removing channel: ${channelId}`);
         supabase.removeChannel(channel);
       };
-    });
+    };
 
-    // Clean up subscription on component unmount
+    const subscription = setupSubscription();
+    
+    // Clean up subscription on unmount
     return () => {
-      if (userId) {
-        userId.then(cleanup => cleanup && cleanup());
-      }
+      subscription.then(cleanup => cleanup && cleanup());
     };
   }, [fetchNotifications]);
 
@@ -181,16 +185,6 @@ export default function NotificationsTab() {
       console.error("Error deleting all notifications:", error);
       toast.error("Erreur", { description: "Impossible de supprimer toutes les notifications" });
     }
-  };
-
-  const handleRefresh = async () => {
-    await fetchNotifications();
-    toast.info("Notifications actualisées");
-  };
-
-  const handleFilterChange = (newFilter: 'all' | 'unread') => {
-    console.log("Filter changed to:", newFilter);
-    setFilter(newFilter);
   };
 
   if (isLoading) {

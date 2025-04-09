@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Notification, NotificationCreateParams, NotificationCategory, NotificationData, DatabaseNotification } from "./types";
@@ -97,8 +96,7 @@ export class NotificationServiceImpl {
       const { error, data } = await supabase
         .from('notifications')
         .delete()
-        .eq('id', notificationId)
-        .select();
+        .eq('id', notificationId);
 
       if (error) {
         console.error('Supabase error deleting notification:', error);
@@ -128,8 +126,7 @@ export class NotificationServiceImpl {
       const { error, data } = await supabase
         .from('notifications')
         .delete()
-        .eq('user_id', session.session.user.id)
-        .select();
+        .eq('user_id', session.session.user.id);
 
       if (error) {
         console.error('Supabase error deleting all notifications:', error);
