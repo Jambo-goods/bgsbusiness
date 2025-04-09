@@ -1,5 +1,5 @@
 
-import { NotificationServiceImpl } from './NotificationService';
+import { NotificationServiceImpl } from './NotificationServiceImpl';
 import { AdminNotificationServiceImpl } from './AdminNotificationService';
 import { NotificationCategories } from './types';
 import type { Notification, NotificationCategory, NotificationData, NotificationService } from './types';

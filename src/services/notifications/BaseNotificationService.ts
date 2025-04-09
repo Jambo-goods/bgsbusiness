@@ -4,111 +4,165 @@ import { v4 as uuidv4 } from "uuid";
 import { Notification, NotificationCreateParams, DatabaseNotification } from "./types";
 
 export class BaseNotificationService {
-  async createNotification(props: NotificationCreateParams): Promise<void> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
+  async createNotification(props: NotificationCreateParams): Promise<boolean> {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return false;
 
-    const id = uuidv4();
-    const { title, description, type, category = 'info', metadata = {} } = props;
+      const id = uuidv4();
+      const { title, description, type, category = 'info', metadata = {}, userId = userData.user.id } = props;
 
-    await supabase.from('notifications').insert({
-      id,
-      title,
-      message: description,
-      type,
-      user_id: userData.user.id,
-      created_at: new Date().toISOString(),
-      seen: false,
-      data: { category, ...metadata }
-    });
-  }
+      const { error } = await supabase.from('notifications').insert({
+        id,
+        title,
+        message: description,
+        type,
+        user_id: userId,
+        created_at: new Date().toISOString(),
+        seen: false,
+        data: { category, ...metadata }
+      });
 
-  async markAsRead(notificationId: string): Promise<void> {
-    await supabase
-      .from('notifications')
-      .update({ seen: true })
-      .eq('id', notificationId);
-  }
-
-  async deleteNotification(notificationId: string): Promise<void> {
-    await supabase
-      .from('notifications')
-      .delete()
-      .eq('id', notificationId);
-  }
-
-  async deleteAllNotifications(): Promise<void> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
-
-    await supabase
-      .from('notifications')
-      .delete()
-      .eq('user_id', userData.user.id);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      return false;
+    }
   }
 
   async getNotifications(): Promise<Notification[]> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return [];
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        throw new Error('No authenticated session');
+      }
 
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userData.user.id)
-      .order('created_at', { ascending: false });
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', session.session.user.id)
+        .order('created_at', { ascending: false });
 
-    if (error || !data) return [];
+      if (error) {
+        throw error;
+      }
 
-    return data.map(item => this.mapDatabaseToNotification(item as DatabaseNotification));
+      return (data || []).map(this.mapDatabaseNotification);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return [];
+    }
   }
 
   async getUnreadCount(): Promise<number> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return 0;
-
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userData.user.id)
-      .eq('seen', false);
-
-    return count || 0;
+    try {
+      const notifications = await this.getNotifications();
+      return notifications.filter(n => !n.read).length;
+    } catch (error) {
+      console.error('Error getting unread count:', error);
+      return 0;
+    }
   }
 
-  async markAllAsRead(): Promise<void> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return;
+  async markAsRead(notificationId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('id', notificationId);
 
-    await supabase
-      .from('notifications')
-      .update({ seen: true })
-      .eq('user_id', userData.user.id)
-      .eq('seen', false);
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      return false;
+    }
   }
 
-  async setupRealtimeSubscription(callback: () => void): Promise<() => void> {
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData?.user) return () => {};
+  async markAllAsRead(): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return false;
 
-    const channel = supabase
-      .channel('notifications_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userData.user.id}`
-      }, () => {
-        callback();
-      })
-      .subscribe();
+      const { error } = await supabase
+        .from('notifications')
+        .update({ seen: true })
+        .eq('user_id', session.session.user.id)
+        .eq('seen', false);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      return false;
+    }
   }
 
-  protected mapDatabaseToNotification(dbNotification: DatabaseNotification): Notification {
-    const data = dbNotification.data || {};
+  async deleteNotification(notificationId: string): Promise<boolean> {
+    try {
+      console.log('Deleting notification with ID:', notificationId);
+      
+      // First verify the session exists
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.error('No authenticated session when deleting notification');
+        return false;
+      }
+      
+      // Delete the notification with additional logging
+      console.log('About to execute deletion query for notification:', notificationId);
+      
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', notificationId);
+
+      if (error) {
+        console.error('Supabase error deleting notification:', error);
+        throw error;
+      }
+      
+      console.log('Notification deleted successfully from database');
+      return true;
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      return false;
+    }
+  }
+
+  async deleteAllNotifications(): Promise<boolean> {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.log('No session found when trying to delete all notifications');
+        return false;
+      }
+
+      console.log('Attempting to delete all notifications for user:', session.session.user.id);
+      
+      // Delete notifications with additional logging
+      console.log('About to execute deletion query for all notifications');
+      
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', session.session.user.id);
+
+      if (error) {
+        console.error('Supabase error deleting all notifications:', error);
+        throw error;
+      }
+      
+      console.log('All notifications deleted successfully from database');
+      return true;
+    } catch (error) {
+      console.error('Error deleting all notifications:', error);
+      return false;
+    }
+  }
+
+  protected mapDatabaseNotification(dbNotification: DatabaseNotification): Notification {
     return {
       id: dbNotification.id,
       title: dbNotification.title,
@@ -116,8 +170,8 @@ export class BaseNotificationService {
       date: new Date(dbNotification.created_at),
       read: dbNotification.seen,
       type: dbNotification.type,
-      category: typeof data === 'object' ? data.category : 'info',
-      metadata: typeof data === 'object' ? data : {}
+      category: dbNotification.data?.category || 'info',
+      metadata: dbNotification.data || {}
     };
   }
 }
