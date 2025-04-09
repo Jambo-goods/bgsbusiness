@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
@@ -30,11 +31,40 @@ const ScheduledPaymentsSection = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const paymentsPerPage = 10;
   const [userInvestments, setUserInvestments] = useState<any[]>([]);
+  const [allScheduledPayments, setAllScheduledPayments] = useState<any[]>([]);
   
   const FIXED_INVESTMENTS = {
     "BGS Poules Pondeuses": 2600,
     "bgs poule pondeuse": 2600,
     "eeee": 100
+  };
+
+  // Fetch all scheduled payments, not just for a specific project
+  const fetchAllScheduledPayments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('scheduled_payments')
+        .select(`
+          *,
+          projects:project_id (
+            name,
+            image,
+            company_name,
+            status
+          )
+        `)
+        .order('payment_date', { ascending: true });
+        
+      if (error) {
+        console.error('Error fetching all scheduled payments:', error);
+        return;
+      }
+      
+      console.log(`Fetched ${data?.length || 0} total scheduled payments from database`);
+      setAllScheduledPayments(data || []);
+    } catch (err) {
+      console.error('Error in fetchAllScheduledPayments:', err);
+    }
   };
 
   useEffect(() => {
@@ -71,6 +101,7 @@ const ScheduledPaymentsSection = () => {
         
         setProjectInvestments(investmentMap);
         
+        // Fetch all projects to get their names
         const { data: projectsData, error: projectsError } = await supabase
           .from('projects')
           .select('id, name');
@@ -83,6 +114,9 @@ const ScheduledPaymentsSection = () => {
           setProjectNames(namesMap);
           console.log("Project names map:", namesMap);
         }
+        
+        // Fetch all scheduled payments
+        fetchAllScheduledPayments();
       } catch (error) {
         console.error("Error fetching investment data:", error);
       }
@@ -163,6 +197,7 @@ const ScheduledPaymentsSection = () => {
     
     try {
       await refetch();
+      await fetchAllScheduledPayments();
       
       // Force a refresh to make sure we load all scheduled payments
       const { data: sessionData } = await supabase.auth.getSession();
@@ -269,22 +304,29 @@ const ScheduledPaymentsSection = () => {
     }
   };
 
-  // Make sure we show all scheduled payments by combining with user investments
-  const enhancedPayments = React.useMemo(() => {
-    if (!scheduledPayments || scheduledPayments.length === 0 || !userInvestments || userInvestments.length === 0) {
-      return scheduledPayments || [];
+  // Get the user's project IDs they've invested in
+  const userProjectIds = React.useMemo(() => {
+    if (!userInvestments || userInvestments.length === 0) return [];
+    return userInvestments.map(inv => inv.project_id);
+  }, [userInvestments]);
+
+  // Filter all scheduled payments to only include those for projects the user has invested in
+  const userScheduledPayments = React.useMemo(() => {
+    if (!allScheduledPayments || allScheduledPayments.length === 0 || !userProjectIds || userProjectIds.length === 0) {
+      return scheduledPayments || []; // Fall back to the original hook data
     }
     
-    // Create a map of project IDs that the user has invested in
-    const userProjectIds = new Set(userInvestments.map(inv => inv.project_id));
+    const filteredPayments = allScheduledPayments.filter(payment => 
+      userProjectIds.includes(payment.project_id)
+    );
     
-    // Filter scheduled payments to only include those for projects the user has invested in
-    return scheduledPayments.filter(payment => userProjectIds.has(payment.project_id));
-  }, [scheduledPayments, userInvestments]);
+    console.log(`Filtered ${allScheduledPayments.length} payments down to ${filteredPayments.length} for user's ${userProjectIds.length} projects`);
+    return filteredPayments;
+  }, [allScheduledPayments, userProjectIds, scheduledPayments]);
 
   const filteredPayments = showPastPayments 
-    ? enhancedPayments 
-    : enhancedPayments.filter(payment => {
+    ? userScheduledPayments 
+    : userScheduledPayments.filter(payment => {
         const paymentDate = new Date(payment.payment_date);
         return paymentDate >= new Date();
       });
@@ -302,8 +344,8 @@ const ScheduledPaymentsSection = () => {
   const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages));
   const goToPrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 1));
 
-  const paidPayments = enhancedPayments ? enhancedPayments.filter(payment => payment.status === 'paid') : [];
-  const pendingPayments = enhancedPayments ? enhancedPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled') : [];
+  const paidPayments = userScheduledPayments ? userScheduledPayments.filter(payment => payment.status === 'paid') : [];
+  const pendingPayments = userScheduledPayments ? userScheduledPayments.filter(payment => payment.status === 'pending' || payment.status === 'scheduled') : [];
   
   const getTotalInvestmentAmount = (projectId: string): number => {
     const projectName = projectNames[projectId] || "";
@@ -325,7 +367,7 @@ const ScheduledPaymentsSection = () => {
       return totalProjectInvestments[projectId];
     }
     
-    const payment = scheduledPayments?.find(p => p.project_id === projectId);
+    const payment = userScheduledPayments?.find(p => p.project_id === projectId);
     if (payment && payment.total_invested_amount && Number(payment.total_invested_amount) > 0) {
       console.log(`Project ${projectName} (${projectId}) investment from payment:`, Number(payment.total_invested_amount));
       return Number(payment.total_invested_amount);
