@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { Notification, NotificationCreateParams, NotificationCategory, NotificationData, DatabaseNotification } from "./types";
@@ -104,7 +105,7 @@ export class NotificationServiceImpl {
       }
       
       console.log('Notification deletion response:', data);
-      console.log('Notification deleted successfully');
+      console.log('Notification deleted successfully from database');
       return true;
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -134,7 +135,7 @@ export class NotificationServiceImpl {
       }
       
       console.log('All notifications deletion response:', data);
-      console.log('All notifications deleted successfully');
+      console.log('All notifications deleted successfully from database');
       return true;
     } catch (error) {
       console.error('Error deleting all notifications:', error);

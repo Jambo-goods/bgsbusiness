@@ -152,7 +152,7 @@ export default function NotificationsTab() {
         );
         
         toast.success("Notification supprimée");
-        console.log("Notification deleted successfully and state updated");
+        console.log("Notification deleted successfully from database and state updated");
       } else {
         throw new Error("La suppression a échoué");
       }
@@ -177,7 +177,7 @@ export default function NotificationsTab() {
         // Update local state immediately
         setNotifications([]);
         toast.success("Toutes les notifications ont été supprimées");
-        console.log("All notifications deleted successfully and state updated");
+        console.log("All notifications deleted successfully from database and state updated");
       } else {
         throw new Error("La suppression a échoué");
       }
@@ -187,7 +187,7 @@ export default function NotificationsTab() {
     }
   };
 
-  // Add the missing handleFilterChange function
+  // Add the handleFilterChange function
   const handleFilterChange = (newFilter: 'all' | 'unread') => {
     console.log("Changing filter to:", newFilter);
     setFilter(newFilter);
