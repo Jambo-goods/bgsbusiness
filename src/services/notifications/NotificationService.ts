@@ -93,18 +93,18 @@ export class NotificationServiceImpl {
       }
       
       // Delete the notification with additional logging
-      const { error, data } = await supabase
+      console.log('About to execute deletion query for notification:', notificationId);
+      
+      const { error } = await supabase
         .from('notifications')
         .delete()
-        .eq('id', notificationId)
-        .select();
+        .eq('id', notificationId);
 
       if (error) {
         console.error('Supabase error deleting notification:', error);
         throw error;
       }
       
-      console.log('Notification deletion response:', data);
       console.log('Notification deleted successfully from database');
       return true;
     } catch (error) {
@@ -124,18 +124,18 @@ export class NotificationServiceImpl {
       console.log('Attempting to delete all notifications for user:', session.session.user.id);
       
       // Delete notifications with additional logging
-      const { error, data } = await supabase
+      console.log('About to execute deletion query for all notifications');
+      
+      const { error } = await supabase
         .from('notifications')
         .delete()
-        .eq('user_id', session.session.user.id)
-        .select();
+        .eq('user_id', session.session.user.id);
 
       if (error) {
         console.error('Supabase error deleting all notifications:', error);
         throw error;
       }
       
-      console.log('All notifications deletion response:', data);
       console.log('All notifications deleted successfully from database');
       return true;
     } catch (error) {
