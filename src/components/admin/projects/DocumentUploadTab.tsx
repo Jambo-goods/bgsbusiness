@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { File, Upload, X, FileCheck, AlertCircle, FileX } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -23,8 +23,8 @@ const DocumentUploadTab: React.FC<DocumentUploadTabProps> = ({ projectId }) => {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  // Create a reference to the file input element
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  // Create a reference to the file input element using useRef
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch existing documents for this project
   useEffect(() => {
@@ -165,7 +165,6 @@ const DocumentUploadTab: React.FC<DocumentUploadTabProps> = ({ projectId }) => {
 
   // Function to trigger file input when clicking the button
   const handleButtonClick = () => {
-    // Programmatically click the hidden file input
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
