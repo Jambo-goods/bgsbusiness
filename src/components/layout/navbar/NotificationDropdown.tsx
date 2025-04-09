@@ -33,19 +33,24 @@ export default function NotificationDropdown() {
     
     // Set up real-time subscription
     if (user) {
+      const channelId = `notification-dropdown-${user.id}`;
       const channel = supabase
-        .channel('notification_changes')
+        .channel(channelId)
         .on('postgres_changes', 
           { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, 
-          () => {
-            if (isOpen) {
+          (payload) => {
+            console.log("NotificationDropdown: Realtime update detected:", payload);
+            if (isOpen || payload.eventType === 'DELETE') {
               fetchNotifications();
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`NotificationDropdown: Realtime subscription status: ${status}`);
+        });
       
       return () => {
+        console.log(`NotificationDropdown: Removing channel: ${channelId}`);
         supabase.removeChannel(channel);
       };
     }

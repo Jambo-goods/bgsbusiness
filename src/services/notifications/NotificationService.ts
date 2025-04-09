@@ -86,16 +86,26 @@ export class NotificationServiceImpl {
     try {
       console.log('Deleting notification with ID:', notificationId);
       
-      const { error } = await supabase
+      // First verify the session exists
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.error('No authenticated session when deleting notification');
+        return false;
+      }
+      
+      // Delete the notification with additional logging
+      const { error, data } = await supabase
         .from('notifications')
         .delete()
-        .eq('id', notificationId);
+        .eq('id', notificationId)
+        .select();
 
       if (error) {
         console.error('Supabase error deleting notification:', error);
         throw error;
       }
       
+      console.log('Notification deletion response:', data);
       console.log('Notification deleted successfully');
       return true;
     } catch (error) {
@@ -114,16 +124,19 @@ export class NotificationServiceImpl {
 
       console.log('Attempting to delete all notifications for user:', session.session.user.id);
       
-      const { error } = await supabase
+      // Delete notifications with additional logging
+      const { error, data } = await supabase
         .from('notifications')
         .delete()
-        .eq('user_id', session.session.user.id);
+        .eq('user_id', session.session.user.id)
+        .select();
 
       if (error) {
         console.error('Supabase error deleting all notifications:', error);
         throw error;
       }
       
+      console.log('All notifications deletion response:', data);
       console.log('All notifications deleted successfully');
       return true;
     } catch (error) {
