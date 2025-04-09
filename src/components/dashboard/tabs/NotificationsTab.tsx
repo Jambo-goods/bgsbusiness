@@ -54,8 +54,8 @@ export default function NotificationsTab() {
       .channel('public:notifications')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'notifications' }, 
-        () => {
-          console.log("Real-time notification update detected");
+        (payload) => {
+          console.log("Real-time notification update detected:", payload);
           fetchNotifications();
         }
       )
@@ -106,14 +106,20 @@ export default function NotificationsTab() {
 
   const handleDeleteNotification = async (id: string) => {
     try {
-      await notificationService.deleteNotification(id);
+      console.log("Attempting to delete notification:", id);
+      const success = await notificationService.deleteNotification(id);
       
-      // Update local state
-      setNotifications(prev => 
-        prev.filter(notification => notification.id !== id)
-      );
-      
-      toast.success("Notification supprimée");
+      if (success) {
+        // Update local state
+        setNotifications(prev => 
+          prev.filter(notification => notification.id !== id)
+        );
+        
+        toast.success("Notification supprimée");
+        console.log("Notification deleted successfully and state updated");
+      } else {
+        throw new Error("La suppression a échoué");
+      }
     } catch (error) {
       console.error("Error deleting notification:", error);
       toast.error("Erreur", { description: "Impossible de supprimer la notification" });
@@ -122,18 +128,23 @@ export default function NotificationsTab() {
 
   const handleDeleteAll = async () => {
     try {
+      console.log("Attempting to delete all notifications");
       const { data: session } = await supabase.auth.getSession();
       if (!session.session) {
         toast.error("Erreur", { description: "Vous devez être connecté pour effectuer cette action" });
         return;
       }
       
-      await notificationService.deleteAllNotifications();
+      const success = await notificationService.deleteAllNotifications();
       
-      // Update local state
-      setNotifications([]);
-      
-      toast.success("Toutes les notifications ont été supprimées");
+      if (success) {
+        // Update local state
+        setNotifications([]);
+        toast.success("Toutes les notifications ont été supprimées");
+        console.log("All notifications deleted successfully and state updated");
+      } else {
+        throw new Error("La suppression a échoué");
+      }
     } catch (error) {
       console.error("Error deleting all notifications:", error);
       toast.error("Erreur", { description: "Impossible de supprimer toutes les notifications" });

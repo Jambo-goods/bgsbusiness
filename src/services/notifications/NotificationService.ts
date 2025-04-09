@@ -84,12 +84,19 @@ export class NotificationServiceImpl {
 
   async deleteNotification(notificationId: string): Promise<boolean> {
     try {
+      console.log('Deleting notification with ID:', notificationId);
+      
       const { error } = await supabase
         .from('notifications')
         .delete()
         .eq('id', notificationId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error deleting notification:', error);
+        throw error;
+      }
+      
+      console.log('Notification deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -100,14 +107,24 @@ export class NotificationServiceImpl {
   async deleteAllNotifications(): Promise<boolean> {
     try {
       const { data: session } = await supabase.auth.getSession();
-      if (!session.session) return false;
+      if (!session.session) {
+        console.log('No session found when trying to delete all notifications');
+        return false;
+      }
 
+      console.log('Attempting to delete all notifications for user:', session.session.user.id);
+      
       const { error } = await supabase
         .from('notifications')
         .delete()
         .eq('user_id', session.session.user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error deleting all notifications:', error);
+        throw error;
+      }
+      
+      console.log('All notifications deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting all notifications:', error);
