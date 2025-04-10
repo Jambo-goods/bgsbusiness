@@ -1,11 +1,14 @@
 
 import { useState } from "react";
-import { LayoutDashboard, Wallet, TrendingUp, Briefcase, Award } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Briefcase, Award, WalletCards } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
+import { useWalletBalance } from "@/hooks/useWalletBalance";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardMenuDropdown() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const { walletBalance, isLoadingBalance } = useWalletBalance();
   
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
@@ -19,9 +22,14 @@ export default function DashboardMenuDropdown() {
     <div className="relative">
       <button
         onClick={toggleDropdown}
-        className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+        className="flex items-center gap-1.5 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
       >
-        <LayoutDashboard className="h-5 w-5 text-gray-700" />
+        <WalletCards className="h-5 w-5 text-gray-700" />
+        {isLoadingBalance ? (
+          <Skeleton className="h-4 w-14" />
+        ) : (
+          <span className="text-sm font-medium text-gray-700">{walletBalance} €</span>
+        )}
       </button>
       
       {isOpen && (
@@ -32,7 +40,7 @@ export default function DashboardMenuDropdown() {
             Tableau de bord
           </Link>
           <Link to="/dashboard?tab=wallet" className={`flex items-center px-4 py-2.5 text-sm ${isActive('tab=wallet') ? 'bg-gray-50 text-bgs-blue font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
-            <Wallet className="h-4 w-4 mr-3 text-bgs-blue" />
+            <WalletCards className="h-4 w-4 mr-3 text-bgs-blue" />
             Solde disponible
           </Link>
           <Link to="/dashboard?tab=yield" className={`flex items-center px-4 py-2.5 text-sm ${isActive('tab=yield') ? 'bg-gray-50 text-bgs-blue font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
