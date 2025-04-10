@@ -1,8 +1,8 @@
 
+import { useState } from "react";
 import { WalletCards } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 export default function DashboardMenuDropdown() {
   const { walletBalance, isLoadingBalance } = useWalletBalance();
@@ -10,18 +10,13 @@ export default function DashboardMenuDropdown() {
   return (
     <div className="relative">
       <button
-        className={cn(
-          "flex items-center gap-2 py-2 px-3 rounded-lg transition-all duration-200",
-          "bg-white border border-gray-100 shadow-sm hover:shadow-md",
-          "text-bgs-blue hover:bg-gray-50"
-        )}
-        aria-label="Solde du portefeuille"
+        className="flex items-center gap-1.5 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
       >
-        <WalletCards className="h-5 w-5 text-bgs-blue" />
+        <WalletCards className="h-5 w-5 text-gray-700" />
         {isLoadingBalance ? (
-          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-14" />
         ) : (
-          <span className="text-sm font-medium">{walletBalance.toLocaleString('fr-FR')} €</span>
+          <span className="text-sm font-medium text-gray-700">{walletBalance} €</span>
         )}
       </button>
     </div>
