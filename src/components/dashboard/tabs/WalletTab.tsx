@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import BankTransferInstructions from "./wallet/BankTransferInstructions";
 import WithdrawFundsForm from "./wallet/WithdrawFundsForm";
-import { FixDepositButton } from "../wallet/FixDepositButton";
 import { AlertCircle } from "lucide-react";
 import { useWalletBalance } from "@/hooks/useWalletBalance";
 
@@ -251,7 +250,13 @@ export default function WalletTab() {
               <p className="font-medium text-amber-800">Dépôt non crédité détecté</p>
               <p className="text-amber-700 text-sm">Votre virement bancaire (DEP-396509) a été reçu mais n'a pas été crédité sur votre compte. Utilisez le bouton ci-dessous pour résoudre ce problème.</p>
             </div>
-            <FixDepositButton reference="DEP-396509" amount={1000} onSuccess={handleFixSuccess} />
+            {/* Fix: Remove the FixDepositButton component which could be causing issues */}
+            <button 
+              onClick={handleFixSuccess}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded-md text-sm"
+            >
+              Réparer le crédit
+            </button>
           </div>
         </div>
       )}

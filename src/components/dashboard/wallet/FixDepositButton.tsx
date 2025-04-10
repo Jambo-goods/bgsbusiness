@@ -1,76 +1,48 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface FixDepositButtonProps {
-  reference?: string;
-  withdrawalId?: string;
+  reference: string;
   amount: number;
-  onSuccess?: () => void;
-  label?: string;
+  onSuccess: () => void;
 }
 
-export function FixDepositButton({ 
-  reference, 
-  withdrawalId,
-  amount,
-  onSuccess,
-  label
-}: FixDepositButtonProps) {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const isWithdrawal = !!withdrawalId;
-  const buttonText = label || (isWithdrawal 
-    ? `Marquer le retrait de ${amount}€ comme payé` 
-    : `Corriger le dépôt ${reference}`);
+export function FixDepositButton({ reference, amount, onSuccess }: FixDepositButtonProps) {
+  const [isLoading, setIsLoading] = React.useState(false);
 
   const handleFix = async () => {
     try {
       setIsLoading(true);
-      
-      // Get current user ID
       const { data: session } = await supabase.auth.getSession();
       
       if (!session.session) {
-        toast.error("Vous devez être connecté pour effectuer cette action");
+        toast.error("Vous devez être connecté pour effectuer cette opération");
         return;
       }
-      
-      const userId = session.session.user.id;
-      
-      // Call the fix-deposit function
-      const { data, error } = await supabase.functions.invoke('fix-deposit', {
-        body: { 
-          userId, 
-          reference, 
-          withdrawalId 
+
+      const { data, error } = await supabase.functions.invoke('fix-missing-deposit', {
+        body: {
+          reference,
+          amount,
+          userId: session.session.user.id
         }
       });
-      
+
       if (error) {
-        console.error("Erreur lors de la correction:", error);
-        toast.error(isWithdrawal 
-          ? "Erreur lors du marquage du retrait comme payé" 
-          : "Erreur lors de la correction du dépôt");
+        console.error("Error fixing deposit:", error);
+        toast.error("Erreur lors de la réparation du dépôt");
         return;
       }
-      
-      if (data.success) {
-        toast.success(data.message || (isWithdrawal 
-          ? "Retrait marqué comme payé avec succès" 
-          : "Dépôt corrigé avec succès"));
-        if (onSuccess) onSuccess();
-      } else {
-        toast.error(data.error || (isWithdrawal
-          ? "Erreur lors du marquage du retrait comme payé" 
-          : "Erreur lors de la correction du dépôt"));
-      }
-    } catch (error: any) {
-      console.error("Erreur:", error.message);
-      toast.error("Une erreur s'est produite");
+
+      console.log("Fixed deposit response:", data);
+      toast.success("Le dépôt a été correctement crédité");
+      onSuccess();
+    } catch (error) {
+      console.error("Error fixing deposit:", error);
+      toast.error("Une erreur est survenue");
     } finally {
       setIsLoading(false);
     }
@@ -78,21 +50,12 @@ export function FixDepositButton({
 
   return (
     <Button 
-      variant="outline"
-      onClick={handleFix}
-      disabled={isLoading}
-      className={isWithdrawal 
-        ? "bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100" 
-        : "bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100"}
+      variant="outline" 
+      onClick={handleFix} 
+      disabled={isLoading} 
+      className="bg-amber-600 hover:bg-amber-700 text-white hover:text-white"
     >
-      {isLoading ? (
-        <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          {isWithdrawal ? "Paiement en cours..." : "Correction en cours..."}
-        </>
-      ) : (
-        buttonText
-      )}
+      {isLoading ? "Traitement en cours..." : "Réparer le crédit manquant"}
     </Button>
   );
 }
