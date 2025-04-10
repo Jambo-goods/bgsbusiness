@@ -23,17 +23,18 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
   const [phone, setPhone] = useState(userData.phone || "");
   const [address, setAddress] = useState(userData.address || "");
   const [isLoading, setIsLoading] = useState(false);
-  const [savedPhone, setSavedPhone] = useState(userData.phone || "");
 
   useEffect(() => {
     setFirstName(userData.firstName || "");
     setLastName(userData.lastName || "");
     setEmail(userData.email || "");
+    setPhone(userData.phone || "");
     setAddress(userData.address || "");
     
     console.log("Phone number from userData:", userData.phone);
     
-    // Fetch the phone number directly from Supabase
+    // Cette section reste pour récupérer le téléphone directement de Supabase
+    // mais nous ne l'afficherons plus dans l'interface
     async function fetchPhoneFromDatabase() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
@@ -52,8 +53,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
           
           console.log("Téléphone récupéré directement de la base de données:", data.phone);
           if (data.phone) {
-            setSavedPhone(data.phone);
-            // Also set the phone input field value
+            // Mise à jour du champ téléphone sans afficher le message
             setPhone(data.phone);
           }
         }
@@ -105,9 +105,6 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
       }
       
       console.log("Profil mis à jour avec succès. Données retournées:", data);
-      console.log("Téléphone enregistré:", data?.[0]?.phone);
-      
-      setSavedPhone(data?.[0]?.phone || "");
       
       if (onProfileUpdate) {
         await onProfileUpdate();
@@ -190,7 +187,7 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
               <label htmlFor="phone" className="block text-sm font-medium text-bgs-blue mb-1">
                 Téléphone
               </label>
-              <div className="relative mb-2">
+              <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Phone size={18} className="text-bgs-blue/50" />
                 </div>
@@ -202,11 +199,6 @@ export default function ProfileTab({ userData, onProfileUpdate }: ProfileTabProp
                   className="bg-white border border-bgs-blue/20 text-bgs-blue rounded-lg block w-full pl-10 p-2.5"
                   placeholder="Saisissez votre numéro de téléphone"
                 />
-              </div>
-              <div className="flex items-center text-sm text-bgs-blue/80 bg-blue-50 p-2 rounded-md">
-                <Phone size={16} className="mr-2 text-bgs-blue/70" />
-                <span className="font-medium">Numéro dans la base de données:</span>
-                <span className="ml-2 font-bold text-bgs-blue">{savedPhone || "Aucun numéro enregistré"}</span>
               </div>
             </div>
             
