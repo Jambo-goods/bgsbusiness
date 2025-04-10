@@ -34,7 +34,6 @@ export default function DashboardMenuDropdown() {
       
       {isOpen && (
         <div className="absolute right-0 mt-2 w-64 bg-white shadow-lg rounded-lg z-50 border border-gray-100 py-2 animate-fade-in">
-          <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase border-b border-gray-100 mb-1">Menu rapide</div>
           <Link to="/dashboard" className={`flex items-center px-4 py-2.5 text-sm ${isActive('/dashboard') && !location.search ? 'bg-gray-50 text-bgs-blue font-medium' : 'text-gray-700 hover:bg-gray-50'}`}>
             <LayoutDashboard className="h-4 w-4 mr-3 text-bgs-blue" />
             Tableau de bord
