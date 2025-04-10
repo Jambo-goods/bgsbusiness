@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import UserMenuDropdown from "./UserMenuDropdown";
-import NotificationDropdown from "./NotificationDropdown";
 import DashboardMenuDropdown from "./DashboardMenuDropdown";
 
 export default function NavbarActions() {
@@ -12,7 +11,6 @@ export default function NavbarActions() {
   if (user) {
     return (
       <div className="flex items-center gap-2">
-        <NotificationDropdown />
         <DashboardMenuDropdown />
         <UserMenuDropdown />
       </div>
