@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useScheduledPayments } from "@/hooks/useScheduledPayments";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface EditPaymentModalProps {
   isOpen: boolean;
@@ -63,6 +65,25 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
       
       const switchingToPaid = status === 'paid' && payment.status !== 'paid';
       
+      // Force the status to update directly in the database for immediate effect
+      if (switchingToPaid || status !== payment.status) {
+        const { error: directUpdateError } = await supabase
+          .from('scheduled_payments')
+          .update({
+            status: status,
+            payment_date: date.toISOString(),
+            percentage: percentage,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', payment.id);
+          
+        if (directUpdateError) {
+          console.error("Erreur lors de la mise à jour directe:", directUpdateError);
+          throw new Error(directUpdateError.message);
+        }
+      }
+      
+      // Continue with the regular update through the hook
       await updatePaymentStatus(
         payment.id, 
         status as 'pending' | 'scheduled' | 'paid',
@@ -74,10 +95,46 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
         toast.success("Paiement marqué comme payé", {
           description: "Les soldes des investisseurs vont être mis à jour"
         });
+        
+        // Directly trigger the wallet update through the edge function
+        try {
+          console.log(`Traitement du paiement ${payment.id} avec pourcentage ${percentage}`);
+          
+          const { data: result, error } = await supabase.functions.invoke(
+            'update-wallet-on-payment',
+            {
+              body: {
+                paymentId: payment.id,
+                projectId: payment.project_id,
+                percentage: percentage,
+                processAll: true,
+                forceRefresh: true
+              }
+            }
+          );
+          
+          if (error) {
+            console.error(`Error processing payment ${payment.id}:`, error);
+            toast.error("Erreur lors du traitement du paiement. Veuillez réessayer.");
+          } else {
+            console.log(`Successfully processed payment ${payment.id}:`, result);
+            
+            if (result?.processed > 0) {              
+              toast.success("Paiement traité", {
+                description: `${result.processed} investisseur(s) ont reçu un rendement`
+              });
+            }
+          }
+        } catch (err) {
+          console.error(`Error invoking edge function:`, err);
+          toast.error("Erreur lors de la mise à jour des soldes");
+        }
       } else {
         toast.success("Paiement programmé mis à jour avec succès");
       }
       
+      // Force an additional refetch to ensure UI is updated
+      await refetch();
       onClose();
     } catch (error) {
       console.error("Erreur lors de la mise à jour:", error);
