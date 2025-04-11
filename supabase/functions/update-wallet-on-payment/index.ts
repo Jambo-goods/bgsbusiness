@@ -2,7 +2,7 @@
 // Follow Deno's ES module convention
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1"
-import { handleCors } from "./utils.ts"
+import { handleCors, corsHeaders } from "./utils.ts"
 import { 
   fetchPayments, 
   fetchProject, 
@@ -20,14 +20,24 @@ serve(async (req) => {
 
   try {
     // Get the request payload and validate it
-    const payload = await req.json();
-    console.log(`Processing request with payload:`, payload);
+    let payload;
+    try {
+      payload = await req.json();
+      console.log(`Processing request with payload:`, payload);
+    } catch (parseError) {
+      console.error("Error parsing request JSON:", parseError);
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
     
     const { isValid, error, validatedData } = validateRequest(payload);
     if (!isValid) {
+      console.error("Invalid request data:", error);
       return new Response(
         JSON.stringify({ error }),
-        { headers: { ...handleCors().headers, "Content-Type": "application/json" }, status: 400 }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
     
@@ -36,6 +46,15 @@ serve(async (req) => {
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error("Missing required environment variables");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get payments that need processing
@@ -43,7 +62,10 @@ serve(async (req) => {
     
     if (paymentsError) {
       console.error('Error fetching payments:', paymentsError);
-      throw paymentsError;
+      return new Response(
+        JSON.stringify({ error: paymentsError.message || "Error fetching payments" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
     }
     
     console.log(`Found ${payments?.length || 0} payments to process`);
@@ -51,12 +73,13 @@ serve(async (req) => {
     if (!payments || payments.length === 0) {
       return new Response(
         JSON.stringify({ success: true, processed: 0, message: "No payments to process" }),
-        { headers: { ...handleCors().headers, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
     
     let processedCount = 0;
     let paymentIds = [];
+    let errors = [];
     
     // Process each payment
     for (const payment of payments) {
@@ -69,6 +92,19 @@ serve(async (req) => {
         
         if (projectError) {
           console.error(`Error fetching project ${payment.project_id}:`, projectError);
+          errors.push({
+            payment_id: payment.id,
+            error: `Error fetching project: ${projectError.message}`
+          });
+          continue;
+        }
+        
+        if (!project) {
+          console.error(`Project ${payment.project_id} not found`);
+          errors.push({
+            payment_id: payment.id,
+            error: `Project not found for ID: ${payment.project_id}`
+          });
           continue;
         }
         
@@ -77,11 +113,19 @@ serve(async (req) => {
         
         if (investmentsError) {
           console.error(`Error fetching investments for project ${payment.project_id}:`, investmentsError);
+          errors.push({
+            payment_id: payment.id,
+            error: `Error fetching investments: ${investmentsError.message}`
+          });
           continue;
         }
         
         if (!investments || investments.length === 0) {
           console.log(`No investments found for project ${payment.project_id}`);
+          
+          // Mark payment as processed even if there are no investments
+          await markPaymentAsProcessed(supabase, payment.id, 0, [], project, payment.percentage);
+          
           continue;
         }
         
@@ -99,30 +143,37 @@ serve(async (req) => {
         
         processedCount += localProcessedCount;
         
-        // Mark the payment as processed
+        // Mark the payment as processed regardless of yield processing results
         await markPaymentAsProcessed(supabase, payment.id, localProcessedCount, investments, project, payment.percentage);
         
       } catch (err) {
         console.error(`Error processing payment ${payment.id}:`, err);
+        errors.push({
+          payment_id: payment.id,
+          error: err.message || "Unknown error"
+        });
       }
     }
     
+    const response = {
+      success: true,
+      processed: processedCount,
+      payments: payments.length,
+      payment_ids: paymentIds,
+      message: `Processed ${processedCount} yield transactions for ${payments.length} payments`,
+      errors: errors.length > 0 ? errors : undefined
+    };
+    
     return new Response(
-      JSON.stringify({
-        success: true,
-        processed: processedCount,
-        payments: payments.length,
-        payment_ids: paymentIds,
-        message: `Processed ${processedCount} yield transactions for ${payments.length} payments`
-      }),
-      { headers: { ...handleCors().headers, "Content-Type": "application/json" } }
+      JSON.stringify(response),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
     console.error("Error:", error);
     
     return new Response(
       JSON.stringify({ error: error.message || "Unknown error occurred" }),
-      { headers: { ...handleCors().headers, "Content-Type": "application/json" }, status: 500 }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   }
 });

@@ -20,20 +20,35 @@ export function usePaymentSubscriptions(refreshBalance: (() => Promise<void>) | 
               (payload.new as any).id,
               (payload.new as any).project_id,
               (payload.new as any).percentage
-            ).then(({success, processed}) => {
+            ).then(({success, processed, message}) => {
               if (!success) {
-                console.error('Error processing new paid payment');
-                toast.error("Erreur lors du traitement du paiement");
+                console.error('Error processing new paid payment:', message);
+                toast.error("Erreur lors du traitement du paiement", {
+                  description: message || "Veuillez réessayer ultérieurement"
+                });
               } else {
                 console.log('Successfully processed new paid payment');
                 if (refreshBalance) {
-                  refreshBalance(); // Removed the false parameter
+                  try {
+                    refreshBalance();
+                  } catch (err) {
+                    console.error("Error refreshing balance:", err);
+                  }
                 }
                 
-                toast.success("Paiement programmé exécuté", {
-                  description: "Votre solde disponible a été mis à jour"
-                });
+                if (processed && processed > 0) {
+                  toast.success("Paiement programmé exécuté", {
+                    description: "Votre solde disponible a été mis à jour"
+                  });
+                } else {
+                  toast.info("Paiement traité", {
+                    description: "Aucun rendement n'a été généré"
+                  });
+                }
               }
+            }).catch(err => {
+              console.error("Exception during payment processing:", err);
+              toast.error("Erreur lors du traitement du paiement");
             });
           }
         }
@@ -48,7 +63,11 @@ export function usePaymentSubscriptions(refreshBalance: (() => Promise<void>) | 
           if ((payload.new as any).description?.includes('Rendement')) {
             console.log('WalletTab: New yield transaction detected, refreshing balance');
             if (refreshBalance) {
-              refreshBalance(); // Removed the false parameter
+              try {
+                refreshBalance();
+              } catch (err) {
+                console.error("Error refreshing balance after yield:", err);
+              }
               
               toast.success("Rendement reçu", {
                 description: `Votre solde a été crédité de ${(payload.new as any).amount}€`
@@ -68,7 +87,11 @@ export function usePaymentSubscriptions(refreshBalance: (() => Promise<void>) | 
           if ((payload.new as any).processed_at && !(payload.old as any).processed_at) {
             console.log('WalletTab: Payment processed, refreshing balance');
             if (refreshBalance) {
-              refreshBalance(); // Removed the false parameter
+              try {
+                refreshBalance();
+              } catch (err) {
+                console.error("Error refreshing balance after payment processed:", err);
+              }
             }
           }
         }

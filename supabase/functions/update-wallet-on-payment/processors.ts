@@ -20,16 +20,32 @@ export async function processInvestorYields(
 ): Promise<number> {
   let processedCount = 0;
   
+  if (!investments || investments.length === 0) {
+    console.log(`No investments found for project ${payment.project_id}, skipping processing`);
+    return 0;
+  }
+  
+  if (!project) {
+    console.log(`Project data not available for ${payment.project_id}, skipping processing`);
+    return 0;
+  }
+  
   for (const investment of investments) {
     const userId = investment.user_id;
-    if (!userId) continue;
+    if (!userId) {
+      console.log(`Investment ${investment.id} has no user_id, skipping`);
+      continue;
+    }
     
     try {
       // Calculate yield amount for this investor
       const monthlyYieldRate = (project.yield || 0) / 100 / 12;
       const yieldAmount = calculateYieldAmount(investment.amount, monthlyYieldRate, paymentPercentage);
       
-      if (yieldAmount <= 0) continue;
+      if (yieldAmount <= 0) {
+        console.log(`Zero or negative yield for user ${userId}, investment ${investment.id}: ${yieldAmount}, skipping`);
+        continue;
+      }
       
       console.log(`Calculating yield for user ${userId}: ${investment.amount} * ${monthlyYieldRate} * ${paymentPercentage}% = ${yieldAmount}`);
       

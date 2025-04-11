@@ -34,6 +34,14 @@ export const processSinglePayment = async (
       };
     } 
     
+    if (!result) {
+      console.error(`No result returned for payment ${paymentId}`);
+      return {
+        success: false,
+        message: "Aucune réponse du serveur lors du traitement du paiement"
+      };
+    }
+    
     console.log(`Successfully processed payment ${paymentId}:`, result);
     return {
       success: true,
@@ -55,11 +63,17 @@ export const checkForUnprocessedPayments = async (
   refreshBalance: (() => Promise<void>) | undefined
 ): Promise<void> => {
   try {
-    const { data: payments } = await supabase
+    const { data: payments, error } = await supabase
       .from('scheduled_payments')
       .select('id, project_id, percentage')
       .eq('status', 'paid')
       .is('processed_at', null);
+      
+    if (error) {
+      console.error("Error fetching unprocessed payments:", error);
+      toast.error("Erreur lors de la vérification des paiements");
+      return;
+    }
       
     if (payments && payments.length > 0) {
       console.log(`Found ${payments.length} unprocessed paid payments`);
@@ -68,26 +82,46 @@ export const checkForUnprocessedPayments = async (
       });
       
       let successCount = 0;
+      let errorCount = 0;
       
       for (const payment of payments) {
-        const result = await processSinglePayment(
-          payment.id,
-          payment.project_id,
-          payment.percentage
-        );
-        
-        if (result.success && result.processed && result.processed > 0) {
-          successCount += result.processed;
+        try {
+          const result = await processSinglePayment(
+            payment.id,
+            payment.project_id,
+            payment.percentage
+          );
+          
+          if (result.success && result.processed && result.processed > 0) {
+            successCount += result.processed;
+          } else if (!result.success) {
+            errorCount++;
+            console.error(`Failed to process payment ${payment.id}:`, result.message);
+          }
+        } catch (innerError) {
+          errorCount++;
+          console.error(`Exception processing payment ${payment.id}:`, innerError);
         }
       }
       
-      if (successCount > 0) {
-        if (refreshBalance) {
+      // Update the wallet balance regardless of errors to ensure UI is up-to-date
+      if (refreshBalance) {
+        try {
           await refreshBalance();
+        } catch (refreshError) {
+          console.error("Error refreshing balance:", refreshError);
         }
-        
+      }
+      
+      if (errorCount > 0) {
+        toast.error("Certains paiements n'ont pas pu être traités", {
+          description: `${errorCount} paiement(s) en erreur. Veuillez réessayer ultérieurement.`
+        });
+      }
+      
+      if (successCount > 0) {
         toast.success("Paiement traité", {
-          description: `${successCount} rendements ont été crédités sur votre compte`
+          description: `${successCount} rendement(s) ont été crédités sur votre compte`
         });
       }
     } else {
@@ -95,5 +129,8 @@ export const checkForUnprocessedPayments = async (
     }
   } catch (err) {
     console.error("Error checking for unprocessed payments:", err);
+    toast.error("Erreur lors de la vérification des paiements", {
+      description: "Veuillez réessayer ultérieurement"
+    });
   }
 };
