@@ -83,7 +83,7 @@ export const checkForUnprocessedPayments = async (
       
       if (successCount > 0) {
         if (refreshBalance) {
-          await refreshBalance(); // Removed the false parameter
+          await refreshBalance();
         }
         
         toast.success("Paiement traité", {

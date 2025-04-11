@@ -185,23 +185,12 @@ export async function markPaymentAsProcessed(
   project: any,
   percentage: number
 ) {
-  let processedAmount = 0;
-  
-  if (processedCount > 0) {
-    processedAmount = investments.reduce((sum, inv) => {
-      const monthlyYieldRate = (project.yield || 0) / 100 / 12;
-      const yieldAmount = Math.round(inv.amount * monthlyYieldRate * (percentage || 100) / 100);
-      return sum + (yieldAmount > 0 ? yieldAmount : 0);
-    }, 0);
-  }
-  
   try {
+    // Simplified update with only processed_at field
     const { error } = await supabase
       .from('scheduled_payments')
       .update({ 
-        processed_at: new Date().toISOString(),
-        processed_investors_count: processedCount,
-        processed_amount: processedAmount
+        processed_at: new Date().toISOString()
       })
       .eq('id', paymentId);
       
@@ -209,7 +198,7 @@ export async function markPaymentAsProcessed(
       console.error(`Error marking payment ${paymentId} as processed:`, error);
       return { success: false, error };
     } else {
-      console.log(`Payment ${paymentId} marked as processed with ${processedCount} investors and ${processedAmount}€ processed`);
+      console.log(`Payment ${paymentId} marked as processed with ${processedCount} investors processed`);
       return { success: true, error: null };
     }
   } catch (err) {

@@ -24,47 +24,52 @@ export async function processInvestorYields(
     const userId = investment.user_id;
     if (!userId) continue;
     
-    // Calculate yield amount for this investor
-    const monthlyYieldRate = (project.yield || 0) / 100 / 12;
-    const yieldAmount = calculateYieldAmount(investment.amount, monthlyYieldRate, paymentPercentage);
-    
-    if (yieldAmount <= 0) continue;
-    
-    console.log(`Calculating yield for user ${userId}: ${investment.amount} * ${monthlyYieldRate} * ${paymentPercentage}% = ${yieldAmount}`);
-    
-    // Check if we've already processed this yield transaction
-    const { exists, error: checkError } = await checkExistingTransaction(
-      supabase, 
-      userId, 
-      payment.id, 
-      payment.project_id
-    );
-    
-    if (checkError) {
-      console.error(`Error checking existing transaction for user ${userId}:`, checkError);
-      continue;
-    }
-    
-    if (exists && !forceRefresh) {
-      console.log(`Yield transaction already exists for user ${userId}, payment ${payment.id}`);
-      continue;
-    } else if (exists && forceRefresh) {
-      console.log(`Force refresh enabled, processing again anyway for user ${userId}`);
-    }
-    
-    // Process the yield
-    const processResult = await processYield(
-      supabase,
-      userId,
-      yieldAmount,
-      project.name,
-      paymentPercentage,
-      payment.id,
-      payment.project_id
-    );
-    
-    if (processResult.success) {
-      processedCount++;
+    try {
+      // Calculate yield amount for this investor
+      const monthlyYieldRate = (project.yield || 0) / 100 / 12;
+      const yieldAmount = calculateYieldAmount(investment.amount, monthlyYieldRate, paymentPercentage);
+      
+      if (yieldAmount <= 0) continue;
+      
+      console.log(`Calculating yield for user ${userId}: ${investment.amount} * ${monthlyYieldRate} * ${paymentPercentage}% = ${yieldAmount}`);
+      
+      // Check if we've already processed this yield transaction
+      const { exists, error: checkError } = await checkExistingTransaction(
+        supabase, 
+        userId, 
+        payment.id, 
+        payment.project_id
+      );
+      
+      if (checkError) {
+        console.error(`Error checking existing transaction for user ${userId}:`, checkError);
+        continue;
+      }
+      
+      if (exists && !forceRefresh) {
+        console.log(`Yield transaction already exists for user ${userId}, payment ${payment.id}`);
+        continue;
+      } else if (exists && forceRefresh) {
+        console.log(`Force refresh enabled, processing again anyway for user ${userId}`);
+      }
+      
+      // Process the yield
+      const processResult = await processYield(
+        supabase,
+        userId,
+        yieldAmount,
+        project.name,
+        paymentPercentage,
+        payment.id,
+        payment.project_id
+      );
+      
+      if (processResult.success) {
+        processedCount++;
+      }
+    } catch (err) {
+      console.error(`Error processing yield for investment ${investment.id}:`, err);
+      continue; // Skip this investment but continue with others
     }
   }
   
