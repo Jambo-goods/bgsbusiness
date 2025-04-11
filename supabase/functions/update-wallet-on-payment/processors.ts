@@ -60,6 +60,8 @@ export async function processInvestorYields(
       // Convert to monthly yield rate (divide by 12 months)
       const yearlyYieldRate = (project.yield || 0);
       const monthlyYieldRate = yearlyYieldRate / 12;
+      
+      // Fixed calculation: Monthly amount = Investment * yearly rate / 12 months * payment percentage
       const yieldAmount = Math.floor((investment.amount * monthlyYieldRate / 100) * paymentPercentage / 100);
       
       console.log(`Project ${project.name} yield rate: ${yearlyYieldRate}% yearly, ${monthlyYieldRate.toFixed(2)}% monthly`);

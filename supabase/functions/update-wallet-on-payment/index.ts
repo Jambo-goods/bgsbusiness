@@ -10,7 +10,7 @@ import {
   markPaymentAsProcessed 
 } from "./database.ts"
 import { processInvestorYields } from "./processors.ts"
-import { validateRequest } from "./validators.ts"
+import { validateRequest } from "./utils.ts"
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -184,4 +184,3 @@ serve(async (req) => {
     );
   }
 });
-
