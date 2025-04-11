@@ -37,6 +37,13 @@ export async function processInvestorYields(
   const activeInvestments = investments.filter(inv => inv.status === 'active');
   console.log(`${activeInvestments.length} out of ${investments.length} investments have 'active' status`);
   
+  // Log all investment statuses for debugging
+  const statuses = {};
+  investments.forEach(inv => {
+    statuses[inv.status] = (statuses[inv.status] || 0) + 1;
+  });
+  console.log('Investment statuses breakdown:', statuses);
+  
   // Only process active investments
   for (const investment of activeInvestments) {
     const userId = investment.user_id;
@@ -46,16 +53,22 @@ export async function processInvestorYields(
     }
     
     try {
-      // Calculate yield amount for this investor
-      const monthlyYieldRate = (project.yield || 0) / 100 / 12;
-      const yieldAmount = calculateYieldAmount(investment.amount, monthlyYieldRate, paymentPercentage);
+      // Debug information for this specific investment
+      console.log(`Processing investment ${investment.id} for user ${userId}, amount: ${investment.amount}, status: ${investment.status}`);
+      
+      // Calculate yield amount for this investor using project yield rate
+      // Convert to monthly yield rate (divide by 12 months)
+      const yearlyYieldRate = (project.yield || 0);
+      const monthlyYieldRate = yearlyYieldRate / 12;
+      const yieldAmount = Math.floor((investment.amount * monthlyYieldRate / 100) * paymentPercentage / 100);
+      
+      console.log(`Project ${project.name} yield rate: ${yearlyYieldRate}% yearly, ${monthlyYieldRate.toFixed(2)}% monthly`);
+      console.log(`Yield calculation for user ${userId}: ${investment.amount} * ${monthlyYieldRate.toFixed(2)}% * ${paymentPercentage}% = ${yieldAmount}`);
       
       if (yieldAmount <= 0) {
         console.log(`Zero or negative yield for user ${userId}, investment ${investment.id}: ${yieldAmount}, skipping`);
         continue;
       }
-      
-      console.log(`Calculating yield for user ${userId}: ${investment.amount} * ${monthlyYieldRate} * ${paymentPercentage}% = ${yieldAmount}`);
       
       // Check if we've already processed this yield transaction
       const { exists, error: checkError } = await checkExistingTransaction(
@@ -90,6 +103,9 @@ export async function processInvestorYields(
       
       if (processResult.success) {
         processedCount++;
+        console.log(`Successfully processed yield for user ${userId}, amount: ${yieldAmount}`);
+      } else {
+        console.error(`Failed to process yield for user ${userId}`);
       }
     } catch (err) {
       console.error(`Error processing yield for investment ${investment.id}:`, err);
@@ -97,6 +113,7 @@ export async function processInvestorYields(
     }
   }
   
+  console.log(`Completed processing with ${processedCount} successful transactions`);
   return processedCount;
 }
 
@@ -160,4 +177,3 @@ async function processYield(
     return { success: false };
   }
 }
-
