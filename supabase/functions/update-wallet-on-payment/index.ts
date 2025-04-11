@@ -25,7 +25,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Processing payment: ${paymentId}, project: ${projectId}, percentage: ${percentage}`);
+    console.log(`Processing payment: ${paymentId}, project: ${projectId}, percentage: ${percentage}, forceRefresh: ${forceRefresh}`);
 
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
@@ -46,7 +46,7 @@ serve(async (req) => {
       query = query.eq('project_id', projectId);
     }
     
-    // Only get payments that haven't been processed yet
+    // Only get payments that haven't been processed yet or force refresh
     if (!forceRefresh) {
       query = query.is('processed_at', null);
     }
@@ -68,11 +68,13 @@ serve(async (req) => {
     }
     
     let processedCount = 0;
+    let paymentIds = [];
     
     // Process each payment
     for (const payment of payments) {
       try {
         console.log(`Processing payment ID: ${payment.id}`);
+        paymentIds.push(payment.id);
         
         // Get the project details
         const { data: project, error: projectError } = await supabase
@@ -90,7 +92,8 @@ serve(async (req) => {
         const { data: investments, error: investmentsError } = await supabase
           .from('investments')
           .select('*')
-          .eq('project_id', payment.project_id);
+          .eq('project_id', payment.project_id)
+          .eq('status', 'active');
         
         if (investmentsError) {
           console.error(`Error fetching investments for project ${payment.project_id}:`, investmentsError);
@@ -104,6 +107,7 @@ serve(async (req) => {
         
         console.log(`Found ${investments.length} investments for project ${payment.project_id}`);
         
+        let localProcessedCount = 0;
         // Process each investor's yield
         for (const investment of investments) {
           const userId = investment.user_id;
@@ -119,17 +123,23 @@ serve(async (req) => {
           console.log(`Calculating yield for user ${userId}: ${investment.amount} * ${monthlyYieldRate} * ${payment.percentage || 100}% = ${yieldAmount}`);
           
           // Check if we've already processed this yield transaction
-          const { data: existingTransaction, error: txError } = await supabase
+          const { data: existingTransaction } = await supabase
             .from('wallet_transactions')
             .select('id')
             .eq('user_id', userId)
-            .eq('amount', yieldAmount)
-            .ilike('description', `%Rendement%${payment.id}%`)
+            .eq('payment_id', payment.id)
+            .eq('project_id', payment.project_id)
+            .eq('type', 'yield')
             .maybeSingle();
             
           if (existingTransaction) {
             console.log(`Yield transaction already exists for user ${userId}, payment ${payment.id}`);
-            continue;
+            
+            if (!forceRefresh) {
+              continue;
+            } else {
+              console.log(`Force refresh enabled, processing again anyway`);
+            }
           }
           
           // Update user's wallet balance
@@ -149,10 +159,12 @@ serve(async (req) => {
             .insert({
               user_id: userId,
               amount: yieldAmount,
-              type: 'deposit',
-              description: `Rendement ${project.name} (ID: ${payment.id})`,
+              type: 'yield',
+              description: `Rendement ${project.name} (${payment.percentage}%)`,
               status: 'completed',
-              receipt_confirmed: true
+              receipt_confirmed: true,
+              payment_id: payment.id,
+              project_id: payment.project_id
             });
             
           if (transactionError) {
@@ -161,18 +173,47 @@ serve(async (req) => {
           }
           
           processedCount++;
+          localProcessedCount++;
+          
+          // Create notification for the user
+          const { error: notifError } = await supabase.from('notifications').insert({
+            user_id: userId,
+            title: "Rendement reçu",
+            message: `Vous avez reçu un rendement de ${yieldAmount}€ pour le projet ${project.name}`,
+            type: "yield",
+            seen: false,
+            data: {
+              payment_id: payment.id,
+              project_id: payment.project_id,
+              amount: yieldAmount,
+              category: "success"
+            }
+          });
+          
+          if (notifError) {
+            console.error(`Error creating notification for user ${userId}:`, notifError);
+          }
         }
         
         // Mark the payment as processed
-        if (!payment.processed_at) {
-          const { error: updateError } = await supabase
-            .from('scheduled_payments')
-            .update({ processed_at: new Date().toISOString() })
-            .eq('id', payment.id);
-            
-          if (updateError) {
-            console.error(`Error marking payment ${payment.id} as processed:`, updateError);
-          }
+        const { error: updateError } = await supabase
+          .from('scheduled_payments')
+          .update({ 
+            processed_at: new Date().toISOString(),
+            processed_investors_count: localProcessedCount,
+            processed_amount: localProcessedCount > 0 ? 
+              investments.reduce((sum, inv) => {
+                const monthlyYieldRate = (project.yield || 0) / 100 / 12;
+                const yield_amount = Math.round(inv.amount * monthlyYieldRate * (payment.percentage || 100) / 100);
+                return sum + (yield_amount > 0 ? yield_amount : 0);
+              }, 0) : 0
+          })
+          .eq('id', payment.id);
+          
+        if (updateError) {
+          console.error(`Error marking payment ${payment.id} as processed:`, updateError);
+        } else {
+          console.log(`Payment ${payment.id} marked as processed with ${localProcessedCount} investors`);
         }
       } catch (err) {
         console.error(`Error processing payment ${payment.id}:`, err);
@@ -184,6 +225,7 @@ serve(async (req) => {
         success: true,
         processed: processedCount,
         payments: payments.length,
+        payment_ids: paymentIds,
         message: `Processed ${processedCount} yield transactions for ${payments.length} payments`
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }

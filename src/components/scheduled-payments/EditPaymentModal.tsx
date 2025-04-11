@@ -53,6 +53,36 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
     }
   }, [isOpen, payment, refetch]);
 
+  const processPayment = async (paymentId: string, projectId: string, paymentPercentage: number) => {
+    console.log(`Démarrage du traitement du paiement ${paymentId} pour le projet ${projectId}`);
+    
+    try {
+      const { data: result, error } = await supabase.functions.invoke(
+        'update-wallet-on-payment',
+        {
+          body: {
+            paymentId: paymentId,
+            projectId: projectId,
+            percentage: paymentPercentage,
+            processAll: true,
+            forceRefresh: true
+          }
+        }
+      );
+      
+      if (error) {
+        console.error(`Erreur lors du traitement du paiement ${paymentId}:`, error);
+        throw new Error(error.message);
+      }
+      
+      console.log(`Paiement ${paymentId} traité avec succès:`, result);
+      return result;
+    } catch (err) {
+      console.error(`Erreur lors de l'appel de la fonction edge:`, err);
+      throw err;
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -65,15 +95,17 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
       
       const switchingToPaid = status === 'paid' && payment.status !== 'paid';
       
-      // Force the status to update directly in the database for immediate effect
+      // Mise à jour directe dans la base de données pour un effet immédiat
       if (switchingToPaid || status !== payment.status) {
+        console.log(`Mise à jour directe du statut du paiement ${payment.id} vers ${status}`);
         const { error: directUpdateError } = await supabase
           .from('scheduled_payments')
           .update({
             status: status,
             payment_date: date.toISOString(),
             percentage: percentage,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            processed_at: switchingToPaid ? null : undefined // Reset processed_at when switching to paid
           })
           .eq('id', payment.id);
           
@@ -81,9 +113,12 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
           console.error("Erreur lors de la mise à jour directe:", directUpdateError);
           throw new Error(directUpdateError.message);
         }
+        
+        // Force une actualisation des données
+        await refetch();
       }
       
-      // Continue with the regular update through the hook
+      // Mets à jour via le hook après la mise à jour directe
       await updatePaymentStatus(
         payment.id, 
         status as 'pending' | 'scheduled' | 'paid',
@@ -91,49 +126,50 @@ export default function EditPaymentModal({ isOpen, onClose, payment }: EditPayme
         percentage
       );
       
+      // Si on passe à payé, traite les portefeuilles des investisseurs
       if (switchingToPaid) {
         toast.success("Paiement marqué comme payé", {
-          description: "Les soldes des investisseurs vont être mis à jour"
+          description: "Traitement des rendements pour les investisseurs en cours..."
         });
         
-        // Directly trigger the wallet update through the edge function
         try {
-          console.log(`Traitement du paiement ${payment.id} avec pourcentage ${percentage}`);
+          // Traite directement le paiement via la fonction edge
+          const result = await processPayment(payment.id, payment.project_id, percentage);
           
-          const { data: result, error } = await supabase.functions.invoke(
-            'update-wallet-on-payment',
-            {
-              body: {
-                paymentId: payment.id,
-                projectId: payment.project_id,
-                percentage: percentage,
-                processAll: true,
-                forceRefresh: true
-              }
-            }
-          );
-          
-          if (error) {
-            console.error(`Error processing payment ${payment.id}:`, error);
-            toast.error("Erreur lors du traitement du paiement. Veuillez réessayer.");
-          } else {
-            console.log(`Successfully processed payment ${payment.id}:`, result);
+          if (result?.processed > 0) {
+            toast.success("Paiement traité avec succès", {
+              description: `${result.processed} investisseur(s) ont reçu leur rendement`
+            });
             
-            if (result?.processed > 0) {              
-              toast.success("Paiement traité", {
-                description: `${result.processed} investisseur(s) ont reçu un rendement`
-              });
+            // Vérifie que le paiement est bien marqué comme traité
+            const { data: updatedPayment } = await supabase
+              .from('scheduled_payments')
+              .select('processed_at')
+              .eq('id', payment.id)
+              .single();
+              
+            if (!updatedPayment?.processed_at) {
+              console.log("Le paiement n'est pas marqué comme traité, mise à jour manuelle...");
+              await supabase
+                .from('scheduled_payments')
+                .update({ 
+                  processed_at: new Date().toISOString(),
+                  status: 'paid'
+                })
+                .eq('id', payment.id);
             }
+          } else {
+            toast.info("Aucun investisseur à créditer pour ce paiement");
           }
         } catch (err) {
-          console.error(`Error invoking edge function:`, err);
-          toast.error("Erreur lors de la mise à jour des soldes");
+          console.error(`Erreur lors du traitement du paiement:`, err);
+          toast.error("Erreur lors de la mise à jour des soldes des investisseurs");
         }
       } else {
         toast.success("Paiement programmé mis à jour avec succès");
       }
       
-      // Force an additional refetch to ensure UI is updated
+      // Force une actualisation additionnelle pour s'assurer que l'UI est à jour
       await refetch();
       onClose();
     } catch (error) {
