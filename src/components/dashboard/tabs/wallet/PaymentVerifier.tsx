@@ -33,7 +33,15 @@ export default function PaymentVerifier({ refreshBalance, onVerificationComplete
       }
     };
     
-    verifyPayments();
+    // Wrap in try/catch to prevent uncaught promise rejections that could break the app
+    try {
+      verifyPayments();
+    } catch (err) {
+      console.error("Uncaught error in verifyPayments:", err);
+      setHasError(true);
+      setIsVerifying(false);
+      onVerificationComplete();
+    }
   }, [refreshBalance, onVerificationComplete]);
 
   if (!isVerifying && !hasError) {
