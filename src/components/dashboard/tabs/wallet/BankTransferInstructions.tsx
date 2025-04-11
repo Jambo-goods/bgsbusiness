@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -14,21 +13,19 @@ export default function BankTransferInstructions() {
   const [transferAmount, setTransferAmount] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
   
-  // Generate reference number once when component mounts
   useEffect(() => {
     const generatedReference = "DEP-" + Math.floor(100000 + Math.random() * 900000);
     setReferenceNumber(generatedReference);
   }, []);
 
   const bankDetails = {
-    name: "BGS Invest",
+    name: "Bambo Guirassy",
     iban: "FR76 2823 3000 0106 0509 3467 772",
     bic: "REVOFRP2",
     bank: "Revolut",
     get reference() { return referenceNumber; }
   };
 
-  // Format reference number with spaces for better readability
   const formatReference = (reference) => {
     if (!reference) return "";
     return reference.replace(/^(DEP-)?(\d{3})(\d{3})$/, "DEP-$2$3");
@@ -57,7 +54,6 @@ export default function BankTransferInstructions() {
         return;
       }
       
-      // Create a notification directly with supabase
       await supabase.from('notifications').insert({
         user_id: userId,
         title: "Demande de dépôt",
@@ -72,7 +68,6 @@ export default function BankTransferInstructions() {
         seen: false
       });
       
-      // Créer l'enregistrement de virement bancaire
       await supabase.from('bank_transfers').insert({
         user_id: userId,
         reference: bankDetails.reference,
@@ -81,13 +76,11 @@ export default function BankTransferInstructions() {
         notes: 'Confirmation de virement par l\'utilisateur'
       });
       
-      // Créer une transaction en statut "pending" - une seule transaction qui sera mise à jour plus tard
-      // Ne pas créer de transaction complétée ici pour éviter le double crédit
       const { error: txError } = await supabase.from('wallet_transactions').insert({
         user_id: userId,
         amount: parseInt(transferAmount),
         type: "deposit",
-        status: "pending", // Statut en attente uniquement
+        status: "pending",
         description: `Virement bancaire (${bankDetails.reference})`
       });
       
