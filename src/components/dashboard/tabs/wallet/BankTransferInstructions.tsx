@@ -22,9 +22,9 @@ export default function BankTransferInstructions() {
 
   const bankDetails = {
     name: "BGS Invest",
-    iban: "FR76 1234 5678 9101 1121 3141 516",
+    iban: "FR76 2823 3000 0106 0509 3467 772",
     bic: "BGSFRINVXXX",
-    bank: "Banque Générale Française",
+    bank: "Revolut",
     get reference() { return referenceNumber; }
   };
 
