@@ -120,9 +120,13 @@ serve(async (req) => {
           continue;
         }
         
-        // If there are no investments, mark the payment as processed but with a note
-        if (!investments || investments.length === 0) {
-          console.log(`No investments found for project ${payment.project_id}, marking as processed with no investors`);
+        // Check if there are any active investments
+        const activeInvestments = investments?.filter(inv => inv.status === 'active') || [];
+        console.log(`Found ${activeInvestments.length} active investments out of ${investments?.length || 0} total investments`);
+        
+        // If there are no active investments, mark the payment as processed but with a note
+        if (!activeInvestments || activeInvestments.length === 0) {
+          console.log(`No active investments found for project ${payment.project_id}, marking as processed with no investors`);
           
           // Mark payment as processed with 0 investors
           await markPaymentAsProcessed(supabase, payment.id, 0, [], project, payment.percentage);
@@ -130,12 +134,12 @@ serve(async (req) => {
           continue;
         }
         
-        console.log(`Found ${investments.length} investments for project ${payment.project_id}`);
+        console.log(`Processing ${activeInvestments.length} active investments for project ${project.name} (${payment.project_id})`);
         
         // Process investors' yields
         const localProcessedCount = await processInvestorYields(
           supabase,
-          investments,
+          activeInvestments,
           project,
           payment,
           percentage || payment.percentage,
@@ -145,7 +149,7 @@ serve(async (req) => {
         processedCount += localProcessedCount;
         
         // Mark the payment as processed regardless of yield processing results
-        await markPaymentAsProcessed(supabase, payment.id, localProcessedCount, investments, project, payment.percentage);
+        await markPaymentAsProcessed(supabase, payment.id, localProcessedCount, activeInvestments, project, payment.percentage);
         
       } catch (err) {
         console.error(`Error processing payment ${payment.id}:`, err);
@@ -180,3 +184,4 @@ serve(async (req) => {
     );
   }
 });
+

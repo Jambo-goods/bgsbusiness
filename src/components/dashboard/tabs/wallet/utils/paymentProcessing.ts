@@ -23,6 +23,15 @@ export const processSinglePayment = async (
       };
     }
     
+    // Log more details about the payment being processed
+    console.log(`Sending request to edge function with parameters:`, {
+      paymentId,
+      projectId,
+      percentage,
+      processAll: true,
+      forceRefresh: true
+    });
+    
     const { data: result, error } = await supabase.functions.invoke(
       'update-wallet-on-payment',
       {
@@ -52,20 +61,33 @@ export const processSinglePayment = async (
       };
     }
     
+    console.log(`Payment processing result for ${paymentId}:`, result);
+    
     // Handle case where payment was successfully processed but no investors needed to be credited
     if (result.processed === 0 && !result.errors) {
       console.log(`Payment ${paymentId} processed successfully, but no investors to credit`);
+      
+      // Check if there's a specific reason in the result message
+      if (result.message && result.message.includes("No investors to credit")) {
+        return {
+          success: true,
+          processed: 0,
+          message: "Aucun investisseur à créditer pour ce paiement"
+        };
+      }
+      
       return {
         success: true,
         processed: 0,
-        message: "Aucun investisseur à créditer pour ce paiement"
+        message: "Aucun investisseur à créditer pour ce paiement. Vérifiez les investissements actifs."
       };
     }
     
     console.log(`Successfully processed payment ${paymentId}:`, result);
     return {
       success: true,
-      processed: result?.processed || 0
+      processed: result?.processed || 0,
+      message: result?.message
     };
   } catch (err) {
     console.error(`Error invoking edge function for payment ${paymentId}:`, err);
@@ -120,6 +142,24 @@ export const checkForUnprocessedPayments = async (
     
     for (const payment of payments) {
       try {
+        // Get more information about this project for better logging
+        const { data: projectInfo } = await supabase
+          .from('projects')
+          .select('name, id')
+          .eq('id', payment.project_id)
+          .single();
+          
+        console.log(`Processing payment for project: ${projectInfo?.name || payment.project_id}`);
+        
+        // Also check if there are active investments for this project
+        const { data: investments } = await supabase
+          .from('investments')
+          .select('id')
+          .eq('project_id', payment.project_id)
+          .eq('status', 'active');
+          
+        console.log(`Project ${projectInfo?.name || payment.project_id} has ${investments?.length || 0} active investments`);
+        
         const result = await processSinglePayment(
           payment.id,
           payment.project_id,
@@ -159,7 +199,7 @@ export const checkForUnprocessedPayments = async (
     
     if (noInvestorsCount > 0) {
       toast.info("Aucun investisseur à créditer pour ce paiement", {
-        description: `${noInvestorsCount} paiement(s) sans investisseurs à créditer.`
+        description: `${noInvestorsCount} paiement(s) sans investisseurs actifs à créditer.`
       });
     }
     
@@ -175,3 +215,4 @@ export const checkForUnprocessedPayments = async (
     });
   }
 };
+

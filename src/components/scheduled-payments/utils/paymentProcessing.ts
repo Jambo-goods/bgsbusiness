@@ -17,6 +17,19 @@ export const processPayment = async (
   console.log(`Démarrage du traitement du paiement ${paymentId} pour le projet ${projectId}`);
   
   try {
+    // First check if there are active investments for this project
+    const { data: investments, error: investmentsError } = await supabase
+      .from('investments')
+      .select('id')
+      .eq('project_id', projectId)
+      .eq('status', 'active');
+    
+    if (investmentsError) {
+      console.error("Error checking investments:", investmentsError);
+    } else {
+      console.log(`Project ${projectId} has ${investments?.length || 0} active investments`);
+    }
+    
     const { data: result, error } = await supabase.functions.invoke(
       'update-wallet-on-payment',
       {
@@ -36,6 +49,17 @@ export const processPayment = async (
     }
     
     console.log(`Paiement ${paymentId} traité avec succès:`, result);
+    
+    // Check if no investors were processed but it's not an error
+    if (result && result.processed === 0 && !result.errors) {
+      // This is a successful process but with no investors to credit
+      return {
+        success: true,
+        processed: 0,
+        message: "Aucun investisseur actif à créditer pour ce paiement"
+      };
+    }
+    
     return result;
   } catch (err) {
     console.error(`Erreur lors de l'appel de la fonction edge:`, err);
@@ -119,6 +143,42 @@ export const handlePaymentUpdate = async (
     
     const switchingToPaid = newStatus === 'paid' && payment.status !== 'paid';
     
+    // If switching to paid, check for active investments for this project
+    if (switchingToPaid) {
+      const { data: investments, error: investmentsError } = await supabase
+        .from('investments')
+        .select('id, user_id, amount')
+        .eq('project_id', payment.project_id)
+        .eq('status', 'active');
+      
+      if (investmentsError) {
+        console.error("Error checking for active investments:", investmentsError);
+      } else {
+        console.log(`Project has ${investments?.length || 0} active investments`);
+        
+        if (!investments || investments.length === 0) {
+          // Check if there are ANY investments for this project (regardless of status)
+          const { data: allInvestments, error } = await supabase
+            .from('investments')
+            .select('id, status')
+            .eq('project_id', payment.project_id);
+          
+          if (!error) {
+            console.log(`Project has ${allInvestments?.length || 0} total investments with any status`);
+            
+            // Group by status
+            if (allInvestments && allInvestments.length > 0) {
+              const statuses = {};
+              allInvestments.forEach(inv => {
+                statuses[inv.status] = (statuses[inv.status] || 0) + 1;
+              });
+              console.log('Investment statuses:', statuses);
+            }
+          }
+        }
+      }
+    }
+    
     // Direct update in database for immediate effect
     if (switchingToPaid || newStatus !== payment.status) {
       await updatePaymentStatusDirectly(
@@ -159,7 +219,13 @@ export const handlePaymentUpdate = async (
           // Ensure payment is marked as processed
           await ensurePaymentProcessed(payment.id);
         } else {
-          toast.info("Aucun investisseur à créditer pour ce paiement");
+          // Even with 0 processed investors, mark the payment as processed
+          await ensurePaymentProcessed(payment.id);
+          
+          // Show information about no investors to credit
+          toast.info("Aucun investisseur à créditer pour ce paiement", {
+            description: "Vérifiez qu'il existe des investissements actifs pour ce projet."
+          });
         }
       } catch (err) {
         console.error(`Erreur lors du traitement du paiement:`, err);
@@ -178,3 +244,4 @@ export const handlePaymentUpdate = async (
     throw error;
   }
 };
+

@@ -197,12 +197,23 @@ export async function fetchProject(
   }
 }
 
-// Fetch investments for a project
+// Enhanced: Fetch investments for a project with improved error handling and logging
 export async function fetchInvestments(
   supabase: SupabaseClient,
   projectId: string
 ) {
   try {
+    console.log(`Fetching investments for project ${projectId}`);
+    
+    // First check if the project exists
+    const { project, error: projectError } = await fetchProject(supabase, projectId);
+    if (projectError) {
+      console.error(`Project ${projectId} not found or error fetching it:`, projectError);
+    } else {
+      console.log(`Project ${projectId} found: ${project.name}`);
+    }
+    
+    // Get all investments for this project with status 'active'
     const { data, error } = await supabase
       .from('investments')
       .select('*')
@@ -214,7 +225,29 @@ export async function fetchInvestments(
       return { investments: null, error };
     }
     
-    return { investments: data, error: null };
+    console.log(`Found ${data?.length || 0} active investments for project ${projectId}`);
+    
+    if (!data || data.length === 0) {
+      // If no active investments found, check if there are ANY investments for this project
+      // maybe they have a different status
+      const { data: allInvestments, error: allInvError } = await supabase
+        .from('investments')
+        .select('id, status, amount, user_id')
+        .eq('project_id', projectId);
+      
+      if (!allInvError && allInvestments && allInvestments.length > 0) {
+        console.log(`Found ${allInvestments.length} total investments with various statuses for project ${projectId}:`);
+        const statuses = {};
+        allInvestments.forEach(inv => {
+          statuses[inv.status] = (statuses[inv.status] || 0) + 1;
+        });
+        console.log('Investment statuses:', statuses);
+      } else {
+        console.log(`No investments at all found for project ${projectId}`);
+      }
+    }
+    
+    return { investments: data || [], error: null };
   } catch (err) {
     console.error(`Error in fetchInvestments for project ${projectId}:`, err);
     return { investments: null, error: err };
@@ -251,3 +284,4 @@ export async function markPaymentAsProcessed(
     return { success: false, error: err };
   }
 }
+

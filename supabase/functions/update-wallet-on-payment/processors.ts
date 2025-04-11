@@ -30,7 +30,15 @@ export async function processInvestorYields(
     return 0;
   }
   
-  for (const investment of investments) {
+  // Log how many investments we're processing and their status
+  console.log(`Processing ${investments.length} investments for project ${project.name} (ID: ${payment.project_id})`);
+  
+  // Check if all investments have 'active' status
+  const activeInvestments = investments.filter(inv => inv.status === 'active');
+  console.log(`${activeInvestments.length} out of ${investments.length} investments have 'active' status`);
+  
+  // Only process active investments
+  for (const investment of activeInvestments) {
     const userId = investment.user_id;
     if (!userId) {
       console.log(`Investment ${investment.id} has no user_id, skipping`);
@@ -152,3 +160,4 @@ async function processYield(
     return { success: false };
   }
 }
+
