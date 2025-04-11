@@ -16,7 +16,9 @@ export default function PaymentVerifier({ refreshBalance, onVerificationComplete
   useEffect(() => {
     const verifyPayments = async () => {
       try {
+        console.log("PaymentVerifier: Starting payment verification");
         await checkForUnprocessedPayments(refreshBalance);
+        console.log("PaymentVerifier: Payment verification completed successfully");
         setIsVerifying(false);
         onVerificationComplete();
       } catch (err) {

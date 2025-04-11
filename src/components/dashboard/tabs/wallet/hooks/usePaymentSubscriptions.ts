@@ -6,6 +6,7 @@ import { processSinglePayment } from "../utils/paymentProcessing";
 
 export function usePaymentSubscriptions(refreshBalance: (() => Promise<void>) | undefined) {
   useEffect(() => {
+    console.log("Setting up payment subscriptions");
     // Set up subscription to detect newly paid scheduled payments
     const scheduledPaymentChannel = supabase
       .channel('wallet_tab_scheduled_payments')
@@ -39,6 +40,10 @@ export function usePaymentSubscriptions(refreshBalance: (() => Promise<void>) | 
                 if (processed && processed > 0) {
                   toast.success("Paiement programmé exécuté", {
                     description: "Votre solde disponible a été mis à jour"
+                  });
+                } else if (message === "Aucun investisseur à créditer pour ce paiement") {
+                  toast.info(message, {
+                    description: "Le paiement a été marqué comme traité"
                   });
                 } else {
                   toast.info("Paiement traité", {
@@ -99,6 +104,7 @@ export function usePaymentSubscriptions(refreshBalance: (() => Promise<void>) | 
       .subscribe();
       
     return () => {
+      console.log("Cleaning up payment subscriptions");
       supabase.removeChannel(scheduledPaymentChannel);
       supabase.removeChannel(yieldTransactionsChannel);
       supabase.removeChannel(processedPaymentsChannel);

@@ -120,10 +120,11 @@ serve(async (req) => {
           continue;
         }
         
+        // If there are no investments, mark the payment as processed but with a note
         if (!investments || investments.length === 0) {
-          console.log(`No investments found for project ${payment.project_id}`);
+          console.log(`No investments found for project ${payment.project_id}, marking as processed with no investors`);
           
-          // Mark payment as processed even if there are no investments
+          // Mark payment as processed with 0 investors
           await markPaymentAsProcessed(supabase, payment.id, 0, [], project, payment.percentage);
           
           continue;
@@ -160,7 +161,9 @@ serve(async (req) => {
       processed: processedCount,
       payments: payments.length,
       payment_ids: paymentIds,
-      message: `Processed ${processedCount} yield transactions for ${payments.length} payments`,
+      message: processedCount > 0 
+        ? `Processed ${processedCount} yield transactions for ${payments.length} payments`
+        : "No investors to credit for this payment, but payment marked as processed",
       errors: errors.length > 0 ? errors : undefined
     };
     
