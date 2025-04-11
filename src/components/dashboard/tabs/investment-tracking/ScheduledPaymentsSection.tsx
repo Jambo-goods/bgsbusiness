@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScheduledPayment } from './types';
@@ -32,6 +31,7 @@ const ScheduledPaymentsSection = () => {
   const paymentsPerPage = 10;
   const [userInvestments, setUserInvestments] = useState<any[]>([]);
   const [allScheduledPayments, setAllScheduledPayments] = useState<any[]>([]);
+  const [hasInvestments, setHasInvestments] = useState(false);
   
   const FIXED_INVESTMENTS = {
     "BGS Poules Pondeuses": 2600,
@@ -90,6 +90,9 @@ const ScheduledPaymentsSection = () => {
         }
         
         console.log(`Found ${investments?.length || 0} user investments`);
+        
+        // Update the hasInvestments state based on whether user has any investments
+        setHasInvestments(investments && investments.length > 0);
         setUserInvestments(investments || []);
         
         const investmentMap: Record<string, number> = {};
@@ -125,40 +128,40 @@ const ScheduledPaymentsSection = () => {
     fetchInvestmentData();
   }, []);
 
-  useEffect(() => {
-    const fetchTotalInvestmentData = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('id, raised, name');
-          
-        if (error) {
-          console.error("Error fetching total investment data:", error);
-          return;
+  const fetchTotalInvestmentData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, raised, name');
+        
+      if (error) {
+        console.error("Error fetching total investment data:", error);
+        return;
+      }
+      
+      const totalInvestmentMap: Record<string, number> = {};
+      
+      data.forEach(project => {
+        if (project.raised !== null && project.raised !== undefined) {
+          totalInvestmentMap[project.id] = project.raised;
+        } else {
+          totalInvestmentMap[project.id] = 0;
         }
         
-        const totalInvestmentMap: Record<string, number> = {};
-        
-        data.forEach(project => {
-          if (project.raised !== null && project.raised !== undefined) {
-            totalInvestmentMap[project.id] = project.raised;
-          } else {
-            totalInvestmentMap[project.id] = 0;
-          }
-          
-          if (project.name && FIXED_INVESTMENTS[project.name]) {
-            console.log(`Applied fixed investment amount for ${project.name}: ${FIXED_INVESTMENTS[project.name]}`);
-            totalInvestmentMap[project.id] = FIXED_INVESTMENTS[project.name];
-          }
-        });
-        
-        console.log("Total investments by project:", totalInvestmentMap);
-        setTotalProjectInvestments(totalInvestmentMap);
-      } catch (error) {
-        console.error("Error fetching total investment data:", error);
-      }
-    };
+        if (project.name && FIXED_INVESTMENTS[project.name]) {
+          console.log(`Applied fixed investment amount for ${project.name}: ${FIXED_INVESTMENTS[project.name]}`);
+          totalInvestmentMap[project.id] = FIXED_INVESTMENTS[project.name];
+        }
+      });
+      
+      console.log("Total investments by project:", totalInvestmentMap);
+      setTotalProjectInvestments(totalInvestmentMap);
+    } catch (error) {
+      console.error("Error fetching total investment data:", error);
+    }
+  };
     
+  useEffect(() => {
     fetchTotalInvestmentData();
   }, []);
 
@@ -313,7 +316,7 @@ const ScheduledPaymentsSection = () => {
   // Filter all scheduled payments to only include those for projects the user has invested in
   const userScheduledPayments = React.useMemo(() => {
     if (!allScheduledPayments || allScheduledPayments.length === 0 || !userProjectIds || userProjectIds.length === 0) {
-      return scheduledPayments || []; // Fall back to the original hook data
+      return []; // Return empty array if no user investments or scheduled payments
     }
     
     const filteredPayments = allScheduledPayments.filter(payment => 
@@ -322,7 +325,7 @@ const ScheduledPaymentsSection = () => {
     
     console.log(`Filtered ${allScheduledPayments.length} payments down to ${filteredPayments.length} for user's ${userProjectIds.length} projects`);
     return filteredPayments;
-  }, [allScheduledPayments, userProjectIds, scheduledPayments]);
+  }, [allScheduledPayments, userProjectIds]);
 
   const filteredPayments = showPastPayments 
     ? userScheduledPayments 
@@ -431,56 +434,60 @@ const ScheduledPaymentsSection = () => {
           Calendrier des paiements programmés 
           ({userInvestments.length > 0 ? `${userInvestments.length} investissements` : 'Aucun investissement'})
         </CardTitle>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => setShowPastPayments(!showPastPayments)}
-            className="text-xs"
-          >
-            <Filter className="h-3.5 w-3.5 mr-1" />
-            {showPastPayments ? "Masquer les paiements passés" : "Afficher tous les paiements"}
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="text-xs"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Actualiser
-          </Button>
-        </div>
+        {userInvestments.length > 0 && (
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowPastPayments(!showPastPayments)}
+              className="text-xs"
+            >
+              <Filter className="h-3.5 w-3.5 mr-1" />
+              {showPastPayments ? "Masquer les paiements passés" : "Afficher tous les paiements"}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="text-xs"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Actualiser
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-green-50 rounded-lg border border-green-100 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <FileCheck className="h-5 w-5 text-green-600" />
-              <span className="text-sm font-medium text-green-700">Versements payés</span>
+        {userInvestments.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="bg-green-50 rounded-lg border border-green-100 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <FileCheck className="h-5 w-5 text-green-600" />
+                <span className="text-sm font-medium text-green-700">Versements payés</span>
+              </div>
+              <div className="flex justify-between items-end">
+                <span className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</span>
+                <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
+                  {paidPayments.length} versement{paidPayments.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
             </div>
-            <div className="flex justify-between items-end">
-              <span className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</span>
-              <Badge variant="outline" className="bg-green-100 text-green-700 border-green-200">
-                {paidPayments.length} versement{paidPayments.length !== 1 ? 's' : ''}
-              </Badge>
+            
+            <div className="bg-amber-50 rounded-lg border border-amber-100 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="h-5 w-5 text-amber-600" />
+                <span className="text-sm font-medium text-amber-700">Versements à venir</span>
+              </div>
+              <div className="flex justify-between items-end">
+                <span className="text-2xl font-bold text-amber-600">{formatCurrency(totalPending)}</span>
+                <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
+                  {pendingPayments.length} versement{pendingPayments.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
             </div>
           </div>
-          
-          <div className="bg-amber-50 rounded-lg border border-amber-100 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="h-5 w-5 text-amber-600" />
-              <span className="text-sm font-medium text-amber-700">Versements à venir</span>
-            </div>
-            <div className="flex justify-between items-end">
-              <span className="text-2xl font-bold text-amber-600">{formatCurrency(totalPending)}</span>
-              <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">
-                {pendingPayments.length} versement{pendingPayments.length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-          </div>
-        </div>
+        )}
 
         {isLoading ? (
           <div className="space-y-3">
@@ -488,25 +495,31 @@ const ScheduledPaymentsSection = () => {
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
           </div>
+        ) : !hasInvestments ? (
+          <div className="text-center py-8 text-gray-500">
+            <CalendarIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+            <p className="text-sm font-medium">Vous n'avez aucun investissement actif</p>
+            <p className="text-xs mt-1">Les paiements programmés apparaîtront ici une fois que vous aurez investi dans un projet</p>
+            <Button 
+              variant="outline" 
+              className="mt-4"
+              onClick={handleRefresh}
+            >
+              Actualiser les données
+            </Button>
+          </div>
         ) : sortedPayments.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <CalendarIcon className="mx-auto h-8 w-8 text-gray-400 mb-2" />
             <p className="text-sm font-medium">Aucun paiement programmé trouvé</p>
             <p className="text-xs mt-1">Les paiements apparaîtront ici une fois programmés par l'équipe</p>
-            {userInvestments.length > 0 && (
-              <div className="mt-4">
-                <p className="text-xs text-amber-600">
-                  Vous avez {userInvestments.length} investissement(s) mais aucun paiement programmé n'est encore visible.
-                </p>
-                <Button 
-                  variant="outline" 
-                  className="mt-2"
-                  onClick={handleRefresh}
-                >
-                  Actualiser les données
-                </Button>
-              </div>
-            )}
+            <Button 
+              variant="outline" 
+              className="mt-2"
+              onClick={handleRefresh}
+            >
+              Actualiser les données
+            </Button>
           </div>
         ) : (
           <>
