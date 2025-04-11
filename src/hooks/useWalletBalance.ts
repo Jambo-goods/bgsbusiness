@@ -48,37 +48,6 @@ export function useWalletBalance(): UseWalletBalanceReturn {
   
   useEffect(() => {
     refreshBalance();
-    
-    // Set up real-time subscription for wallet balance changes
-    const setupRealtimeSubscription = async () => {
-      const { data: session } = await supabase.auth.getSession();
-      if (!session.session) return;
-      
-      const userId = session.session.user.id;
-      
-      const channel = supabase
-        .channel('wallet_balance_changes')
-        .on('postgres_changes', 
-          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `id=eq.${userId}` },
-          (payload) => {
-            // Check if wallet_balance field changed
-            if ((payload.new as any).wallet_balance !== (payload.old as any).wallet_balance) {
-              console.log('Wallet balance changed, updating...', payload.new);
-              setWalletBalance((payload.new as any).wallet_balance || 0);
-            }
-          }
-        )
-        .subscribe();
-        
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    };
-    
-    const cleanup = setupRealtimeSubscription();
-    return () => {
-      cleanup.then(fn => fn && fn());
-    };
   }, [refreshBalance]);
   
   return {
