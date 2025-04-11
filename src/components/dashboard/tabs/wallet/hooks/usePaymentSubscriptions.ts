@@ -11,7 +11,7 @@ export function usePaymentSubscriptions(refreshBalance: (() => Promise<void>) | 
     // Safety check for supabase client
     if (!supabase || !supabase.channel) {
       console.error("Supabase client is not properly initialized or missing realtime functionality");
-      return;
+      return () => {}; // Return empty cleanup function
     }
     
     // Set up subscription to detect newly paid scheduled payments

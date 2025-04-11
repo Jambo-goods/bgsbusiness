@@ -17,6 +17,13 @@ export default function PaymentVerifier({ refreshBalance, onVerificationComplete
     const verifyPayments = async () => {
       try {
         console.log("PaymentVerifier: Starting payment verification");
+        
+        // Check if the function exists before calling it
+        if (typeof checkForUnprocessedPayments !== 'function') {
+          console.error("checkForUnprocessedPayments is not a function", checkForUnprocessedPayments);
+          throw new Error("Payment processing function is not available");
+        }
+        
         await checkForUnprocessedPayments(refreshBalance);
         console.log("PaymentVerifier: Payment verification completed successfully");
         setIsVerifying(false);
